@@ -59,11 +59,13 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
       supabase.from('enterprise_offices').select('id, name, city').eq('workspace_id', workspaceId).order('name'),
       supabase.from('enterprise_member_templates').select('*').eq('workspace_id', workspaceId).order('template_name'),
       supabase.from('enterprise_memberships').select('business_role').eq('workspace_id', workspaceId).not('business_role', 'is', null),
-    ]).then(([officeRes, templateRes, memberRes]) => {
+      (supabase as any).from('enterprise_member_role_allocations').select('business_role').eq('workspace_id', workspaceId),
+    ]).then(([officeRes, templateRes, memberRes, allocRes]) => {
       setOffices((officeRes.data as Office[]) || []);
       setTemplates((templateRes.data as MemberTemplate[]) || []);
       const roleSet = new Set<string>();
       ((memberRes.data as any[]) || []).forEach((m: any) => { if (m.business_role) roleSet.add(m.business_role); });
+      ((allocRes.data as any[]) || []).forEach((a: any) => { if (a.business_role) roleSet.add(a.business_role); });
       setBusinessRoles(Array.from(roleSet).sort());
     });
   }, [open, workspaceId]);
