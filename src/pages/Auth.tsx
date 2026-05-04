@@ -89,7 +89,7 @@ const Auth = () => {
   const [otpCode, setOtpCode] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
-  const { user, signIn, signUp, signOut } = useAuth();
+  const { user, signIn, signUp, signOut, setSessionFromTokens } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const redirectTo = searchParams.get("redirect") || "/enterprise";
@@ -109,6 +109,33 @@ const Auth = () => {
     const emailFromQuery = searchParams.get("email");
     if (emailFromQuery) setEmail(emailFromQuery);
   }, [isVerifyMode, searchParams]);
+
+
+
+  useEffect(() => {
+    if (oauthProvider !== GOOGLE_OAUTH_PROVIDER) return;
+    if (user) return;
+
+    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const accessToken = hashParams.get("access_token");
+    const refreshToken = hashParams.get("refresh_token");
+
+    if (!accessToken || !refreshToken) return;
+
+    const restoreSessionFromHash = async () => {
+      try {
+        setLoading(true);
+        await setSessionFromTokens(accessToken, refreshToken);
+        window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+      } catch {
+        toast.error("Google bejelentkezési munkamenet helyreállítása sikertelen.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    restoreSessionFromHash();
+  }, [oauthProvider, user, setSessionFromTokens]);
 
   // Handle return from Google OAuth or email activation link
   useEffect(() => {
