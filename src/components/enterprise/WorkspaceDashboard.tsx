@@ -145,175 +145,178 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto p-4">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="flex overflow-x-auto w-full justify-start gap-1 h-auto flex-nowrap p-1">
-            {canView('members') && (
-              <TabsTrigger value="members" className="gap-1">
-                <Users className="h-4 w-4" /> Tagok
-              </TabsTrigger>
-            )}
-            {hasCalendarAccess && (
-              <TabsTrigger value="calendar" className="gap-1">
-                <CalendarDays className="h-4 w-4" /> Naptár
-              </TabsTrigger>
-            )}
-            {hasRequestsAccess && (
-              <TabsTrigger value="requests" className="gap-1">
-                <FileText className="h-4 w-4" /> Kérelmek
-              </TabsTrigger>
-            )}
-            <TabsTrigger value="resources" className="gap-1">
-              <Briefcase className="h-4 w-4" /> Erőforrások
-            </TabsTrigger>
-            {canView('rules') && (
-              <TabsTrigger value="rules" className="gap-1">
-                <ShieldAlert className="h-4 w-4" /> Szabályok
-              </TabsTrigger>
-            )}
-            {canView('notifications') && (
-              <TabsTrigger value="notifications" className="gap-1">
-                <Bell className="h-4 w-4" /> Értesítések
-              </TabsTrigger>
-            )}
-            {(canView('reports') || canView('audit') || canView('export')) && (
-              <TabsTrigger value="reports-audit" className="gap-1">
-                <BarChart3 className="h-4 w-4" /> Riportok és Audit
-              </TabsTrigger>
-            )}
-            {canView('settings') && (
-              <TabsTrigger value="settings" className="gap-1">
-                <Settings className="h-4 w-4" /> Beállítások
-              </TabsTrigger>
-            )}
-          </TabsList>
-
-          {canView('members') && (
-            <TabsContent value="members" className="space-y-3">
-              {canView('invitations') && (
-                <InvitationsPanel workspaceId={workspace.id} isAdmin={canEdit('invitations')} />
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <div className="sticky top-[57px] z-20 bg-background/95 backdrop-blur border-b px-4">
+          <div className="max-w-5xl mx-auto">
+            <TabsList className="flex overflow-x-auto w-full justify-start gap-1 h-auto flex-nowrap p-1 bg-transparent rounded-none border-0 shadow-none">
+              {canView('members') && (
+                <TabsTrigger value="members" className="gap-1">
+                  <Users className="h-4 w-4" /> Tagok
+                </TabsTrigger>
               )}
-              <MemberList workspaceId={workspace.id} userId={userId} userRole={userRole} />
-            </TabsContent>
-          )}
+              {hasCalendarAccess && (
+                <TabsTrigger value="calendar" className="gap-1">
+                  <CalendarDays className="h-4 w-4" /> Naptár
+                </TabsTrigger>
+              )}
+              {hasRequestsAccess && (
+                <TabsTrigger value="requests" className="gap-1">
+                  <FileText className="h-4 w-4" /> Kérelmek
+                </TabsTrigger>
+              )}
+              <TabsTrigger value="resources" className="gap-1">
+                <Briefcase className="h-4 w-4" /> Erőforrások
+              </TabsTrigger>
+              {canView('rules') && (
+                <TabsTrigger value="rules" className="gap-1">
+                  <ShieldAlert className="h-4 w-4" /> Szabályok
+                </TabsTrigger>
+              )}
+              {canView('notifications') && (
+                <TabsTrigger value="notifications" className="gap-1">
+                  <Bell className="h-4 w-4" /> Értesítések
+                </TabsTrigger>
+              )}
+              {(canView('reports') || canView('audit') || canView('export')) && (
+                <TabsTrigger value="reports-audit" className="gap-1">
+                  <BarChart3 className="h-4 w-4" /> Riportok és Audit
+                </TabsTrigger>
+              )}
+              {canView('settings') && (
+                <TabsTrigger value="settings" className="gap-1">
+                  <Settings className="h-4 w-4" /> Beállítások
+                </TabsTrigger>
+              )}
+            </TabsList>
+          </div>
+        </div>
 
-          {hasCalendarAccess && (
-            <TabsContent value="calendar" className="space-y-3">
-              <Tabs defaultValue="calendar-main" className="space-y-3">
-                <TabsList className="grid grid-cols-4 w-full sm:w-auto h-auto">
-                  <TabsTrigger value="calendar-main">Naptár</TabsTrigger>
-                  <TabsTrigger value="calendar-timeline">Idővonal</TabsTrigger>
-                  <TabsTrigger value="calendar-coverage">Kapacitástervező</TabsTrigger>
-                  <TabsTrigger value="calendar-annual">Éves nézet</TabsTrigger>
-                </TabsList>
+        <main className="max-w-5xl mx-auto p-4">
+          <div className="space-y-4">
+            {canView('members') && (
+              <TabsContent value="members" className="space-y-3">
+                {canView('invitations') && (
+                  <InvitationsPanel workspaceId={workspace.id} isAdmin={canEdit('invitations')} />
+                )}
+                <MemberList workspaceId={workspace.id} userId={userId} userRole={userRole} />
+              </TabsContent>
+            )}
 
-                <TabsContent value="calendar-main" className="space-y-3">
-                  <LeaveCalendar
-                    workspaceId={workspace.id}
-                    onNavigateTab={setActiveTab}
-                    showLeaveDays={canView('calendar_leave_days')}
-                    showCoverage={canView('calendar_coverage')}
-                    showRequests={canView('calendar_requests')}
-                    showConflicts={canView('calendar_conflicts')}
-                  />
-                  {/* Secondary info widgets — supplementary, below primary calendar */}
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-                    <BirthdayAnniversaryWidget workspaceId={workspace.id} />
-                    <AnnualTrendChart workspaceId={workspace.id} />
-                  </div>
-                </TabsContent>
+            {hasCalendarAccess && (
+              <TabsContent value="calendar" className="space-y-3">
+                <Tabs defaultValue="calendar-main" className="space-y-3">
+                  <TabsList className="grid grid-cols-4 w-full sm:w-auto h-auto">
+                    <TabsTrigger value="calendar-main">Naptár</TabsTrigger>
+                    <TabsTrigger value="calendar-timeline">Idővonal</TabsTrigger>
+                    <TabsTrigger value="calendar-coverage">Kapacitástervező</TabsTrigger>
+                    <TabsTrigger value="calendar-annual">Éves nézet</TabsTrigger>
+                  </TabsList>
 
-                <TabsContent value="calendar-timeline" className="space-y-3">
-                  <TimelineView
-                    workspaceId={workspace.id}
-                    onFilteredUsersChange={(userIds, range) =>
-                      setTimelineReport({ userIds, range })
-                    }
-                  />
-                  {timelineReport && timelineReport.userIds.length > 0 && (
-                    <SkillCapacityReport
+                  <TabsContent value="calendar-main" className="space-y-3">
+                    <LeaveCalendar
                       workspaceId={workspace.id}
-                      filteredUserIds={timelineReport.userIds}
-                      range={timelineReport.range}
+                      onNavigateTab={setActiveTab}
+                      showLeaveDays={canView('calendar_leave_days')}
+                      showCoverage={canView('calendar_coverage')}
+                      showRequests={canView('calendar_requests')}
+                      showConflicts={canView('calendar_conflicts')}
                     />
-                  )}
-                </TabsContent>
+                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                      <BirthdayAnniversaryWidget workspaceId={workspace.id} />
+                      <AnnualTrendChart workspaceId={workspace.id} />
+                    </div>
+                  </TabsContent>
 
-                <TabsContent value="calendar-coverage">
-                  <CoveragePlannerView
-                    workspaceId={workspace.id}
-                    userId={userId}
-                  />
-                </TabsContent>
+                  <TabsContent value="calendar-timeline" className="space-y-3">
+                    <TimelineView
+                      workspaceId={workspace.id}
+                      onFilteredUsersChange={(userIds, range) =>
+                        setTimelineReport({ userIds, range })
+                      }
+                    />
+                    {timelineReport && timelineReport.userIds.length > 0 && (
+                      <SkillCapacityReport
+                        workspaceId={workspace.id}
+                        filteredUserIds={timelineReport.userIds}
+                        range={timelineReport.range}
+                      />
+                    )}
+                  </TabsContent>
 
-                <TabsContent value="calendar-annual">
-                  <AnnualLeaveGrid
-                    workspaceId={workspace.id}
-                    userId={userId}
-                    allMembers={allMembers}
-                    isAdmin={isAdmin}
-                  />
-                </TabsContent>
-              </Tabs>
+                  <TabsContent value="calendar-coverage">
+                    <CoveragePlannerView
+                      workspaceId={workspace.id}
+                      userId={userId}
+                    />
+                  </TabsContent>
+
+                  <TabsContent value="calendar-annual">
+                    <AnnualLeaveGrid
+                      workspaceId={workspace.id}
+                      userId={userId}
+                      allMembers={allMembers}
+                      isAdmin={isAdmin}
+                    />
+                  </TabsContent>
+                </Tabs>
+              </TabsContent>
+            )}
+
+            {hasRequestsAccess && (
+              <TabsContent value="requests">
+                <RequestsAndApprovalsTab
+                  workspaceId={workspace.id}
+                  userId={userId}
+                  userRole={userRole}
+                  isAdmin={isAdmin}
+                  canApprove={canEdit('approvals')}
+                  canOverride={canEdit('admin_override')}
+                  canSubmit={canEdit('leave_requests_submit')}
+                  canViewOwn={canView('requests_own')}
+                  canViewTeam={canView('requests_team')}
+                />
+              </TabsContent>
+            )}
+
+            <TabsContent value="resources">
+              <ResourcesTab workspaceId={workspace.id} userId={userId} isAdmin={isAdmin} />
             </TabsContent>
-          )}
 
-          {hasRequestsAccess && (
-            <TabsContent value="requests">
-              <RequestsAndApprovalsTab
-                workspaceId={workspace.id}
-                userId={userId}
-                userRole={userRole}
-                isAdmin={isAdmin}
-                canApprove={canEdit('approvals')}
-                canOverride={canEdit('admin_override')}
-                canSubmit={canEdit('leave_requests_submit')}
-                canViewOwn={canView('requests_own')}
-                canViewTeam={canView('requests_team')}
-              />
-            </TabsContent>
-          )}
+            {canView('rules') && (
+              <TabsContent value="rules">
+                <div className="space-y-6">
+                  <ApprovalChainManager workspaceId={workspace.id} />
+                  <LeaveTypeManager workspaceId={workspace.id} />
+                  <HolidayManager workspaceId={workspace.id} />
+                  <CompanyLeaveDayManager workspaceId={workspace.id} userId={userId} />
+                  <BlockedDateManager workspaceId={workspace.id} userId={userId} />
+                  <DailyRuleManager workspaceId={workspace.id} userId={userId} />
+                  <OfficeCoverageRuleManager workspaceId={workspace.id} userId={userId} />
+                  <RuleTemplateLibrary workspaceId={workspace.id} userId={userId} />
+                </div>
+              </TabsContent>
+            )}
 
+            {canView('notifications') && (
+              <TabsContent value="notifications">
+                <EnterpriseNotifications workspaceId={workspace.id} userId={userId} />
+              </TabsContent>
+            )}
 
+            {(canView('reports') || canView('audit') || canView('export')) && (
+              <TabsContent value="reports-audit">
+                <ReportsAndAuditTab workspaceId={workspace.id} userId={userId} />
+              </TabsContent>
+            )}
 
-          <TabsContent value="resources">
-            <ResourcesTab workspaceId={workspace.id} userId={userId} isAdmin={isAdmin} />
-          </TabsContent>
-
-          {canView('rules') && (
-            <TabsContent value="rules">
-              <div className="space-y-6">
-                <ApprovalChainManager workspaceId={workspace.id} />
-                <LeaveTypeManager workspaceId={workspace.id} />
-                <HolidayManager workspaceId={workspace.id} />
-                <CompanyLeaveDayManager workspaceId={workspace.id} userId={userId} />
-                <BlockedDateManager workspaceId={workspace.id} userId={userId} />
-                <DailyRuleManager workspaceId={workspace.id} userId={userId} />
-                <OfficeCoverageRuleManager workspaceId={workspace.id} userId={userId} />
-                <RuleTemplateLibrary workspaceId={workspace.id} userId={userId} />
-              </div>
-            </TabsContent>
-          )}
-
-          {canView('notifications') && (
-            <TabsContent value="notifications">
-              <EnterpriseNotifications workspaceId={workspace.id} userId={userId} />
-            </TabsContent>
-          )}
-
-          {(canView('reports') || canView('audit') || canView('export')) && (
-            <TabsContent value="reports-audit">
-              <ReportsAndAuditTab workspaceId={workspace.id} userId={userId} />
-            </TabsContent>
-          )}
-
-          {canView('settings') && (
-            <TabsContent value="settings">
-              <WorkspaceSettings workspace={workspace} userRole={userRole} userId={userId} onRefresh={onRefresh} />
-            </TabsContent>
-          )}
-        </Tabs>
-      </main>
+            {canView('settings') && (
+              <TabsContent value="settings">
+                <WorkspaceSettings workspace={workspace} userRole={userRole} userId={userId} onRefresh={onRefresh} canViewPermissionConfig={userRole === 'owner' || canView('permission_config')} />
+              </TabsContent>
+            )}
+          </div>
+        </main>
+      </Tabs>
 
       <InviteMemberDialog
         open={showInvite}
@@ -330,7 +333,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
           member={myMembership}
           workspaceId={workspace.id}
           allMembers={allMembers}
-          isAdmin={false}
+          isAdmin={true}
           showEmail={true}
         />
       )}
@@ -508,7 +511,7 @@ function InvitationList({ workspaceId, isAdmin }: { workspaceId: string; isAdmin
 }
 
 // ===== Workspace Settings =====
-function WorkspaceSettings({ workspace, userRole, userId, onRefresh }: { workspace: Workspace; userRole?: string; userId: string; onRefresh: () => void }) {
+function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPermissionConfig = true }: { workspace: Workspace; userRole?: string; userId: string; onRefresh: () => void; canViewPermissionConfig?: boolean }) {
   const [name, setName] = useState(workspace.name);
   const [description, setDescription] = useState(workspace.description || '');
   const [saving, setSaving] = useState(false);
@@ -585,9 +588,11 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh }: { workspa
 
   return (
     <div className="space-y-3">
-      <SettingsSection workspaceId={workspace.id} sectionKey="settings.permissions" icon={<Shield className="h-4 w-4" />} title="Jogosultságok kezelése">
-        <RolePermissionManager workspaceId={workspace.id} userRole={userRole || 'member'} />
-      </SettingsSection>
+      {canViewPermissionConfig && (
+        <SettingsSection workspaceId={workspace.id} sectionKey="settings.permissions" icon={<Shield className="h-4 w-4" />} title="Jogosultságok kezelése">
+          <RolePermissionManager workspaceId={workspace.id} userRole={userRole || 'member'} />
+        </SettingsSection>
+      )}
 
       {/* Pozíciók és Csapatok átkerültek az Erőforrások fülbe (Single Source of Truth) */}
 

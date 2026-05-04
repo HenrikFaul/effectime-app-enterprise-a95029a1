@@ -4,11 +4,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Building2, Settings } from 'lucide-react';
+import { Plus, Settings } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { CreateWorkspaceDialog } from '@/components/enterprise/CreateWorkspaceDialog';
 import { WorkspaceDashboard } from '@/components/enterprise/WorkspaceDashboard';
+import { EffectimeLogo } from '@/components/EffectimeLogo';
 
 interface Workspace {
   id: string;
@@ -40,6 +41,7 @@ export default function Enterprise() {
   const [showCreate, setShowCreate] = useState(false);
   const [acceptingInvite, setAcceptingInvite] = useState(false);
   const [selectedWorkspaceId, setSelectedWorkspaceIdState] = useState<string | null>(null);
+  const [userClearedWorkspace, setUserClearedWorkspace] = useState(false);
 
   const activeTab = searchParams.get('tab') || 'members';
   const inviteToken = searchParams.get('invite') || null;
@@ -47,6 +49,7 @@ export default function Enterprise() {
   const setSelectedWorkspaceId = (id: string | null) => {
     setSelectedWorkspaceIdState(id);
     if (id) {
+      setUserClearedWorkspace(false);
       localStorage.setItem(ACTIVE_WORKSPACE_KEY, id);
       const nextParams = new URLSearchParams(searchParams);
       nextParams.set('tab', 'members');
@@ -56,6 +59,7 @@ export default function Enterprise() {
       return;
     }
 
+    setUserClearedWorkspace(true);
     localStorage.removeItem(ACTIVE_WORKSPACE_KEY);
     const nextParams = new URLSearchParams(searchParams);
     nextParams.delete('invite');
@@ -117,6 +121,9 @@ export default function Enterprise() {
       return;
     }
 
+    // Don't auto-select when the user explicitly navigated back to the selector
+    if (userClearedWorkspace) return;
+
     const wsFromUrl = searchParams.get('ws');
     const storedWorkspaceId = localStorage.getItem(ACTIVE_WORKSPACE_KEY);
     const fallbackWorkspaceId = workspaces[0]?.id ?? null;
@@ -138,7 +145,7 @@ export default function Enterprise() {
       if (!nextParams.get('tab')) nextParams.set('tab', 'members');
       setSearchParams(nextParams, { replace: true });
     }
-  }, [workspaces, searchParams, setSearchParams, selectedWorkspaceId]);
+  }, [workspaces, searchParams, setSearchParams, selectedWorkspaceId, userClearedWorkspace]);
 
   useEffect(() => {
     if (!user || !inviteToken || acceptingInvite) return;
@@ -232,10 +239,7 @@ export default function Enterprise() {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur px-4 py-3">
         <div className="flex items-center justify-between max-w-5xl mx-auto">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-semibold">Workspace</h1>
-          </div>
+          <EffectimeLogo size={34} variant="full" />
           <Button onClick={() => setShowCreate(true)} size="sm">
             <Plus className="h-4 w-4 mr-1" /> Új munkaterület
           </Button>
