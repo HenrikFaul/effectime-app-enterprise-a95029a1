@@ -66,6 +66,7 @@ export const STANDALONE_FEATURES: { key: string; label: string }[] = [
   { key: 'audit', label: 'Audit napló' },
   { key: 'export', label: 'Export' },
   { key: 'settings', label: 'Beállítások' },
+  { key: 'permission_config', label: 'Jogosultság konfiguráció' },
   { key: 'admin_override', label: 'Admin felülbírálás' },
   { key: 'resources', label: 'Erőforrások' },
   { key: 'resources_dashboard', label: 'Erőforrás áttekintés' },

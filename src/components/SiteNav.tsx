@@ -1,14 +1,12 @@
 import { Link } from "@tanstack/react-router";
+import { EffectimeLogo } from './EffectimeLogo';
 
 export function SiteNav() {
   return (
     <nav className="sticky top-0 z-50 border-b border-border/60 bg-background/70 backdrop-blur-xl">
       <div className="container mx-auto flex items-center justify-between px-6 py-5 lg:px-8">
         <Link to="/" className="flex items-center gap-2">
-          <span className="inline-block h-7 w-7 rounded-md bg-gradient-to-br from-brand to-primary shadow-lg shadow-primary/20" />
-          <span className="font-display text-xl font-bold tracking-tight text-foreground">
-            Effectime
-          </span>
+          <EffectimeLogo size={36} variant="full" />
         </Link>
 
         <div className="hidden items-center gap-8 text-sm font-medium text-muted-foreground md:flex">
