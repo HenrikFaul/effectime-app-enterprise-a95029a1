@@ -35,15 +35,17 @@ export function TeamManager({ workspaceId, userId }: Props) {
   const fetchData = async () => {
     setLoading(true);
 
-    const [teamsRes, teamRolesRes, membersRes] = await Promise.all([
+    const [teamsRes, teamRolesRes, membersRes, allocRes] = await Promise.all([
       (supabase as any).from('enterprise_teams').select('*').eq('workspace_id', workspaceId).order('name'),
       (supabase as any).from('enterprise_team_roles').select('*').eq('workspace_id', workspaceId),
       supabase.from('enterprise_memberships').select('business_role').eq('workspace_id', workspaceId).in('status', ['active', 'invited']),
+      (supabase as any).from('enterprise_member_role_allocations').select('business_role').eq('workspace_id', workspaceId),
     ]);
 
     const teamRows = (teamsRes.data as any[]) || [];
     const teamRoleRows = (teamRolesRes.data as any[]) || [];
     const memberRows = (membersRes.data as any[]) || [];
+    const allocRows = (allocRes.data as any[]) || [];
 
     // Map roles per team
     const rolesByTeam = new Map<string, string[]>();
@@ -60,9 +62,13 @@ export function TeamManager({ workspaceId, userId }: Props) {
       return { id: t.id, name: t.name, description: t.description, roles, memberCount, max_absent: t.max_absent ?? null, approval_mode: t.approval_mode || 'linear' };
     });
 
-    // Available business roles in this workspace (distinct from memberships)
-    const distinctRoles = Array.from(new Set(memberRows.map(m => m.business_role).filter(Boolean))) as string[];
-    setAvailableRoles(distinctRoles.sort());
+    // Merge both sources: memberships.business_role (legacy) + allocations.business_role (canonical)
+    const roleSet = new Set<string>([
+      ...memberRows.map(m => m.business_role).filter(Boolean),
+      ...allocRows.map((a: any) => a.business_role).filter(Boolean),
+    ]);
+    const distinctRoles = Array.from(roleSet).sort() as string[];
+    setAvailableRoles(distinctRoles);
     setTeams(built);
     setMaxAbsentDraft(Object.fromEntries(built.map(t => [t.id, t.max_absent == null ? '' : String(t.max_absent)])));
     setLoading(false);
