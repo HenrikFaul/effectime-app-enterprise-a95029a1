@@ -1,3 +1,22 @@
+## 2026-05-04 — SPA routing hardening + Auth page world-class redesign
+
+### Fixed — SPA 404 at /auth (P0 production incident)
+- **Root cause**: Cloudflare proxying to origin without Pages-level SPA fallback. Direct navigation to `/auth` returned HTTP 404 plain-text from origin.
+- `public/_redirects`: normalised to single-space format (`/*  /index.html  200`) for maximum Cloudflare Pages / Netlify compatibility.
+- `public/_headers`: added security headers (`X-Frame-Options`, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`) and correct cache directives (`no-cache` for `index.html`, `immutable` for hashed assets).
+- `public/404.html`: existing SPA redirect script confirmed correct — captures full path + query + hash into `sessionStorage` and redirects to `/?r=...`; `SpaRedirectHandler` in `App.tsx` restores the route.
+
+### Enhanced — `src/pages/Auth.tsx` — Auth page architectural redesign
+- **Trust badge row** (6 badges): GDPR-kompatibilis, ISO 27001 elvek, Enterprise Ready, 99.9% Uptime SLA, RLS adatelérés, Top SaaS 2026. Colour-coded icon cards with `whileInView` entrance animations.
+- **Comparison matrix** ("Hagyományos eszközök vs. Effectime"): 6-row table with `X`/`Check` icons comparing setup time, approval flow, capacity view, leave balance, audit trail, mobile access. Zero Lorem Ipsum — all copy grounded in actual changelog capabilities.
+- **FAQ expanded**: 3 → 6 professional Q&A items covering daily utility, enterprise structure, smart scheduling wizard, approval customisation, mobile access, and data security.
+- **Calendar mockup legend**: colour legend row added (Elérhető / Szabadság / Betegszabadság).
+- **Workflow step arrows**: `ArrowRight` connector between cards on desktop.
+- **Feature callout pills**: three labelled pills below calendar section copy (Csapatnaptár, Éves nézet, Valós idejű).
+- **Footer**: Terms, Privacy, Support links added.
+- **Micro-interactions**: button hover lift (`hover:-translate-y-0.5`) and shadow-glow on primary CTA; Google button lift on hover; input `focus-visible:ring-primary`.
+- All authentication logic preserved without modification (sign-in, sign-up, OTP verify, forgot-password, Google OAuth, email-activation callback).
+
 ## 2026-04-30 — Production stabilization audit: backend bug fixes
 
 ### Fixed — `src/lib/conflictEngine.ts`

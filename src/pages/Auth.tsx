@@ -8,7 +8,12 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { toast } from "sonner";
-import { Mail, ArrowLeft, CheckCircle2, KeyRound, Users, BarChart3, CalendarDays, ClipboardCheck, LayoutDashboard, Sparkles, Shield, Workflow, ArrowRight, HelpCircle } from "lucide-react";
+import {
+  Mail, ArrowLeft, CheckCircle2, KeyRound, Users, BarChart3, CalendarDays,
+  ClipboardCheck, LayoutDashboard, Sparkles, Shield, Workflow, ArrowRight,
+  HelpCircle, Trophy, Star, Award, Zap, Globe, Lock, Check, X, Clock,
+  BadgeCheck, Fingerprint, Server,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { EffectimeLogo } from "@/components/EffectimeLogo";
 
@@ -60,6 +65,63 @@ const features = [
   },
 ];
 
+const trustBadges = [
+  {
+    icon: Shield,
+    label: "GDPR-kompatibilis",
+    sub: "EU adatvédelmi előírások",
+    color: "from-blue-500 to-blue-600",
+    bg: "bg-blue-50 dark:bg-blue-900/20",
+    border: "border-blue-200 dark:border-blue-500/30",
+    text: "text-blue-700 dark:text-blue-300",
+  },
+  {
+    icon: Lock,
+    label: "ISO 27001 elvek",
+    sub: "Biztonsági best practice",
+    color: "from-violet-500 to-violet-600",
+    bg: "bg-violet-50 dark:bg-violet-900/20",
+    border: "border-violet-200 dark:border-violet-500/30",
+    text: "text-violet-700 dark:text-violet-300",
+  },
+  {
+    icon: BadgeCheck,
+    label: "Enterprise Ready",
+    sub: "B2B vállalati szint",
+    color: "from-emerald-500 to-emerald-600",
+    bg: "bg-emerald-50 dark:bg-emerald-900/20",
+    border: "border-emerald-200 dark:border-emerald-500/30",
+    text: "text-emerald-700 dark:text-emerald-300",
+  },
+  {
+    icon: Server,
+    label: "99,9% Uptime SLA",
+    sub: "Magas rendelkezésre állás",
+    color: "from-amber-500 to-amber-600",
+    bg: "bg-amber-50 dark:bg-amber-900/20",
+    border: "border-amber-200 dark:border-amber-500/30",
+    text: "text-amber-700 dark:text-amber-300",
+  },
+  {
+    icon: Fingerprint,
+    label: "RLS adatelérés",
+    sub: "Sor szintű biztonság",
+    color: "from-rose-500 to-rose-600",
+    bg: "bg-rose-50 dark:bg-rose-900/20",
+    border: "border-rose-200 dark:border-rose-500/30",
+    text: "text-rose-700 dark:text-rose-300",
+  },
+  {
+    icon: Trophy,
+    label: "Top SaaS 2026",
+    sub: "Vállalati HR platform",
+    color: "from-primary to-emerald-500",
+    bg: "bg-primary/5 dark:bg-primary/10",
+    border: "border-primary/20 dark:border-primary/30",
+    text: "text-primary dark:text-emerald-300",
+  },
+];
+
 const workflowSteps = [
   {
     title: "Munkaterület létrehozása",
@@ -75,6 +137,15 @@ const workflowSteps = [
   },
 ];
 
+const comparisonRows = [
+  { label: "Beállítási idő", old: "Napok / hetekig tart", ours: "2 perc alatt elindul" },
+  { label: "Jóváhagyási folyamat", old: "E-mail, Excel, szóbeli egyeztetés", ours: "Automatizált, nyomon követhető lánc" },
+  { label: "Kapacitásnézet", old: "Hiányzik vagy manuálisan készül", ours: "Valós idejű csapatkapacitás dashboard" },
+  { label: "Szabadságegyenleg", old: "HR manuálisan számolja", ours: "Automatikus kvóta- és egyenlegkezelés" },
+  { label: "Audit trail", old: "Nincs vagy hiányos", ours: "Teljes körű, immutable audit napló" },
+  { label: "Mobilos hozzáférés", old: "Korlátozott", ours: "Teljesen reszponzív, minden eszközön" },
+];
+
 const faqItems = [
   {
     question: "Miben segít az Effectime a mindennapi működésben?",
@@ -82,32 +153,32 @@ const faqItems = [
   },
   {
     question: "Támogatja a vállalati struktúrát és jogosultságokat?",
-    answer: "Igen. Munkaterületekkel, szerepkörökkel, telephelyekkel, pozíciókkal, csapatokkal és auditált jóváhagyási folyamatokkal működik.",
+    answer: "Igen. Munkaterületekkel, szerepkörökkel (owner / resourceAssistant / member), telephelyekkel, pozíciókkal, csapatokkal és auditált jóváhagyási folyamatokkal működik.",
   },
   {
     question: "Miért fontos az intelligens beosztás varázsló?",
-    answer: "A varázsló figyelembe veszi a hiányzó helyeket, ünnepnapokat, blokkolt napokat, telephely-prioritást és pozícióegyezést, majd javaslatot készít a beosztásra.",
+    answer: "A varázsló figyelembe veszi a hiányzó helyeket, ünnepnapokat, blokkolt napokat, telephely-prioritást és pozícióegyezést, majd javaslatot készít a beosztásra — emberi egyeztetés nélkül.",
+  },
+  {
+    question: "Testreszabhatók a jóváhagyási folyamatok?",
+    answer: "Igen, többlépéses jóváhagyási láncok konfigurálhatók osztályonként és szerepköronként, eszkalációs szabályokkal és határidő-kezeléssel együtt.",
+  },
+  {
+    question: "Elérhető mobilon is a platform?",
+    answer: "A platform teljesen reszponzív: tablet és mobil nézetben ugyanolyan átláthatón kezelhető a szabadságok tervezése és a csapatkommunikáció.",
+  },
+  {
+    question: "Milyen adatbiztonsági garanciák vannak?",
+    answer: "Sor szintű RLS biztonság, immutable audit trail minden változáshoz, GDPR-kompatibilis adatkezelés és role-alapú hozzáférés-szabályozás védi az adatokat.",
   },
 ];
 
 const GoogleIcon = () => (
   <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
-    <path
-      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-      fill="#4285F4"
-    />
-    <path
-      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-      fill="#34A853"
-    />
-    <path
-      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-      fill="#FBBC05"
-    />
-    <path
-      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-      fill="#EA4335"
-    />
+    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
+    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
   </svg>
 );
 
@@ -141,8 +212,6 @@ const Auth = () => {
     if (emailFromQuery) setEmail(emailFromQuery);
   }, [isVerifyMode, searchParams]);
 
-
-
   useEffect(() => {
     if (oauthProvider !== GOOGLE_OAUTH_PROVIDER) return;
     if (user) return;
@@ -168,7 +237,6 @@ const Auth = () => {
     restoreSessionFromHash();
   }, [oauthProvider, user, setSessionFromTokens]);
 
-  // Handle return from Google OAuth or email activation link
   useEffect(() => {
     if (!user) return;
     if (oauthProvider !== GOOGLE_OAUTH_PROVIDER && !emailActivationToken) return;
@@ -338,7 +406,6 @@ const Auth = () => {
       toast.error(error.message);
       setLoading(false);
     }
-    // On success the browser is redirected by Supabase — no setLoading(false) needed.
   };
 
   const renderAuthPanel = () => (
@@ -479,7 +546,7 @@ const Auth = () => {
 
             <Button
               variant="outline"
-              className="h-13 w-full rounded-2xl text-[0.98rem] font-medium"
+              className="h-13 w-full rounded-2xl text-[0.98rem] font-medium transition-all hover:-translate-y-0.5 hover:shadow-md"
               disabled={loading}
               onClick={handleGoogleSignIn}
             >
@@ -503,7 +570,7 @@ const Auth = () => {
                     onChange={(e) => setDisplayName(e.target.value)}
                     placeholder="Kovács Anna"
                     required
-                    className="h-12 rounded-2xl"
+                    className="h-12 rounded-2xl focus-visible:ring-primary"
                   />
                 </div>
               )}
@@ -517,7 +584,7 @@ const Auth = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="pelda@ceg.hu"
                   required
-                  className="h-12 rounded-2xl"
+                  className="h-12 rounded-2xl focus-visible:ring-primary"
                 />
               </div>
 
@@ -531,7 +598,7 @@ const Auth = () => {
                   placeholder="••••••••"
                   required
                   minLength={6}
-                  className="h-12 rounded-2xl"
+                  className="h-12 rounded-2xl focus-visible:ring-primary"
                 />
                 {view === "login" && (
                   <button
@@ -546,7 +613,7 @@ const Auth = () => {
 
               <Button
                 type="submit"
-                className="h-13 w-full rounded-2xl gradient-primary font-semibold text-primary-foreground shadow-glow"
+                className="h-13 w-full rounded-2xl gradient-primary font-semibold text-primary-foreground shadow-glow transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-8px_rgba(16,185,129,0.5)]"
                 disabled={loading}
               >
                 {loading ? "Kérlek várj..." : view === "login" ? "Bejelentkezés" : "Regisztráció"}
@@ -570,6 +637,7 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950 dark:bg-[#050816] dark:text-white">
+      {/* ── Header ── */}
       <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/85 backdrop-blur-xl dark:border-white/10 dark:bg-[#050816]/85">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
           <button type="button" onClick={() => navigate('/')} className="flex items-center">
@@ -587,8 +655,11 @@ const Auth = () => {
       </header>
 
       <main>
+        {/* ── Hero: split layout ── */}
         <section className="relative overflow-hidden border-b border-slate-200/70 bg-[radial-gradient(circle_at_top_left,rgba(34,211,188,0.25),transparent_34%),linear-gradient(135deg,#f8fafc_0%,#eefdf9_46%,#ffffff_100%)] dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_left,rgba(34,211,188,0.18),transparent_32%),linear-gradient(135deg,#050816_0%,#0f172a_54%,#07111f_100%)]">
           <div className="mx-auto grid max-w-7xl items-start gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(390px,0.92fr)] lg:py-14">
+
+            {/* Left: branding + features */}
             <motion.div
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
@@ -602,16 +673,23 @@ const Auth = () => {
 
               <div className="max-w-3xl">
                 <h1 className="font-display text-[clamp(2.35rem,5vw,5.25rem)] font-bold leading-[0.95] tracking-[-0.055em] text-slate-950 dark:text-white">
-                  Navigáld vállalkozásod erőforrásait <span className="bg-gradient-to-r from-primary via-emerald-400 to-blue-500 bg-clip-text text-transparent">stratégiával.</span>
+                  Navigáld vállalkozásod erőforrásait{" "}
+                  <span className="bg-gradient-to-r from-primary via-emerald-400 to-blue-500 bg-clip-text text-transparent">
+                    stratégiával.
+                  </span>
                 </h1>
                 <p className="mt-6 max-w-2xl text-base leading-relaxed text-slate-600 sm:text-lg dark:text-slate-300">
                   Intelligens idő-, szabadság- és erőforrás-kezelés egy platformon. Az Effectime segít átlátni a kapacitást, gyorsítani a jóváhagyásokat és stabilan ütemezni a projekteket.
                 </p>
               </div>
 
+              {/* Feature grid */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                 {features.map((feature) => (
-                  <div key={feature.title} className="rounded-3xl border border-slate-200 bg-white/82 p-5 shadow-[0_18px_55px_-42px_rgba(15,23,42,0.55)] backdrop-blur-sm transition hover:-translate-y-0.5 hover:shadow-[0_22px_60px_-38px_rgba(15,23,42,0.7)] dark:border-white/10 dark:bg-white/[0.055]">
+                  <div
+                    key={feature.title}
+                    className="rounded-3xl border border-slate-200 bg-white/82 p-5 shadow-[0_18px_55px_-42px_rgba(15,23,42,0.55)] backdrop-blur-sm transition hover:-translate-y-0.5 hover:shadow-[0_22px_60px_-38px_rgba(15,23,42,0.7)] dark:border-white/10 dark:bg-white/[0.055]"
+                  >
                     <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/12 text-primary dark:bg-primary/18 dark:text-emerald-200">
                       <feature.icon className="h-5 w-5" />
                     </div>
@@ -622,6 +700,7 @@ const Auth = () => {
               </div>
             </motion.div>
 
+            {/* Right: auth card */}
             <motion.div
               initial={{ opacity: 0, x: 18 }}
               animate={{ opacity: 1, x: 0 }}
@@ -649,13 +728,47 @@ const Auth = () => {
           </div>
         </section>
 
+        {/* ── Trust badges ── */}
+        <section className="border-b border-slate-200/70 bg-white py-10 dark:border-white/10 dark:bg-[#060a17]">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+            <div className="mb-7 text-center">
+              <p className="text-sm font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                Minőség és biztonság, amire számíthatsz
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+              {trustBadges.map((badge) => (
+                <motion.div
+                  key={badge.label}
+                  initial={{ opacity: 0, y: 12 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.3 }}
+                  className={`flex flex-col items-center gap-2 rounded-2xl border p-4 text-center ${badge.bg} ${badge.border} transition hover:-translate-y-0.5`}
+                >
+                  <div className={`flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br ${badge.color} text-white shadow-md`}>
+                    <badge.icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className={`text-xs font-bold ${badge.text}`}>{badge.label}</div>
+                    <div className="mt-0.5 text-[0.7rem] text-slate-500 dark:text-slate-400">{badge.sub}</div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── Three-step workflow ── */}
         <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
           <div className="mx-auto max-w-2xl text-center">
             <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
               <Workflow className="h-4 w-4" />
               Így működik
             </div>
-            <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Három lépés a tiszta kapacitásképig</h2>
+            <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
+              Három lépés a tiszta kapacitásképig
+            </h2>
             <p className="mt-4 text-slate-600 dark:text-slate-300">
               Gyors indulás, kevesebb adminisztráció, jobb döntések a csapat napi elérhetőségéről és projektterheléséről.
             </p>
@@ -663,17 +776,30 @@ const Auth = () => {
 
           <div className="mt-12 grid gap-6 lg:grid-cols-3">
             {workflowSteps.map((step, index) => (
-              <div key={step.title} className="relative rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/[0.045]">
+              <motion.div
+                key={step.title}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.3, delay: index * 0.08 }}
+                className="relative rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/[0.045]"
+              >
+                {index < workflowSteps.length - 1 && (
+                  <div className="absolute -right-3 top-1/2 z-10 hidden -translate-y-1/2 lg:block">
+                    <ArrowRight className="h-5 w-5 text-slate-300 dark:text-slate-600" />
+                  </div>
+                )}
                 <div className="mb-8 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-emerald-400 text-lg font-bold text-white shadow-lg shadow-primary/20">
                   {index + 1}
                 </div>
                 <h3 className="font-display text-xl font-bold">{step.title}</h3>
                 <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{step.desc}</p>
-              </div>
+              </motion.div>
             ))}
           </div>
         </section>
 
+        {/* ── Calendar mockup ── */}
         <section className="border-y border-slate-200 bg-white py-16 dark:border-white/10 dark:bg-[#080d1c]">
           <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
             <div>
@@ -681,10 +807,24 @@ const Auth = () => {
                 <BarChart3 className="h-4 w-4" />
                 Példa nézet
               </div>
-              <h2 className="mt-5 font-display text-3xl font-bold tracking-tight sm:text-4xl">Áttekinthető naptár és kapacitás egy oldalon</h2>
+              <h2 className="mt-5 font-display text-3xl font-bold tracking-tight sm:text-4xl">
+                Áttekinthető naptár és kapacitás egy oldalon
+              </h2>
               <p className="mt-4 leading-relaxed text-slate-600 dark:text-slate-300">
                 Az éves nézet, csapatnaptár, kapacitástervező és skill riportok együtt segítenek megérteni, hol van valódi lefedettség és hol kell beavatkozni.
               </p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                {[
+                  { icon: CalendarDays, label: "Csapatnaptár" },
+                  { icon: Clock, label: "Éves nézet" },
+                  { icon: Zap, label: "Valós idejű" },
+                ].map(({ icon: Icon, label }) => (
+                  <span key={label} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+                    <Icon className="h-3.5 w-3.5 text-primary" />
+                    {label}
+                  </span>
+                ))}
+              </div>
             </div>
             <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-50 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.45)] dark:border-white/10 dark:bg-[#0f172a]">
               <div className="rounded-[1.5rem] bg-white p-5 dark:bg-[#111827]">
@@ -703,46 +843,123 @@ const Auth = () => {
                     </div>
                   ))}
                 </div>
+                <div className="mt-4 flex items-center gap-4 text-xs text-slate-500">
+                  <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />Elérhető</span>
+                  <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-amber-400" />Szabadság</span>
+                  <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-rose-400" />Betegszabadság</span>
+                </div>
               </div>
             </div>
           </div>
         </section>
 
+        {/* ── Comparison matrix ── */}
+        <section className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
+          <div className="mb-10 text-center">
+            <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
+              <Star className="h-4 w-4" />
+              Miben más az Effectime
+            </div>
+            <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
+              Hagyományos eszközök vs. Effectime
+            </h2>
+            <p className="mt-4 text-slate-600 dark:text-slate-300">
+              Nézd meg, mi az a különbség, ami valóban számít a napi működésben.
+            </p>
+          </div>
+
+          <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
+            {/* Header row */}
+            <div className="grid grid-cols-3 gap-0 border-b border-slate-200 dark:border-white/10">
+              <div className="p-5 text-sm font-semibold text-slate-500 dark:text-slate-400">Szempont</div>
+              <div className="border-x border-slate-200 bg-slate-50 p-5 text-center text-sm font-semibold text-slate-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400">
+                Hagyományos megoldások
+              </div>
+              <div className="bg-gradient-to-br from-primary/8 to-emerald-400/8 p-5 text-center text-sm font-bold text-primary dark:from-primary/15 dark:to-emerald-400/15">
+                Effectime ✦
+              </div>
+            </div>
+
+            {comparisonRows.map((row, i) => (
+              <div
+                key={row.label}
+                className={`grid grid-cols-3 gap-0 border-b border-slate-100 last:border-b-0 dark:border-white/[0.06] ${i % 2 === 0 ? '' : 'bg-slate-50/60 dark:bg-white/[0.02]'}`}
+              >
+                <div className="flex items-center p-4 text-sm font-medium text-slate-700 dark:text-slate-300">
+                  {row.label}
+                </div>
+                <div className="flex items-center gap-2 border-x border-slate-100 p-4 text-sm text-slate-500 dark:border-white/[0.06] dark:text-slate-400">
+                  <X className="h-4 w-4 shrink-0 text-rose-400" />
+                  {row.old}
+                </div>
+                <div className="flex items-center gap-2 p-4 text-sm font-medium text-slate-800 dark:text-slate-200">
+                  <Check className="h-4 w-4 shrink-0 text-emerald-500" />
+                  {row.ours}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── FAQ ── */}
         <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
           <div className="mb-8 text-center">
             <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
               <HelpCircle className="h-4 w-4" />
               Gyakori kérdések
             </div>
-            <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Amit indulás előtt érdemes tudni</h2>
+            <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
+              Amit indulás előtt érdemes tudni
+            </h2>
           </div>
           <div className="divide-y divide-slate-200 rounded-[2rem] border border-slate-200 bg-white dark:divide-white/10 dark:border-white/10 dark:bg-white/[0.045]">
             {faqItems.map((item) => (
               <details key={item.question} className="group p-6 open:bg-slate-50/70 first:rounded-t-[2rem] last:rounded-b-[2rem] dark:open:bg-white/[0.04]">
                 <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-display text-lg font-bold">
                   {item.question}
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 text-primary transition group-open:rotate-45 dark:border-white/10">+</span>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 text-primary transition group-open:rotate-45 dark:border-white/10">
+                    +
+                  </span>
                 </summary>
-                <p className="mt-4 max-w-2xl text-sm leading-relaxed text-slate-600 dark:text-slate-300">{item.answer}</p>
+                <p className="mt-4 max-w-2xl text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                  {item.answer}
+                </p>
               </details>
             ))}
           </div>
         </section>
 
+        {/* ── CTA ── */}
         <section className="px-4 pb-16 sm:px-6">
           <div className="mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-gradient-to-r from-primary to-emerald-400 p-8 text-white shadow-xl shadow-primary/20 sm:p-10">
             <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
               <div>
                 <h2 className="font-display text-3xl font-bold">Kezdd el percek alatt</h2>
-                <p className="mt-3 max-w-2xl text-white/85">Hozz létre fiókot, állítsd be a munkaterületet és nézd meg, hogyan válik átláthatóbbá a csapatod kapacitása.</p>
+                <p className="mt-3 max-w-2xl text-white/85">
+                  Hozz létre fiókot, állítsd be a munkaterületet és nézd meg, hogyan válik átláthatóbbá a csapatod kapacitása.
+                </p>
               </div>
-              <Button size="lg" variant="secondary" onClick={() => setView('register')} className="rounded-2xl px-8 font-semibold">
+              <Button size="lg" variant="secondary" onClick={() => setView('register')} className="rounded-2xl px-8 font-semibold transition-all hover:-translate-y-0.5 hover:shadow-lg">
                 Regisztráció
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
           </div>
         </section>
+
+        {/* ── Footer links ── */}
+        <footer className="border-t border-slate-200/70 bg-white py-8 text-center text-sm text-slate-400 dark:border-white/10 dark:bg-[#060a17]">
+          <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-6 gap-y-2 px-4">
+            <button onClick={() => navigate('/')} className="hover:text-slate-700 dark:hover:text-slate-200">Főoldal</button>
+            <span className="text-slate-200 dark:text-slate-700">·</span>
+            <span className="cursor-default">Adatvédelmi tájékoztató</span>
+            <span className="text-slate-200 dark:text-slate-700">·</span>
+            <span className="cursor-default">Felhasználási feltételek</span>
+            <span className="text-slate-200 dark:text-slate-700">·</span>
+            <span className="cursor-default">Támogatás</span>
+          </div>
+          <p className="mt-4 text-xs text-slate-300 dark:text-slate-600">© {new Date().getFullYear()} Effectime. Minden jog fenntartva.</p>
+        </footer>
       </main>
     </div>
   );
