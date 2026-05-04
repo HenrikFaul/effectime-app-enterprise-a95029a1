@@ -200,9 +200,9 @@ export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {})
             Admin Panel
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onClick={() => navigate('/enterprise')} className="rounded-lg cursor-pointer">
+        <DropdownMenuItem onClick={() => navigate('/app')} className="rounded-lg cursor-pointer">
           <Building2 className="mr-2 h-4 w-4" />
-          Enterprise
+          Munkaterület
         </DropdownMenuItem>
         <DropdownMenuItem onClick={toggleTheme} className="rounded-lg cursor-pointer">
           {theme === 'dark' ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}

@@ -44,7 +44,7 @@ export default function Landing() {
   useEffect(() => {
     if (!user) return;
     if (searchParams.get('oauth') !== 'google') return;
-    const redirectTo = searchParams.get('redirect') || '/enterprise';
+    const redirectTo = searchParams.get('redirect') || '/app';
     navigate(redirectTo, { replace: true });
   }, [user, searchParams, navigate]);
 
