@@ -1,186 +1,465 @@
 /*
- * Effectime selectable theme systems.
+ * Effectime selectable visual systems.
  *
- * theme-enterprise: current light/dark enterprise dashboard design from index.css.
- * theme-nebula: Nebula Obsidian, a near-black green/purple SaaS design inspired by src/styles.css.
+ * The runtime logic already adds one of these classes to the document root:
+ * theme-enterprise, theme-nebula, theme-aurora, theme-graphite, theme-sunrise, theme-mono.
  *
- * The app uses Tailwind v3 with HSL CSS variables, so the Nebula palette is exposed in
- * the same h/s/l variable format as the existing design system.
+ * This stylesheet intentionally changes only design tokens and low-risk component surfaces.
+ * It does not alter routing, permissions, validation, data loading, or interaction logic.
  */
 
 @layer base {
   .theme-enterprise {
     color-scheme: light;
+    --brand-logo-start: 172 66% 38%;
+    --brand-logo-mid: 204 84% 54%;
+    --brand-logo-end: 152 76% 52%;
   }
 
   .theme-enterprise.dark {
     color-scheme: dark;
+    --brand-logo-start: 172 66% 50%;
+    --brand-logo-mid: 204 90% 64%;
+    --brand-logo-end: 152 78% 58%;
   }
 
+  /* Template 1: Nebula Strategy — screenshot-aligned premium dark SaaS */
   .theme-nebula {
     color-scheme: dark;
+    --background: 229 48% 8%;
+    --foreground: 225 42% 95%;
 
-    --background: 230 44% 8%;
-    --foreground: 225 36% 94%;
+    --card: 226 36% 13%;
+    --card-foreground: 225 42% 95%;
 
-    --card: 228 36% 13%;
-    --card-foreground: 225 36% 94%;
+    --popover: 228 42% 10%;
+    --popover-foreground: 225 42% 95%;
 
-    --popover: 228 38% 11%;
-    --popover-foreground: 225 36% 94%;
+    --primary: 119 74% 56%;
+    --primary-foreground: 230 48% 8%;
+    --primary-glow: 150 78% 56%;
 
-    --primary: 119 74% 57%;
-    --primary-foreground: 230 44% 8%;
-    --primary-glow: 150 78% 55%;
+    --secondary: 226 34% 16%;
+    --secondary-foreground: 224 32% 88%;
 
-    --secondary: 228 32% 16%;
-    --secondary-foreground: 225 28% 88%;
+    --muted: 227 30% 17%;
+    --muted-foreground: 222 22% 69%;
 
-    --muted: 228 28% 17%;
-    --muted-foreground: 222 20% 68%;
-
-    --accent: 218 86% 61%;
+    --accent: 217 88% 61%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 72% 55%;
+    --destructive: 0 74% 58%;
     --destructive-foreground: 0 0% 100%;
 
     --success: 145 70% 48%;
-    --success-foreground: 230 44% 8%;
+    --success-foreground: 230 48% 8%;
 
     --warning: 38 92% 55%;
-    --warning-foreground: 230 44% 8%;
+    --warning-foreground: 230 48% 8%;
 
     --vote-good: 145 70% 48%;
     --vote-maybe: 38 92% 55%;
-    --vote-bad: 0 72% 55%;
+    --vote-bad: 0 74% 58%;
 
     --border: 225 28% 22%;
     --input: 225 28% 22%;
-    --ring: 119 74% 57%;
+    --ring: 119 74% 56%;
 
     --radius: 1rem;
 
-    --sidebar-background: 230 44% 8%;
-    --sidebar-foreground: 225 28% 88%;
-    --sidebar-primary: 119 74% 57%;
-    --sidebar-primary-foreground: 230 44% 8%;
-    --sidebar-accent: 228 32% 16%;
-    --sidebar-accent-foreground: 225 28% 88%;
+    --sidebar-background: 229 48% 8%;
+    --sidebar-foreground: 224 32% 88%;
+    --sidebar-primary: 119 74% 56%;
+    --sidebar-primary-foreground: 230 48% 8%;
+    --sidebar-accent: 226 34% 16%;
+    --sidebar-accent-foreground: 224 32% 88%;
     --sidebar-border: 225 28% 18%;
-    --sidebar-ring: 119 74% 57%;
+    --sidebar-ring: 119 74% 56%;
 
-    --shadow-card: 0 1px 0 hsl(225 28% 28% / 0.45), 0 18px 60px -32px hsl(0 0% 0% / 0.75);
-    --shadow-elevated: 0 28px 80px -28px hsl(119 74% 57% / 0.22), 0 16px 48px -28px hsl(218 86% 61% / 0.28);
-    --shadow-modal: 0 30px 90px -18px hsl(0 0% 0% / 0.75);
-    --shadow-glow: 0 0 28px hsl(119 74% 57% / 0.28), 0 0 54px hsl(218 86% 61% / 0.14);
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
 
-    --gradient-primary: linear-gradient(135deg, hsl(218 86% 61%), hsl(158 68% 50%), hsl(119 74% 57%));
-    --gradient-accent: linear-gradient(135deg, hsl(258 80% 63%), hsl(218 86% 61%));
-    --gradient-hero: radial-gradient(circle at 50% 0%, hsl(218 86% 61% / 0.18), transparent 35%), radial-gradient(circle at 70% 20%, hsl(119 74% 57% / 0.13), transparent 30%), linear-gradient(180deg, hsl(230 44% 8%), hsl(230 48% 7%));
-    --gradient-surface: linear-gradient(180deg, hsl(228 36% 14%), hsl(230 44% 8%));
+    --shadow-card: 0 1px 0 hsl(225 28% 28% / 0.55), 0 18px 60px -34px hsl(0 0% 0% / 0.82);
+    --shadow-elevated: 0 28px 80px -28px hsl(119 74% 56% / 0.24), 0 16px 48px -28px hsl(217 88% 61% / 0.30);
+    --shadow-modal: 0 30px 90px -18px hsl(0 0% 0% / 0.78);
+    --shadow-glow: 0 0 28px hsl(119 74% 56% / 0.30), 0 0 54px hsl(217 88% 61% / 0.16);
+
+    --gradient-primary: linear-gradient(135deg, hsl(119 74% 56%), hsl(150 78% 56%));
+    --gradient-accent: linear-gradient(135deg, hsl(217 88% 61%), hsl(258 82% 65%));
+    --gradient-hero: radial-gradient(circle at 50% 0%, hsl(217 88% 61% / 0.20), transparent 35%), radial-gradient(circle at 70% 20%, hsl(119 74% 56% / 0.15), transparent 30%), linear-gradient(180deg, hsl(229 48% 8%), hsl(230 52% 7%));
+    --gradient-surface: linear-gradient(180deg, hsl(226 36% 14%), hsl(229 48% 8%));
+    --brand-logo-start: 217 88% 61%;
+    --brand-logo-mid: 152 76% 53%;
+    --brand-logo-end: 119 74% 56%;
   }
 
-  .theme-nebula body {
-    background:
-      radial-gradient(circle at 20% 0%, hsl(218 86% 61% / 0.12), transparent 28rem),
-      radial-gradient(circle at 80% 10%, hsl(119 74% 57% / 0.10), transparent 24rem),
-      hsl(var(--background));
+  /* Template 2: Aurora Focus — bright, calm, high-clarity planning workspace */
+  .theme-aurora {
+    color-scheme: light;
+    --background: 210 56% 97%;
+    --foreground: 226 42% 16%;
+    --card: 0 0% 100%;
+    --card-foreground: 226 42% 16%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 226 42% 16%;
+    --primary: 202 96% 44%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 171 76% 45%;
+    --secondary: 210 44% 93%;
+    --secondary-foreground: 222 32% 24%;
+    --muted: 210 42% 92%;
+    --muted-foreground: 219 18% 43%;
+    --accent: 278 76% 56%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 160 66% 38%;
+    --success-foreground: 0 0% 100%;
+    --warning: 37 92% 50%;
+    --warning-foreground: 30 40% 12%;
+    --vote-good: 160 66% 38%;
+    --vote-maybe: 37 92% 50%;
+    --vote-bad: 0 72% 51%;
+    --border: 214 30% 85%;
+    --input: 214 30% 85%;
+    --ring: 202 96% 44%;
+    --radius: 1.125rem;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 32% 24%;
+    --sidebar-primary: 202 96% 44%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 44% 93%;
+    --sidebar-accent-foreground: 222 32% 24%;
+    --sidebar-border: 214 30% 88%;
+    --sidebar-ring: 202 96% 44%;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --shadow-card: 0 1px 2px hsl(215 35% 25% / 0.06), 0 18px 40px -28px hsl(202 96% 44% / 0.28);
+    --shadow-elevated: 0 24px 70px -34px hsl(202 96% 44% / 0.34), 0 14px 40px -30px hsl(278 76% 56% / 0.24);
+    --shadow-modal: 0 30px 90px -28px hsl(215 35% 25% / 0.30);
+    --shadow-glow: 0 0 30px hsl(171 76% 45% / 0.22);
+    --gradient-primary: linear-gradient(135deg, hsl(202 96% 44%), hsl(171 76% 45%));
+    --gradient-accent: linear-gradient(135deg, hsl(278 76% 56%), hsl(202 96% 54%));
+    --gradient-hero: radial-gradient(circle at 12% 10%, hsl(171 76% 45% / 0.20), transparent 30rem), radial-gradient(circle at 88% 0%, hsl(278 76% 56% / 0.14), transparent 26rem), linear-gradient(180deg, hsl(210 56% 98%), hsl(210 56% 95%));
+    --gradient-surface: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 56% 97%));
+    --brand-logo-start: 202 96% 44%;
+    --brand-logo-mid: 171 76% 45%;
+    --brand-logo-end: 278 76% 56%;
   }
 
-  .theme-nebula .bg-background {
-    background-color: hsl(var(--background));
+  /* Template 3: Graphite Pro — dense, executive, dark operations console */
+  .theme-graphite {
+    color-scheme: dark;
+    --background: 220 16% 10%;
+    --foreground: 210 22% 94%;
+    --card: 220 14% 15%;
+    --card-foreground: 210 22% 94%;
+    --popover: 220 16% 12%;
+    --popover-foreground: 210 22% 94%;
+    --primary: 16 92% 61%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 32 96% 62%;
+    --secondary: 220 12% 19%;
+    --secondary-foreground: 210 18% 88%;
+    --muted: 220 10% 20%;
+    --muted-foreground: 214 13% 72%;
+    --accent: 196 82% 50%;
+    --accent-foreground: 220 16% 10%;
+    --destructive: 0 70% 58%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 146 52% 47%;
+    --success-foreground: 220 16% 10%;
+    --warning: 42 94% 58%;
+    --warning-foreground: 220 16% 10%;
+    --vote-good: 146 52% 47%;
+    --vote-maybe: 42 94% 58%;
+    --vote-bad: 0 70% 58%;
+    --border: 216 11% 26%;
+    --input: 216 11% 26%;
+    --ring: 16 92% 61%;
+    --radius: 0.625rem;
+    --sidebar-background: 220 17% 8%;
+    --sidebar-foreground: 210 18% 88%;
+    --sidebar-primary: 16 92% 61%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 12% 18%;
+    --sidebar-accent-foreground: 210 18% 88%;
+    --sidebar-border: 216 11% 22%;
+    --sidebar-ring: 16 92% 61%;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --shadow-card: 0 1px 0 hsl(0 0% 100% / 0.06), 0 18px 50px -32px hsl(0 0% 0% / 0.86);
+    --shadow-elevated: 0 24px 72px -34px hsl(16 92% 61% / 0.32), 0 16px 52px -36px hsl(196 82% 50% / 0.24);
+    --shadow-modal: 0 32px 90px -22px hsl(0 0% 0% / 0.82);
+    --shadow-glow: 0 0 26px hsl(16 92% 61% / 0.26);
+    --gradient-primary: linear-gradient(135deg, hsl(16 92% 61%), hsl(32 96% 62%));
+    --gradient-accent: linear-gradient(135deg, hsl(196 82% 50%), hsl(16 92% 61%));
+    --gradient-hero: radial-gradient(circle at 10% 0%, hsl(16 92% 61% / 0.18), transparent 30rem), radial-gradient(circle at 90% 12%, hsl(196 82% 50% / 0.14), transparent 26rem), linear-gradient(180deg, hsl(220 16% 10%), hsl(220 18% 8%));
+    --gradient-surface: linear-gradient(180deg, hsl(220 14% 16%), hsl(220 16% 10%));
+    --brand-logo-start: 16 92% 61%;
+    --brand-logo-mid: 32 96% 62%;
+    --brand-logo-end: 196 82% 50%;
   }
 
+  /* Template 4: Sunrise Flow — warm, approachable HR workspace */
+  .theme-sunrise {
+    color-scheme: light;
+    --background: 36 100% 97%;
+    --foreground: 23 48% 18%;
+    --card: 0 0% 100%;
+    --card-foreground: 23 48% 18%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 23 48% 18%;
+    --primary: 16 92% 56%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 43 94% 58%;
+    --secondary: 34 74% 91%;
+    --secondary-foreground: 23 44% 24%;
+    --muted: 34 70% 91%;
+    --muted-foreground: 24 28% 38%;
+    --accent: 43 94% 56%;
+    --accent-foreground: 23 48% 18%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 151 55% 39%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 23 48% 18%;
+    --vote-good: 151 55% 39%;
+    --vote-maybe: 38 92% 50%;
+    --vote-bad: 0 72% 51%;
+    --border: 32 50% 82%;
+    --input: 32 50% 82%;
+    --ring: 16 92% 56%;
+    --radius: 1.35rem;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 23 44% 24%;
+    --sidebar-primary: 16 92% 56%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 34 74% 91%;
+    --sidebar-accent-foreground: 23 44% 24%;
+    --sidebar-border: 32 50% 86%;
+    --sidebar-ring: 16 92% 56%;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --shadow-card: 0 1px 2px hsl(23 48% 18% / 0.07), 0 18px 50px -32px hsl(16 92% 56% / 0.30);
+    --shadow-elevated: 0 26px 76px -34px hsl(16 92% 56% / 0.34), 0 14px 40px -30px hsl(43 94% 56% / 0.24);
+    --shadow-modal: 0 30px 90px -28px hsl(23 48% 18% / 0.32);
+    --shadow-glow: 0 0 30px hsl(43 94% 58% / 0.28);
+    --gradient-primary: linear-gradient(135deg, hsl(16 92% 56%), hsl(43 94% 58%));
+    --gradient-accent: linear-gradient(135deg, hsl(43 94% 58%), hsl(151 55% 39%));
+    --gradient-hero: radial-gradient(circle at 15% 5%, hsl(43 94% 58% / 0.26), transparent 30rem), radial-gradient(circle at 85% 10%, hsl(16 92% 56% / 0.14), transparent 26rem), linear-gradient(180deg, hsl(36 100% 98%), hsl(36 100% 95%));
+    --gradient-surface: linear-gradient(180deg, hsl(0 0% 100%), hsl(36 100% 97%));
+    --brand-logo-start: 16 92% 56%;
+    --brand-logo-mid: 43 94% 58%;
+    --brand-logo-end: 151 55% 39%;
+  }
+
+  /* Template 5: Mono Precision — editorial, minimal, compliance-friendly */
+  .theme-mono {
+    color-scheme: light;
+    --background: 210 20% 99%;
+    --foreground: 216 10% 13%;
+    --card: 0 0% 100%;
+    --card-foreground: 216 10% 13%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 216 10% 13%;
+    --primary: 216 10% 13%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 216 7% 34%;
+    --secondary: 210 14% 93%;
+    --secondary-foreground: 216 10% 13%;
+    --muted: 210 14% 94%;
+    --muted-foreground: 215 7% 40%;
+    --accent: 216 8% 30%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 64% 46%;
+    --destructive-foreground: 0 0% 100%;
+    --success: 152 46% 34%;
+    --success-foreground: 0 0% 100%;
+    --warning: 39 82% 45%;
+    --warning-foreground: 0 0% 100%;
+    --vote-good: 152 46% 34%;
+    --vote-maybe: 39 82% 45%;
+    --vote-bad: 0 64% 46%;
+    --border: 214 15% 84%;
+    --input: 214 15% 84%;
+    --ring: 216 10% 13%;
+    --radius: 0.35rem;
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 216 10% 13%;
+    --sidebar-primary: 216 10% 13%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 14% 93%;
+    --sidebar-accent-foreground: 216 10% 13%;
+    --sidebar-border: 214 15% 84%;
+    --sidebar-ring: 216 10% 13%;
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --shadow-card: 0 1px 0 hsl(216 10% 13% / 0.10), 0 10px 30px -26px hsl(216 10% 13% / 0.32);
+    --shadow-elevated: 0 18px 54px -34px hsl(216 10% 13% / 0.38);
+    --shadow-modal: 0 28px 84px -26px hsl(216 10% 13% / 0.36);
+    --shadow-glow: 0 0 0 1px hsl(216 10% 13% / 0.12);
+    --gradient-primary: linear-gradient(135deg, hsl(216 10% 13%), hsl(216 7% 34%));
+    --gradient-accent: linear-gradient(135deg, hsl(216 8% 30%), hsl(216 10% 13%));
+    --gradient-hero: linear-gradient(180deg, hsl(210 20% 99%), hsl(210 14% 95%));
+    --gradient-surface: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 20% 99%));
+    --brand-logo-start: 216 10% 13%;
+    --brand-logo-mid: 216 7% 34%;
+    --brand-logo-end: 216 10% 13%;
+  }
+
+  html.theme-nebula body,
+  html.theme-aurora body,
+  html.theme-graphite body,
+  html.theme-sunrise body,
+  html.theme-mono body {
+    background: var(--gradient-hero);
+    min-height: 100vh;
+  }
+}
+
+@layer components {
+  /* Shared refinements: premium surfaces without changing component behavior. */
   .theme-nebula .bg-card,
-  .theme-nebula [class*='bg-card'] {
-    background-color: hsl(var(--card) / 0.86);
+  .theme-nebula [class*='bg-card'],
+  .theme-aurora .bg-card,
+  .theme-aurora [class*='bg-card'],
+  .theme-graphite .bg-card,
+  .theme-graphite [class*='bg-card'],
+  .theme-sunrise .bg-card,
+  .theme-sunrise [class*='bg-card'],
+  .theme-mono .bg-card,
+  .theme-mono [class*='bg-card'] {
+    background-image: var(--gradient-surface);
+    box-shadow: var(--shadow-card);
   }
 
   .theme-nebula .border,
-  .theme-nebula [class*='border-border'] {
+  .theme-nebula [class*='border-border'],
+  .theme-graphite .border,
+  .theme-graphite [class*='border-border'] {
     border-color: hsl(var(--border) / 0.82);
   }
 
-  .theme-aurora {
-    --background: 210 55% 98%;
-    --foreground: 225 35% 18%;
-    --card: 0 0% 100%;
-    --card-foreground: 225 35% 18%;
-    --primary: 206 100% 47%;
-    --primary-foreground: 0 0% 100%;
-    --accent: 282 79% 56%;
-    --accent-foreground: 0 0% 100%;
-    --muted: 214 45% 94%;
-    --muted-foreground: 221 20% 40%;
-    --border: 218 26% 85%;
-    --ring: 282 79% 56%;
+  .theme-aurora .border,
+  .theme-aurora [class*='border-border'],
+  .theme-sunrise .border,
+  .theme-sunrise [class*='border-border'],
+  .theme-mono .border,
+  .theme-mono [class*='border-border'] {
+    border-color: hsl(var(--border) / 0.9);
   }
 
-  .theme-graphite {
-    color-scheme: dark;
-    --background: 220 15% 11%;
-    --foreground: 210 20% 93%;
-    --card: 220 14% 15%;
-    --card-foreground: 210 20% 93%;
-    --primary: 14 90% 61%;
-    --primary-foreground: 0 0% 100%;
-    --accent: 197 82% 48%;
-    --accent-foreground: 0 0% 100%;
-    --muted: 220 10% 20%;
-    --muted-foreground: 214 12% 72%;
-    --border: 216 11% 26%;
-    --ring: 14 90% 61%;
+  .theme-nebula button,
+  .theme-aurora button,
+  .theme-graphite button,
+  .theme-sunrise button,
+  .theme-mono button,
+  .theme-nebula a,
+  .theme-aurora a,
+  .theme-graphite a,
+  .theme-sunrise a,
+  .theme-mono a {
+    transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+    transition-duration: 180ms;
+    transition-timing-function: cubic-bezier(0.2, 0, 0, 1);
   }
 
-  .theme-sunrise {
-    --background: 36 100% 98%;
-    --foreground: 22 47% 20%;
-    --card: 0 0% 100%;
-    --card-foreground: 22 47% 20%;
-    --primary: 17 93% 56%;
-    --primary-foreground: 0 0% 100%;
-    --accent: 44 95% 53%;
-    --accent-foreground: 22 47% 20%;
-    --muted: 33 72% 92%;
-    --muted-foreground: 24 28% 37%;
-    --border: 32 50% 82%;
-    --ring: 17 93% 56%;
+  .theme-nebula button:focus-visible,
+  .theme-aurora button:focus-visible,
+  .theme-graphite button:focus-visible,
+  .theme-sunrise button:focus-visible,
+  .theme-mono button:focus-visible,
+  .theme-nebula a:focus-visible,
+  .theme-aurora a:focus-visible,
+  .theme-graphite a:focus-visible,
+  .theme-sunrise a:focus-visible,
+  .theme-mono a:focus-visible,
+  .theme-nebula input:focus-visible,
+  .theme-aurora input:focus-visible,
+  .theme-graphite input:focus-visible,
+  .theme-sunrise input:focus-visible,
+  .theme-mono input:focus-visible,
+  .theme-nebula textarea:focus-visible,
+  .theme-aurora textarea:focus-visible,
+  .theme-graphite textarea:focus-visible,
+  .theme-sunrise textarea:focus-visible,
+  .theme-mono textarea:focus-visible,
+  .theme-nebula select:focus-visible,
+  .theme-aurora select:focus-visible,
+  .theme-graphite select:focus-visible,
+  .theme-sunrise select:focus-visible,
+  .theme-mono select:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: 2px;
   }
 
-  .theme-mono {
-    --background: 210 20% 99%;
-    --foreground: 216 9% 15%;
-    --card: 0 0% 100%;
-    --card-foreground: 216 9% 15%;
-    --primary: 216 9% 15%;
-    --primary-foreground: 0 0% 100%;
-    --accent: 216 7% 32%;
-    --accent-foreground: 0 0% 100%;
-    --muted: 210 15% 94%;
-    --muted-foreground: 215 7% 41%;
-    --border: 214 15% 84%;
-    --ring: 216 9% 15%;
+  .theme-nebula [class*='bg-primary'],
+  .theme-aurora [class*='bg-primary'],
+  .theme-graphite [class*='bg-primary'],
+  .theme-sunrise [class*='bg-primary'],
+  .theme-mono [class*='bg-primary'] {
+    background-image: var(--gradient-primary);
+    box-shadow: var(--shadow-glow);
+  }
+
+  .theme-mono [class*='bg-primary'] {
+    box-shadow: none;
+  }
+
+  .theme-mono .rounded-2xl,
+  .theme-mono .rounded-xl,
+  .theme-mono .rounded-lg {
+    border-radius: var(--radius);
+  }
+
+  .theme-graphite .rounded-2xl,
+  .theme-graphite .rounded-xl,
+  .theme-graphite .rounded-lg {
+    border-radius: calc(var(--radius) + 2px);
+  }
+
+  .theme-sunrise .rounded-2xl,
+  .theme-sunrise .rounded-xl {
+    border-radius: calc(var(--radius) + 10px);
   }
 }
 
 @layer utilities {
   .theme-nebula .glass,
-  .theme-nebula .glass-strong {
+  .theme-nebula .glass-strong,
+  .theme-graphite .glass,
+  .theme-graphite .glass-strong {
     background: hsl(var(--card) / 0.72);
     border: 1px solid hsl(var(--border) / 0.72);
     box-shadow: var(--shadow-card);
   }
 
-  .theme-nebula .text-gradient {
-    background: linear-gradient(90deg, hsl(225 36% 94%), hsl(218 86% 61%), hsl(119 74% 57%));
+  .theme-aurora .glass,
+  .theme-aurora .glass-strong,
+  .theme-sunrise .glass,
+  .theme-sunrise .glass-strong,
+  .theme-mono .glass,
+  .theme-mono .glass-strong {
+    background: hsl(var(--card) / 0.82);
+    border: 1px solid hsl(var(--border) / 0.78);
+    box-shadow: var(--shadow-card);
+  }
+
+  .theme-nebula .text-gradient,
+  .theme-aurora .text-gradient,
+  .theme-graphite .text-gradient,
+  .theme-sunrise .text-gradient,
+  .theme-mono .text-gradient {
+    background: var(--gradient-primary);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
   .nebula-glow {
-    background: radial-gradient(circle at center, hsl(218 86% 61% / 0.45) 0%, hsl(218 86% 61% / 0) 62%);
+    background: radial-gradient(circle at center, hsl(217 88% 61% / 0.45) 0%, hsl(217 88% 61% / 0) 62%);
   }
 
   .nebula-panel {
