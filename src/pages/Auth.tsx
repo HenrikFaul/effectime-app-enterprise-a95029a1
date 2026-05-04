@@ -8,8 +8,9 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { toast } from "sonner";
-import { Mail, ArrowLeft, CheckCircle2, KeyRound, Users, BarChart3, CalendarDays } from "lucide-react";
+import { Mail, ArrowLeft, CheckCircle2, KeyRound, Users, BarChart3, CalendarDays, ClipboardCheck, LayoutDashboard, Sparkles, Shield, Building2, Workflow, ArrowRight, HelpCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { EffectimeLogo } from "@/components/EffectimeLogo";
 
 type AuthView = "login" | "register" | "verify" | "forgot";
 
@@ -26,36 +27,66 @@ const buildAuthRedirectUrl = (redirectPath: string) => {
   return url.toString();
 };
 
-const latinQuotes = [
-  {
-    text: "Tempus una actum pretiosissimum es",
-    cls: "left-[6%] top-[10%] rotate-[-6deg] text-[clamp(0.86rem,0.95vw,0.98rem)] [font-family:'Brush_Script_MT','Segoe_Print','Comic_Sans_MS',cursive]",
-  },
-  {
-    text: "Nihil est pretiosius quam tempus tecum.",
-    cls: "right-[8%] top-[40%] rotate-[4deg] text-[clamp(0.84rem,0.92vw,0.95rem)] [font-family:'Lucida_Handwriting','Segoe_Print','Comic_Sans_MS',cursive]",
-  },
-  {
-    text: "In tempore una acto, amor crescit.",
-    cls: "left-[18%] bottom-[10%] rotate-[-2deg] text-[clamp(0.84rem,0.9vw,0.94rem)] [font-family:'Segoe_Script','Comic_Sans_MS',cursive]",
-  },
-];
-
 const features = [
   {
     icon: CalendarDays,
-    title: "Szabadság & jelenlét kezelés",
-    desc: "Kérelmek, jóváhagyási láncok és naptárintegráció egy helyen.",
+    title: "Egységes csapatnaptár",
+    desc: "Lásd egy nézetben a kollégák elérhetőségét, szabadságokat és projektütemezéseket — automatikus szinkronizációval.",
+  },
+  {
+    icon: ClipboardCheck,
+    title: "Szabadság- és kérelemkezelés",
+    desc: "Egyszerű igénylés, gyors jóváhagyás. Kvóták, féléves egyenlegek és félnapos szabadságok támogatásával.",
+  },
+  {
+    icon: LayoutDashboard,
+    title: "Erőforrás-tervezés",
+    desc: "Vizualizáld csapatod kapacitását, kerüld el a túlterheltséget és tartsd egyensúlyban a projekteket.",
+  },
+  {
+    icon: Sparkles,
+    title: "Intelligens beosztás varázsló",
+    desc: "Automatikus javaslatokat készít szabadságok, ünnepnapok, telephely-prioritás és pozícióegyezés alapján.",
   },
   {
     icon: Users,
-    title: "Csapatkapacitás tervezés",
-    desc: "Valós idejű lefedettség, kvóták és helyettesítési szabályok.",
+    title: "Munkaterületek",
+    desc: "Külön munkaterületek cégegységenként, dedikált tagsággal, szabályokkal és audit traillel.",
   },
   {
-    icon: BarChart3,
-    title: "Riporting & agilis integráció",
-    desc: "Egyéni riportok, ütemezett küldés és Jira-kapcsolat.",
+    icon: CheckCircle2,
+    title: "Jóváhagyási munkafolyamatok",
+    desc: "Átlátható, követhető folyamatok minden kérelemhez. Értesítések, naplózás és exportálás.",
+  },
+];
+
+const workflowSteps = [
+  {
+    title: "Munkaterület létrehozása",
+    desc: "Állítsd be a cégegységeket, telephelyeket, pozíciókat és az alap jogosultságokat.",
+  },
+  {
+    title: "Csapat és szabályok felvétele",
+    desc: "Hívd meg a kollégákat, rendelj hozzá kvótákat, jóváhagyási láncokat és naptárbeállításokat.",
+  },
+  {
+    title: "Kapacitás optimalizálása",
+    desc: "Használd az intelligens beosztás varázslót, riportokat és projekttervezést a napi döntésekhez.",
+  },
+];
+
+const faqItems = [
+  {
+    question: "Miben segít az Effectime a mindennapi működésben?",
+    answer: "Egy helyre hozza a szabadságkérelmeket, jóváhagyásokat, csapatnaptárat, kapacitástervezést és riportokat, így kevesebb kézi egyeztetésre van szükség.",
+  },
+  {
+    question: "Támogatja a vállalati struktúrát és jogosultságokat?",
+    answer: "Igen. Munkaterületekkel, szerepkörökkel, telephelyekkel, pozíciókkal, csapatokkal és auditált jóváhagyási folyamatokkal működik.",
+  },
+  {
+    question: "Miért fontos az intelligens beosztás varázsló?",
+    answer: "A varázsló figyelembe veszi a hiányzó helyeket, ünnepnapokat, blokkolt napokat, telephely-prioritást és pozícióegyezést, majd javaslatot készít a beosztásra.",
   },
 ];
 
@@ -538,112 +569,181 @@ const Auth = () => {
   );
 
   return (
-    <div className="h-screen overflow-hidden bg-background">
-      {/* Desktop layout */}
-      <div className="hidden h-full grid-cols-[minmax(0,0.52fr)_minmax(0,0.48fr)] lg:grid">
-        <section className="h-full overflow-hidden gradient-primary px-[18px] py-[18px] text-primary-foreground">
-          <div className="flex h-full flex-col">
-            <div className="flex items-center gap-3">
-              <div className="flex h-14 w-14 items-center justify-center rounded-[18px] bg-primary-foreground/14 backdrop-blur-sm">
-                <span className="font-display text-2xl font-bold">E</span>
-              </div>
-              <div>
-                <div className="font-display text-[1.8rem] font-bold leading-none">Effectime</div>
-                <div className="text-[0.78rem] font-medium text-primary-foreground/70 tracking-wide uppercase">Enterprise</div>
-              </div>
-            </div>
+    <div className="min-h-screen bg-slate-50 text-slate-950 dark:bg-[#050816] dark:text-white">
+      <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/85 backdrop-blur-xl dark:border-white/10 dark:bg-[#050816]/85">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
+          <button type="button" onClick={() => navigate('/')} className="flex items-center">
+            <EffectimeLogo size={34} variant="full" />
+          </button>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="rounded-xl">
+              Főoldal
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setView(view === 'login' ? 'register' : 'login')} className="rounded-xl">
+              {view === "login" ? "Regisztráció" : "Bejelentkezés"}
+            </Button>
+          </div>
+        </div>
+      </header>
 
-            <div className="mt-5 max-w-[520px]">
-              <h1 className="font-display text-[clamp(1.9rem,2.9vw,3.25rem)] font-bold leading-[0.97] tracking-[-0.04em]">
-                Szervezze meg csapata szabadságát és idejét hatékonyan
-              </h1>
-              <p className="mt-4 max-w-[600px] text-[clamp(0.88rem,0.96vw,1rem)] leading-relaxed text-primary-foreground/82">
-                Kezeld a szabadságkérelmeket, tervezd a csapatkapacitást és generálj riportokat — mindezt egy helyen, a csapatod méretéhez igazítva.
+      <main>
+        <section className="relative overflow-hidden border-b border-slate-200/70 bg-[radial-gradient(circle_at_top_left,rgba(34,211,188,0.25),transparent_34%),linear-gradient(135deg,#f8fafc_0%,#eefdf9_46%,#ffffff_100%)] dark:border-white/10 dark:bg-[radial-gradient(circle_at_top_left,rgba(34,211,188,0.18),transparent_32%),linear-gradient(135deg,#050816_0%,#0f172a_54%,#07111f_100%)]">
+          <div className="mx-auto grid max-w-7xl items-start gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(390px,0.92fr)] lg:py-14">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35 }}
+              className="flex flex-col gap-7"
+            >
+              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-white/80 px-4 py-2 text-sm font-semibold text-primary shadow-sm dark:border-primary/25 dark:bg-white/8 dark:text-emerald-200">
+                <Shield className="h-4 w-4" />
+                Enterprise kapacitáskezelő platform
+              </div>
+
+              <div className="max-w-3xl">
+                <h1 className="font-display text-[clamp(2.35rem,5vw,5.25rem)] font-bold leading-[0.95] tracking-[-0.055em] text-slate-950 dark:text-white">
+                  Navigáld vállalkozásod erőforrásait <span className="bg-gradient-to-r from-primary via-emerald-400 to-blue-500 bg-clip-text text-transparent">stratégiával.</span>
+                </h1>
+                <p className="mt-6 max-w-2xl text-base leading-relaxed text-slate-600 sm:text-lg dark:text-slate-300">
+                  Intelligens idő-, szabadság- és erőforrás-kezelés egy platformon. Az Effectime segít átlátni a kapacitást, gyorsítani a jóváhagyásokat és stabilan ütemezni a projekteket.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {features.map((feature) => (
+                  <div key={feature.title} className="rounded-3xl border border-slate-200 bg-white/82 p-5 shadow-[0_18px_55px_-42px_rgba(15,23,42,0.55)] backdrop-blur-sm transition hover:-translate-y-0.5 hover:shadow-[0_22px_60px_-38px_rgba(15,23,42,0.7)] dark:border-white/10 dark:bg-white/[0.055]">
+                    <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/12 text-primary dark:bg-primary/18 dark:text-emerald-200">
+                      <feature.icon className="h-5 w-5" />
+                    </div>
+                    <h3 className="font-display text-base font-bold text-slate-950 dark:text-white">{feature.title}</h3>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{feature.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 18 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.35, delay: 0.05 }}
+              className="lg:sticky lg:top-24"
+            >
+              <div className="rounded-[2rem] border border-slate-200 bg-white/92 p-5 shadow-[0_30px_100px_-42px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/10 dark:bg-[#070b18]/92 dark:shadow-[0_30px_100px_-42px_rgba(0,0,0,0.9)] sm:p-8">
+                {renderAuthPanel()}
+              </div>
+              <div className="mt-4 grid grid-cols-3 gap-3 text-center text-xs text-slate-500 dark:text-slate-400">
+                <div className="rounded-2xl border border-slate-200 bg-white/70 p-3 dark:border-white/10 dark:bg-white/[0.04]">
+                  <div className="font-bold text-slate-900 dark:text-white">RLS</div>
+                  Biztonságos adatelérés
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white/70 p-3 dark:border-white/10 dark:bg-white/[0.04]">
+                  <div className="font-bold text-slate-900 dark:text-white">Audit</div>
+                  Követhető folyamatok
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white/70 p-3 dark:border-white/10 dark:bg-white/[0.04]">
+                  <div className="font-bold text-slate-900 dark:text-white">Jira</div>
+                  Agilis integráció
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+
+        <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6">
+          <div className="mx-auto max-w-2xl text-center">
+            <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
+              <Workflow className="h-4 w-4" />
+              Így működik
+            </div>
+            <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Három lépés a tiszta kapacitásképig</h2>
+            <p className="mt-4 text-slate-600 dark:text-slate-300">
+              Gyors indulás, kevesebb adminisztráció, jobb döntések a csapat napi elérhetőségéről és projektterheléséről.
+            </p>
+          </div>
+
+          <div className="mt-12 grid gap-6 lg:grid-cols-3">
+            {workflowSteps.map((step, index) => (
+              <div key={step.title} className="relative rounded-[1.75rem] border border-slate-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-white/[0.045]">
+                <div className="mb-8 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-primary to-emerald-400 text-lg font-bold text-white shadow-lg shadow-primary/20">
+                  {index + 1}
+                </div>
+                <h3 className="font-display text-xl font-bold">{step.title}</h3>
+                <p className="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">{step.desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="border-y border-slate-200 bg-white py-16 dark:border-white/10 dark:bg-[#080d1c]">
+          <div className="mx-auto grid max-w-7xl gap-10 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+            <div>
+              <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
+                <BarChart3 className="h-4 w-4" />
+                Példa nézet
+              </div>
+              <h2 className="mt-5 font-display text-3xl font-bold tracking-tight sm:text-4xl">Áttekinthető naptár és kapacitás egy oldalon</h2>
+              <p className="mt-4 leading-relaxed text-slate-600 dark:text-slate-300">
+                Az éves nézet, csapatnaptár, kapacitástervező és skill riportok együtt segítenek megérteni, hol van valódi lefedettség és hol kell beavatkozni.
               </p>
             </div>
-
-            <div className="mt-6 grid max-w-[840px] grid-cols-3 gap-4">
-              {features.map((feature) => (
-                <div
-                  key={feature.title}
-                  className="rounded-[22px] border border-primary-foreground/24 bg-primary-foreground/8 p-5 backdrop-blur-sm"
-                >
-                  <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary-foreground/14">
-                    <feature.icon className="h-5 w-5" />
+            <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-slate-50 p-4 shadow-[0_24px_80px_-42px_rgba(15,23,42,0.45)] dark:border-white/10 dark:bg-[#0f172a]">
+              <div className="rounded-[1.5rem] bg-white p-5 dark:bg-[#111827]">
+                <div className="mb-5 flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-semibold text-slate-500 dark:text-slate-400">Mai kapacitás</div>
+                    <div className="font-display text-2xl font-bold">Budapest · Resource team</div>
                   </div>
-                  <div className="text-[0.98rem] font-semibold leading-snug">{feature.title}</div>
-                  <div className="mt-2 text-[0.84rem] leading-relaxed text-primary-foreground/72">{feature.desc}</div>
+                  <div className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">82% elérhető</div>
                 </div>
-              ))}
-            </div>
-
-            <div className="mt-auto pt-2 text-xs text-primary-foreground/48">
-              © 2026 Effectime. Minden jog fenntartva.
+                <div className="grid grid-cols-7 gap-2 text-center text-xs text-slate-500">
+                  {['H','K','Sze','Cs','P','Szo','V'].map((d) => <div key={d}>{d}</div>)}
+                  {Array.from({ length: 28 }).map((_, i) => (
+                    <div key={i} className={`rounded-xl px-2 py-3 font-semibold ${i % 9 === 0 ? 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-200' : i % 5 === 0 ? 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-100' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-100'}`}>
+                      {i + 1}
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="h-full overflow-hidden bg-slate-50 px-[24px] py-[18px] dark:bg-[#040814]">
-          <div className="grid h-full grid-rows-[minmax(0,0.78fr)_minmax(0,0.22fr)] gap-3">
-            <div className="min-h-0 overflow-hidden rounded-[34px] border border-slate-200 bg-white px-[40px] py-[24px] shadow-[0_24px_80px_-36px_rgba(15,23,42,0.18)] dark:border-white/8 dark:bg-[#050816] dark:shadow-[0_24px_80px_-36px_rgba(2,8,23,0.8)]">
-              {renderAuthPanel()}
+        <section className="mx-auto max-w-4xl px-4 py-16 sm:px-6">
+          <div className="mb-8 text-center">
+            <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
+              <HelpCircle className="h-4 w-4" />
+              Gyakori kérdések
             </div>
+            <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">Amit indulás előtt érdemes tudni</h2>
+          </div>
+          <div className="divide-y divide-slate-200 rounded-[2rem] border border-slate-200 bg-white dark:divide-white/10 dark:border-white/10 dark:bg-white/[0.045]">
+            {faqItems.map((item) => (
+              <details key={item.question} className="group p-6 open:bg-slate-50/70 first:rounded-t-[2rem] last:rounded-b-[2rem] dark:open:bg-white/[0.04]">
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-4 font-display text-lg font-bold">
+                  {item.question}
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 text-primary transition group-open:rotate-45 dark:border-white/10">+</span>
+                </summary>
+                <p className="mt-4 max-w-2xl text-sm leading-relaxed text-slate-600 dark:text-slate-300">{item.answer}</p>
+              </details>
+            ))}
+          </div>
+        </section>
 
-            <div className="relative min-h-0 overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_14px_40px_rgba(15,23,42,0.08)] dark:border-white/7 dark:bg-[#050816] dark:shadow-none">
-              {latinQuotes.map((quote) => (
-                <div
-                  key={quote.text}
-                  className={`absolute max-w-[44%] whitespace-normal leading-[1.18] text-slate-600 dark:text-white/92 ${quote.cls}`}
-                >
-                  {quote.text}
-                </div>
-              ))}
+        <section className="px-4 pb-16 sm:px-6">
+          <div className="mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-gradient-to-r from-primary to-emerald-400 p-8 text-white shadow-xl shadow-primary/20 sm:p-10">
+            <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
+              <div>
+                <h2 className="font-display text-3xl font-bold">Kezdd el percek alatt</h2>
+                <p className="mt-3 max-w-2xl text-white/85">Hozz létre fiókot, állítsd be a munkaterületet és nézd meg, hogyan válik átláthatóbbá a csapatod kapacitása.</p>
+              </div>
+              <Button size="lg" variant="secondary" onClick={() => setView('register')} className="rounded-2xl px-8 font-semibold">
+                Regisztráció
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
             </div>
           </div>
         </section>
-      </div>
-
-      {/* Mobile layout */}
-      <div className="flex h-full flex-col overflow-hidden lg:hidden">
-        <div className="gradient-primary px-4 py-4 text-primary-foreground">
-          <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary-foreground/16">
-              <span className="font-display text-xl font-bold">E</span>
-            </div>
-            <div>
-              <div className="font-display text-[2rem] font-bold leading-none">Effectime</div>
-              <div className="text-[0.72rem] font-medium text-primary-foreground/70 tracking-wide uppercase">Enterprise</div>
-            </div>
-          </div>
-
-          <h1 className="mt-4 font-display text-[1.65rem] font-bold leading-[0.98] tracking-[-0.03em]">
-            Szervezze meg csapata szabadságát és idejét
-          </h1>
-          <p className="mt-2 text-sm leading-relaxed text-primary-foreground/80">
-            Szabadságkezelés, kapacitástervezés és riporting — mindezt egy helyen.
-          </p>
-        </div>
-
-        <div className="flex-1 overflow-hidden bg-[#040814] p-3">
-          <div className="grid h-full grid-rows-[minmax(0,0.82fr)_minmax(0,0.18fr)] gap-3">
-            <div className="min-h-0 overflow-auto rounded-[28px] border border-slate-200 bg-white/96 p-4 shadow-[0_12px_35px_rgba(15,23,42,0.08)] dark:border-white/8 dark:bg-[#050816] dark:shadow-none">
-              {renderAuthPanel()}
-            </div>
-
-            <div className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-white/92 shadow-[0_10px_30px_rgba(15,23,42,0.06)] dark:border-white/8 dark:bg-[#050816] dark:shadow-none">
-              <div className="absolute left-[7%] top-[10%] max-w-[70%] rotate-[-5deg] text-[0.8rem] text-slate-600 dark:text-white/90 [font-family:'Brush_Script_MT','Segoe_Print','Comic_Sans_MS',cursive]">
-                Tempus una actum pretiosissimum es
-              </div>
-              <div className="absolute right-[6%] top-[38%] max-w-[66%] rotate-[4deg] text-[0.77rem] text-slate-600 dark:text-white/90 [font-family:'Lucida_Handwriting','Segoe_Print','Comic_Sans_MS',cursive]">
-                Nihil est pretiosius quam tempus tecum.
-              </div>
-              <div className="absolute left-[13%] bottom-[12%] max-w-[70%] rotate-[-2deg] text-[0.77rem] text-slate-600 dark:text-white/90 [font-family:'Segoe_Script','Comic_Sans_MS',cursive]">
-                In tempore una acto, amor crescit.
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      </main>
     </div>
   );
 };
