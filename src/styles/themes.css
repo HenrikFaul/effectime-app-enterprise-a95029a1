@@ -101,6 +101,67 @@
   .theme-nebula [class*='border-border'] {
     border-color: hsl(var(--border) / 0.82);
   }
+
+  .theme-aurora {
+    --background: 210 55% 98%;
+    --foreground: 225 35% 18%;
+    --card: 0 0% 100%;
+    --card-foreground: 225 35% 18%;
+    --primary: 206 100% 47%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 282 79% 56%;
+    --accent-foreground: 0 0% 100%;
+    --muted: 214 45% 94%;
+    --muted-foreground: 221 20% 40%;
+    --border: 218 26% 85%;
+    --ring: 282 79% 56%;
+  }
+
+  .theme-graphite {
+    color-scheme: dark;
+    --background: 220 15% 11%;
+    --foreground: 210 20% 93%;
+    --card: 220 14% 15%;
+    --card-foreground: 210 20% 93%;
+    --primary: 14 90% 61%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 197 82% 48%;
+    --accent-foreground: 0 0% 100%;
+    --muted: 220 10% 20%;
+    --muted-foreground: 214 12% 72%;
+    --border: 216 11% 26%;
+    --ring: 14 90% 61%;
+  }
+
+  .theme-sunrise {
+    --background: 36 100% 98%;
+    --foreground: 22 47% 20%;
+    --card: 0 0% 100%;
+    --card-foreground: 22 47% 20%;
+    --primary: 17 93% 56%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 44 95% 53%;
+    --accent-foreground: 22 47% 20%;
+    --muted: 33 72% 92%;
+    --muted-foreground: 24 28% 37%;
+    --border: 32 50% 82%;
+    --ring: 17 93% 56%;
+  }
+
+  .theme-mono {
+    --background: 210 20% 99%;
+    --foreground: 216 9% 15%;
+    --card: 0 0% 100%;
+    --card-foreground: 216 9% 15%;
+    --primary: 216 9% 15%;
+    --primary-foreground: 0 0% 100%;
+    --accent: 216 7% 32%;
+    --accent-foreground: 0 0% 100%;
+    --muted: 210 15% 94%;
+    --muted-foreground: 215 7% 41%;
+    --border: 214 15% 84%;
+    --ring: 216 9% 15%;
+  }
 }
 
 @layer utilities {

@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
 type Theme = 'light' | 'dark';
-export type ThemeStyle = 'enterprise' | 'nebula';
+export type ThemeStyle = 'enterprise' | 'nebula' | 'aurora' | 'graphite' | 'sunrise' | 'mono';
 
 interface ThemeContextType {
   theme: Theme;
@@ -18,7 +18,8 @@ const STYLE_STORAGE_KEY = 'effectime-theme-style';
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const isTheme = (value: string | null): value is Theme => value === 'light' || value === 'dark';
-const isThemeStyle = (value: string | null): value is ThemeStyle => value === 'enterprise' || value === 'nebula';
+const THEME_STYLES: ThemeStyle[] = ['enterprise', 'nebula', 'aurora', 'graphite', 'sunrise', 'mono'];
+const isThemeStyle = (value: string | null): value is ThemeStyle => !!value && THEME_STYLES.includes(value as ThemeStyle);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
@@ -41,9 +42,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const root = document.documentElement;
 
-    root.classList.toggle('dark', theme === 'dark' || themeStyle === 'nebula');
+    root.classList.toggle('dark', theme === 'dark' || ['nebula', 'graphite'].includes(themeStyle));
     root.classList.toggle('theme-enterprise', themeStyle === 'enterprise');
     root.classList.toggle('theme-nebula', themeStyle === 'nebula');
+    root.classList.toggle('theme-aurora', themeStyle === 'aurora');
+    root.classList.toggle('theme-graphite', themeStyle === 'graphite');
+    root.classList.toggle('theme-sunrise', themeStyle === 'sunrise');
+    root.classList.toggle('theme-mono', themeStyle === 'mono');
     root.dataset.themeStyle = themeStyle;
 
     localStorage.setItem(THEME_STORAGE_KEY, theme);
@@ -51,7 +56,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [theme, themeStyle]);
 
   const toggleTheme = () => setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-  const toggleThemeStyle = () => setThemeStyle(prev => prev === 'nebula' ? 'enterprise' : 'nebula');
+  const toggleThemeStyle = () => setThemeStyle(prev => THEME_STYLES[(THEME_STYLES.indexOf(prev) + 1) % THEME_STYLES.length]);
 
   return (
     <ThemeContext.Provider value={{ theme, themeStyle, toggleTheme, setTheme, setThemeStyle, toggleThemeStyle }}>
