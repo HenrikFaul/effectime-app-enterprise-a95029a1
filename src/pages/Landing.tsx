@@ -66,15 +66,16 @@ export default function Landing() {
         <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-20 pb-16 text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/5 px-4 py-1.5 text-sm text-primary font-medium mb-6">
             <Shield className="h-3.5 w-3.5" />
-            Enterprise szabadságkezelő platform
+            Enterprise kapacitáskezelő platform
           </div>
           <h1 className="font-display font-bold text-4xl sm:text-5xl md:text-6xl leading-tight mb-6 text-foreground">
             Vállalati szabadság&shy;kezelés,{' '}
             <span className="text-primary">egyszerűen</span>
           </h1>
           <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-            Az Effectime segítségével a csapatod szabadsági kérelmei, jóváhagyásai és kapacitástervezése
-            egyetlen helyen, átláthatóan kezelhető.
+            Az Effectime platformmal valós időben láthatod és optimalizálhatod csapatod kapacitását.
+            Egységesítjük a tervezést, projektek ütemezését és az erőforrás-gazdálkodást,
+            hogy szervezeted minden pillanatban a stratégiára koncentrálhasson.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button
