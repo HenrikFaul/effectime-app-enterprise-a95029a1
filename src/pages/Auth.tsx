@@ -141,6 +141,8 @@ const Auth = () => {
     if (emailFromQuery) setEmail(emailFromQuery);
   }, [isVerifyMode, searchParams]);
 
+
+
   useEffect(() => {
     if (oauthProvider !== GOOGLE_OAUTH_PROVIDER) return;
     if (user) return;
@@ -166,6 +168,7 @@ const Auth = () => {
     restoreSessionFromHash();
   }, [oauthProvider, user, setSessionFromTokens]);
 
+  // Handle return from Google OAuth or email activation link
   useEffect(() => {
     if (!user) return;
     if (oauthProvider !== GOOGLE_OAUTH_PROVIDER && !emailActivationToken) return;
@@ -319,7 +322,7 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     setLoading(true);
 
-    const callbackUri = new URL("/", window.location.origin);
+    const callbackUri = new URL("/auth", window.location.origin);
     callbackUri.searchParams.set(GOOGLE_OAUTH_QUERY_PARAM, GOOGLE_OAUTH_PROVIDER);
     callbackUri.searchParams.set("redirect", redirectTo);
 
@@ -335,6 +338,7 @@ const Auth = () => {
       toast.error(error.message);
       setLoading(false);
     }
+    // On success the browser is redirected by Supabase — no setLoading(false) needed.
   };
 
   const renderAuthPanel = () => (
