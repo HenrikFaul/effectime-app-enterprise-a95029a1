@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signUp = async (email: string, password: string, displayName: string, redirectTo = '/enterprise') => {
+  const signUp = async (email: string, password: string, displayName: string, redirectTo = '/app') => {
     const signupRedirectUrl = new URL('/auth', window.location.origin);
     if (redirectTo.startsWith('/')) {
       signupRedirectUrl.searchParams.set('redirect', redirectTo);

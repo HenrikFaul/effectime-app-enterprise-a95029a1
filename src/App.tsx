@@ -51,7 +51,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
       return <>{children}</>;
     }
 
-    return <Navigate to={redirect || "/enterprise"} replace />;
+    return <Navigate to={redirect || "/app"} replace />;
   }
   return <>{children}</>;
 }
@@ -66,7 +66,8 @@ const App = () => (
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Landing />} />
-              <Route path="/enterprise" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
+              <Route path="/app" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
+              <Route path="/enterprise" element={<ProtectedRoute><Navigate to="/app" replace /></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
               <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
               <Route path="/reset-password" element={<ResetPassword />} />

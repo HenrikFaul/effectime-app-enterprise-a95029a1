@@ -92,7 +92,7 @@ const Auth = () => {
   const { user, signIn, signUp, signOut, setSessionFromTokens } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const redirectTo = searchParams.get("redirect") || "/enterprise";
+  const redirectTo = searchParams.get("redirect") || "/app";
   const oauthProvider = searchParams.get(GOOGLE_OAUTH_QUERY_PARAM);
   const emailActivationToken = searchParams.get(EMAIL_ACTIVATION_QUERY_PARAM);
   const isVerifyMode = searchParams.get("verify") === "1";

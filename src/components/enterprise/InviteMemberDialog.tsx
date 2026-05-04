@@ -162,7 +162,7 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
         }
       }
 
-      const inviteRedirectPath = invData?.token ? `/enterprise?invite=${invData.token}` : '/enterprise';
+      const inviteRedirectPath = invData?.token ? `/app?invite=${invData.token}` : '/app';
       const signInUrl = new URL('/auth', window.location.origin);
       signInUrl.searchParams.set('redirect', inviteRedirectPath);
       const roleLabel = getRoleLabel(role);

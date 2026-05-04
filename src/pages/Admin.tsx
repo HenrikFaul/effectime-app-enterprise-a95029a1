@@ -26,7 +26,7 @@ const Admin = () => {
         .maybeSingle();
 
       if (!data) {
-        navigate('/enterprise', { replace: true });
+        navigate('/app', { replace: true });
         return;
       }
       setIsAdmin(true);
@@ -46,7 +46,7 @@ const Admin = () => {
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-50 border-b bg-card/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/enterprise')} className="rounded-xl">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/app')} className="rounded-xl">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-2">

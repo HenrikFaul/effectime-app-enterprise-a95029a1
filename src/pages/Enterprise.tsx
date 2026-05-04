@@ -29,6 +29,8 @@ interface Membership {
   location: string | null;
 }
 
+const ACTIVE_WORKSPACE_KEY = 'active_workspace_id';
+
 export default function Enterprise() {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -37,24 +39,37 @@ export default function Enterprise() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [acceptingInvite, setAcceptingInvite] = useState(false);
+  const [selectedWorkspaceId, setSelectedWorkspaceIdState] = useState<string | null>(null);
 
-  // Read workspace ID and tab from URL search params
-  const selectedWorkspaceId = searchParams.get('ws') || null;
   const activeTab = searchParams.get('tab') || 'members';
   const inviteToken = searchParams.get('invite') || null;
 
   const setSelectedWorkspaceId = (id: string | null) => {
+    setSelectedWorkspaceIdState(id);
     if (id) {
-      setSearchParams({ ws: id, tab: 'members' });
-    } else {
-      setSearchParams({});
+      localStorage.setItem(ACTIVE_WORKSPACE_KEY, id);
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.set('tab', 'members');
+      nextParams.delete('invite');
+      nextParams.delete('ws');
+      setSearchParams(nextParams, { replace: true });
+      return;
     }
+
+    localStorage.removeItem(ACTIVE_WORKSPACE_KEY);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('invite');
+    nextParams.delete('ws');
+    nextParams.delete('tab');
+    setSearchParams(nextParams, { replace: true });
   };
 
   const setActiveTab = (tab: string) => {
-    if (selectedWorkspaceId) {
-      setSearchParams({ ws: selectedWorkspaceId, tab });
-    }
+    if (!selectedWorkspaceId) return;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('tab', tab);
+    nextParams.delete('ws');
+    setSearchParams(nextParams, { replace: true });
   };
 
   const fetchWorkspaces = useCallback(async () => {
@@ -97,6 +112,35 @@ export default function Enterprise() {
   }, [fetchWorkspaces]);
 
   useEffect(() => {
+    if (!workspaces.length) {
+      setSelectedWorkspaceIdState(null);
+      return;
+    }
+
+    const wsFromUrl = searchParams.get('ws');
+    const storedWorkspaceId = localStorage.getItem(ACTIVE_WORKSPACE_KEY);
+    const fallbackWorkspaceId = workspaces[0]?.id ?? null;
+    const candidate = wsFromUrl || storedWorkspaceId || fallbackWorkspaceId;
+    const resolvedWorkspace = workspaces.find((w) => w.id === candidate) || null;
+    const resolvedWorkspaceId = resolvedWorkspace?.id ?? null;
+
+    if (resolvedWorkspaceId !== selectedWorkspaceId) {
+      setSelectedWorkspaceIdState(resolvedWorkspaceId);
+    }
+
+    if (resolvedWorkspaceId) {
+      localStorage.setItem(ACTIVE_WORKSPACE_KEY, resolvedWorkspaceId);
+    }
+
+    if (wsFromUrl) {
+      const nextParams = new URLSearchParams(searchParams);
+      nextParams.delete('ws');
+      if (!nextParams.get('tab')) nextParams.set('tab', 'members');
+      setSearchParams(nextParams, { replace: true });
+    }
+  }, [workspaces, searchParams, setSearchParams, selectedWorkspaceId]);
+
+  useEffect(() => {
     if (!user || !inviteToken || acceptingInvite) return;
 
     let cancelled = false;
@@ -115,10 +159,11 @@ export default function Enterprise() {
 
       const nextParams = new URLSearchParams(searchParams);
       nextParams.delete('invite');
+      nextParams.delete('ws');
 
       if (error || data?.error) {
         toast.error(data?.error || 'Nem sikerült elfogadni a meghívót.');
-        setSearchParams(nextParams);
+        setSearchParams(nextParams, { replace: true });
         setAcceptingInvite(false);
         return;
       }
@@ -127,11 +172,12 @@ export default function Enterprise() {
       if (cancelled) return;
 
       if (data?.workspace_id) {
-        nextParams.set('ws', data.workspace_id);
+        setSelectedWorkspaceIdState(data.workspace_id);
+        localStorage.setItem(ACTIVE_WORKSPACE_KEY, data.workspace_id);
         nextParams.set('tab', 'members');
       }
 
-      setSearchParams(nextParams);
+      setSearchParams(nextParams, { replace: true });
       toast.success(data?.already_member ? 'Már tagja vagy ennek a munkaterületnek.' : 'A meghívót elfogadtuk, beléptél a munkaterületbe.');
       setAcceptingInvite(false);
     };
@@ -188,7 +234,7 @@ export default function Enterprise() {
         <div className="flex items-center justify-between max-w-5xl mx-auto">
           <div className="flex items-center gap-2">
             <Building2 className="h-5 w-5 text-primary" />
-            <h1 className="text-lg font-semibold">Enterprise</h1>
+            <h1 className="text-lg font-semibold">Workspace</h1>
           </div>
           <Button onClick={() => setShowCreate(true)} size="sm">
             <Plus className="h-4 w-4 mr-1" /> Új munkaterület
@@ -207,7 +253,7 @@ export default function Enterprise() {
               <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
               <h2 className="text-xl font-semibold mb-2">Még nincs munkaterületed</h2>
               <p className="text-muted-foreground mb-4">
-                Hozz létre egy enterprise munkaterületet a csapatod távolléteinek kezeléséhez.
+                Hozz létre egy munkaterületet a csapatod távolléteinek kezeléséhez.
               </p>
               <Button onClick={() => setShowCreate(true)}>
                 <Plus className="h-4 w-4 mr-1" /> Munkaterület létrehozása
@@ -239,6 +285,7 @@ export default function Enterprise() {
                         <Settings className="h-3 w-3" />
                         {ws.timezone}
                       </span>
+                      <span>{new Date(ws.created_at).toLocaleDateString('hu-HU')}</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -251,8 +298,10 @@ export default function Enterprise() {
       <CreateWorkspaceDialog
         open={showCreate}
         onOpenChange={setShowCreate}
-        userId={user?.id || ''}
-        onCreated={fetchWorkspaces}
+        onCreated={async () => {
+          await fetchWorkspaces();
+          setShowCreate(false);
+        }}
       />
     </div>
   );
