@@ -69,8 +69,8 @@ export default function Landing() {
             Enterprise kapacitáskezelő platform
           </div>
           <h1 className="font-display font-bold text-4xl sm:text-5xl md:text-6xl leading-tight mb-6 text-foreground">
-            Vállalati szabadság&shy;kezelés,{' '}
-            <span className="text-primary">egyszerűen</span>
+            Vállalati erőforrás&shy;kezelés,{' '}
+            <span className="text-primary">hatékonyan</span>
           </h1>
           <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
             Az Effectime platformmal valós időben láthatod és optimalizálhatod csapatod kapacitását.
@@ -99,7 +99,7 @@ export default function Landing() {
         {/* Features */}
         <section className="mx-auto max-w-6xl px-4 sm:px-6 py-16">
           <h2 className="font-display font-bold text-2xl sm:text-3xl text-center mb-12">
-            Minden, amire egy vállalatnak szüksége van
+            Minden, amire egy vállalati erőforrásmenedzsmentnek szüksége van
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {FEATURES.map(({ icon: Icon, title, description }) => (
@@ -123,7 +123,7 @@ export default function Landing() {
                   Mindent tartalmaz, ami kell
                 </h2>
                 <p className="text-muted-foreground mb-8 leading-relaxed">
-                  Nincs szükség bonyolult integrációkra. Az Effectime Enterprise-ban minden funkció beépítve érkezik.
+                  Nincs szükség további integrációkra. Az Effectime Enterprise-ban minden funkció beépítve érkezik.
                 </p>
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {BENEFITS.map((b) => (
@@ -135,7 +135,7 @@ export default function Landing() {
                 </ul>
               </div>
               <div className="rounded-2xl border border-border bg-card p-8 flex flex-col gap-6 shadow-sm">
-                <div className="font-display font-bold text-xl">Kezdjen el ma</div>
+                <div className="font-display font-bold text-xl">Próbálja ki már ma</div>
                 <p className="text-muted-foreground text-sm leading-relaxed">
                   Regisztráljon ingyenesen, hozza létre munkaterületét, és invitálja meg csapatát percek alatt.
                 </p>
@@ -147,7 +147,6 @@ export default function Landing() {
                   Ingyenes regisztráció
                   <ArrowRight className="h-4 w-4" />
                 </Button>
-                <p className="text-xs text-muted-foreground text-center">Nem szükséges bankkártya.</p>
               </div>
             </div>
           </div>
