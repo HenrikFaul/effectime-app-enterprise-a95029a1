@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { CalendarDays, Users, BarChart3, Shield, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { EffectimeLogo } from '@/components/EffectimeLogo';
 
 const FEATURES = [
   {
@@ -53,9 +54,7 @@ export default function Landing() {
       {/* Nav */}
       <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 h-16 flex items-center justify-between">
-          <span className="font-display font-bold text-xl tracking-tight">
-            <span className="gradient-primary bg-clip-text text-transparent">Effectime</span>
-          </span>
+          <EffectimeLogo size={32} variant="full" />
           <Button variant="outline" size="sm" onClick={() => navigate('/auth')} className="rounded-xl">
             Bejelentkezés
           </Button>
@@ -158,7 +157,7 @@ export default function Landing() {
       {/* Footer */}
       <footer className="border-t border-border py-8">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
-          <span className="font-display font-semibold text-foreground">Effectime</span>
+          <EffectimeLogo size={24} variant="full" />
           <span>© {new Date().getFullYear()} Effectime. Minden jog fenntartva.</span>
         </div>
       </footer>

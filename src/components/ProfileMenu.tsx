@@ -15,7 +15,14 @@ export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {})
   const { theme, themeStyle, toggleTheme, toggleThemeStyle } = useTheme();
   const navigate = useNavigate();
   const isTemporarySession = isTemporary;
-  const nextThemeStyleLabel = themeStyle === 'nebula' ? 'Enterprise világos stílus' : 'Nebula Obsidian stílus';
+  const layoutLabels: Record<string, string> = {
+    enterprise: 'Enterprise Classic',
+    nebula: 'Nebula Strategy',
+    aurora: 'Aurora Focus',
+    graphite: 'Graphite Pro',
+    sunrise: 'Sunrise Flow',
+    mono: 'Mono Precision',
+  };
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState('');
   const [savingName, setSavingName] = useState(false);
@@ -160,11 +167,11 @@ export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {})
           </DropdownMenuItem>
           <DropdownMenuItem onClick={toggleThemeStyle} className="rounded-lg cursor-pointer">
             <Palette className="mr-2 h-4 w-4" />
-            {nextThemeStyleLabel}
+            Következő layout: {layoutLabels[themeStyle] || themeStyle}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={toggleTheme} className="rounded-lg cursor-pointer" disabled={themeStyle === 'nebula'}>
+          <DropdownMenuItem onClick={toggleTheme} className="rounded-lg cursor-pointer" disabled={['nebula', 'graphite'].includes(themeStyle)}>
             {theme === 'dark' ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
-            {themeStyle === 'nebula' ? 'Nebula sötét mód aktív' : theme === 'dark' ? 'Világos mód' : 'Sötét mód'}
+            {['nebula', 'graphite'].includes(themeStyle) ? 'A kiválasztott layout fix dark módú' : theme === 'dark' ? 'Világos mód' : 'Sötét mód'}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={signOut} className="rounded-lg cursor-pointer text-destructive focus:text-destructive">
@@ -211,11 +218,11 @@ export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {})
         </DropdownMenuItem>
         <DropdownMenuItem onClick={toggleThemeStyle} className="rounded-lg cursor-pointer">
           <Palette className="mr-2 h-4 w-4" />
-          {nextThemeStyleLabel}
+          Következő layout: {layoutLabels[themeStyle] || themeStyle}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={toggleTheme} className="rounded-lg cursor-pointer" disabled={themeStyle === 'nebula'}>
+        <DropdownMenuItem onClick={toggleTheme} className="rounded-lg cursor-pointer" disabled={['nebula', 'graphite'].includes(themeStyle)}>
           {theme === 'dark' ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
-          {themeStyle === 'nebula' ? 'Nebula sötét mód aktív' : theme === 'dark' ? 'Világos mód' : 'Sötét mód'}
+          {['nebula', 'graphite'].includes(themeStyle) ? 'A kiválasztott layout fix dark módú' : theme === 'dark' ? 'Világos mód' : 'Sötét mód'}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={signOut} className="rounded-lg cursor-pointer text-destructive focus:text-destructive">

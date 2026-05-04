@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox } from 'lucide-react';
+import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
@@ -54,6 +54,7 @@ import { CoveragePlannerView } from './calendar/CoveragePlannerView';
 import { SkillCapacityReport } from './calendar/SkillCapacityReport';
 import { useEnterprisePermissions } from '@/hooks/useEnterprisePermissions';
 import { useWorkspaceSectionState } from '@/hooks/useWorkspaceSectionState';
+import { useTheme, type ThemeStyle } from '@/hooks/useTheme';
 
 interface Workspace {
   id: string;
@@ -311,7 +312,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
 
             {canView('settings') && (
               <TabsContent value="settings">
-                <WorkspaceSettings workspace={workspace} userRole={userRole} userId={userId} onRefresh={onRefresh} canViewPermissionConfig={userRole === 'owner' || canView('permission_config')} />
+                <WorkspaceSettings workspace={workspace} userRole={userRole} userId={userId} onRefresh={onRefresh} canViewPermissionConfig={userRole === 'owner' || canView('permission_config')} canViewLayoutSetting={userRole === 'owner' || canView('layout_setting')} />
               </TabsContent>
             )}
           </div>
@@ -511,7 +512,7 @@ function InvitationList({ workspaceId, isAdmin }: { workspaceId: string; isAdmin
 }
 
 // ===== Workspace Settings =====
-function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPermissionConfig = true }: { workspace: Workspace; userRole?: string; userId: string; onRefresh: () => void; canViewPermissionConfig?: boolean }) {
+function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPermissionConfig = true, canViewLayoutSetting = false }: { workspace: Workspace; userRole?: string; userId: string; onRefresh: () => void; canViewPermissionConfig?: boolean; canViewLayoutSetting?: boolean }) {
   const [name, setName] = useState(workspace.name);
   const [description, setDescription] = useState(workspace.description || '');
   const [saving, setSaving] = useState(false);
@@ -585,6 +586,15 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
   ];
 
   const isAdmin = userRole === 'owner' || userRole === 'resourceAssistant';
+  const { themeStyle, setThemeStyle } = useTheme();
+  const layoutOptions: { value: ThemeStyle; label: string }[] = [
+    { value: 'enterprise', label: 'Enterprise Classic' },
+    { value: 'nebula', label: 'Nebula Strategy (screenshot template)' },
+    { value: 'aurora', label: 'Aurora Focus' },
+    { value: 'graphite', label: 'Graphite Pro' },
+    { value: 'sunrise', label: 'Sunrise Flow' },
+    { value: 'mono', label: 'Mono Precision' },
+  ];
 
   return (
     <div className="space-y-3">
@@ -649,6 +659,24 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
       {isAdmin && (
         <SettingsSection workspaceId={workspace.id} sectionKey="settings.ui_section_states" icon={<Settings className="h-4 w-4" />} title="Menü szekciók alapállapota (cégszintű)">
           <UiSectionStateManager workspaceId={workspace.id} userId={userId} />
+        </SettingsSection>
+      )}
+
+      {canViewLayoutSetting && (
+        <SettingsSection workspaceId={workspace.id} sectionKey="settings.layout_setting" icon={<LayoutPanelLeft className="h-4 w-4" />} title="Layout Setting">
+          <div className="space-y-3">
+            <p className="text-xs text-muted-foreground">Válassz a 6 eltérő vizuális template közül funkcionális változás nélkül.</p>
+            <Select value={themeStyle} onValueChange={(v) => setThemeStyle(v as ThemeStyle)}>
+              <SelectTrigger className="max-w-md">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {layoutOptions.map(option => (
+                  <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </SettingsSection>
       )}
 
