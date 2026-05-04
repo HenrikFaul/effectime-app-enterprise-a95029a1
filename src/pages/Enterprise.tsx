@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Settings } from 'lucide-react';
+import { Plus, Settings, LogOut } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import { CreateWorkspaceDialog } from '@/components/enterprise/CreateWorkspaceDialog';
@@ -33,7 +33,7 @@ interface Membership {
 const ACTIVE_WORKSPACE_KEY = 'active_workspace_id';
 
 export default function Enterprise() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [memberships, setMemberships] = useState<Membership[]>([]);
@@ -240,9 +240,14 @@ export default function Enterprise() {
       <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur px-4 py-3">
         <div className="flex items-center justify-between max-w-5xl mx-auto">
           <EffectimeLogo size={34} variant="full" />
-          <Button onClick={() => setShowCreate(true)} size="sm">
-            <Plus className="h-4 w-4 mr-1" /> Új munkaterület
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => setShowCreate(true)} size="sm">
+              <Plus className="h-4 w-4 mr-1" /> Új munkaterület
+            </Button>
+            <Button onClick={signOut} size="sm" variant="destructive" className="gap-1.5">
+              <LogOut className="h-4 w-4" /> Kilépés
+            </Button>
+          </div>
         </div>
       </header>
 

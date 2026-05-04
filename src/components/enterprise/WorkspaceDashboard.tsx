@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft } from 'lucide-react';
+import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft, LogOut } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
@@ -55,6 +55,7 @@ import { SkillCapacityReport } from './calendar/SkillCapacityReport';
 import { useEnterprisePermissions } from '@/hooks/useEnterprisePermissions';
 import { useWorkspaceSectionState } from '@/hooks/useWorkspaceSectionState';
 import { useTheme, type ThemeStyle } from '@/hooks/useTheme';
+import { useAuth } from '@/hooks/useAuth';
 
 interface Workspace {
   id: string;
@@ -77,6 +78,7 @@ interface Props {
 }
 
 export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefresh, activeTab: externalTab, onTabChange }: Props) {
+  const { signOut } = useAuth();
   const [showInvite, setShowInvite] = useState(false);
   const [showMyProfile, setShowMyProfile] = useState(false);
   const [myMembership, setMyMembership] = useState<any>(null);
@@ -142,6 +144,9 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                 <UserPlus className="h-4 w-4 mr-1" /> Meghívás
               </Button>
             )}
+            <Button size="sm" variant="destructive" onClick={signOut} className="gap-1.5">
+              <LogOut className="h-4 w-4" /> Kilépés
+            </Button>
           </div>
         </div>
       </header>
