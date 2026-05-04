@@ -1,0 +1,130 @@
+/*
+ * Effectime selectable theme systems.
+ *
+ * theme-enterprise: current light/dark enterprise dashboard design from index.css.
+ * theme-nebula: Nebula Obsidian, a near-black green/purple SaaS design inspired by src/styles.css.
+ *
+ * The app uses Tailwind v3 with HSL CSS variables, so the Nebula palette is exposed in
+ * the same h/s/l variable format as the existing design system.
+ */
+
+@layer base {
+  .theme-enterprise {
+    color-scheme: light;
+  }
+
+  .theme-enterprise.dark {
+    color-scheme: dark;
+  }
+
+  .theme-nebula {
+    color-scheme: dark;
+
+    --background: 230 44% 8%;
+    --foreground: 225 36% 94%;
+
+    --card: 228 36% 13%;
+    --card-foreground: 225 36% 94%;
+
+    --popover: 228 38% 11%;
+    --popover-foreground: 225 36% 94%;
+
+    --primary: 119 74% 57%;
+    --primary-foreground: 230 44% 8%;
+    --primary-glow: 150 78% 55%;
+
+    --secondary: 228 32% 16%;
+    --secondary-foreground: 225 28% 88%;
+
+    --muted: 228 28% 17%;
+    --muted-foreground: 222 20% 68%;
+
+    --accent: 218 86% 61%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 145 70% 48%;
+    --success-foreground: 230 44% 8%;
+
+    --warning: 38 92% 55%;
+    --warning-foreground: 230 44% 8%;
+
+    --vote-good: 145 70% 48%;
+    --vote-maybe: 38 92% 55%;
+    --vote-bad: 0 72% 55%;
+
+    --border: 225 28% 22%;
+    --input: 225 28% 22%;
+    --ring: 119 74% 57%;
+
+    --radius: 1rem;
+
+    --sidebar-background: 230 44% 8%;
+    --sidebar-foreground: 225 28% 88%;
+    --sidebar-primary: 119 74% 57%;
+    --sidebar-primary-foreground: 230 44% 8%;
+    --sidebar-accent: 228 32% 16%;
+    --sidebar-accent-foreground: 225 28% 88%;
+    --sidebar-border: 225 28% 18%;
+    --sidebar-ring: 119 74% 57%;
+
+    --shadow-card: 0 1px 0 hsl(225 28% 28% / 0.45), 0 18px 60px -32px hsl(0 0% 0% / 0.75);
+    --shadow-elevated: 0 28px 80px -28px hsl(119 74% 57% / 0.22), 0 16px 48px -28px hsl(218 86% 61% / 0.28);
+    --shadow-modal: 0 30px 90px -18px hsl(0 0% 0% / 0.75);
+    --shadow-glow: 0 0 28px hsl(119 74% 57% / 0.28), 0 0 54px hsl(218 86% 61% / 0.14);
+
+    --gradient-primary: linear-gradient(135deg, hsl(218 86% 61%), hsl(158 68% 50%), hsl(119 74% 57%));
+    --gradient-accent: linear-gradient(135deg, hsl(258 80% 63%), hsl(218 86% 61%));
+    --gradient-hero: radial-gradient(circle at 50% 0%, hsl(218 86% 61% / 0.18), transparent 35%), radial-gradient(circle at 70% 20%, hsl(119 74% 57% / 0.13), transparent 30%), linear-gradient(180deg, hsl(230 44% 8%), hsl(230 48% 7%));
+    --gradient-surface: linear-gradient(180deg, hsl(228 36% 14%), hsl(230 44% 8%));
+  }
+
+  .theme-nebula body {
+    background:
+      radial-gradient(circle at 20% 0%, hsl(218 86% 61% / 0.12), transparent 28rem),
+      radial-gradient(circle at 80% 10%, hsl(119 74% 57% / 0.10), transparent 24rem),
+      hsl(var(--background));
+  }
+
+  .theme-nebula .bg-background {
+    background-color: hsl(var(--background));
+  }
+
+  .theme-nebula .bg-card,
+  .theme-nebula [class*='bg-card'] {
+    background-color: hsl(var(--card) / 0.86);
+  }
+
+  .theme-nebula .border,
+  .theme-nebula [class*='border-border'] {
+    border-color: hsl(var(--border) / 0.82);
+  }
+}
+
+@layer utilities {
+  .theme-nebula .glass,
+  .theme-nebula .glass-strong {
+    background: hsl(var(--card) / 0.72);
+    border: 1px solid hsl(var(--border) / 0.72);
+    box-shadow: var(--shadow-card);
+  }
+
+  .theme-nebula .text-gradient {
+    background: linear-gradient(90deg, hsl(225 36% 94%), hsl(218 86% 61%), hsl(119 74% 57%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .nebula-glow {
+    background: radial-gradient(circle at center, hsl(218 86% 61% / 0.45) 0%, hsl(218 86% 61% / 0) 62%);
+  }
+
+  .nebula-panel {
+    background: linear-gradient(180deg, hsl(var(--card) / 0.92), hsl(var(--card) / 0.72));
+    border: 1px solid hsl(var(--border) / 0.75);
+    box-shadow: var(--shadow-card);
+  }
+}

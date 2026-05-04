@@ -7,14 +7,15 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { User, LogOut, Moon, Sun, Pencil, Copy, Check, Save, ShieldCheck, Building2 } from 'lucide-react';
+import { User, LogOut, Moon, Sun, Pencil, Copy, Check, Save, ShieldCheck, Building2, Palette } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {}) {
   const { user, signOut, isTemporary, tempAccessToken } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, themeStyle, toggleTheme, toggleThemeStyle } = useTheme();
   const navigate = useNavigate();
   const isTemporarySession = isTemporary;
+  const nextThemeStyleLabel = themeStyle === 'nebula' ? 'Enterprise világos stílus' : 'Nebula Obsidian stílus';
   const [editingName, setEditingName] = useState(false);
   const [newName, setNewName] = useState('');
   const [savingName, setSavingName] = useState(false);
@@ -157,9 +158,13 @@ export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {})
             {copied ? <Check className="mr-2 h-4 w-4 text-primary" /> : <Copy className="mr-2 h-4 w-4" />}
             Visszatérési link másolása
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={toggleTheme} className="rounded-lg cursor-pointer">
+          <DropdownMenuItem onClick={toggleThemeStyle} className="rounded-lg cursor-pointer">
+            <Palette className="mr-2 h-4 w-4" />
+            {nextThemeStyleLabel}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={toggleTheme} className="rounded-lg cursor-pointer" disabled={themeStyle === 'nebula'}>
             {theme === 'dark' ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
-            {theme === 'dark' ? 'Világos mód' : 'Sötét mód'}
+            {themeStyle === 'nebula' ? 'Nebula sötét mód aktív' : theme === 'dark' ? 'Világos mód' : 'Sötét mód'}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={signOut} className="rounded-lg cursor-pointer text-destructive focus:text-destructive">
@@ -204,9 +209,13 @@ export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {})
           <Building2 className="mr-2 h-4 w-4" />
           Munkaterület
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={toggleTheme} className="rounded-lg cursor-pointer">
+        <DropdownMenuItem onClick={toggleThemeStyle} className="rounded-lg cursor-pointer">
+          <Palette className="mr-2 h-4 w-4" />
+          {nextThemeStyleLabel}
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={toggleTheme} className="rounded-lg cursor-pointer" disabled={themeStyle === 'nebula'}>
           {theme === 'dark' ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
-          {theme === 'dark' ? 'Világos mód' : 'Sötét mód'}
+          {themeStyle === 'nebula' ? 'Nebula sötét mód aktív' : theme === 'dark' ? 'Világos mód' : 'Sötét mód'}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={signOut} className="rounded-lg cursor-pointer text-destructive focus:text-destructive">
