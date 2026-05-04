@@ -291,7 +291,7 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     setLoading(true);
 
-    const callbackUri = new URL("/auth", window.location.origin);
+    const callbackUri = new URL("/", window.location.origin);
     callbackUri.searchParams.set(GOOGLE_OAUTH_QUERY_PARAM, GOOGLE_OAUTH_PROVIDER);
     callbackUri.searchParams.set("redirect", redirectTo);
 

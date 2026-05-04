@@ -1,4 +1,6 @@
-import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { CalendarDays, Users, BarChart3, Shield, ArrowRight, CheckCircle2 } from 'lucide-react';
 
@@ -36,6 +38,15 @@ const BENEFITS = [
 
 export default function Landing() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (!user) return;
+    if (searchParams.get('oauth') !== 'google') return;
+    const redirectTo = searchParams.get('redirect') || '/enterprise';
+    navigate(redirectTo, { replace: true });
+  }, [user, searchParams, navigate]);
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
