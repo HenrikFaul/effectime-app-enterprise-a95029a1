@@ -2,7 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
 
@@ -56,6 +57,23 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+const SpaRedirectHandler = () => {
+  const navigate = useNavigate();
+  useEffect(() => {
+    const stored = sessionStorage.getItem('spa_redirect');
+    if (stored) {
+      sessionStorage.removeItem('spa_redirect');
+      try {
+        const { path } = JSON.parse(stored) as { path: string };
+        if (path) { navigate('/' + path, { replace: true }); return; }
+      } catch { /* ignore */ }
+    }
+    const r = new URLSearchParams(window.location.search).get('r');
+    if (r) navigate('/' + r, { replace: true });
+  }, [navigate]);
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
@@ -64,6 +82,7 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
+            <SpaRedirectHandler />
             <Routes>
               <Route path="/" element={<Landing />} />
               <Route path="/app" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />

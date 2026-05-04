@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Effectime</title>
+    <script>
+      // SPA fallback: preserve the full path + query so React Router can handle it.
+      var seg = window.location.pathname
+        .split('/')
+        .slice(1)
+        .join('/')
+        .replace(/\/$/, '');
+      var query = window.location.search.slice(1);
+      var hash  = window.location.hash.slice(1);
+      var state = { path: seg + (query ? '?' + query : '') + (hash ? '#' + hash : '') };
+      window.sessionStorage.setItem('spa_redirect', JSON.stringify(state));
+      window.location.replace('/?r=' + encodeURIComponent(state.path));
+    </script>
+  </head>
+  <body></body>
+</html>
