@@ -1,1 +1,25 @@
 project_id = "oezlzzmzzvbvinuysxaz"
+
+[functions]
+  [functions.auth-email-hook]
+    verify_jwt = false
+  [functions.delete-account]
+    verify_jwt = false
+  [functions.join-event]
+    verify_jwt = false
+  [functions.cleanup-temp-users]
+    verify_jwt = false
+  [functions.process-email-queue]
+    verify_jwt = true
+  [functions.send-transactional-email]
+    verify_jwt = false
+  [functions.preview-transactional-email]
+    verify_jwt = false
+  [functions.handle-email-unsubscribe]
+    verify_jwt = false
+  [functions.handle-email-suppression]
+    verify_jwt = false
+  [functions.sync-holidays]
+    verify_jwt = false
+  [functions.data-migration]
+    verify_jwt = false

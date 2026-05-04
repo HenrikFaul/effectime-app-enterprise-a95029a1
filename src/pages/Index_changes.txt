@@ -1,0 +1,42 @@
+// Két célzott módosítás az Index.tsx-hez:
+//
+// 1) Import:
+import { CalendarGrid } from '@/CalendarGrid';
+//
+// a régi helyett:
+// import { CalendarGrid } from '@/components/CalendarGrid';
+//
+// 2) currentUserVoteMap szűrés event range-re:
+//
+// const currentUserVoteMap = useMemo<Record<string, AvailabilityMode>>(() => {
+//   if (!user) return {};
+//
+//   const evStart = selectedEvent?.start_date ? startOfDay(parseISO(selectedEvent.start_date)) : null;
+//   const evEnd = selectedEvent?.end_date ? startOfDay(parseISO(selectedEvent.end_date)) : null;
+//
+//   const map: Record<string, AvailabilityMode> = {};
+//   votes.forEach((vote) => {
+//     if (vote.user_id !== user.id) return;
+//
+//     const voteDate = startOfDay(parseISO(vote.vote_date));
+//     if (evStart && voteDate < evStart) return;
+//     if (evEnd && voteDate > evEnd) return;
+//
+//     map[vote.vote_date] = vote.vote_value as AvailabilityMode;
+//   });
+//
+//   return map;
+// }, [votes, user, selectedEvent?.start_date, selectedEvent?.end_date]);
+//
+// 3) handleVote elejére tedd be:
+//
+// if (selectedEvent?.start_date && startOfDay(date) < startOfDay(parseISO(selectedEvent.start_date))) {
+//   return;
+// }
+// if (selectedEvent?.end_date && startOfDay(date) > startOfDay(parseISO(selectedEvent.end_date))) {
+//   return;
+// }
+//
+// 4) handleBatchVote-ban a days tömböt szűrd event range-re is.
+//
+// Ha kéred, a következő körben ezt is teljes kész Index.tsx fájlként adom.

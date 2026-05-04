@@ -1,0 +1,1 @@
+CREATE POLICY "Service can update share tokens" ON public.event_share_tokens FOR UPDATE TO authenticated USING (true) WITH CHECK (true);

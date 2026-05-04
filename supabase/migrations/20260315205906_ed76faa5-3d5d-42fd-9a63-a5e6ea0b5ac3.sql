@@ -1,0 +1,1 @@
+ALTER TABLE public.profiles ADD COLUMN temp_verification_code text;

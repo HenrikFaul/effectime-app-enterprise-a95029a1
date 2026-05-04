@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.1"
   }
   public: {
     Tables: {
@@ -173,123 +173,6 @@ export type Database = {
         }
         Relationships: []
       }
-      enterprise_agile_capacity_events: {
-        Row: {
-          auto_action_taken: string | null
-          created_at: string
-          created_by: string | null
-          details: Json
-          event_type: string
-          id: string
-          impact_summary: string
-          integration_id: string
-          issue_key: string | null
-          risk_level: string
-          workspace_id: string
-        }
-        Insert: {
-          auto_action_taken?: string | null
-          created_at?: string
-          created_by?: string | null
-          details?: Json
-          event_type: string
-          id?: string
-          impact_summary: string
-          integration_id: string
-          issue_key?: string | null
-          risk_level?: string
-          workspace_id: string
-        }
-        Update: {
-          auto_action_taken?: string | null
-          created_at?: string
-          created_by?: string | null
-          details?: Json
-          event_type?: string
-          id?: string
-          impact_summary?: string
-          integration_id?: string
-          issue_key?: string | null
-          risk_level?: string
-          workspace_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "enterprise_agile_capacity_events_integration_id_fkey"
-            columns: ["integration_id"]
-            isOneToOne: false
-            referencedRelation: "enterprise_workspace_integrations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enterprise_agile_capacity_events_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "enterprise_workspaces"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      enterprise_agile_external_field_mappings: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          external_field_id: string
-          id: string
-          integration_id: string
-          is_required: boolean
-          is_safe_writeback: boolean
-          normalized_field: string
-          provider: string
-          sync_direction: string
-          updated_at: string
-          workspace_id: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          external_field_id: string
-          id?: string
-          integration_id: string
-          is_required?: boolean
-          is_safe_writeback?: boolean
-          normalized_field: string
-          provider: string
-          sync_direction?: string
-          updated_at?: string
-          workspace_id: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          external_field_id?: string
-          id?: string
-          integration_id?: string
-          is_required?: boolean
-          is_safe_writeback?: boolean
-          normalized_field?: string
-          provider?: string
-          sync_direction?: string
-          updated_at?: string
-          workspace_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "enterprise_agile_external_field_mappings_integration_id_fkey"
-            columns: ["integration_id"]
-            isOneToOne: false
-            referencedRelation: "enterprise_workspace_integrations"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "enterprise_agile_external_field_mappings_workspace_id_fkey"
-            columns: ["workspace_id"]
-            isOneToOne: false
-            referencedRelation: "enterprise_workspaces"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       enterprise_agile_field_metadata: {
         Row: {
           discovered_at: string
@@ -351,7 +234,6 @@ export type Database = {
         Row: {
           assignee_email: string | null
           assignee_name: string | null
-          capacity_risk: string | null
           completed_hours: number | null
           components: string[] | null
           created_at: string
@@ -359,9 +241,7 @@ export type Database = {
           due_date: string | null
           external_id: string | null
           external_key: string
-          external_type: string | null
           external_updated_at: string | null
-          fit_score: number | null
           id: string
           integration_id: string
           issue_type: string | null
@@ -370,7 +250,6 @@ export type Database = {
           last_synced_at: string
           original_estimate_hours: number | null
           parent_key: string | null
-          plan_impact_reason: string | null
           priority: string | null
           project_key: string | null
           provider: string
@@ -381,9 +260,7 @@ export type Database = {
           start_date: string | null
           status: string | null
           story_points: number | null
-          suggested_role: string | null
           summary: string | null
-          target_sprint: string | null
           updated_at: string
           url: string | null
           workspace_id: string
@@ -391,7 +268,6 @@ export type Database = {
         Insert: {
           assignee_email?: string | null
           assignee_name?: string | null
-          capacity_risk?: string | null
           completed_hours?: number | null
           components?: string[] | null
           created_at?: string
@@ -399,9 +275,7 @@ export type Database = {
           due_date?: string | null
           external_id?: string | null
           external_key: string
-          external_type?: string | null
           external_updated_at?: string | null
-          fit_score?: number | null
           id?: string
           integration_id: string
           issue_type?: string | null
@@ -410,7 +284,6 @@ export type Database = {
           last_synced_at?: string
           original_estimate_hours?: number | null
           parent_key?: string | null
-          plan_impact_reason?: string | null
           priority?: string | null
           project_key?: string | null
           provider: string
@@ -421,9 +294,7 @@ export type Database = {
           start_date?: string | null
           status?: string | null
           story_points?: number | null
-          suggested_role?: string | null
           summary?: string | null
-          target_sprint?: string | null
           updated_at?: string
           url?: string | null
           workspace_id: string
@@ -431,7 +302,6 @@ export type Database = {
         Update: {
           assignee_email?: string | null
           assignee_name?: string | null
-          capacity_risk?: string | null
           completed_hours?: number | null
           components?: string[] | null
           created_at?: string
@@ -439,9 +309,7 @@ export type Database = {
           due_date?: string | null
           external_id?: string | null
           external_key?: string
-          external_type?: string | null
           external_updated_at?: string | null
-          fit_score?: number | null
           id?: string
           integration_id?: string
           issue_type?: string | null
@@ -450,7 +318,6 @@ export type Database = {
           last_synced_at?: string
           original_estimate_hours?: number | null
           parent_key?: string | null
-          plan_impact_reason?: string | null
           priority?: string | null
           project_key?: string | null
           provider?: string
@@ -461,9 +328,7 @@ export type Database = {
           start_date?: string | null
           status?: string | null
           story_points?: number | null
-          suggested_role?: string | null
           summary?: string | null
-          target_sprint?: string | null
           updated_at?: string
           url?: string | null
           workspace_id?: string
@@ -3441,6 +3306,10 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      export_all_tables_sample: {
+        Args: { limit_per_table?: number }
+        Returns: Json
       }
       has_enterprise_role: {
         Args: {
