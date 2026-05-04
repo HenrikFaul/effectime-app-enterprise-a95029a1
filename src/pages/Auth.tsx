@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { toast } from "sonner";
-import { Mail, ArrowLeft, CheckCircle2, KeyRound, Users, BarChart3, CalendarDays, ClipboardCheck, LayoutDashboard, Sparkles, Shield, Building2, Workflow, ArrowRight, HelpCircle } from "lucide-react";
+import { Mail, ArrowLeft, CheckCircle2, KeyRound, Users, BarChart3, CalendarDays, ClipboardCheck, LayoutDashboard, Sparkles, Shield, Workflow, ArrowRight, HelpCircle } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { EffectimeLogo } from "@/components/EffectimeLogo";
 
@@ -322,7 +322,7 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     setLoading(true);
 
-    const callbackUri = new URL("/", window.location.origin);
+    const callbackUri = new URL("/auth", window.location.origin);
     callbackUri.searchParams.set(GOOGLE_OAUTH_QUERY_PARAM, GOOGLE_OAUTH_PROVIDER);
     callbackUri.searchParams.set("redirect", redirectTo);
 
