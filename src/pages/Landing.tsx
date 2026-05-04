@@ -74,8 +74,7 @@ export default function Landing() {
           </h1>
           <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
             Az Effectime platformmal valós időben láthatod és optimalizálhatod csapatod kapacitását.
-            Egységesítjük a tervezést, projektek ütemezését és az erőforrás-gazdálkodást,
-            hogy szervezeted minden pillanatban a stratégiára koncentrálhasson.
+            Egységesítjük a tervezést, projektek ütemezését és az erőforrás-gazdálkodást, hogy szervezeted minden pillanatban a stratégiára koncentrálhasson.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button

@@ -92,7 +92,7 @@ function LandingPage() {
         <div className="container mx-auto px-6 pt-24 pb-32 text-center lg:px-8 lg:pt-32 lg:pb-40">
           <span className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-surface/60 px-4 py-1.5 text-xs font-medium text-muted-foreground backdrop-blur">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary" />
-            Új generációs vállalati erőforrás-platform
+            Enterprise kapacitáskezelő platform
           </span>
 
           <h1 className="mx-auto mt-8 max-w-4xl text-balance font-display text-5xl font-bold leading-[1.05] tracking-tight text-foreground sm:text-6xl lg:text-7xl">
@@ -104,8 +104,8 @@ function LandingPage() {
           </h1>
 
           <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg text-muted-foreground sm:text-xl">
-            Intelligens idő-, szabadság- és erőforrás-kezelés egy platformon. Az Effectime
-            segít a csapatoknak átlátni a kapacitást és gyorsítani a jóváhagyásokat.
+            Az Effectime platformmal valós időben láthatod és optimalizálhatod csapatod kapacitását.
+            Egységesítjük a tervezést, projektek ütemezését és az erőforrás-gazdálkodást, hogy szervezeted minden pillanatban a stratégiára koncentrálhasson.
           </p>
 
           <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
