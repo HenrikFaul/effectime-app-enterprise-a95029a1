@@ -66,6 +66,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
   const [allWorkspaceAllocations, setAllWorkspaceAllocations] = useState<PeerAllocation[]>([]);
   const [teamsData, setTeamsData] = useState<{ id: string; name: string; roles: string[] }[]>([]);
   const [editForm, setEditForm] = useState({
+    display_name: '',
     location: '',
     city: '',
     office_id: '',
@@ -201,12 +202,14 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
       location: member.location || '',
       city: (member as any).city || '',
       office_id: (member as any).office_id || '',
+      display_name: member.display_name || '',
       base_working_hours: Number((member as any).base_working_hours ?? 8),
     });
   }, [member, open, workspaceId, showEmail]);
 
   const handleSave = async () => {
     if (!member) return;
+    const normalizedDisplayName = editForm.display_name.trim();
     const primaryRole = allocations.find(a => a.is_priority)?.business_role || allocations[0]?.business_role || null;
     const { error } = await (supabase as any)
       .from('enterprise_memberships')
@@ -222,6 +225,16 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
     if (error) {
       toast.error('Hiba a mentéskor');
       return;
+    }
+
+    if (normalizedDisplayName) {
+      const { error: profileError } = await (supabase as any)
+        .from('profiles')
+        .upsert({ user_id: member.user_id, display_name: normalizedDisplayName }, { onConflict: 'user_id' });
+
+      if (profileError) {
+        toast.error('A név mentése nem sikerült. A többi tagadat mentve lett.');
+      }
     }
 
     await supabase.from('enterprise_member_role_allocations').delete().eq('membership_id', member.id);
@@ -313,6 +326,10 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
               <CardContent className="px-4 pb-3 space-y-2 text-sm">
                 {editing ? (
                   <div className="space-y-3">
+                    <div>
+                      <Label className="text-xs">Név</Label>
+                      <Input value={editForm.display_name} onChange={e => setEditForm(f => ({ ...f, display_name: e.target.value }))} placeholder="Tag neve" className="h-8 text-sm" />
+                    </div>
                     <div>
                       <Label className="text-xs">Munkakör(ök) és megosztás</Label>
                       <div className="mt-1.5">
