@@ -390,7 +390,6 @@
     background: var(--gradient-hero);
     min-height: 100vh;
   }
-}
 
 
   /* Shared refinements: premium surfaces without changing component behavior. */
@@ -497,7 +496,6 @@
   .theme-sunrise .rounded-xl {
     border-radius: calc(var(--radius) + 10px);
   }
-}
 
 
   .theme-nebula .glass,
@@ -540,4 +538,3 @@
     border: 1px solid hsl(var(--border) / 0.75);
     box-shadow: var(--shadow-card);
   }
-}
