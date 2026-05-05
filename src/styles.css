@@ -1,1 +1,10 @@
-/* Compat shim — actual styles live in src/index.css */
+/*
+ * Compat alias for src/index.css. Some build pipelines / legacy imports may
+ * reach for src/styles.css directly, so we re-declare the Tailwind directives
+ * here before pulling in the shared theme tokens.
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import "./styles/themes.css";
