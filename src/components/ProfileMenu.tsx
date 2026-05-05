@@ -170,9 +170,9 @@ export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {})
             <Palette className="mr-2 h-4 w-4" />
             Következő layout: {layoutLabels[themeStyle] || themeStyle}
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={toggleTheme} className="rounded-lg cursor-pointer" disabled={['nebula', 'graphite'].includes(themeStyle)}>
+          <DropdownMenuItem onClick={toggleTheme} className="rounded-lg cursor-pointer" disabled={['nebula', 'nebula-obsidian', 'graphite'].includes(themeStyle)}>
             {theme === 'dark' ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
-            {['nebula', 'graphite'].includes(themeStyle) ? 'A kiválasztott layout fix dark módú' : theme === 'dark' ? 'Világos mód' : 'Sötét mód'}
+            {['nebula', 'nebula-obsidian', 'graphite'].includes(themeStyle) ? 'A kiválasztott layout fix dark módú' : theme === 'dark' ? 'Világos mód' : 'Sötét mód'}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={signOut} className="rounded-lg cursor-pointer text-destructive focus:text-destructive">
@@ -221,9 +221,9 @@ export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {})
           <Palette className="mr-2 h-4 w-4" />
           Következő layout: {layoutLabels[themeStyle] || themeStyle}
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={toggleTheme} className="rounded-lg cursor-pointer" disabled={['nebula', 'graphite'].includes(themeStyle)}>
+        <DropdownMenuItem onClick={toggleTheme} className="rounded-lg cursor-pointer" disabled={['nebula', 'nebula-obsidian', 'graphite'].includes(themeStyle)}>
           {theme === 'dark' ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
-          {['nebula', 'graphite'].includes(themeStyle) ? 'A kiválasztott layout fix dark módú' : theme === 'dark' ? 'Világos mód' : 'Sötét mód'}
+          {['nebula', 'nebula-obsidian', 'graphite'].includes(themeStyle) ? 'A kiválasztott layout fix dark módú' : theme === 'dark' ? 'Világos mód' : 'Sötét mód'}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={signOut} className="rounded-lg cursor-pointer text-destructive focus:text-destructive">
