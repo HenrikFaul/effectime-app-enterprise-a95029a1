@@ -309,7 +309,80 @@
     --brand-logo-end: 216 10% 13%;
   }
 
+  /* Template 7: Nebula Obsidian — premium obsidian dark with violet→cyan gradient and electric green CTA */
+  .theme-nebula-obsidian {
+    color-scheme: dark;
+    --background: 230 55% 6%;
+    --foreground: 220 25% 96%;
+
+    --card: 230 42% 10%;
+    --card-foreground: 220 25% 96%;
+
+    --popover: 230 48% 8%;
+    --popover-foreground: 220 25% 96%;
+
+    /* Electric green CTA — matches "Próbálja ingyen" / "Kezdje el ingyen" buttons */
+    --primary: 142 72% 52%;
+    --primary-foreground: 230 55% 6%;
+    --primary-glow: 152 78% 58%;
+
+    --secondary: 230 32% 14%;
+    --secondary-foreground: 220 25% 92%;
+
+    --muted: 230 28% 15%;
+    --muted-foreground: 222 18% 68%;
+
+    /* Violet/blue accent for the gradient text */
+    --accent: 258 88% 68%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 74% 58%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 142 72% 52%;
+    --success-foreground: 230 55% 6%;
+
+    --warning: 38 92% 55%;
+    --warning-foreground: 230 55% 6%;
+
+    --vote-good: 142 72% 52%;
+    --vote-maybe: 38 92% 55%;
+    --vote-bad: 0 74% 58%;
+
+    --border: 230 28% 20%;
+    --input: 230 28% 20%;
+    --ring: 142 72% 52%;
+
+    --radius: 1rem;
+
+    --sidebar-background: 230 55% 6%;
+    --sidebar-foreground: 220 25% 92%;
+    --sidebar-primary: 142 72% 52%;
+    --sidebar-primary-foreground: 230 55% 6%;
+    --sidebar-accent: 230 32% 14%;
+    --sidebar-accent-foreground: 220 25% 92%;
+    --sidebar-border: 230 28% 18%;
+    --sidebar-ring: 142 72% 52%;
+
+    --font-display: 'Space Grotesk', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+
+    --shadow-card: 0 1px 0 hsl(230 28% 26% / 0.5), 0 22px 70px -36px hsl(0 0% 0% / 0.9);
+    --shadow-elevated: 0 32px 90px -28px hsl(142 72% 52% / 0.30), 0 18px 54px -28px hsl(258 88% 68% / 0.28);
+    --shadow-modal: 0 32px 100px -18px hsl(0 0% 0% / 0.85);
+    --shadow-glow: 0 0 28px hsl(142 72% 52% / 0.40), 0 0 60px hsl(258 88% 68% / 0.18);
+
+    --gradient-primary: linear-gradient(135deg, hsl(142 72% 52%), hsl(152 78% 58%));
+    --gradient-accent: linear-gradient(135deg, hsl(258 88% 68%), hsl(199 92% 60%));
+    --gradient-hero: radial-gradient(circle at 50% 0%, hsl(258 88% 68% / 0.22), transparent 38%), radial-gradient(circle at 80% 30%, hsl(199 92% 60% / 0.16), transparent 32%), linear-gradient(180deg, hsl(230 55% 6%), hsl(232 60% 5%));
+    --gradient-surface: linear-gradient(180deg, hsl(230 42% 11%), hsl(230 55% 6%));
+    --brand-logo-start: 258 88% 68%;
+    --brand-logo-mid: 199 92% 60%;
+    --brand-logo-end: 142 72% 52%;
+  }
+
   html.theme-nebula body,
+  html.theme-nebula-obsidian body,
   html.theme-aurora body,
   html.theme-graphite body,
   html.theme-sunrise body,
