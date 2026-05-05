@@ -595,6 +595,7 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
   const layoutOptions: { value: ThemeStyle; label: string }[] = [
     { value: 'enterprise', label: 'Enterprise Classic' },
     { value: 'nebula', label: 'Nebula Strategy (screenshot template)' },
+    { value: 'nebula-obsidian', label: 'Nebula Obsidian' },
     { value: 'aurora', label: 'Aurora Focus' },
     { value: 'graphite', label: 'Graphite Pro' },
     { value: 'sunrise', label: 'Sunrise Flow' },
