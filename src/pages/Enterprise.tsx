@@ -307,6 +307,7 @@ export default function Enterprise() {
       <CreateWorkspaceDialog
         open={showCreate}
         onOpenChange={setShowCreate}
+        userId={user?.id || ''}
         onCreated={async () => {
           await fetchWorkspaces();
           setShowCreate(false);
