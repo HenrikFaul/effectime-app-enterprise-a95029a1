@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft, LogOut } from 'lucide-react';
+import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft, LogOut, Building2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
@@ -56,6 +56,11 @@ import { useEnterprisePermissions } from '@/hooks/useEnterprisePermissions';
 import { useWorkspaceSectionState } from '@/hooks/useWorkspaceSectionState';
 import { useTheme, type ThemeStyle } from '@/hooks/useTheme';
 import { useAuth } from '@/hooks/useAuth';
+import { HelpButton } from '@/components/help/HelpButton';
+import { LanguageSelector } from '@/components/i18n/LanguageSelector';
+import { useHelpAnchor } from '@/lib/help/registry';
+import { OrganizationModule } from './organization/OrganizationModule';
+import { LocalizationSettings } from './settings/LocalizationSettings';
 
 interface Workspace {
   id: string;
@@ -93,6 +98,15 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   const isAdmin = userRole === 'owner' || userRole === 'resourceAssistant';
   const { canView, canEdit } = useEnterprisePermissions(workspace.id, userRole);
 
+  // Map active tab → help anchor
+  const helpAnchorId =
+    activeTab === 'members' ? 'workspace.members' :
+    activeTab === 'organization' ? 'workspace.organization' :
+    activeTab === 'calendar' ? 'workspace.calendar' :
+    activeTab === 'requests' ? 'workspace.approvals' :
+    'workspace.members';
+  useHelpAnchor({ id: helpAnchorId, crumbs: [workspace.name, activeTab] });
+
   // Fetch current user's membership + profile for "Profilom"
   useEffect(() => {
     const fetchMyMembership = async () => {
@@ -123,15 +137,19 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur px-4 py-3">
-        <div className="flex items-center justify-between max-w-5xl mx-auto">
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="icon" onClick={onBack}>
+        <div
+          className="flex items-center justify-between max-w-5xl mx-auto gap-2"
+          data-help-region={helpAnchorId}
+        >
+          <div className="flex items-center gap-2 min-w-0">
+            <HelpButton />
+            <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div>
-              <h1 className="text-lg font-semibold">{workspace.name}</h1>
+            <div className="min-w-0">
+              <h1 className="text-lg font-semibold truncate">{workspace.name}</h1>
               {workspace.description && (
-                <p className="text-xs text-muted-foreground">{workspace.description}</p>
+                <p className="text-xs text-muted-foreground truncate">{workspace.description}</p>
               )}
             </div>
           </div>
@@ -144,6 +162,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                 <UserPlus className="h-4 w-4 mr-1" /> Meghívás
               </Button>
             )}
+            <LanguageSelector />
             <Button size="sm" variant="destructive" onClick={signOut} className="gap-1.5">
               <LogOut className="h-4 w-4" /> Kilépés
             </Button>
@@ -158,6 +177,11 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               {canView('members') && (
                 <TabsTrigger value="members" className="gap-1">
                   <Users className="h-4 w-4" /> Tagok
+                </TabsTrigger>
+              )}
+              {canView('members') && (
+                <TabsTrigger value="organization" className="gap-1">
+                  <Building2 className="h-4 w-4" /> Szervezet
                 </TabsTrigger>
               )}
               {hasCalendarAccess && (
@@ -205,6 +229,12 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                   <InvitationsPanel workspaceId={workspace.id} isAdmin={canEdit('invitations')} />
                 )}
                 <MemberList workspaceId={workspace.id} userId={userId} userRole={userRole} />
+              </TabsContent>
+            )}
+
+            {canView('members') && (
+              <TabsContent value="organization" className="space-y-3">
+                <OrganizationModule workspaceId={workspace.id} isAdmin={isAdmin} />
               </TabsContent>
             )}
 
@@ -629,6 +659,10 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
 
       <SettingsSection workspaceId={workspace.id} sectionKey="settings.ical" icon={<Rss className="h-4 w-4" />} title="iCal naptár-feliratkozás">
         <ICalSubscription workspaceId={workspace.id} userId={userId} />
+      </SettingsSection>
+
+      <SettingsSection workspaceId={workspace.id} sectionKey="settings.localization" icon={<Settings className="h-4 w-4" />} title="Nyelvi beállítások / Localization">
+        <LocalizationSettings workspaceId={workspace.id} />
       </SettingsSection>
 
       {isAdmin && (

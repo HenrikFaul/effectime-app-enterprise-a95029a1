@@ -1,3 +1,59 @@
+## 2026-05-05 — v3.0.0 Phases 1–4 implementation: localization, help system, Organization module, position catalog, org chart, manual
+
+### Added — Phase 1 (Localization + Help system)
+- **i18n core** (`src/i18n/`): homegrown React-Context provider, EN + HU resource bundles (`src/i18n/resources/{en,hu}.ts`), `useT`/`useI18n` hooks, browser+localStorage+`profiles.preferred_locale` detection chain with English fallback. No new npm dependency.
+- **Language selector** (`src/components/i18n/LanguageSelector.tsx`) — circular flag dropdown in the right header cluster; persists immediately to `localStorage.effectime.locale` and best-effort to `profiles.preferred_locale`.
+- **Help system** (`src/lib/help/registry.tsx`, `src/components/help/HelpButton.tsx`, `src/components/help/HelpDrawer.tsx`) — question-mark button on the **left side** of every header, right-side drawer with section title, summary, common-tasks list, and breadcrumb chips. Page regions marked with `data-help-region="<anchor>"` receive a soft pulse ring (respects `prefers-reduced-motion`). Shipped anchors: `home.overview`, `workspace.members`, `workspace.organization`, `workspace.calendar`, `workspace.approvals`, `settings.localization`.
+- **Help highlight CSS** (`src/index.css`): `.help-highlight-ring` + keyframes + reduced-motion guard.
+- **Header restructure** (`src/pages/Enterprise.tsx`, `src/components/enterprise/WorkspaceDashboard.tsx`): Help (?) on left, Language selector in right cluster, all existing buttons preserved (Profilom, Meghívás, Kilépés, Új munkaterület). Workspace header now drives the help anchor from the active tab.
+- **Settings → Localization** (`src/components/enterprise/settings/LocalizationSettings.tsx`): read-only v1 — lists EN + HU with active-language indicator, missing-key counter, workspace-default note.
+- **Side fix**: missing `Building2` import in `Enterprise.tsx` (latent bug — would crash the empty-workspace state) added.
+
+### Added — Phase 2 (Organization module)
+- **Migration** `supabase/migrations/20260505120000_preferred_locale_and_organization.sql`: idempotent additive migration adding
+  - `profiles.preferred_locale` + check constraint,
+  - `enterprise_workspaces.default_locale` + check constraint,
+  - tables: `enterprise_org_units`, `enterprise_leadership_levels`, `enterprise_contract_types`, `enterprise_industries`, `enterprise_work_categories`, `enterprise_job_families`, `enterprise_org_chart_snapshots`,
+  - additive columns on `enterprise_memberships`: `org_unit_id`, `manager_id`, `leadership_level_id`, `contract_type_id`, `leadership_category` (with check constraint), `employer_rights`, `position_catalog_id`, `seniority`,
+  - manager-cycle prevention trigger,
+  - RLS policies (members view, admins manage) for all new tables,
+  - `seed_default_contract_types` and `seed_default_leadership_levels` SECURITY DEFINER seeders.
+- **People → Organization** tab (`src/components/enterprise/organization/`): full sub-module with seven tabs:
+  - `OrgStructure` — hierarchical tree with parent picker, archive action.
+  - `LeadershipLevels`, `ContractTypes`, `Industries`, `WorkCategories`, `JobFamilies` — backed by a shared `CatalogListEditor` (label + auto-slugged code, archive, optional **Seed defaults** for leadership and contracts).
+  - `OrgChart` — auto-generated tree from `manager_id`, search filter, snapshot timestamp, **Regenerate snapshot** writes to `enterprise_org_chart_snapshots`.
+- **InviteMemberDialog** enhanced (`src/components/enterprise/InviteMemberDialog.tsx`):
+  - New optional Organization metadata section: org unit, direct manager, contract type, leadership level, leadership category, employer-rights checkbox.
+  - Predefined Position Picker integration (Phase 3).
+  - All new fields stored in the workspace `invitation_prefills` payload alongside existing fields.
+  - Audit-log metadata extended with the new fields.
+  - Existing free-text + RoleAllocationEditor + template paths fully preserved.
+- **MemberProfileSheet** completion banner (`src/components/enterprise/MemberProfileSheet.tsx`): non-blocking amber banner at the top of the profile when any of `org_unit_id`, `manager_id`, `contract_type_id`, `leadership_level_id` is missing. Existing data preserved.
+
+### Added — Phase 3 (Position catalog)
+- **PositionPickerDialog** (`src/components/enterprise/positions/PositionPickerDialog.tsx`): three-step drill-down (category → role → review skills), reads from existing workspace catalog tables (`enterprise_workspace_role_categories`, `enterprise_workspace_roles`, `enterprise_workspace_role_skills`). Recommended `required` skills pre-checked; per-skill opt-in/opt-out; seniority selector (junior/medior/senior/lead/principal). Returns `{ positionRoleId, positionLabel, seniority, skillIds }` to the caller. Free-text path remains the default.
+
+### Added — Phase 4 (Org chart + manual)
+- **Org chart snapshot table** in the same migration; snapshot persistence wired through OrgChart's *Regenerate snapshot* action.
+- **Bilingual user manual** (`docs/manual/{en,hu}/`):
+  - `README.md`, `getting-started.md`, `workspaces.md`, `help.md`, `settings/localization.md`,
+  - `people/members.md`, `people/organization.md`, `people/positions.md`,
+  - parallel EN + HU editions covering all Phase 1–3 surface.
+
+### Wiring
+- `src/App.tsx`: wraps the app in `<I18nProvider>` and `<HelpRegistryProvider>`, renders `<HelpDrawer />` once at the top level.
+- `WorkspaceDashboard` adds the `Szervezet` tab between Tagok and Naptár (gated by `members` view permission, identical to Tagok).
+- `WorkspaceSettings` adds the Localization section after iCal.
+
+### Non-Regression Contract enforcement
+- Conflict engine, capacity engine, approval chain semantics, RLS helpers, email registry, office coverage rule fallback, calendar filter system, auth flows — **untouched**.
+- All new fields on `enterprise_memberships` are nullable; the application reads via `.from('table').select('*')` patterns and degrades gracefully if columns are missing in dev.
+- All new tables are workspace-scoped with `is_enterprise_member()` SELECT and `has_enterprise_role()` write policies.
+
+### Validation
+- `npx tsc --noEmit -p tsconfig.app.json`: 0 errors in any new or modified file. Total error count went from 19 → 18 (the missing `Building2` import in `Enterprise.tsx` is now fixed). Remaining 18 errors are all pre-existing missing-peer-dep complaints in the sandbox (`framer-motion`, `@dnd-kit/*`, `@tanstack/react-router`, `@tanstack/react-virtual`, `@lovable.dev/cloud-auth-js`, `@tanstack/react-start`) plus one pre-existing `CreateWorkspaceDialog` `userId` prop mismatch.
+- Production `vite build` failure in the sandbox is pre-existing (peer-dep resolution against the lovable npm cache returned 403); identical on `HEAD` without these changes.
+
 ## 2026-05-05 — v3.0.0 Effectime Enterprise Master Framework (specification + Phase-1 prompts)
 
 ### Added — Versioning artifacts (no runtime changes in this commit)

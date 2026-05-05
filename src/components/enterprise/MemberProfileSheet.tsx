@@ -15,6 +15,8 @@ import { NotificationPreferences } from './NotificationPreferences';
 import { RoleAllocationEditor, Allocation } from './RoleAllocationEditor';
 import { MemberSitePriorityEditor } from './MemberSitePriorityEditor';
 import { cn } from '@/lib/utils';
+import { useT } from '@/i18n/I18nProvider';
+import { AlertCircle } from 'lucide-react';
 
 interface Member {
   id: string;
@@ -318,6 +320,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
 
         <ScrollArea className="h-[calc(100vh-120px)]">
           <div className="p-4 space-y-4">
+            <OrganizationCompletionBanner member={member as any} />
             {/* Basic Info / Edit */}
             <Card>
               <CardHeader className="py-3 px-4">
@@ -602,5 +605,41 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
         </ScrollArea>
       </SheetContent>
     </Sheet>
+  );
+}
+
+// v3.0.0 — Organization metadata completion banner. Visible when one or more
+// of the new soft-required fields (manager, org_unit, contract_type,
+// leadership_level) are missing on the membership row. Non-blocking, advisory.
+function OrganizationCompletionBanner({ member }: { member: Record<string, any> }) {
+  const t = useT();
+  const missing: string[] = [];
+  if (!member?.org_unit_id) missing.push(t("member.org_unit"));
+  if (!member?.manager_id) missing.push(t("member.manager"));
+  if (!member?.contract_type_id) missing.push(t("member.contract_type"));
+  if (!member?.leadership_level_id) missing.push(t("member.leadership_level"));
+  if (missing.length === 0) return null;
+  return (
+    <div className="flex gap-2 rounded-md border border-amber-300/60 bg-amber-50 dark:bg-amber-950/30 px-3 py-2">
+      <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+      <div className="text-xs">
+        <div className="font-semibold text-amber-900 dark:text-amber-200">
+          {t("member.completion_banner_title")}
+        </div>
+        <p className="mt-0.5 text-amber-900/80 dark:text-amber-100/80 leading-relaxed">
+          {t("member.completion_banner_body")}
+        </p>
+        <div className="mt-1 flex flex-wrap gap-1">
+          {missing.map((m) => (
+            <span
+              key={m}
+              className="inline-flex items-center rounded bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 text-[10px] text-amber-900 dark:text-amber-100"
+            >
+              {m}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }
