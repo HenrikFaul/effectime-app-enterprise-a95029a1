@@ -217,4 +217,22 @@
   .pb-safe {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
+
+  .help-highlight-ring {
+    position: relative;
+    box-shadow: 0 0 0 2px hsl(var(--primary) / 0.45), 0 0 0 6px hsl(var(--primary) / 0.12);
+    border-radius: var(--radius);
+    transition: box-shadow 200ms ease-out;
+    animation: help-highlight-pulse 1.2s ease-out 1;
+  }
+
+  @keyframes help-highlight-pulse {
+    0%   { box-shadow: 0 0 0 0 hsl(var(--primary) / 0.55), 0 0 0 0 hsl(var(--primary) / 0.18); }
+    50%  { box-shadow: 0 0 0 4px hsl(var(--primary) / 0.45), 0 0 0 10px hsl(var(--primary) / 0.18); }
+    100% { box-shadow: 0 0 0 2px hsl(var(--primary) / 0.45), 0 0 0 6px hsl(var(--primary) / 0.12); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .help-highlight-ring { animation: none; }
+  }
 }

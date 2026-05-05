@@ -10,6 +10,10 @@ import { toast } from 'sonner';
 import { CreateWorkspaceDialog } from '@/components/enterprise/CreateWorkspaceDialog';
 import { WorkspaceDashboard } from '@/components/enterprise/WorkspaceDashboard';
 import { EffectimeLogo } from '@/components/EffectimeLogo';
+import { HelpButton } from '@/components/help/HelpButton';
+import { LanguageSelector } from '@/components/i18n/LanguageSelector';
+import { useHelpAnchor } from '@/lib/help/registry';
+import { useT } from '@/i18n/I18nProvider';
 
 interface Workspace {
   id: string;
@@ -34,6 +38,8 @@ const ACTIVE_WORKSPACE_KEY = 'active_workspace_id';
 
 export default function Enterprise() {
   const { user, signOut } = useAuth();
+  const t = useT();
+  useHelpAnchor({ id: 'home.overview', crumbs: ['Effectime', 'Workspaces'] });
   const [searchParams, setSearchParams] = useSearchParams();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [memberships, setMemberships] = useState<Membership[]>([]);
@@ -238,14 +244,21 @@ export default function Enterprise() {
   return (
     <div className="min-h-screen bg-background">
       <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur px-4 py-3">
-        <div className="flex items-center justify-between max-w-5xl mx-auto">
-          <EffectimeLogo size={34} variant="full" />
+        <div
+          className="flex items-center justify-between max-w-5xl mx-auto gap-2"
+          data-help-region="home.overview"
+        >
+          <div className="flex items-center gap-2">
+            <HelpButton />
+            <EffectimeLogo size={34} variant="full" />
+          </div>
           <div className="flex items-center gap-2">
             <Button onClick={() => setShowCreate(true)} size="sm">
-              <Plus className="h-4 w-4 mr-1" /> Új munkaterület
+              <Plus className="h-4 w-4 mr-1" /> {t('header.new_workspace')}
             </Button>
+            <LanguageSelector />
             <Button onClick={signOut} size="sm" variant="destructive" className="gap-1.5">
-              <LogOut className="h-4 w-4" /> Kilépés
+              <LogOut className="h-4 w-4" /> {t('header.sign_out')}
             </Button>
           </div>
         </div>

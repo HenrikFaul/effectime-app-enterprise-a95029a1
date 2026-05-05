@@ -6,6 +6,9 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate } from "react-route
 import { useEffect } from "react";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { I18nProvider } from "@/i18n/I18nProvider";
+import { HelpRegistryProvider } from "@/lib/help/registry";
+import { HelpDrawer } from "@/components/help/HelpDrawer";
 
 import Auth from "./pages/Auth";
 import Landing from "./pages/Landing";
@@ -78,24 +81,29 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
       <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter>
-            <SpaRedirectHandler />
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/app" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
-              <Route path="/enterprise" element={<ProtectedRoute><Navigate to="/app" replace /></ProtectedRoute>} />
-              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-              <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
-              <Route path="/reset-password" element={<ResetPassword />} />
-              <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-              <Route path="/unsubscribe" element={<Unsubscribe />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+        <I18nProvider>
+          <HelpRegistryProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <HelpDrawer />
+              <BrowserRouter>
+                <SpaRedirectHandler />
+                <Routes>
+                  <Route path="/" element={<Landing />} />
+                  <Route path="/app" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
+                  <Route path="/enterprise" element={<ProtectedRoute><Navigate to="/app" replace /></ProtectedRoute>} />
+                  <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                  <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+                  <Route path="/unsubscribe" element={<Unsubscribe />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </HelpRegistryProvider>
+        </I18nProvider>
       </AuthProvider>
     </ThemeProvider>
   </QueryClientProvider>
