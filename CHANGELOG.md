@@ -322,3 +322,11 @@
   - Tagonkénti risk-level (Low/Medium/High) és fit-score (%) megjelenítés
   - Overload/underload jelzések megtartása a korábbi működéssel kompatibilisen
 - Cél: a meglévő Jira/ADO foundation megtartása mellett előkészített adat- és UI-alap a kétirányú, auditált capacity sync iteratív bővítéséhez.
+
+## 2026-05-05 — Enterprise role/category/skill catalog foundation (inventory + workspace overrides)
+- Új adatmodell bevezetve a munkakategória → munkakör → skill kapcsolatokhoz, külön ID-alapú entitásokkal és deduplikált skill-kezeléssel.
+- Új globális inventory táblák: `enterprise_catalog_categories`, `enterprise_catalog_roles`, `enterprise_catalog_skills`, `enterprise_catalog_role_skills`.
+- Új cégszintű testreszabható réteg: `enterprise_workspace_role_categories`, `enterprise_workspace_roles`, `enterprise_workspace_skills`, `enterprise_workspace_role_skills`.
+- `enterprise_memberships` bővítve `business_role_id` mezővel (FK a workspace role táblára), így a meglévő szöveges `business_role` mellett ID-alapú kötés is elérhető.
+- Experience/szenioritás bevezetve `enterprise_experience_level` enumon keresztül, szerep-skill elvárásokon használható (`min_experience_level`).
+- RLS policy-k, indexek és `updated_at` triggerek hozzáadva a karbantartható, multi-tenant működéshez.
