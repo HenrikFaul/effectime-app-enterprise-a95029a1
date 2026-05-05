@@ -1,3 +1,43 @@
+## 2026-05-05 — v3.0.0 Effectime Enterprise Master Framework (specification + Phase-1 prompts)
+
+### Added — Versioning artifacts (no runtime changes in this commit)
+- `versioning/05052601_v3.0.0_enterprise_master_spec.md` — canonical 25-section product, UX, frontend, backend, QA, localization, documentation, and rollout specification for the Effectime platform. Establishes the structural framework the existing modules must align to.
+- `versioning/05052601_v3.0.0_ai_dev_prompts.md` — Phase-1 implementation prompts (header restructure, i18n scaffold, `profiles.preferred_locale`, help registry shell, Settings → Localization v1) with binding regression constraints and validation checklist.
+
+### Scope established by this directive
+- **First-class Organization module** (hierarchy, leadership levels, contractual relationships, industry, work categories, job families, automatic org chart) as a People sub-section — not a parallel hierarchy.
+- **Mandatory member metadata** at creation: direct manager, organizational unit, position, leadership level, contract type, workspace, employer-rights flag, leadership category. Soft-required during transition with completion banner; cut-over date per workspace.
+- **Predefined position catalog** with category drill-down and recommended skill expectation inheritance (junior/medior/senior). Free-text path preserved alongside catalog path. Builds on the role/category/skill catalog migration `20260505110000_enterprise_role_skill_catalog.sql`.
+- **Onboarding playbook** as a first-class module: templates, instances, steps, ownership, deadlines, escalation, completion. Reuses the existing approval engine; does not duplicate it.
+- **External Access Request matrix** tied to position and onboarding (Jira, Confluence, Outlook, Dynatrace, ERP, Billing, custom). Position × system pivot; routed through existing approval chains.
+- **Help system** with question-mark icon on the **left side of the header**, contextual highlighting of the current page region, bilingual content, focus-trapped drawer.
+- **Localization architecture** (English + Hungarian first), language selector with circular flag in the right header cluster. `profiles.preferred_locale` persistence; workspace default; missing-key fallback to English.
+- **Full user manual** structure under `docs/manual/<locale>/<module>/<page>.md`, in-app `/manual` route, EN+HU parallel publishing.
+- **Strategic capability framing** (capacity engine, predictive forecasting, workforce command center, approval orchestration, multi-workspace operating model, integration health, skill staffing, financials, scenarios, compliance, capacity DNA, recovery mode, org pulse, decision memory) layered on existing modules — not new top-level destinations.
+- **Information architecture** consolidated to seven primary destinations: Home, Calendar, People, Workflows, Resources, Reports, Settings.
+
+### Non-Regression Contract (binding)
+- Auth flows, leave/approval lifecycle, quota math, conflict engine, capacity engine, RLS policies, email registry, office coverage rule fallback, and calendar filter system are classified **preserve exactly**.
+- No removal of any existing tab, page, route, button, filter, export, or notification without an explicit `risky-change` artifact and changelog `Removed` entry.
+- No silent semantics drift on approval, leave conflict, capacity, or coverage logic. No RLS weakening.
+- No localization of database identifiers, enum codes, or stored permission keys.
+
+### Non-Duplication Rules (binding)
+- Organization module is canonical for hierarchy and contracts; existing People surfaces read from and write to it.
+- Single skill taxonomy shared between SkillsManager and position catalog.
+- Single approval engine for leave, onboarding, and access decisions.
+- Onboarding and access KPIs ship as datasets/views in the existing report builder.
+- All new flows route through `EnterpriseNotifications` and the transactional email registry.
+
+### Rollout
+- Phased delivery (Phase 1 foundations → Phase 7 localization completion) gated by per-workspace feature flags: `feat.help_system`, `feat.org_module`, `feat.position_catalog`, `feat.onboarding`, `feat.access_matrix`, `feat.localization_hu`, `feat.command_center`, `feat.recovery_mode`. Default off in production; rollback by flag.
+
+### Notes
+- This commit is **specification-only**. No `src/`, no migrations, no edge function changes. Runtime behavior is unchanged.
+- Implementation begins under `versioning/05052601_v3.0.0_ai_dev_prompts.md` Phase 1.
+
+---
+
 ## 2026-05-04 — SPA routing hardening + Auth page world-class redesign
 
 ### Fixed — SPA 404 at /auth (P0 production incident)
