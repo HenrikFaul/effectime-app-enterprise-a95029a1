@@ -42,9 +42,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const root = document.documentElement;
 
-    root.classList.toggle('dark', theme === 'dark' || ['nebula', 'graphite'].includes(themeStyle));
+    root.classList.toggle('dark', theme === 'dark' || ['nebula', 'nebula-obsidian', 'graphite'].includes(themeStyle));
     root.classList.toggle('theme-enterprise', themeStyle === 'enterprise');
     root.classList.toggle('theme-nebula', themeStyle === 'nebula');
+    root.classList.toggle('theme-nebula-obsidian', themeStyle === 'nebula-obsidian');
     root.classList.toggle('theme-aurora', themeStyle === 'aurora');
     root.classList.toggle('theme-graphite', themeStyle === 'graphite');
     root.classList.toggle('theme-sunrise', themeStyle === 'sunrise');
