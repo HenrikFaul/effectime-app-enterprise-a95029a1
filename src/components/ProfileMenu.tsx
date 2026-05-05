@@ -18,6 +18,7 @@ export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {})
   const layoutLabels: Record<string, string> = {
     enterprise: 'Enterprise Classic',
     nebula: 'Nebula Strategy',
+    'nebula-obsidian': 'Nebula Obsidian',
     aurora: 'Aurora Focus',
     graphite: 'Graphite Pro',
     sunrise: 'Sunrise Flow',
