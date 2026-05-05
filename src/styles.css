@@ -1,6 +1,10 @@
 /*
- * Compatibility entry for the original Nebula Obsidian design file.
- * The active app stylesheet is src/index.css, which imports ./styles/themes.css.
- * Keep this file so direct imports of src/styles.css also expose the selectable theme definitions.
+ * Compat alias for src/index.css. Some build pipelines / legacy imports may
+ * reach for src/styles.css directly, so we re-declare the Tailwind directives
+ * here before pulling in the shared theme tokens.
  */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @import "./styles/themes.css";

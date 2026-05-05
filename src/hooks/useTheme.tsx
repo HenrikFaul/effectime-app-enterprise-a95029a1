@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
 type Theme = 'light' | 'dark';
-export type ThemeStyle = 'enterprise' | 'nebula' | 'aurora' | 'graphite' | 'sunrise' | 'mono';
+export type ThemeStyle = 'enterprise' | 'nebula' | 'nebula-obsidian' | 'aurora' | 'graphite' | 'sunrise' | 'mono';
 
 interface ThemeContextType {
   theme: Theme;
@@ -18,7 +18,7 @@ const STYLE_STORAGE_KEY = 'effectime-theme-style';
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const isTheme = (value: string | null): value is Theme => value === 'light' || value === 'dark';
-const THEME_STYLES: ThemeStyle[] = ['enterprise', 'nebula', 'aurora', 'graphite', 'sunrise', 'mono'];
+const THEME_STYLES: ThemeStyle[] = ['enterprise', 'nebula', 'nebula-obsidian', 'aurora', 'graphite', 'sunrise', 'mono'];
 const isThemeStyle = (value: string | null): value is ThemeStyle => !!value && THEME_STYLES.includes(value as ThemeStyle);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
@@ -42,9 +42,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const root = document.documentElement;
 
-    root.classList.toggle('dark', theme === 'dark' || ['nebula', 'graphite'].includes(themeStyle));
+    root.classList.toggle('dark', theme === 'dark' || ['nebula', 'nebula-obsidian', 'graphite'].includes(themeStyle));
     root.classList.toggle('theme-enterprise', themeStyle === 'enterprise');
     root.classList.toggle('theme-nebula', themeStyle === 'nebula');
+    root.classList.toggle('theme-nebula-obsidian', themeStyle === 'nebula-obsidian');
     root.classList.toggle('theme-aurora', themeStyle === 'aurora');
     root.classList.toggle('theme-graphite', themeStyle === 'graphite');
     root.classList.toggle('theme-sunrise', themeStyle === 'sunrise');
