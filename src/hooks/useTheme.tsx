@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 
 type Theme = 'light' | 'dark';
-export type ThemeStyle = 'enterprise' | 'nebula' | 'aurora' | 'graphite' | 'sunrise' | 'mono';
+export type ThemeStyle = 'enterprise' | 'nebula' | 'nebula-obsidian' | 'aurora' | 'graphite' | 'sunrise' | 'mono';
 
 interface ThemeContextType {
   theme: Theme;
