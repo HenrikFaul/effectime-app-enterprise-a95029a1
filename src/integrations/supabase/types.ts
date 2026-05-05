@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.1"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -173,6 +173,123 @@ export type Database = {
         }
         Relationships: []
       }
+      enterprise_agile_capacity_events: {
+        Row: {
+          auto_action_taken: string | null
+          created_at: string
+          created_by: string | null
+          details: Json
+          event_type: string
+          id: string
+          impact_summary: string
+          integration_id: string
+          issue_key: string | null
+          risk_level: string
+          workspace_id: string
+        }
+        Insert: {
+          auto_action_taken?: string | null
+          created_at?: string
+          created_by?: string | null
+          details?: Json
+          event_type: string
+          id?: string
+          impact_summary: string
+          integration_id: string
+          issue_key?: string | null
+          risk_level?: string
+          workspace_id: string
+        }
+        Update: {
+          auto_action_taken?: string | null
+          created_at?: string
+          created_by?: string | null
+          details?: Json
+          event_type?: string
+          id?: string
+          impact_summary?: string
+          integration_id?: string
+          issue_key?: string | null
+          risk_level?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_agile_capacity_events_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspace_integrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_agile_capacity_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_agile_external_field_mappings: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          external_field_id: string
+          id: string
+          integration_id: string
+          is_required: boolean
+          is_safe_writeback: boolean
+          normalized_field: string
+          provider: string
+          sync_direction: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          external_field_id: string
+          id?: string
+          integration_id: string
+          is_required?: boolean
+          is_safe_writeback?: boolean
+          normalized_field: string
+          provider: string
+          sync_direction?: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          external_field_id?: string
+          id?: string
+          integration_id?: string
+          is_required?: boolean
+          is_safe_writeback?: boolean
+          normalized_field?: string
+          provider?: string
+          sync_direction?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_agile_external_field_mappings_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspace_integrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_agile_external_field_mappings_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enterprise_agile_field_metadata: {
         Row: {
           discovered_at: string
@@ -234,6 +351,7 @@ export type Database = {
         Row: {
           assignee_email: string | null
           assignee_name: string | null
+          capacity_risk: string | null
           completed_hours: number | null
           components: string[] | null
           created_at: string
@@ -241,7 +359,9 @@ export type Database = {
           due_date: string | null
           external_id: string | null
           external_key: string
+          external_type: string | null
           external_updated_at: string | null
+          fit_score: number | null
           id: string
           integration_id: string
           issue_type: string | null
@@ -250,6 +370,7 @@ export type Database = {
           last_synced_at: string
           original_estimate_hours: number | null
           parent_key: string | null
+          plan_impact_reason: string | null
           priority: string | null
           project_key: string | null
           provider: string
@@ -260,7 +381,9 @@ export type Database = {
           start_date: string | null
           status: string | null
           story_points: number | null
+          suggested_role: string | null
           summary: string | null
+          target_sprint: string | null
           updated_at: string
           url: string | null
           workspace_id: string
@@ -268,6 +391,7 @@ export type Database = {
         Insert: {
           assignee_email?: string | null
           assignee_name?: string | null
+          capacity_risk?: string | null
           completed_hours?: number | null
           components?: string[] | null
           created_at?: string
@@ -275,7 +399,9 @@ export type Database = {
           due_date?: string | null
           external_id?: string | null
           external_key: string
+          external_type?: string | null
           external_updated_at?: string | null
+          fit_score?: number | null
           id?: string
           integration_id: string
           issue_type?: string | null
@@ -284,6 +410,7 @@ export type Database = {
           last_synced_at?: string
           original_estimate_hours?: number | null
           parent_key?: string | null
+          plan_impact_reason?: string | null
           priority?: string | null
           project_key?: string | null
           provider: string
@@ -294,7 +421,9 @@ export type Database = {
           start_date?: string | null
           status?: string | null
           story_points?: number | null
+          suggested_role?: string | null
           summary?: string | null
+          target_sprint?: string | null
           updated_at?: string
           url?: string | null
           workspace_id: string
@@ -302,6 +431,7 @@ export type Database = {
         Update: {
           assignee_email?: string | null
           assignee_name?: string | null
+          capacity_risk?: string | null
           completed_hours?: number | null
           components?: string[] | null
           created_at?: string
@@ -309,7 +439,9 @@ export type Database = {
           due_date?: string | null
           external_id?: string | null
           external_key?: string
+          external_type?: string | null
           external_updated_at?: string | null
+          fit_score?: number | null
           id?: string
           integration_id?: string
           issue_type?: string | null
@@ -318,6 +450,7 @@ export type Database = {
           last_synced_at?: string
           original_estimate_hours?: number | null
           parent_key?: string | null
+          plan_impact_reason?: string | null
           priority?: string | null
           project_key?: string | null
           provider?: string
@@ -328,7 +461,9 @@ export type Database = {
           start_date?: string | null
           status?: string | null
           story_points?: number | null
+          suggested_role?: string | null
           summary?: string | null
+          target_sprint?: string | null
           updated_at?: string
           url?: string | null
           workspace_id?: string
@@ -570,6 +705,149 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      enterprise_catalog_categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      enterprise_catalog_role_skills: {
+        Row: {
+          created_at: string
+          id: string
+          min_experience_level:
+            | Database["public"]["Enums"]["enterprise_experience_level"]
+            | null
+          required: boolean
+          role_id: string
+          skill_id: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          min_experience_level?:
+            | Database["public"]["Enums"]["enterprise_experience_level"]
+            | null
+          required?: boolean
+          role_id: string
+          skill_id: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          min_experience_level?:
+            | Database["public"]["Enums"]["enterprise_experience_level"]
+            | null
+          required?: boolean
+          role_id?: string
+          skill_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_catalog_role_skills_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_catalog_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_catalog_role_skills_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_catalog_skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_catalog_roles: {
+        Row: {
+          category_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          normalized_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          category_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          normalized_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          category_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          normalized_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_catalog_roles_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_catalog_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_catalog_skills: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          normalized_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          normalized_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          normalized_name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       enterprise_company_leave_days: {
         Row: {
@@ -1362,6 +1640,7 @@ export type Database = {
         Row: {
           base_working_hours: number
           business_role: string | null
+          business_role_id: string | null
           city: string | null
           created_at: string
           id: string
@@ -1380,6 +1659,7 @@ export type Database = {
         Insert: {
           base_working_hours?: number
           business_role?: string | null
+          business_role_id?: string | null
           city?: string | null
           created_at?: string
           id?: string
@@ -1398,6 +1678,7 @@ export type Database = {
         Update: {
           base_working_hours?: number
           business_role?: string | null
+          business_role_id?: string | null
           city?: string | null
           created_at?: string
           id?: string
@@ -1414,6 +1695,13 @@ export type Database = {
           workspace_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "enterprise_memberships_business_role_id_fkey"
+            columns: ["business_role_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspace_roles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "enterprise_memberships_office_id_fkey"
             columns: ["office_id"]
@@ -2618,6 +2906,225 @@ export type Database = {
           },
         ]
       }
+      enterprise_workspace_role_categories: {
+        Row: {
+          catalog_category_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          catalog_category_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          catalog_category_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_workspace_role_categories_catalog_category_id_fkey"
+            columns: ["catalog_category_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_catalog_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_workspace_role_categories_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_workspace_role_skills: {
+        Row: {
+          approved: boolean
+          created_at: string
+          id: string
+          min_experience_level:
+            | Database["public"]["Enums"]["enterprise_experience_level"]
+            | null
+          required: boolean
+          role_id: string
+          updated_at: string
+          workspace_id: string
+          workspace_skill_id: string
+        }
+        Insert: {
+          approved?: boolean
+          created_at?: string
+          id?: string
+          min_experience_level?:
+            | Database["public"]["Enums"]["enterprise_experience_level"]
+            | null
+          required?: boolean
+          role_id: string
+          updated_at?: string
+          workspace_id: string
+          workspace_skill_id: string
+        }
+        Update: {
+          approved?: boolean
+          created_at?: string
+          id?: string
+          min_experience_level?:
+            | Database["public"]["Enums"]["enterprise_experience_level"]
+            | null
+          required?: boolean
+          role_id?: string
+          updated_at?: string
+          workspace_id?: string
+          workspace_skill_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_workspace_role_skills_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspace_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_workspace_role_skills_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_workspace_role_skills_workspace_skill_id_fkey"
+            columns: ["workspace_skill_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspace_skills"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_workspace_roles: {
+        Row: {
+          catalog_role_id: string | null
+          category_id: string
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          catalog_role_id?: string | null
+          category_id: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          catalog_role_id?: string | null
+          category_id?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_workspace_roles_catalog_role_id_fkey"
+            columns: ["catalog_role_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_catalog_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_workspace_roles_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspace_role_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_workspace_roles_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_workspace_skills: {
+        Row: {
+          catalog_skill_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          skill_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          catalog_skill_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          skill_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          catalog_skill_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          skill_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_workspace_skills_catalog_skill_id_fkey"
+            columns: ["catalog_skill_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_catalog_skills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_workspace_skills_skill_id_fkey"
+            columns: ["skill_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_skills"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_workspace_skills_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enterprise_workspaces: {
         Row: {
           allow_manager_retroactive: boolean
@@ -3307,10 +3814,6 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
-      export_all_tables_sample: {
-        Args: { limit_per_table?: number }
-        Returns: Json
-      }
       has_enterprise_role: {
         Args: {
           _roles: Database["public"]["Enums"]["enterprise_role"][]
@@ -3325,6 +3828,15 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      import_enterprise_catalog_to_workspace: {
+        Args: { p_approved?: boolean; p_workspace_id: string }
+        Returns: {
+          categories_imported: number
+          role_skill_links_imported: number
+          roles_imported: number
+          skills_imported: number
+        }[]
       }
       is_enterprise_member: {
         Args: { _user_id: string; _workspace_id: string }
@@ -3350,6 +3862,12 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user"
+      enterprise_experience_level:
+        | "junior"
+        | "medior"
+        | "senior"
+        | "lead"
+        | "principal"
       enterprise_membership_status:
         | "active"
         | "invited"
@@ -3500,6 +4018,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user"],
+      enterprise_experience_level: [
+        "junior",
+        "medior",
+        "senior",
+        "lead",
+        "principal",
+      ],
       enterprise_membership_status: [
         "active",
         "invited",
