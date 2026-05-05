@@ -8,7 +8,7 @@
  * It does not alter routing, permissions, validation, data loading, or interaction logic.
  */
 
-@layer base {
+
   .theme-enterprise {
     color-scheme: light;
     --brand-logo-start: 172 66% 38%;
@@ -392,7 +392,7 @@
   }
 }
 
-@layer components {
+
   /* Shared refinements: premium surfaces without changing component behavior. */
   .theme-nebula .bg-card,
   .theme-nebula [class*='bg-card'],
@@ -499,7 +499,7 @@
   }
 }
 
-@layer utilities {
+
   .theme-nebula .glass,
   .theme-nebula .glass-strong,
   .theme-graphite .glass,
