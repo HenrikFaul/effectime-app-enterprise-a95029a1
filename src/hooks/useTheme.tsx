@@ -18,7 +18,7 @@ const STYLE_STORAGE_KEY = 'effectime-theme-style';
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 const isTheme = (value: string | null): value is Theme => value === 'light' || value === 'dark';
-const THEME_STYLES: ThemeStyle[] = ['enterprise', 'nebula', 'aurora', 'graphite', 'sunrise', 'mono'];
+const THEME_STYLES: ThemeStyle[] = ['enterprise', 'nebula', 'nebula-obsidian', 'aurora', 'graphite', 'sunrise', 'mono'];
 const isThemeStyle = (value: string | null): value is ThemeStyle => !!value && THEME_STYLES.includes(value as ThemeStyle);
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
