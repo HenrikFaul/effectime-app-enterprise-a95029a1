@@ -88,13 +88,23 @@ async function jiraDiscoverFields(integ: IntegrationRow) {
   }));
 }
 
+// Recursively flatten Atlassian Document Format → plain text
+function adfToText(node: any): string {
+  if (!node) return '';
+  if (typeof node === 'string') return node;
+  if (Array.isArray(node)) return node.map(adfToText).join('');
+  let out = '';
+  if (node.type === 'text' && typeof node.text === 'string') out += node.text;
+  if (Array.isArray(node.content)) out += node.content.map(adfToText).join('');
+  if (node.type === 'paragraph' || node.type === 'heading') out += '\n';
+  return out;
+}
+
 async function jiraSearch(integ: IntegrationRow, jql: string, maxResults = 50) {
   const base = jiraBaseUrl(integ.base_url);
   const query = jql || `project = "${integ.project_key ?? ''}" ORDER BY updated DESC`;
-  const fields = [
-    'summary', 'status', 'assignee', 'reporter', 'issuetype', 'priority', 'labels', 'components',
-    'customfield_10016', 'duedate', 'parent', 'timetracking', 'updated',
-  ];
+  // Request *all* navigable fields so we receive description, team, start date, sprint, etc.
+  const fields = ['*all'];
   const requestBody = {
     jql: query,
     maxResults,
@@ -102,7 +112,6 @@ async function jiraSearch(integ: IntegrationRow, jql: string, maxResults = 50) {
   };
 
   // Primary: new Jira endpoint POST /rest/api/3/search/jql
-  // The legacy /rest/api/3/search returns 410 Gone (deprecated May 2025).
   let r = await fetch(`${base}/rest/api/3/search/jql`, {
     method: 'POST',
     headers: {
@@ -113,12 +122,12 @@ async function jiraSearch(integ: IntegrationRow, jql: string, maxResults = 50) {
     body: JSON.stringify(requestBody),
   });
 
-  // Fallback: GET /rest/api/3/search/jql (some tenants only allow GET).
+  // Fallback: GET /rest/api/3/search/jql
   if (!r.ok && (r.status === 400 || r.status === 404 || r.status === 405)) {
     const qs = new URLSearchParams({
       jql: query,
       maxResults: String(maxResults),
-      fields: fields.join(','),
+      fields: '*all',
     });
     r = await fetch(`${base}/rest/api/3/search/jql?${qs.toString()}`, {
       method: 'GET',
@@ -126,36 +135,72 @@ async function jiraSearch(integ: IntegrationRow, jql: string, maxResults = 50) {
     });
   }
 
+  // Last resort: legacy /rest/api/3/search (still alive on some tenants)
+  if (!r.ok && (r.status === 400 || r.status === 404 || r.status === 405 || r.status === 410)) {
+    const qs = new URLSearchParams({
+      jql: query,
+      maxResults: String(maxResults),
+      fields: '*all',
+    });
+    r = await fetch(`${base}/rest/api/3/search?${qs.toString()}`, {
+      method: 'GET',
+      headers: { Authorization: authHeader(integ), Accept: 'application/json' },
+    });
+  }
+
   if (!r.ok) throw new Error(`Jira search failed ${r.status}: ${(await r.text()).slice(0, 350)}`);
   const data = await r.json();
-  return (data.issues ?? []).map((i: any) => ({
-    external_key: i.key,
-    external_id: i.id,
-    summary: i.fields?.summary ?? null,
-    status: i.fields?.status?.name ?? null,
-    assignee_email: i.fields?.assignee?.emailAddress ?? null,
-    assignee_name: i.fields?.assignee?.displayName ?? null,
-    issue_type: i.fields?.issuetype?.name ?? null,
-    priority: i.fields?.priority?.name ?? null,
-    labels: i.fields?.labels ?? [],
-    components: (i.fields?.components ?? []).map((c: any) => c.name).filter(Boolean),
-    parent_key: i.fields?.parent?.key ?? null,
-    reporter_email: i.fields?.reporter?.emailAddress ?? null,
-    sprint_name:
-      i.fields?.sprint?.name
-      ?? i.fields?.customfield_10020?.[0]?.name
-      ?? i.fields?.customfield_10007?.[0]?.name
-      ?? null,
-    story_points: i.fields?.customfield_10016 ?? null,
-    original_estimate_hours: i.fields?.timetracking?.originalEstimateSeconds ? Number(i.fields.timetracking.originalEstimateSeconds) / 3600 : null,
-    remaining_hours: i.fields?.timetracking?.remainingEstimateSeconds ? Number(i.fields.timetracking.remainingEstimateSeconds) / 3600 : null,
-    completed_hours: i.fields?.timetracking?.timeSpentSeconds ? Number(i.fields.timetracking.timeSpentSeconds) / 3600 : null,
-    external_updated_at: i.fields?.updated ?? null,
-    custom_fields: i.fields ?? null,
-    due_date: i.fields?.duedate ?? null,
-    url: `${jiraBaseUrl(integ.base_url)}/browse/${i.key}`,
-    raw: i,
-  }));
+  return (data.issues ?? []).map((i: any) => {
+    const f = i.fields ?? {};
+    // Sprint may live on a few common custom-field IDs
+    const sprintArr =
+      f.sprint ? [f.sprint] :
+      f.customfield_10020 ?? f.customfield_10007 ?? f.customfield_10010 ?? null;
+    const sprintName = Array.isArray(sprintArr) && sprintArr.length
+      ? (sprintArr[sprintArr.length - 1]?.name ?? null)
+      : (sprintArr?.name ?? null);
+    // Team field: customfield_10001 commonly, or "team"
+    const teamRaw = f.team ?? f.customfield_10001 ?? null;
+    const teamName = typeof teamRaw === 'string'
+      ? teamRaw
+      : teamRaw?.name ?? teamRaw?.displayName ?? teamRaw?.value ?? null;
+    // Start date: customfield_10015 commonly
+    const startDate = f.customfield_10015 ?? f.startdate ?? null;
+    // Story points commonly customfield_10016 or 10026
+    const storyPoints = f.customfield_10016 ?? f.customfield_10026 ?? null;
+    // Description: ADF object → plain text
+    const description = typeof f.description === 'string'
+      ? f.description
+      : adfToText(f.description);
+
+    return {
+      external_key: i.key,
+      external_id: i.id,
+      summary: f.summary ?? null,
+      description: description || null,
+      status: f.status?.name ?? null,
+      assignee_email: f.assignee?.emailAddress ?? null,
+      assignee_name: f.assignee?.displayName ?? null,
+      issue_type: f.issuetype?.name ?? null,
+      priority: f.priority?.name ?? null,
+      labels: f.labels ?? [],
+      components: (f.components ?? []).map((c: any) => c.name).filter(Boolean),
+      parent_key: f.parent?.key ?? null,
+      reporter_email: f.reporter?.emailAddress ?? f.reporter?.name ?? null,
+      sprint_name: sprintName,
+      team_name: teamName,
+      start_date: startDate,
+      story_points: storyPoints,
+      original_estimate_hours: f.timetracking?.originalEstimateSeconds ? Number(f.timetracking.originalEstimateSeconds) / 3600 : null,
+      remaining_hours: f.timetracking?.remainingEstimateSeconds ? Number(f.timetracking.remainingEstimateSeconds) / 3600 : null,
+      completed_hours: f.timetracking?.timeSpentSeconds ? Number(f.timetracking.timeSpentSeconds) / 3600 : null,
+      external_updated_at: f.updated ?? null,
+      custom_fields: f ?? null,
+      due_date: f.duedate ?? null,
+      url: `${jiraBaseUrl(integ.base_url)}/browse/${i.key}`,
+      raw: i,
+    };
+  });
 }
 
 async function jiraCreate(integ: IntegrationRow, payload: any) {
