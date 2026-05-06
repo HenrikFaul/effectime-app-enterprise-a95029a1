@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft, LogOut, Building2 } from 'lucide-react';
+import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft, LogOut, Building2, GitMerge } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
@@ -62,6 +62,9 @@ import { useHelpAnchor } from '@/lib/help/registry';
 import { OrganizationModule } from './organization/OrganizationModule';
 import { LocalizationSettings } from './settings/LocalizationSettings';
 import { NotificationBell } from './NotificationBell';
+import { WorkflowsModule } from './workflows/WorkflowsModule';
+import { CommandCenter } from './CommandCenter';
+import { RecoveryModeSettings } from './settings/RecoveryModeSettings';
 
 interface Workspace {
   id: string;
@@ -91,6 +94,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   const [allMembers, setAllMembers] = useState<any[]>([]);
   const [timelineReport, setTimelineReport] = useState<{ userIds: string[]; range: { from: Date; to: Date } } | null>(null);
   const [internalTab, setInternalTab] = useState('members');
+  const [recoveryMode, setRecoveryMode] = useState<boolean>(false);
   const activeTab = externalTab || internalTab;
   const setActiveTab = (tab: string) => {
     if (onTabChange) onTabChange(tab);
@@ -105,6 +109,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
     activeTab === 'organization' ? 'workspace.organization' :
     activeTab === 'calendar' ? 'workspace.calendar' :
     activeTab === 'requests' ? 'workspace.approvals' :
+    activeTab === 'workflows' ? 'workspace.workflows' :
     'workspace.members';
   useHelpAnchor({ id: helpAnchorId, crumbs: [workspace.name, activeTab] });
 
@@ -129,6 +134,28 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
     };
     fetchMyMembership();
   }, [workspace.id, userId]);
+
+  // Track workspace recovery mode flag (additive column added by v3.0.0 Phase 6).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await (supabase as any)
+        .from('enterprise_workspaces')
+        .select('recovery_mode')
+        .eq('id', workspace.id)
+        .maybeSingle();
+      if (!cancelled) setRecoveryMode(!!data?.recovery_mode);
+    })();
+    const id = window.setInterval(async () => {
+      const { data } = await (supabase as any)
+        .from('enterprise_workspaces')
+        .select('recovery_mode')
+        .eq('id', workspace.id)
+        .maybeSingle();
+      if (!cancelled) setRecoveryMode(!!data?.recovery_mode);
+    }, 90_000);
+    return () => { cancelled = true; window.clearInterval(id); };
+  }, [workspace.id]);
 
   // Check if any calendar sub-permission is available
   const hasCalendarAccess = canView('calendar');
@@ -196,6 +223,11 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                   <FileText className="h-4 w-4" /> Kérelmek
                 </TabsTrigger>
               )}
+              {canView('members') && (
+                <TabsTrigger value="workflows" className="gap-1">
+                  <GitMerge className="h-4 w-4" /> Folyamatok
+                </TabsTrigger>
+              )}
               <TabsTrigger value="resources" className="gap-1">
                 <Briefcase className="h-4 w-4" /> Erőforrások
               </TabsTrigger>
@@ -215,6 +247,11 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
 
         <main className="max-w-5xl mx-auto p-4">
           <div className="space-y-4">
+            <CommandCenter
+              workspaceId={workspace.id}
+              onOpenTab={setActiveTab}
+              recoveryMode={recoveryMode}
+            />
             {canView('members') && (
               <TabsContent value="members" className="space-y-3">
                 {canView('invitations') && (
@@ -227,6 +264,12 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
             {canView('members') && (
               <TabsContent value="organization" className="space-y-3">
                 <OrganizationModule workspaceId={workspace.id} isAdmin={isAdmin} />
+              </TabsContent>
+            )}
+
+            {canView('members') && (
+              <TabsContent value="workflows" className="space-y-3">
+                <WorkflowsModule workspaceId={workspace.id} isAdmin={isAdmin} userId={userId} />
               </TabsContent>
             )}
 
@@ -782,6 +825,12 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
       <SettingsSection workspaceId={workspace.id} sectionKey="settings.localization" icon={<Settings className="h-4 w-4" />} title="Nyelvi beállítások / Localization">
         <LocalizationSettings workspaceId={workspace.id} />
       </SettingsSection>
+
+      {isAdmin && (
+        <SettingsSection workspaceId={workspace.id} sectionKey="settings.recovery_mode" icon={<ShieldAlert className="h-4 w-4" />} title="Recovery üzemmód / Recovery Mode">
+          <RecoveryModeSettings workspaceId={workspace.id} userId={userId} />
+        </SettingsSection>
+      )}
 
       {isAdmin && (
         <SettingsSection workspaceId={workspace.id} sectionKey="settings.allowances" icon={<Wallet className="h-4 w-4" />} title="Allowance pool kezelése">

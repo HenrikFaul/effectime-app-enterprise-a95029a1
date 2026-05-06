@@ -1,3 +1,57 @@
+## 2026-05-05 — v3.0.0 Phases 5–7 implementation: Onboarding, External Access matrix, Strategic capabilities, Localization expansion
+
+### Added — Phase 5 (Onboarding & External Access)
+- **Migration** `supabase/migrations/20260505130000_onboarding_access_strategic.sql` (idempotent additive):
+  - `enterprise_onboarding_templates`, `enterprise_onboarding_template_steps` (8 step types: `task | read | acknowledge | training | exam | approval | internal_permission | external_access`),
+  - `enterprise_onboarding_instances`, `enterprise_onboarding_step_completions`,
+  - `enterprise_access_systems`, `enterprise_access_templates`, `enterprise_access_template_systems`, `enterprise_access_requests`, `enterprise_access_decisions`,
+  - cross-table FK from onboarding step `access_system_id` to access systems,
+  - full RLS (members read, admins write; child-table policies gate via parent's workspace),
+  - `seed_default_access_systems` SECURITY DEFINER seeder (Jira / Confluence / Outlook / Dynatrace / ERP / Billing / Entry Control).
+- **Workflows module** (`src/components/enterprise/workflows/`):
+  - `WorkflowsModule` shell with 5 sub-tabs.
+  - `OnboardingTemplates` — create + publish + archive templates, per-template collapsible step editor, 8 step types localized.
+  - `OnboardingInbox` — start onboarding for a member, per-instance progress (completed steps / total steps), confirm/cancel actions.
+  - `AccessSystems` — manage external + internal systems, **Seed defaults** RPC button, archive.
+  - `AccessTemplates` — pivot-style position-bundle editor, system checkbox toggles per template, collapsible per template.
+  - `AccessInbox` — submit on behalf of member, decide (approve/reject/mark granted/revoke), every decision writes to `enterprise_access_decisions`.
+- **New `Folyamatok` (Workflows) tab** added to the workspace tab bar between Naptár and Erőforrások (gated by `members` view permission).
+
+### Added — Phase 6 (Strategic capabilities)
+- **Migration extends `enterprise_workspaces`**: `recovery_mode`, `recovery_mode_reason`, `recovery_mode_activated_at`, `recovery_mode_activated_by`.
+- **`enterprise_capacity_snapshots`** table for per-day baseline / effective / committed / available FTE + shortage/overload scores + payload jsonb (foundation for predictive forecaster v2).
+- **`enterprise_decision_memory`** table — `(workspace_id, subject_type, subject_id)` UNIQUE annotation with rationale / expected outcome / observed outcome.
+- **`CommandCenter` widget** (`src/components/enterprise/CommandCenter.tsx`) — rendered at the top of the workspace dashboard, surfaces four counters (pending leave approvals, in-progress onboarding instances, pending access requests, members with incomplete org metadata). Click-through navigates to the relevant tab. Visually shifts to destructive-tinted card when Recovery Mode is active. Refreshes every 90s.
+- **`RecoveryModeSettings`** — Settings → Recovery üzemmód section with activate/deactivate, reason, activated-at timestamp.
+- **`DecisionMemoryEditor`** — generic memo component (`subject_type`, `subject_id`) for attaching rationale + expected/observed outcomes to any decision; uses upsert pattern. Drop-in for approvals, scenarios, access decisions.
+- **WorkspaceDashboard** loads `recovery_mode` flag at mount and refreshes every 90s; CommandCenter receives the flag for visual emphasis.
+
+### Added — Phase 7 (Localization expansion + admin manageability)
+- **Hungarian localization completed** for all new keys: workflows, onboarding (template / instance / step types), access (systems / templates / inbox + 7 statuses + 5 actions), command center, decision memory, settings (recovery + localization import/export). EN baseline mirrored.
+- **i18n CSV utilities** (`src/lib/i18n/csv.ts`):
+  - `flatten(bundle)` — recursive dotted-key map of resource bundle.
+  - `buildI18nCsv()` — RFC4180 CSV with BOM, columns `key,en,hu`, sorted by key.
+  - `parseCsv(text)` and `parseI18nCsv(text)` — quoted-field aware parser, computes `{ added, updated, skipped, total, overrides }` summary; per-locale override Maps.
+  - `bundleStats()` — total keys + missing-key counters per locale.
+- **Settings → Localization** now exports / imports bilingual translation CSVs:
+  - **Export CSV** downloads `effectime-i18n-YYYY-MM-DD.csv`.
+  - **Import CSV** parses uploads, validates header, reports a session summary (`{{added}} new · {{updated}} updated · {{skipped}} skipped`). Persistent admin overrides land in a follow-up release; this surface is the canonical translator exchange unit.
+  - Header now also shows live counters: total keys / missing in HU / missing in EN.
+
+### Wiring
+- `WorkspaceDashboard` imports `WorkflowsModule`, `CommandCenter`, `RecoveryModeSettings`; renders CommandCenter once at the top of `<main>`; new `workflows` TabsContent; new Settings section for Recovery Mode (admin only); refresh-on-interval recovery flag.
+- New help anchor `workspace.workflows` registered in EN + HU bundles.
+
+### Non-Regression Contract enforcement
+- All Phase 5–6 tables additive; all RLS workspace-scoped via `is_enterprise_member()` / `has_enterprise_role()`.
+- No existing tab, button, route, or workflow removed. Workflows is a brand-new tab, not a replacement.
+- Command Center is purely additive (extra widget at top of `<main>`); existing dashboard layout below remains untouched.
+- Decision Memory does not modify any existing approval/leave/scenario row — it stores a side-table annotation.
+- i18n CSV import is session-only in this release; persistent overrides require a follow-up RPC and are explicitly noted in the import help text.
+
+### Validation
+- `npx tsc --noEmit -p tsconfig.app.json`: zero errors in any new file (workflows/*, CommandCenter, RecoveryModeSettings, DecisionMemoryEditor, csv util, both bundles, NotificationBell). Total error count unchanged at 18 — all pre-existing missing-peer-dep complaints in the sandbox.
+
 ## 2026-05-05 — v3.0.0 Phases 1–4 implementation: localization, help system, Organization module, position catalog, org chart, manual
 
 ### Added — Phase 1 (Localization + Help system)
