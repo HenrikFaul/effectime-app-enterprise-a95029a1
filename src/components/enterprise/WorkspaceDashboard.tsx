@@ -61,6 +61,7 @@ import { LanguageSelector } from '@/components/i18n/LanguageSelector';
 import { useHelpAnchor } from '@/lib/help/registry';
 import { OrganizationModule } from './organization/OrganizationModule';
 import { LocalizationSettings } from './settings/LocalizationSettings';
+import { NotificationBell } from './NotificationBell';
 
 interface Workspace {
   id: string;
@@ -154,6 +155,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <NotificationBell workspaceId={workspace.id} userId={userId} />
             <Button size="sm" variant="outline" onClick={() => setShowMyProfile(true)}>
               <User className="h-4 w-4 mr-1" /> Profilom
             </Button>
@@ -197,16 +199,6 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               <TabsTrigger value="resources" className="gap-1">
                 <Briefcase className="h-4 w-4" /> Erőforrások
               </TabsTrigger>
-              {canView('rules') && (
-                <TabsTrigger value="rules" className="gap-1">
-                  <ShieldAlert className="h-4 w-4" /> Szabályok
-                </TabsTrigger>
-              )}
-              {canView('notifications') && (
-                <TabsTrigger value="notifications" className="gap-1">
-                  <Bell className="h-4 w-4" /> Értesítések
-                </TabsTrigger>
-              )}
               {(canView('reports') || canView('audit') || canView('export')) && (
                 <TabsTrigger value="reports-audit" className="gap-1">
                   <BarChart3 className="h-4 w-4" /> Riportok és Audit
@@ -310,6 +302,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                   canSubmit={canEdit('leave_requests_submit')}
                   canViewOwn={canView('requests_own')}
                   canViewTeam={canView('requests_team')}
+                  canViewRules={canView('rules')}
                 />
               </TabsContent>
             )}
@@ -317,27 +310,6 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
             <TabsContent value="resources">
               <ResourcesTab workspaceId={workspace.id} userId={userId} isAdmin={isAdmin} />
             </TabsContent>
-
-            {canView('rules') && (
-              <TabsContent value="rules">
-                <div className="space-y-6">
-                  <ApprovalChainManager workspaceId={workspace.id} />
-                  <LeaveTypeManager workspaceId={workspace.id} />
-                  <HolidayManager workspaceId={workspace.id} />
-                  <CompanyLeaveDayManager workspaceId={workspace.id} userId={userId} />
-                  <BlockedDateManager workspaceId={workspace.id} userId={userId} />
-                  <DailyRuleManager workspaceId={workspace.id} userId={userId} />
-                  <OfficeCoverageRuleManager workspaceId={workspace.id} userId={userId} />
-                  <RuleTemplateLibrary workspaceId={workspace.id} userId={userId} />
-                </div>
-              </TabsContent>
-            )}
-
-            {canView('notifications') && (
-              <TabsContent value="notifications">
-                <EnterpriseNotifications workspaceId={workspace.id} userId={userId} />
-              </TabsContent>
-            )}
 
             {(canView('reports') || canView('audit') || canView('export')) && (
               <TabsContent value="reports-audit">
@@ -378,10 +350,24 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
 }
 
 // ===== Combined Requests + Approvals Tab =====
-function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canApprove, canOverride, canSubmit, canViewOwn, canViewTeam }: { workspaceId: string; userId: string; userRole: string; isAdmin: boolean; canApprove?: boolean; canOverride?: boolean; canSubmit?: boolean; canViewOwn?: boolean; canViewTeam?: boolean }) {
+function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canApprove, canOverride, canSubmit, canViewOwn, canViewTeam, canViewRules }: { workspaceId: string; userId: string; userRole: string; isAdmin: boolean; canApprove?: boolean; canOverride?: boolean; canSubmit?: boolean; canViewOwn?: boolean; canViewTeam?: boolean; canViewRules?: boolean }) {
   const [showOverride, setShowOverride] = useState(false);
+  // Per user request: all top-level sections start collapsed.
+  const [approvalsOpen, setApprovalsOpen] = useState(false);
+  const [requestsOpen, setRequestsOpen] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
+  // Rules sub-sections (each independently collapsible, all default closed)
+  const [openApprovalChain, setOpenApprovalChain] = useState(false);
+  const [openLeaveTypes, setOpenLeaveTypes] = useState(false);
+  const [openHolidays, setOpenHolidays] = useState(false);
+  const [openCompanyDays, setOpenCompanyDays] = useState(false);
+  const [openBlockedDates, setOpenBlockedDates] = useState(false);
+  const [openDailyRules, setOpenDailyRules] = useState(false);
+  const [openOfficeCoverage, setOpenOfficeCoverage] = useState(false);
+  const [openRuleTemplates, setOpenRuleTemplates] = useState(false);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Saját szabadság-egyenleg (kvótakártya) */}
       {(canViewOwn || canSubmit) && (
         <QuotaBalanceCard workspaceId={workspaceId} userId={userId} />
@@ -391,27 +377,159 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
       <SubstituteInbox workspaceId={workspaceId} userId={userId} />
 
       {isAdmin && (
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold flex items-center gap-2">
-              <Shield className="h-4 w-4 text-primary" />
-              Jóváhagyások
-            </h3>
-            <Button size="sm" variant="outline" onClick={() => setShowOverride(true)} className="text-xs">
-              <ShieldAlert className="h-3.5 w-3.5 mr-1" /> Kérelem más nevében
-            </Button>
-          </div>
-          <ApprovalInbox workspaceId={workspaceId} userId={userId} />
-          <AdminLeaveOverride open={showOverride} onOpenChange={setShowOverride} workspaceId={workspaceId} adminUserId={userId} onCreated={() => {}} />
-        </div>
+        <Collapsible open={approvalsOpen} onOpenChange={setApprovalsOpen}>
+          <CollapsibleTrigger asChild>
+            <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+              <CardContent className="flex items-center justify-between py-3 px-4">
+                <div className="flex items-center gap-2">
+                  <Shield className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-sm">Jóváhagyások</span>
+                </div>
+                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${approvalsOpen ? 'rotate-180' : ''}`} />
+              </CardContent>
+            </Card>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2">
+            <div className="flex justify-end mb-2">
+              <Button size="sm" variant="outline" onClick={() => setShowOverride(true)} className="text-xs">
+                <ShieldAlert className="h-3.5 w-3.5 mr-1" /> Kérelem más nevében
+              </Button>
+            </div>
+            <ApprovalInbox workspaceId={workspaceId} userId={userId} />
+            <AdminLeaveOverride open={showOverride} onOpenChange={setShowOverride} workspaceId={workspaceId} adminUserId={userId} onCreated={() => {}} />
+          </CollapsibleContent>
+        </Collapsible>
       )}
-      <div>
-        <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-          <FileText className="h-4 w-4 text-muted-foreground" />
-          Kérelmek
-        </h3>
-        <LeaveRequestList workspaceId={workspaceId} userId={userId} userRole={userRole} canViewOwn={canViewOwn} canViewTeam={canViewTeam} />
-      </div>
+
+      <Collapsible open={requestsOpen} onOpenChange={setRequestsOpen}>
+        <CollapsibleTrigger asChild>
+          <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+            <CardContent className="flex items-center justify-between py-3 px-4">
+              <div className="flex items-center gap-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium text-sm">Kérelmek</span>
+              </div>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${requestsOpen ? 'rotate-180' : ''}`} />
+            </CardContent>
+          </Card>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-2">
+          <LeaveRequestList workspaceId={workspaceId} userId={userId} userRole={userRole} canViewOwn={canViewOwn} canViewTeam={canViewTeam} />
+        </CollapsibleContent>
+      </Collapsible>
+
+      {canViewRules && (
+        <Collapsible open={rulesOpen} onOpenChange={setRulesOpen}>
+          <CollapsibleTrigger asChild>
+            <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+              <CardContent className="flex items-center justify-between py-3 px-4">
+                <div className="flex items-center gap-2">
+                  <ShieldAlert className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-sm">Szabályok</span>
+                </div>
+                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${rulesOpen ? 'rotate-180' : ''}`} />
+              </CardContent>
+            </Card>
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2 space-y-2">
+            <Collapsible open={openApprovalChain} onOpenChange={setOpenApprovalChain}>
+              <CollapsibleTrigger asChild>
+                <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+                  <CardContent className="flex items-center justify-between py-2.5 px-4">
+                    <span className="text-xs font-medium">Jóváhagyási láncok</span>
+                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openApprovalChain ? 'rotate-180' : ''}`} />
+                  </CardContent>
+                </Card>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2"><ApprovalChainManager workspaceId={workspaceId} /></CollapsibleContent>
+            </Collapsible>
+
+            <Collapsible open={openLeaveTypes} onOpenChange={setOpenLeaveTypes}>
+              <CollapsibleTrigger asChild>
+                <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+                  <CardContent className="flex items-center justify-between py-2.5 px-4">
+                    <span className="text-xs font-medium">Távollét típusok</span>
+                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openLeaveTypes ? 'rotate-180' : ''}`} />
+                  </CardContent>
+                </Card>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2"><LeaveTypeManager workspaceId={workspaceId} /></CollapsibleContent>
+            </Collapsible>
+
+            <Collapsible open={openHolidays} onOpenChange={setOpenHolidays}>
+              <CollapsibleTrigger asChild>
+                <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+                  <CardContent className="flex items-center justify-between py-2.5 px-4">
+                    <span className="text-xs font-medium">Ünnepnapok</span>
+                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openHolidays ? 'rotate-180' : ''}`} />
+                  </CardContent>
+                </Card>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2"><HolidayManager workspaceId={workspaceId} /></CollapsibleContent>
+            </Collapsible>
+
+            <Collapsible open={openCompanyDays} onOpenChange={setOpenCompanyDays}>
+              <CollapsibleTrigger asChild>
+                <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+                  <CardContent className="flex items-center justify-between py-2.5 px-4">
+                    <span className="text-xs font-medium">Cég-szintű napok</span>
+                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openCompanyDays ? 'rotate-180' : ''}`} />
+                  </CardContent>
+                </Card>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2"><CompanyLeaveDayManager workspaceId={workspaceId} userId={userId} /></CollapsibleContent>
+            </Collapsible>
+
+            <Collapsible open={openBlockedDates} onOpenChange={setOpenBlockedDates}>
+              <CollapsibleTrigger asChild>
+                <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+                  <CardContent className="flex items-center justify-between py-2.5 px-4">
+                    <span className="text-xs font-medium">Tiltott napok</span>
+                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openBlockedDates ? 'rotate-180' : ''}`} />
+                  </CardContent>
+                </Card>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2"><BlockedDateManager workspaceId={workspaceId} userId={userId} /></CollapsibleContent>
+            </Collapsible>
+
+            <Collapsible open={openDailyRules} onOpenChange={setOpenDailyRules}>
+              <CollapsibleTrigger asChild>
+                <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+                  <CardContent className="flex items-center justify-between py-2.5 px-4">
+                    <span className="text-xs font-medium">Napi szabályok</span>
+                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openDailyRules ? 'rotate-180' : ''}`} />
+                  </CardContent>
+                </Card>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2"><DailyRuleManager workspaceId={workspaceId} userId={userId} /></CollapsibleContent>
+            </Collapsible>
+
+            <Collapsible open={openOfficeCoverage} onOpenChange={setOpenOfficeCoverage}>
+              <CollapsibleTrigger asChild>
+                <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+                  <CardContent className="flex items-center justify-between py-2.5 px-4">
+                    <span className="text-xs font-medium">Telephelyi lefedettségi szabályok</span>
+                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openOfficeCoverage ? 'rotate-180' : ''}`} />
+                  </CardContent>
+                </Card>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2"><OfficeCoverageRuleManager workspaceId={workspaceId} userId={userId} /></CollapsibleContent>
+            </Collapsible>
+
+            <Collapsible open={openRuleTemplates} onOpenChange={setOpenRuleTemplates}>
+              <CollapsibleTrigger asChild>
+                <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+                  <CardContent className="flex items-center justify-between py-2.5 px-4">
+                    <span className="text-xs font-medium">Szabálysablon-könyvtár</span>
+                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openRuleTemplates ? 'rotate-180' : ''}`} />
+                  </CardContent>
+                </Card>
+              </CollapsibleTrigger>
+              <CollapsibleContent className="mt-2"><RuleTemplateLibrary workspaceId={workspaceId} userId={userId} /></CollapsibleContent>
+            </Collapsible>
+          </CollapsibleContent>
+        </Collapsible>
+      )}
     </div>
   );
 }
