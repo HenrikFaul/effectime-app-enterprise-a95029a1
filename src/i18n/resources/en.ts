@@ -251,6 +251,7 @@ const en = {
       import_help:
         'Upload a CSV with columns: key, en, hu. Existing keys are updated only inside this session — the file format is the canonical exchange unit for translators.',
       import_summary: '{{added}} new · {{updated}} updated · {{skipped}} skipped',
+      persisted: 'Translation overrides persisted to the workspace.',
     },
     recovery: {
       title: 'Recovery Mode',
@@ -364,6 +365,54 @@ const en = {
     placeholder_rationale: 'Why is this decision being made?',
     placeholder_expected: 'What outcome do we expect?',
     placeholder_observed: 'What actually happened? (fill in later)',
+    stale_inbox_title: 'Observed outcome — pending capture',
+    stale_inbox_description:
+      'Decisions whose observation window has elapsed. Capture the observed outcome to close the learning loop.',
+    no_stale: 'No decisions waiting for observation.',
+    days_overdue: '{{count}} days overdue',
+    capture_observed: 'Capture observed outcome',
+  },
+  pulse: {
+    title: 'Org Pulse',
+    subtitle: 'Privacy-safe operational signals (k ≥ 5).',
+    suppressed: 'Hidden — fewer than 5 records',
+    active_members: 'Active members',
+    employer_rights: 'Employer-rights holders',
+    missing_org_unit: 'Missing org unit',
+    missing_manager: 'Missing manager',
+    missing_contract: 'Missing contract',
+    missing_leadership: 'Missing leadership level',
+    open_approvals_long: 'Approvals open > 48h',
+    weekly_leave: 'Approved leave (last 7 days)',
+  },
+  capacity: {
+    title: 'Capacity DNA',
+    subtitle:
+      'Daily snapshots of baseline / available / shortage / overload signals. Foundation for the predictive forecaster.',
+    generate: 'Generate snapshot for today',
+    generated: 'Snapshot saved',
+    snapshot_date: 'Date',
+    baseline_fte: 'Baseline FTE',
+    effective_fte: 'Effective FTE',
+    available_fte: 'Available FTE',
+    shortage_score: 'Shortage',
+    overload_score: 'Overload',
+    no_snapshots: 'No snapshots yet. Run generation to seed one.',
+    note:
+      'Rule-based v1: baseline = active members; effective = baseline minus approved leave overlapping the date; shortage_score = max(0, committed − effective) / baseline.',
+  },
+  integration_health: {
+    title: 'Integration Health Center',
+    subtitle:
+      'Last sync status per integration with error excerpts from the agile sync log.',
+    healthy: 'Healthy',
+    degraded: 'Degraded',
+    failed: 'Failed',
+    no_integrations: 'No integrations configured.',
+    no_sync_log: 'No sync activity recorded for this integration.',
+    last_sync: 'Last sync',
+    success: 'Success',
+    error: 'Error',
   },
 } as const;
 

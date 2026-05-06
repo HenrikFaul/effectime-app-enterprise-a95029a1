@@ -7,17 +7,20 @@ import { LOCALE_LABEL, SUPPORTED_LOCALES, type Locale } from '@/i18n/locales';
 import { Download, Globe, Upload } from 'lucide-react';
 import { toast } from 'sonner';
 import { buildI18nCsv, bundleStats, parseI18nCsv, type ImportSummary } from '@/lib/i18n/csv';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Props {
   workspaceId: string;
+  isAdmin?: boolean;
+  userId?: string;
 }
 
-export function LocalizationSettings({ workspaceId }: Props) {
-  void workspaceId;
+export function LocalizationSettings({ workspaceId, isAdmin = false, userId }: Props) {
   const t = useT();
-  const { locale } = useI18n();
+  const { locale, loadWorkspaceOverrides } = useI18n();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [lastImport, setLastImport] = useState<ImportSummary | null>(null);
+  const [persisting, setPersisting] = useState(false);
 
   const stats = useMemo(() => bundleStats(), []);
 
@@ -34,6 +37,38 @@ export function LocalizationSettings({ workspaceId }: Props) {
     URL.revokeObjectURL(url);
   };
 
+  const persistOverrides = async (summary: ImportSummary) => {
+    if (!isAdmin) return;
+    setPersisting(true);
+    const rows: { workspace_id: string; locale: Locale; key: string; value: string; source: string; authored_by: string | null }[] = [];
+    (Object.keys(summary.overrides) as Locale[]).forEach((l) => {
+      summary.overrides[l].forEach((value, key) => {
+        rows.push({
+          workspace_id: workspaceId,
+          locale: l,
+          key,
+          value,
+          source: 'csv_import',
+          authored_by: userId ?? null,
+        });
+      });
+    });
+    if (rows.length === 0) {
+      setPersisting(false);
+      return;
+    }
+    const { error } = await (supabase as any)
+      .from('enterprise_translation_overrides')
+      .upsert(rows, { onConflict: 'workspace_id,locale,key' });
+    setPersisting(false);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(t('settings.localization.persisted'));
+    await loadWorkspaceOverrides(workspaceId);
+  };
+
   const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -48,6 +83,9 @@ export function LocalizationSettings({ workspaceId }: Props) {
           skipped: summary.skipped,
         }),
       );
+      if (isAdmin) {
+        await persistOverrides(summary);
+      }
     } catch (err: any) {
       toast.error(err?.message ?? 'CSV parse failed');
     } finally {

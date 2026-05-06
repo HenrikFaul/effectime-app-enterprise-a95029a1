@@ -1,3 +1,42 @@
+## 2026-05-05 — v3.0.0 Phase 8 implementation: persistent translation overrides, predictive forecaster v1, Org Pulse, Integration Health Center, Decision Memory observed-outcome capture
+
+### Added — Persistent translation overrides
+- Migration `supabase/migrations/20260505140000_phase8_overrides_pulse.sql` adds `enterprise_translation_overrides` (workspace_id, locale, key, value, source, authored_by) with `(workspace_id, locale, key)` UNIQUE, full RLS (member read, admin write).
+- `I18nProvider` extended with `loadWorkspaceOverrides(workspaceId)` and `activeWorkspaceId`. Resolution order is now: workspace override (active locale) → bundle (active locale) → workspace override (default locale) → bundle (default locale) → key. `WorkspaceDashboard` invokes `loadWorkspaceOverrides(workspace.id)` on mount and clears on unmount.
+- `Settings → Localization`: admins now have a true persistence path. Importing a CSV upserts each row into `enterprise_translation_overrides` and immediately reloads the active overrides — translations live without code changes.
+
+### Added — Capacity DNA / Predictive forecaster v1 (rule-based, client-side)
+- `CapacityDnaPanel` rendered inside the Resources tab with a *Generate snapshot for today* admin action.
+- Computes baseline (active members), effective (baseline minus approved leave overlapping today), committed (sum of `enterprise_member_role_allocations.percentage / 100`), available, shortage_score, overload_score.
+- Upserts to `enterprise_capacity_snapshots (workspace_id, snapshot_date)` UNIQUE; the last 30 days are surfaced as a compact table with shortage/overload trend icons.
+
+### Added — Org Pulse widget
+- `OrgPulseWidget` rendered above the workspace tabs (admins only). Pulls from a new SQL view `enterprise_org_pulse_membership` plus two on-the-fly counters (approvals open > 48h; approved leave in the last 7 days).
+- Privacy-safe: every cell is suppressed when its denominator (`active_members`) is below `k = 5`, or when the value itself is between 1 and 4 (k-anonymity floor).
+
+### Added — Integration Health Center
+- New Settings section (admin only) — `IntegrationHealthCenter` lists each `enterprise_integrations` row with a per-integration health badge (`healthy / degraded / failed / unknown`) computed from the last 5 entries of `enterprise_agile_sync_log`.
+- Surfaces last sync action, status, and the three most recent error excerpts inline.
+
+### Added — Decision Memory observed-outcome capture
+- Migration adds `enterprise_decision_memory.observation_due_at` plus a `BEFORE INSERT` trigger that defaults it to `authored_at + 14 days`.
+- `DecisionMemoryStaleInbox` rendered inside the Approvals collapsible (admin only). Lists every memory whose observation window has elapsed and has no observed outcome yet; admins capture the outcome inline. Closes the learning loop on every recorded decision.
+
+### i18n
+- Added EN + HU keys for `pulse`, `capacity`, `integration_health`, `decision.stale_inbox_*`, `settings.localization.persisted`. Both bundles in lockstep — the import-CSV pipeline can now patch any gap without code deploys.
+
+### Wiring
+- `WorkspaceDashboard` imports the four new components, passes `isAdmin` + `userId` to `LocalizationSettings`, renders `CapacityDnaPanel` in Resources, `OrgPulseWidget` above tabs, `IntegrationHealthCenter` and `DecisionMemoryStaleInbox` in their respective Settings/Approvals sections.
+- `loadWorkspaceOverrides` lifecycle anchored to the active workspace.
+
+### Non-Regression Contract
+- Migration is purely additive (one new table, one new view, one new column, one new trigger). No RLS weakening; new policies match the established `is_enterprise_member` / `has_enterprise_role` pattern.
+- Phase 8 components are admin-only where they involve writes; read-only members see suppressed pulse cells and snapshot tables but cannot trigger writes.
+- Forecaster v1 is rule-based and runs client-side — no edge-function or pg_cron dependency.
+
+### Validation
+- `npx tsc --noEmit -p tsconfig.app.json`: total error count unchanged at 18 (all pre-existing missing-peer-dep issues in the sandbox). Zero errors in any Phase 8 file (`CapacityDnaPanel`, `OrgPulseWidget`, `IntegrationHealthCenter`, `DecisionMemoryStaleInbox`, `csv` util, `I18nProvider` extensions, `LocalizationSettings` upsert path, both bundles).
+
 ## 2026-05-05 — v3.0.0 Phases 5–7 implementation: Onboarding, External Access matrix, Strategic capabilities, Localization expansion
 
 ### Added — Phase 5 (Onboarding & External Access)

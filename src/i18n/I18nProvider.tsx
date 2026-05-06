@@ -22,6 +22,10 @@ interface I18nContextValue {
   setLocale: (l: Locale) => void;
   t: (key: string, vars?: Record<string, string | number>) => string;
   ready: boolean;
+  /** Load persistent translation overrides for a workspace (admin-managed). */
+  loadWorkspaceOverrides: (workspaceId: string | null) => Promise<void>;
+  /** Currently-active workspace whose overrides are merged in. */
+  activeWorkspaceId: string | null;
 }
 
 const I18nContext = createContext<I18nContextValue | null>(null);
@@ -53,6 +57,33 @@ function interpolate(value: string, vars?: Record<string, string | number>): str
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(() => detectInitialLocale());
   const [ready, setReady] = useState(false);
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
+  const [overridesByLocale, setOverridesByLocale] = useState<Record<Locale, Map<string, string>>>({
+    en: new Map(),
+    hu: new Map(),
+  });
+
+  const loadWorkspaceOverrides = useCallback(async (workspaceId: string | null) => {
+    setActiveWorkspaceId(workspaceId);
+    if (!workspaceId) {
+      setOverridesByLocale({ en: new Map(), hu: new Map() });
+      return;
+    }
+    try {
+      const { data } = await (supabase as any)
+        .from('enterprise_translation_overrides')
+        .select('locale, key, value')
+        .eq('workspace_id', workspaceId);
+      const next: Record<Locale, Map<string, string>> = { en: new Map(), hu: new Map() };
+      ((data as any[]) || []).forEach((row: any) => {
+        const l = row.locale as Locale;
+        if (l in next) next[l].set(row.key, row.value);
+      });
+      setOverridesByLocale(next);
+    } catch {
+      // table may not exist yet in dev — degrade silently
+    }
+  }, []);
 
   // Hydrate from profiles.preferred_locale once, when a user is signed in.
   useEffect(() => {
@@ -119,9 +150,15 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const t = useCallback(
     (key: string, vars?: Record<string, string | number>) => {
+      // Resolution order: workspace override (active locale) → bundle (active locale)
+      // → workspace override (default locale) → bundle (default locale) → key.
+      const overrideActive = overridesByLocale[locale]?.get(key);
+      if (overrideActive != null) return interpolate(overrideActive, vars);
+
       const bundle = BUNDLES[locale];
       const fallback = BUNDLES[DEFAULT_LOCALE];
-      const value = lookup(bundle, key) ?? lookup(fallback, key);
+      const overrideFallback = overridesByLocale[DEFAULT_LOCALE]?.get(key);
+      const value = lookup(bundle, key) ?? overrideFallback ?? lookup(fallback, key);
       if (!value) {
         if (import.meta.env.DEV) {
           // eslint-disable-next-line no-console
@@ -131,10 +168,13 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       }
       return interpolate(value, vars);
     },
-    [locale],
+    [locale, overridesByLocale],
   );
 
-  const value = useMemo<I18nContextValue>(() => ({ locale, setLocale, t, ready }), [locale, setLocale, t, ready]);
+  const value = useMemo<I18nContextValue>(
+    () => ({ locale, setLocale, t, ready, loadWorkspaceOverrides, activeWorkspaceId }),
+    [locale, setLocale, t, ready, loadWorkspaceOverrides, activeWorkspaceId],
+  );
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;
 }
@@ -148,6 +188,8 @@ export function useI18n(): I18nContextValue {
       setLocale: () => undefined,
       t: (k) => k,
       ready: true,
+      loadWorkspaceOverrides: async () => undefined,
+      activeWorkspaceId: null,
     };
   }
   return ctx;
