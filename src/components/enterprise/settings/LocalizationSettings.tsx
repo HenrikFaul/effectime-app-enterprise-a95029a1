@@ -1,8 +1,12 @@
+import { useMemo, useRef, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { useT, useI18n } from '@/i18n/I18nProvider';
 import { LOCALE_LABEL, SUPPORTED_LOCALES, type Locale } from '@/i18n/locales';
-import { Globe } from 'lucide-react';
+import { Download, Globe, Upload } from 'lucide-react';
+import { toast } from 'sonner';
+import { buildI18nCsv, bundleStats, parseI18nCsv, type ImportSummary } from '@/lib/i18n/csv';
 
 interface Props {
   workspaceId: string;
@@ -12,6 +16,44 @@ export function LocalizationSettings({ workspaceId }: Props) {
   void workspaceId;
   const t = useT();
   const { locale } = useI18n();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [lastImport, setLastImport] = useState<ImportSummary | null>(null);
+
+  const stats = useMemo(() => bundleStats(), []);
+
+  const downloadCsv = () => {
+    const csv = buildI18nCsv();
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `effectime-i18n-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const onFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const summary = parseI18nCsv(text);
+      setLastImport(summary);
+      toast.success(
+        t('settings.localization.import_summary', {
+          added: summary.added,
+          updated: summary.updated,
+          skipped: summary.skipped,
+        }),
+      );
+    } catch (err: any) {
+      toast.error(err?.message ?? 'CSV parse failed');
+    } finally {
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   return (
     <Card>
@@ -71,10 +113,36 @@ export function LocalizationSettings({ workspaceId }: Props) {
           <div className="text-xs uppercase tracking-wide text-muted-foreground mb-2">
             {t('settings.localization.missing_keys')}
           </div>
-          <div className="text-sm text-muted-foreground">
-            {t('settings.localization.none_missing')}
+          <div className="flex flex-wrap gap-2 text-xs">
+            <Badge variant="outline">total keys: {stats.totalKeys}</Badge>
+            <Badge variant={stats.missingHu === 0 ? 'outline' : 'secondary'}>
+              hu: {stats.missingHu === 0 ? t('settings.localization.none_missing') : t('settings.localization.missing_count', { count: stats.missingHu })}
+            </Badge>
+            <Badge variant={stats.missingEn === 0 ? 'outline' : 'secondary'}>
+              en: {stats.missingEn === 0 ? t('settings.localization.none_missing') : t('settings.localization.missing_count', { count: stats.missingEn })}
+            </Badge>
           </div>
         </div>
+
+        <div className="flex flex-wrap items-center gap-2 border-t pt-3">
+          <Button size="sm" variant="outline" onClick={downloadCsv}>
+            <Download className="h-3.5 w-3.5 mr-1" /> {t('settings.localization.export_csv')}
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => fileInputRef.current?.click()}>
+            <Upload className="h-3.5 w-3.5 mr-1" /> {t('settings.localization.import_csv')}
+          </Button>
+          <input ref={fileInputRef} type="file" accept=".csv,text/csv" className="hidden" onChange={onFile} />
+        </div>
+        <p className="text-[11px] text-muted-foreground">{t('settings.localization.import_help')}</p>
+        {lastImport ? (
+          <div className="text-xs text-muted-foreground">
+            {t('settings.localization.import_summary', {
+              added: lastImport.added,
+              updated: lastImport.updated,
+              skipped: lastImport.skipped,
+            })}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );
