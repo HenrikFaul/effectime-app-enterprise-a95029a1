@@ -251,6 +251,7 @@ const hu = {
       import_help:
         'Tölts fel egy CSV-t a következő oszlopokkal: key, en, hu. A meglévő kulcsok csak ebben a munkamenetben frissülnek — a fájlformátum a fordítók számára kanonikus csereformátum.',
       import_summary: '{{added}} új · {{updated}} frissítve · {{skipped}} kihagyva',
+      persisted: 'Fordítási felülírások mentve a munkaterületbe.',
     },
     recovery: {
       title: 'Recovery üzemmód',
@@ -364,6 +365,54 @@ const hu = {
     placeholder_rationale: 'Miért hozzuk meg ezt a döntést?',
     placeholder_expected: 'Milyen eredményre számítunk?',
     placeholder_observed: 'Mi történt valójában? (későbbi kitöltés)',
+    stale_inbox_title: 'Megfigyelt eredmény — rögzítés szükséges',
+    stale_inbox_description:
+      'Olyan döntések, melyek megfigyelési ablaka lejárt. Rögzítsd a megfigyelt eredményt, hogy a tanulási kör záruljon.',
+    no_stale: 'Nincs megfigyelésre váró döntés.',
+    days_overdue: '{{count}} napja esedékes',
+    capture_observed: 'Megfigyelt eredmény rögzítése',
+  },
+  pulse: {
+    title: 'Org Pulse',
+    subtitle: 'Privacy-safe operatív jelek (k ≥ 5).',
+    suppressed: 'Elrejtve — kevesebb mint 5 rekord',
+    active_members: 'Aktív tagok',
+    employer_rights: 'Munkáltatói jogkörrel',
+    missing_org_unit: 'Hiányzó szervezeti egység',
+    missing_manager: 'Hiányzó vezető',
+    missing_contract: 'Hiányzó szerződés',
+    missing_leadership: 'Hiányzó vezetői szint',
+    open_approvals_long: '48 órán túli függő jóváhagyás',
+    weekly_leave: 'Jóváhagyott távollét (utolsó 7 nap)',
+  },
+  capacity: {
+    title: 'Kapacitás DNA',
+    subtitle:
+      'Napi pillanatképek: alap / elérhető / hiány / túlterhelés jelek. Az előrejelző motor alapja.',
+    generate: 'Mai pillanatkép generálása',
+    generated: 'Pillanatkép elmentve',
+    snapshot_date: 'Dátum',
+    baseline_fte: 'Alap FTE',
+    effective_fte: 'Effektív FTE',
+    available_fte: 'Elérhető FTE',
+    shortage_score: 'Hiány',
+    overload_score: 'Túlterhelés',
+    no_snapshots: 'Még nincs pillanatkép. Indíts egy generálást.',
+    note:
+      'Szabályalapú v1: alap = aktív tagok; effektív = alap mínusz adott napi jóváhagyott távollét; shortage_score = max(0, committed − effektív) / alap.',
+  },
+  integration_health: {
+    title: 'Integrációs egészségközpont',
+    subtitle:
+      'Integrációnkénti utolsó szinkron-állapot a sync naplóból kiemelt hibarészletekkel.',
+    healthy: 'Egészséges',
+    degraded: 'Romlott',
+    failed: 'Sikertelen',
+    no_integrations: 'Nincs konfigurált integráció.',
+    no_sync_log: 'Ehhez az integrációhoz nincs napló-bejegyzés.',
+    last_sync: 'Utolsó szinkron',
+    success: 'Sikeres',
+    error: 'Hiba',
   },
 } as const;
 

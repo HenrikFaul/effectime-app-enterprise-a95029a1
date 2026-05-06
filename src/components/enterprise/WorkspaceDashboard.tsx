@@ -65,6 +65,11 @@ import { NotificationBell } from './NotificationBell';
 import { WorkflowsModule } from './workflows/WorkflowsModule';
 import { CommandCenter } from './CommandCenter';
 import { RecoveryModeSettings } from './settings/RecoveryModeSettings';
+import { CapacityDnaPanel } from './CapacityDnaPanel';
+import { OrgPulseWidget } from './OrgPulseWidget';
+import { IntegrationHealthCenter } from './settings/IntegrationHealthCenter';
+import { DecisionMemoryStaleInbox } from './DecisionMemoryStaleInbox';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Workspace {
   id: string;
@@ -88,6 +93,7 @@ interface Props {
 
 export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefresh, activeTab: externalTab, onTabChange }: Props) {
   const { signOut } = useAuth();
+  const { loadWorkspaceOverrides } = useI18n();
   const [showInvite, setShowInvite] = useState(false);
   const [showMyProfile, setShowMyProfile] = useState(false);
   const [myMembership, setMyMembership] = useState<any>(null);
@@ -134,6 +140,14 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
     };
     fetchMyMembership();
   }, [workspace.id, userId]);
+
+  // Load workspace-scoped translation overrides (Phase 8 — admin-managed CSV).
+  useEffect(() => {
+    loadWorkspaceOverrides(workspace.id);
+    return () => {
+      loadWorkspaceOverrides(null);
+    };
+  }, [workspace.id, loadWorkspaceOverrides]);
 
   // Track workspace recovery mode flag (additive column added by v3.0.0 Phase 6).
   useEffect(() => {
@@ -252,6 +266,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               onOpenTab={setActiveTab}
               recoveryMode={recoveryMode}
             />
+            {isAdmin ? <OrgPulseWidget workspaceId={workspace.id} /> : null}
             {canView('members') && (
               <TabsContent value="members" className="space-y-3">
                 {canView('invitations') && (
@@ -350,8 +365,9 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               </TabsContent>
             )}
 
-            <TabsContent value="resources">
+            <TabsContent value="resources" className="space-y-4">
               <ResourcesTab workspaceId={workspace.id} userId={userId} isAdmin={isAdmin} />
+              <CapacityDnaPanel workspaceId={workspace.id} isAdmin={isAdmin} />
             </TabsContent>
 
             {(canView('reports') || canView('audit') || canView('export')) && (
@@ -440,6 +456,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
             </div>
             <ApprovalInbox workspaceId={workspaceId} userId={userId} />
             <AdminLeaveOverride open={showOverride} onOpenChange={setShowOverride} workspaceId={workspaceId} adminUserId={userId} onCreated={() => {}} />
+            <DecisionMemoryStaleInbox workspaceId={workspaceId} isAdmin={isAdmin} authoredBy={userId} />
           </CollapsibleContent>
         </Collapsible>
       )}
@@ -824,12 +841,18 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
       </SettingsSection>
 
       <SettingsSection workspaceId={workspace.id} sectionKey="settings.localization" icon={<Settings className="h-4 w-4" />} title="Nyelvi beállítások / Localization">
-        <LocalizationSettings workspaceId={workspace.id} />
+        <LocalizationSettings workspaceId={workspace.id} isAdmin={isAdmin} userId={userId} />
       </SettingsSection>
 
       {isAdmin && (
         <SettingsSection workspaceId={workspace.id} sectionKey="settings.recovery_mode" icon={<ShieldAlert className="h-4 w-4" />} title="Recovery üzemmód / Recovery Mode">
           <RecoveryModeSettings workspaceId={workspace.id} userId={userId} />
+        </SettingsSection>
+      )}
+
+      {isAdmin && (
+        <SettingsSection workspaceId={workspace.id} sectionKey="settings.integration_health" icon={<Plug className="h-4 w-4" />} title="Integrációs egészségközpont / Integration Health Center">
+          <IntegrationHealthCenter workspaceId={workspace.id} />
         </SettingsSection>
       )}
 
