@@ -4,13 +4,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ListTodo, Plug, Search, PlusCircle, Gauge, Database, BarChart3 } from 'lucide-react';
+import { ListTodo, Plug, Search, PlusCircle, Gauge, Database, BarChart3, KanbanSquare } from 'lucide-react';
 import { IntegrationManager } from '../IntegrationManager';
 import { BacklogBrowser } from './BacklogBrowser';
 import { IssueWriteback } from './IssueWriteback';
 import { CapacityFit } from './CapacityFit';
 import { FieldDiscovery } from './FieldDiscovery';
 import { AgileInsights } from './AgileInsights';
+import { AgileBoards } from './AgileBoards';
 
 interface Props {
   workspaceId: string;
