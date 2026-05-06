@@ -1,3 +1,21 @@
+## 2026-05-06 — Jira integration repair + Boards (Kanban / Scrum / Gantt)
+
+### Fixed
+- **Jira search 410/empty result regression** — `jira-devops-proxy` now requests `*all` fields and falls back through `POST /rest/api/3/search/jql → GET /rest/api/3/search/jql → GET /rest/api/3/search` so tenants on either the new or legacy endpoint succeed.
+- Removed leftover `auth-middleware.ts` / `client.server.ts` TanStack stubs that were re-created in a previous session and broke the Vite SPA build (`Cannot find module '@tanstack/react-start'`).
+
+### Added — Extended Jira field ingest
+The proxy now imports and caches the following fields per issue (Jira Cloud):
+`assignee, reporter, status, issue_type, summary, description (ADF→plain text), key, parent_key, sprint_name, labels (full), due_date, team_name, start_date, priority, story_points`.
+Schema: two new columns on `enterprise_agile_issues` — `description text`, `team_name text`.
+
+### Added — Boards tab (Kanban / Scrum / Gantt)
+New `AgileBoards` component, mounted as a dedicated tab in `AgilePanel`:
+- **Kanban** — columns grouped by `status`, cards show key, type chip, assignee, SP, priority, labels.
+- **Scrum** — first level grouped by `sprint_name`, second level by `status`; per-sprint header counts tickets and total Story Points.
+- **Gantt** — horizontal month-grid timeline driven by `start_date → due_date` with type-coloured bars (Bug=red, Epic=purple, Story=emerald, Task/other=sky).
+All three views read from the cached `enterprise_agile_issues` so they remain available offline; a `Szinkron` button forces a fresh pull.
+
 ## 2026-05-05 — v3.0.0 Phase 8 implementation: persistent translation overrides, predictive forecaster v1, Org Pulse, Integration Health Center, Decision Memory observed-outcome capture
 
 ### Added — Persistent translation overrides

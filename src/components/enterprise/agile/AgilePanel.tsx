@@ -4,13 +4,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ListTodo, Plug, Search, PlusCircle, Gauge, Database, BarChart3 } from 'lucide-react';
+import { ListTodo, Plug, Search, PlusCircle, Gauge, Database, BarChart3, KanbanSquare } from 'lucide-react';
 import { IntegrationManager } from '../IntegrationManager';
 import { BacklogBrowser } from './BacklogBrowser';
 import { IssueWriteback } from './IssueWriteback';
 import { CapacityFit } from './CapacityFit';
 import { FieldDiscovery } from './FieldDiscovery';
 import { AgileInsights } from './AgileInsights';
+import { AgileBoards } from './AgileBoards';
 
 interface Props {
   workspaceId: string;
@@ -85,6 +86,7 @@ export function AgilePanel({ workspaceId, userId, isAdmin }: Props) {
       <Tabs value={tab} onValueChange={setTab} className="space-y-3">
         <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="browser" className="gap-1"><Search className="h-4 w-4" /> Backlog</TabsTrigger>
+          <TabsTrigger value="boards" className="gap-1"><KanbanSquare className="h-4 w-4" /> Boards</TabsTrigger>
           <TabsTrigger value="writeback" className="gap-1"><PlusCircle className="h-4 w-4" /> Issue írás</TabsTrigger>
           <TabsTrigger value="capacity" className="gap-1"><Gauge className="h-4 w-4" /> Capacity Fit</TabsTrigger>
           <TabsTrigger value="fields" className="gap-1"><Database className="h-4 w-4" /> Mezők</TabsTrigger>
@@ -93,6 +95,9 @@ export function AgilePanel({ workspaceId, userId, isAdmin }: Props) {
         </TabsList>
         <TabsContent value="browser">
           {active ? <BacklogBrowser integration={active} /> : <EmptyState />}
+        </TabsContent>
+        <TabsContent value="boards">
+          {active ? <AgileBoards integration={active} /> : <EmptyState />}
         </TabsContent>
         <TabsContent value="writeback">
           {active ? <IssueWriteback integration={active} userId={userId} /> : <EmptyState />}

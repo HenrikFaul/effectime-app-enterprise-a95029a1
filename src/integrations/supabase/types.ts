@@ -356,6 +356,7 @@ export type Database = {
           components: string[] | null
           created_at: string
           custom_fields: Json | null
+          description: string | null
           due_date: string | null
           external_id: string | null
           external_key: string
@@ -384,6 +385,7 @@ export type Database = {
           suggested_role: string | null
           summary: string | null
           target_sprint: string | null
+          team_name: string | null
           updated_at: string
           url: string | null
           workspace_id: string
@@ -396,6 +398,7 @@ export type Database = {
           components?: string[] | null
           created_at?: string
           custom_fields?: Json | null
+          description?: string | null
           due_date?: string | null
           external_id?: string | null
           external_key: string
@@ -424,6 +427,7 @@ export type Database = {
           suggested_role?: string | null
           summary?: string | null
           target_sprint?: string | null
+          team_name?: string | null
           updated_at?: string
           url?: string | null
           workspace_id: string
@@ -436,6 +440,7 @@ export type Database = {
           components?: string[] | null
           created_at?: string
           custom_fields?: Json | null
+          description?: string | null
           due_date?: string | null
           external_id?: string | null
           external_key?: string
@@ -464,6 +469,7 @@ export type Database = {
           suggested_role?: string | null
           summary?: string | null
           target_sprint?: string | null
+          team_name?: string | null
           updated_at?: string
           url?: string | null
           workspace_id?: string
