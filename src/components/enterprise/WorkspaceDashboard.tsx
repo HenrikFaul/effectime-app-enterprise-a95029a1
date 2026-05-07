@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft, LogOut, Building2, GitMerge } from 'lucide-react';
+import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft, LogOut, Building2, GitMerge, CircleHelp } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
@@ -68,6 +68,7 @@ import { RecoveryModeSettings } from './settings/RecoveryModeSettings';
 import { CapacityDnaPanel } from './CapacityDnaPanel';
 import { OrgPulseWidget } from './OrgPulseWidget';
 import { IntegrationHealthCenter } from './settings/IntegrationHealthCenter';
+import { HelpSystemSettings } from './settings/HelpSystemSettings';
 import { DecisionMemoryStaleInbox } from './DecisionMemoryStaleInbox';
 import { useI18n } from '@/i18n/I18nProvider';
 
@@ -856,6 +857,12 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
       {isAdmin && (
         <SettingsSection workspaceId={workspace.id} sectionKey="settings.integration_health" icon={<Plug className="h-4 w-4" />} title="Integrációs egészségközpont / Integration Health Center">
           <IntegrationHealthCenter workspaceId={workspace.id} />
+        </SettingsSection>
+      )}
+
+      {isAdmin && (
+        <SettingsSection workspaceId={workspace.id} sectionKey="settings.help_system" icon={<CircleHelp className="h-4 w-4" />} title="AI súgó tartalom / AI Help Content">
+          <HelpSystemSettings workspaceId={workspace.id} />
         </SettingsSection>
       )}
 

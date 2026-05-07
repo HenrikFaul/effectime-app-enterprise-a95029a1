@@ -603,6 +603,19 @@ const en = {
     success: 'Success',
     error: 'Error',
   },
+  help_settings: {
+    title: 'AI Help Content',
+    ai_toggle_label: 'AI content regeneration',
+    ai_toggle_description:
+      'When enabled, the help system can regenerate articles automatically on new releases.',
+    regenerate_now: 'Regenerate now',
+    regenerating: 'Regenerating…',
+    regenerate_description:
+      'Triggers an immediate AI regeneration of all help articles from the latest codebase.',
+    last_regenerated: 'Last regenerated:',
+    regen_success: 'Done — {{count}} articles updated.',
+    regen_error: 'Regeneration failed',
+  },
 } as const;
 
 export default en;

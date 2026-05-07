@@ -15,6 +15,8 @@ import { useHelpRegistry } from '@/lib/help/registry';
 import { useI18n } from '@/i18n/I18nProvider';
 import { ArrowLeft, CircleHelp, Search, Sparkles, X } from 'lucide-react';
 import { useHelpArticleByAnchor, useHelpSearch } from '@/lib/help/useHelpArticles';
+import en from '@/i18n/resources/en';
+import hu from '@/i18n/resources/hu';
 
 interface AnchorCopy {
   title: string;
@@ -22,23 +24,25 @@ interface AnchorCopy {
   commonTasks?: string[];
 }
 
-function resolveAnchorCopy(
-  t: (k: string) => string,
-  id: string | null,
-): AnchorCopy | null {
+const RAW_BUNDLES: Record<string, any> = { en, hu };
+
+/**
+ * Direct property lookup into the anchors sub-object using the anchor ID as
+ * a literal key (e.g. 'workspace.calendar'). This avoids the i18n t() resolver
+ * which splits on '.' and cannot traverse keys that contain dots.
+ */
+function resolveAnchorCopy(locale: string, id: string | null): AnchorCopy | null {
   if (!id) return null;
-  const titleKey = `help.anchors.${id}.title`;
-  const summaryKey = `help.anchors.${id}.summary`;
-  const title = t(titleKey);
-  const summary = t(summaryKey);
-  if (title === titleKey || summary === summaryKey) return null;
-  const commonTasks: string[] = [];
-  for (let i = 0; i < 8; i += 1) {
-    const k = `help.anchors.${id}.commonTasks.${i}`;
-    const v = t(k);
-    if (v && v !== k) commonTasks.push(v);
-  }
-  return { title, summary, commonTasks };
+  const anchors =
+    (RAW_BUNDLES[locale] as any)?.help?.anchors ??
+    (RAW_BUNDLES['en'] as any)?.help?.anchors;
+  const entry = anchors?.[id];
+  if (!entry?.title || !entry?.summary) return null;
+  return {
+    title: entry.title,
+    summary: entry.summary,
+    commonTasks: Array.isArray(entry.commonTasks) ? entry.commonTasks : [],
+  };
 }
 
 export function HelpDrawer() {
@@ -82,7 +86,7 @@ export function HelpDrawer() {
 
   const { article, loading } = useHelpArticleByAnchor(activeAnchorId, locale);
   const { results, loading: searching } = useHelpSearch(query, locale);
-  const fallbackCopy = useMemo(() => resolveAnchorCopy(t, activeAnchorId), [t, activeAnchorId]);
+  const fallbackCopy = useMemo(() => resolveAnchorCopy(locale, activeAnchorId), [locale, activeAnchorId]);
 
   // Soft highlight on the active region when drawer opens
   useEffect(() => {

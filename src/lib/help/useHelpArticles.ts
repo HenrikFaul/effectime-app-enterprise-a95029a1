@@ -18,7 +18,14 @@ export interface HelpArticle {
   last_generated_at: string;
 }
 
-/** Fetch a single article matching anchorId for the active locale, with EN fallback. */
+/**
+ * Fetch the best article for a given anchorId.
+ * Multiple topics can share one anchor_id (e.g. workspace.settings has several).
+ * We pick the most-recently generated active article for the requested locale,
+ * falling back to EN when no locale-specific article exists.
+ *
+ * Uses .limit(1) to guarantee .maybeSingle() never throws a multi-row error.
+ */
 export function useHelpArticleByAnchor(anchorId: string | null, locale: string) {
   const [article, setArticle] = useState<HelpArticle | null>(null);
   const [loading, setLoading] = useState(false);
@@ -32,26 +39,30 @@ export function useHelpArticleByAnchor(anchorId: string | null, locale: string) 
     setLoading(true);
     (async () => {
       try {
-        // Active locale first — only fetch active (non-archived) articles
+        // Active locale first — most recent active article for this anchor
         const { data: primary } = await (supabase as any)
           .from('help_articles')
           .select('*')
           .eq('anchor_id', anchorId)
           .eq('locale', locale)
           .eq('is_active', true)
+          .order('last_generated_at', { ascending: false })
+          .limit(1)
           .maybeSingle();
         if (cancelled) return;
         if (primary) {
           setArticle(primary as HelpArticle);
           return;
         }
-        // Fallback to EN — only active
+        // Fallback to EN
         const { data: fallback } = await (supabase as any)
           .from('help_articles')
           .select('*')
           .eq('anchor_id', anchorId)
           .eq('locale', 'en')
           .eq('is_active', true)
+          .order('last_generated_at', { ascending: false })
+          .limit(1)
           .maybeSingle();
         if (cancelled) return;
         setArticle((fallback as HelpArticle) ?? null);
@@ -84,7 +95,6 @@ export function useHelpSearch(query: string, locale: string) {
     setLoading(true);
     const t = setTimeout(async () => {
       try {
-        // Prefer active locale; OR title/summary/tags ilike
         const pat = `%${trimmed}%`;
         const { data } = await (supabase as any)
           .from('help_articles')
@@ -92,6 +102,7 @@ export function useHelpSearch(query: string, locale: string) {
           .eq('is_active', true)
           .in('locale', [locale, 'en'])
           .or(`title.ilike.${pat},summary.ilike.${pat},body_md.ilike.${pat}`)
+          .order('last_generated_at', { ascending: false })
           .limit(20);
         if (cancelled) return;
         // Dedupe by topic_key, prefer active locale
