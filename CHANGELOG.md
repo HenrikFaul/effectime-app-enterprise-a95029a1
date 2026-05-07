@@ -1,3 +1,16 @@
+## 2026-05-07 — v3.2.0 Self-Updating Help System
+
+### Added
+- **DB**: `help_articles` (topic_key, locale, title, summary, body_md, route, anchor_id, taxonomy, tags, synonyms, related_topics, search_tokens tsvector) + `help_releases` for release-driven regeneration tracking. RLS: public read, service-role write only.
+- **Edge function `help-regenerator`**: GitHub release webhook entrypoint (HMAC-verified via `GITHUB_RELEASE_WEBHOOK_SECRET`). Pulls `CHANGELOG.md` + `versioning/*.md` from the repo, calls **Google Gemini 2.0 Flash** with a structured-JSON system prompt to produce EN+HU end-user help articles, and upserts them into `help_articles`. Tracks each run in `help_releases` (pending/running/succeeded/failed).
+- **Frontend Help Drawer redesign**: search bar with debounced autocomplete across title/summary/body, locale-aware results with EN fallback, markdown body rendering (react-markdown), release tag badge, dark glass surface.
+- **Drag-target ? icon**: pointerdown on the ? button now starts a drag session — moving over any `[data-help-region]` element highlights it (`.help-target-hover`), and releasing on it opens the drawer with that region's article. Click without movement still opens the page-level help.
+- **`useHelpArticleByAnchor` / `useHelpSearch` hooks** in `src/lib/help/useHelpArticles.ts`.
+
+### Webhook URL
+`POST https://oezlzzmzzvbvinuysxaz.supabase.co/functions/v1/help-regenerator`
+Configure as a GitHub repository webhook with secret = `GITHUB_RELEASE_WEBHOOK_SECRET`, content-type `application/json`, event = "Releases".
+
 ## 2026-05-07 — v3.1.0 Phases 9, 10, 11: QA Safety Net, Versioning & Rollout, Implementation Roadmap
 
 ### Added — Phase 9 (QA, testing, and release safety)
