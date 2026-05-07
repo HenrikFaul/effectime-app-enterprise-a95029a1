@@ -121,6 +121,56 @@ const hu = {
           'Hiányzó kulcsok áttekintése',
         ],
       },
+      'workspace.resources': {
+        title: 'Erőforrások',
+        summary:
+          'Az Erőforrások fül teljes képet ad a csapat kapacitásáról, projekt idővonalakról, agile integrációról és skill elérhetőségről. Használd munkaterhelés tervezéshez és hiányok korai azonosításához.',
+        commonTasks: [
+          'Kapacitás hőtérkép megtekintése',
+          'Projektek és mérföldkövek hozzáadása vagy szerkesztése',
+          'Jira vagy Azure DevOps csatlakoztatása',
+          'Kapacitás DNA pillanatkép generálása',
+          'Skill lefedettség és hiányok áttekintése',
+        ],
+      },
+      'workspace.reports': {
+        title: 'Riportok és Audit',
+        summary:
+          'A Riportok fül KPI dashboardokat, távolléti trend diagramokat és megváltoztathatatlan audit naplót kínál. Csapatállapot nyomon követésére, bérszámfejtési vagy megfelelési adatexportra és tevékenységelőzmény vizsgálatára használható.',
+        commonTasks: [
+          'KPI összefoglaló kártyák megtekintése',
+          'Audit napló szűrése szereplő vagy eseménytípus alapján',
+          'Távolléti adatok exportálása CSV-be',
+          'Ismétlődő riport ütemezése',
+          'Riport widget kitűzése a dashboardra',
+        ],
+      },
+      'workspace.settings': {
+        title: 'Beállítások',
+        summary:
+          'A munkaterület beállításaiban konfigurálható a megjelenés, lokalizáció, iCal feed, naptárszűrők sorrendje, jogosultságok és integrációk. A legtöbb beállítást csak tulajdonosok és erőforrás-asszisztensek módosíthatják.',
+        commonTasks: [
+          'Munkaterület nevének és megjelenésének módosítása',
+          'Távolléttípusok, ünnepnapok és tiltott napok kezelése',
+          'Napi lefedettségi szabályok beállítása',
+          'Jira vagy Azure DevOps integráció beállítása',
+          'Fordítási felülbírálatok exportálása vagy importálása',
+          'Szerepkör-jogosultságok konfigurálása',
+          'Helyreállítási üzemmód aktiválása vagy deaktiválása',
+        ],
+      },
+      'workspace.agile': {
+        title: 'Agile (Jira / Azure DevOps)',
+        summary:
+          'Az Agile panel összeköti a Jira vagy Azure DevOps projekteket az Effectime-mal. Böngészd a backlogot, ellenőrizd a sprint kapacitást a távollétek tükrében, hozz létre vagy frissíts issue-kat, és futtass mi-lenne-ha szimulációkat.',
+        commonTasks: [
+          'Issue-k keresése JQL vagy WIQL segítségével',
+          'Sprint kapacitás és távolléti átfedés megtekintése',
+          'Jira vagy ADO issue létrehozása vagy frissítése',
+          'Mi-lenne-ha szimuláció futtatása távolléti hatás elemzésére',
+          'Váltás Kanban, Scrum és Gantt nézetek között',
+        ],
+      },
     } as Record<
       string,
       {

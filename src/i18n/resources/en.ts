@@ -121,6 +121,56 @@ const en = {
           'Review missing-key counts',
         ],
       },
+      'workspace.resources': {
+        title: 'Resources',
+        summary:
+          'The Resources tab gives you a full picture of team capacity, project timelines, agile integration, and skill availability. Use it to plan workload and identify gaps before they become problems.',
+        commonTasks: [
+          'View capacity heatmap across the team',
+          'Add or edit projects and milestones',
+          'Connect Jira or Azure DevOps for agile syncing',
+          'Generate a capacity DNA snapshot',
+          'Review skill coverage and shortfalls',
+        ],
+      },
+      'workspace.reports': {
+        title: 'Reports & Audit',
+        summary:
+          'The Reports tab provides KPI dashboards, leave trend charts, and an immutable audit log. Use it to track team health, export data for payroll or compliance, and investigate activity history.',
+        commonTasks: [
+          'View KPI summary cards',
+          'Filter the audit log by actor or event type',
+          'Export leave data to CSV',
+          'Schedule a recurring report delivery',
+          'Pin a report widget to the dashboard',
+        ],
+      },
+      'workspace.settings': {
+        title: 'Settings',
+        summary:
+          'Workspace settings let you configure branding, localization, iCal feeds, calendar filter order, role permissions, and integration connections. Only owners and resource assistants can change most settings.',
+        commonTasks: [
+          'Update workspace name and branding',
+          'Configure leave types, holidays, and blocked dates',
+          'Manage daily coverage rules',
+          'Set up Jira or Azure DevOps integration',
+          'Export or import translation overrides',
+          'Configure role permissions',
+          'Activate or deactivate recovery mode',
+        ],
+      },
+      'workspace.agile': {
+        title: 'Agile (Jira / Azure DevOps)',
+        summary:
+          'The Agile panel connects your Jira or Azure DevOps projects to Effectime. Browse the backlog, check sprint capacity against leave, create or update issues, and run what-if simulations.',
+        commonTasks: [
+          'Search issues using JQL or WIQL',
+          'View sprint capacity vs. leave overlap',
+          'Create or update a Jira or ADO issue',
+          'Run a what-if simulation for leave impact',
+          'Switch between Kanban, Scrum, and Gantt views',
+        ],
+      },
     } as Record<
       string,
       {
