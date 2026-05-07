@@ -1,1 +1,4 @@
 project_id = "oezlzzmzzvbvinuysxaz"
+
+[functions.help-regenerator]
+verify_jwt = false
