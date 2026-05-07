@@ -32,24 +32,26 @@ export function useHelpArticleByAnchor(anchorId: string | null, locale: string) 
     setLoading(true);
     (async () => {
       try {
-        // Active locale first
+        // Active locale first — only fetch active (non-archived) articles
         const { data: primary } = await (supabase as any)
           .from('help_articles')
           .select('*')
           .eq('anchor_id', anchorId)
           .eq('locale', locale)
+          .eq('is_active', true)
           .maybeSingle();
         if (cancelled) return;
         if (primary) {
           setArticle(primary as HelpArticle);
           return;
         }
-        // Fallback to EN
+        // Fallback to EN — only active
         const { data: fallback } = await (supabase as any)
           .from('help_articles')
           .select('*')
           .eq('anchor_id', anchorId)
           .eq('locale', 'en')
+          .eq('is_active', true)
           .maybeSingle();
         if (cancelled) return;
         setArticle((fallback as HelpArticle) ?? null);
@@ -87,6 +89,7 @@ export function useHelpSearch(query: string, locale: string) {
         const { data } = await (supabase as any)
           .from('help_articles')
           .select('*')
+          .eq('is_active', true)
           .in('locale', [locale, 'en'])
           .or(`title.ilike.${pat},summary.ilike.${pat},body_md.ilike.${pat}`)
           .limit(20);

@@ -41,7 +41,7 @@ export function ResourcesTab({ workspaceId, userId, isAdmin }: Props) {
         <TabsContent value="dashboard"><ResourceDashboard workspaceId={workspaceId} /></TabsContent>
         <TabsContent value="heatmap"><UtilizationHeatmap workspaceId={workspaceId} /></TabsContent>
         <TabsContent value="projects"><ProjectList workspaceId={workspaceId} userId={userId} isAdmin={isAdmin} /></TabsContent>
-        <TabsContent value="agile"><AgilePanel workspaceId={workspaceId} userId={userId} isAdmin={isAdmin} /></TabsContent>
+        <TabsContent value="agile" data-help-region="workspace.agile"><AgilePanel workspaceId={workspaceId} userId={userId} isAdmin={isAdmin} /></TabsContent>
         <TabsContent value="skills"><SkillsManager workspaceId={workspaceId} isAdmin={isAdmin} /></TabsContent>
         <TabsContent value="scenarios"><ScenarioPlanner workspaceId={workspaceId} userId={userId} isAdmin={isAdmin} /></TabsContent>
         <TabsContent value="financials"><FinancialsPanel workspaceId={workspaceId} isAdmin={isAdmin} /></TabsContent>

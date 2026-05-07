@@ -1,3 +1,55 @@
+## 2026-05-07 — v3.2.2 Help System — Full Documentation Suite & Gap Closure
+
+### Fixed
+- **`useHelpArticleByAnchor`**: added `.eq('is_active', true)` filter — archived articles were surfacing in the drawer when a topic had been regenerated and the old version archived.
+- **`useHelpSearch`**: added `.eq('is_active', true)` filter — same root cause; search results could return stale archived articles.
+- **HelpDrawer release badge**: label changed from `help.section_label` ("Section") to `help.generated_label` ("Generated") — the badge now correctly reads "Generated · v3.2.0" instead of "Section · v3.2.0".
+
+### Added — `data-help-region` completeness
+- **`ResourcesTab`**: `<TabsContent value="agile">` now carries `data-help-region="workspace.agile"` — the drag-target ? icon can now target the Agile board section for context-specific help.
+
+### Added — i18n fallback anchors
+- **EN + HU bundles**: 13 new fallback anchor entries covering all gaps between the drawer and seed data:
+  `workspace.requests`, `capacity-dna`, `command-center`, `decision-memory`, `coverage-planner`, `org-chart`, `audit-log`, `quota-manager`, `holiday-manager`, `localization-settings`, `integration-health`, `role-permissions`, `access-request`.
+- `workspace.approvals` enhanced with `commonTasks` list (both locales).
+- New i18n key `help.generated_label` added in both EN (`'Generated'`) and HU (`'Generálva'`).
+
+### Added — Seed migration `20260507140000`
+- **14 new curated help articles** (7 topics × 2 locales) filling the mandatory anchor gaps:
+  - `time-entry` (EN + HU) — step-by-step leave request submission with conflict engine flow diagram
+  - `onboarding-template` (EN + HU) — template creation, step types, publish/archive lifecycle
+  - `agile-kanban` (EN + HU) — Kanban board view, card anatomy, sync workflow
+  - `agile-scrum` (EN + HU) — Scrum board with per-sprint totals and story point headers
+  - `agile-gantt` (EN + HU) — Gantt timeline, type colour coding, date requirements
+  - `jira-integration` (EN + HU) — connection setup, test connection, project config sync, troubleshooting
+  - `export-center` (EN + HU) — CSV export workflow, field list, encoding note
+- All rows use `ON CONFLICT DO NOTHING` — safe to re-run and regenerator-upserts are never overwritten.
+
+### Added — `docs/help/` documentation suite
+- **8 structured EN help articles** under `docs/help/en/` with Mermaid flowcharts, step-by-step guides, common actions tables, and troubleshooting sections:
+  - `00-index.md` — feature map with anchor-to-article cross-reference
+  - `01-getting-started.md` — sign-in, workspace selector, first steps
+  - `02-leave-requests-and-approvals.md` — full leave request and approval chain flows
+  - `03-members-and-organization.md` — invite flow, org module, position catalog, org chart
+  - `04-calendar-and-capacity.md` — four calendar views, coverage planner, Capacity DNA
+  - `05-workflows-onboarding-access.md` — onboarding templates, access systems and templates, access inbox
+  - `06-resources-agile-capacity.md` — capacity heatmap, projects, all three agile board views, Capacity Fit
+  - `07-reports-audit-export.md` — KPI dashboard, immutable audit log, CSV export
+  - `08-settings-admin.md` — all settings sections, approval chains, Recovery Mode, Decision Memory, Command Center
+- **`docs/help-reference.md`** — top-level canonical feature map consumed by the AI regenerator: all anchor IDs, navigation paths, and business rule summaries.
+
+### Added — `help-regenerator` improvements
+- Now scans **three** source directories instead of two: `versioning/`, `docs/` (root), and `docs/help/en/` (up to 8 articles).
+- The EN help articles serve as style and content reference for Gemini — generated articles will mirror the established structure and tone.
+- `changed_files.count` in `help_releases` now correctly reflects all three source sets.
+
+### Non-Regression Contract
+- Zero changes to existing RLS policies, approval engine, capacity engine, or any component outside of the help system.
+- The `is_active` filter is purely additive — it uses the index `help_articles_active_idx` added in v3.2.1.
+- All existing `data-help-region` attributes preserved; only one new attribute added.
+- All existing i18n keys preserved; only new keys added.
+- Seed migration uses `ON CONFLICT DO NOTHING` — cannot overwrite existing content.
+
 ## 2026-05-07 — v3.2.1 Help System Diagnosis & Hardening
 
 ### Fixed
