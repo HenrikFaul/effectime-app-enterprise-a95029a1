@@ -211,17 +211,27 @@ async function regenerate(payload: Payload) {
     // 2) Pull source documents
     const changelog = await ghFetchRaw(repo, ref, "CHANGELOG.md");
     const versioningFiles = await ghListDir(repo, ref, "versioning");
-    const docsFiles = await ghListDir(repo, ref, "docs");
+    const docsRootFiles = await ghListDir(repo, ref, "docs");
+    const helpEnFiles = await ghListDir(repo, ref, "docs/help/en");
 
     const versioningDocs: string[] = [];
     for (const f of versioningFiles.slice(-12)) {
       const txt = await ghFetchRaw(repo, ref, `versioning/${f}`);
       if (txt) versioningDocs.push(`### versioning/${f}\n${txt}`);
     }
-    const docsDocs: string[] = [];
-    for (const f of docsFiles.slice(-6)) {
+
+    // docs root-level .md files (e.g. help-reference.md)
+    const docsRootDocs: string[] = [];
+    for (const f of docsRootFiles.slice(-4)) {
       const txt = await ghFetchRaw(repo, ref, `docs/${f}`);
-      if (txt) docsDocs.push(`### docs/${f}\n${txt}`);
+      if (txt) docsRootDocs.push(`### docs/${f}\n${txt}`);
+    }
+
+    // docs/help/en articles — structured user-facing documentation
+    const helpEnDocs: string[] = [];
+    for (const f of helpEnFiles.slice(-8)) {
+      const txt = await ghFetchRaw(repo, ref, `docs/help/en/${f}`);
+      if (txt) helpEnDocs.push(`### docs/help/en/${f}\n${txt}`);
     }
 
     const userPrompt = [
@@ -231,14 +241,19 @@ async function regenerate(payload: Payload) {
         (changelog || "").slice(0, 20_000)
       }`,
       `\n--- versioning/*.md (latest 12, truncated) ---\n${
-        versioningDocs.join("\n\n").slice(0, 25_000)
+        versioningDocs.join("\n\n").slice(0, 20_000)
       }`,
-      `\n--- docs/*.md (latest 6, truncated) ---\n${
-        docsDocs.join("\n\n").slice(0, 10_000)
+      `\n--- docs/*.md (root level, truncated) ---\n${
+        docsRootDocs.join("\n\n").slice(0, 15_000)
+      }`,
+      `\n--- docs/help/en/*.md (structured help articles, truncated) ---\n${
+        helpEnDocs.join("\n\n").slice(0, 20_000)
       }`,
       `\nGenerate help articles for ALL user-facing features mentioned above. ` +
         `Make sure to cover every mandatory anchor listed in the system prompt. ` +
-        `Use the changelog and versioning docs as context for accurate feature descriptions.`,
+        `Use the changelog, versioning docs, and the existing help/en articles as ` +
+        `context for accurate, consistent feature descriptions. Mirror the style ` +
+        `and structure of the existing help/en articles.`,
     ].join("\n");
 
     const articles = await callGemini(SYSTEM_PROMPT, userPrompt);
@@ -289,7 +304,7 @@ async function regenerate(payload: Payload) {
         status: "succeeded",
         summary: `Generated ${rows.length} article rows across ${articles.length} topics`,
         changed_files: {
-          count: versioningDocs.length + docsFiles.length + (changelog ? 1 : 0),
+          count: versioningDocs.length + docsRootDocs.length + helpEnDocs.length + (changelog ? 1 : 0),
         },
         completed_at: new Date().toISOString(),
       })

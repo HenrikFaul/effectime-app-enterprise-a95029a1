@@ -238,7 +238,7 @@ export function HelpDrawer() {
                 <div className="mt-4 flex items-center gap-1 text-[10px] text-muted-foreground">
                   <Sparkles className="h-3 w-3" />
                   <span>
-                    {t('help.section_label')} · {article.source_release_tag}
+                    {t('help.generated_label')} · {article.source_release_tag}
                   </span>
                 </div>
               )}
