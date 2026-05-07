@@ -1,3 +1,26 @@
+## 2026-05-07 — v3.2.3 Help System — Admin Controls & Multi-Tab Fix
+
+### Fixed
+- **`useHelpArticleByAnchor` + `useHelpSearch`**: added `.order('last_generated_at', { ascending: false }).limit(1)` before every `.maybeSingle()` call — Supabase `.maybeSingle()` throws when multiple rows match (e.g. five articles shared `anchor_id = 'workspace.settings'`). This was the root cause of the "only Members tab shows help content" bug: the thrown error was silently caught and `article` was set to `null`.
+- **`HelpDrawer` i18n fallback (`resolveAnchorCopy`)**: rewrote to import raw bundle objects directly (`import en from '@/i18n/resources/en'`) and use literal key access (`anchors[id]`) instead of calling `t()`. The `lookup()` function splits on `.` which broke all dotted anchor IDs like `workspace.calendar` — the traversal tried `anchors['workspace']['calendar']` instead of `anchors['workspace.calendar']`.
+
+### Added
+- **`HelpSystemSettings` component** (`src/components/enterprise/settings/HelpSystemSettings.tsx`): new admin-only settings card with:
+  - `Switch` toggle to enable/disable AI help content regeneration (persisted to `enterprise_workspaces.help_ai_enabled`)
+  - "Regenerate now" button that immediately invokes the `help-regenerator` Supabase Edge Function
+  - Last-regenerated timestamp display
+  - Result badge (success/error) after manual regeneration
+- **Schema migration `20260507150000`**: two new additive columns on `enterprise_workspaces`:
+  - `help_ai_enabled boolean NOT NULL DEFAULT true`
+  - `help_last_regenerated_at timestamptz`
+- **`WorkspaceDashboard` Settings tab**: `HelpSystemSettings` wired in as an admin-only `SettingsSection` (after Integration Health Center)
+- **i18n keys** `help_settings.*` added to both EN and HU bundles (9 keys each)
+
+### Non-Regression Contract
+- Zero changes to existing RLS policies, approval engine, capacity engine, or any component outside of the help system.
+- Schema migration is purely additive — `ADD COLUMN IF NOT EXISTS` with safe defaults.
+- All existing i18n keys preserved; only new keys added.
+
 ## 2026-05-07 — v3.2.2 Help System — Full Documentation Suite & Gap Closure
 
 ### Fixed

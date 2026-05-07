@@ -603,6 +603,19 @@ const hu = {
     success: 'Sikeres',
     error: 'Hiba',
   },
+  help_settings: {
+    title: 'AI súgó tartalom',
+    ai_toggle_label: 'AI tartalom-újragenerálás',
+    ai_toggle_description:
+      'Ha be van kapcsolva, a súgórendszer új kiadásokkor automatikusan tudja frissíteni a cikkeket.',
+    regenerate_now: 'Újragenerálás most',
+    regenerating: 'Újragenerálás…',
+    regenerate_description:
+      'Azonnali AI újragenerálást indít el a legfrissebb kódbázis alapján.',
+    last_regenerated: 'Utoljára generálva:',
+    regen_success: 'Kész — {{count}} cikk frissítve.',
+    regen_error: 'Újragenerálás sikertelen',
+  },
 } as const;
 
 export default hu;
