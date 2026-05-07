@@ -1,3 +1,46 @@
+## 2026-05-07 — v3.1.0 Phases 9, 10, 11: QA Safety Net, Versioning & Rollout, Implementation Roadmap
+
+### Added — Phase 9 (QA, testing, and release safety)
+
+**Unit test suite — 77 new tests across 6 test files** (total: 83 tests, all passing):
+
+- `src/test/passwordValidation.test.ts` (9 tests): full coverage of `validatePassword` per-check flags and `isPasswordValid` composite gate; regression-guards the auth strength requirements.
+- `src/test/capacityEngine.test.ts` (11 tests): `sortCandidatesForRequirement` (full-time ≥90% vs partial-fit strategy, immutability, empty input); `summarizeRequirements` (gap math, multi-role, zero-assignment, over-assignment edge cases).
+- `src/test/coverageEligibility.test.ts` (20 tests): pure `evaluateEligibility` and `rankCandidates` — all blocking and warning codes verified (ON_LEAVE, BLOCKED, PENDING_LEAVE, HOLIDAY, WRONG_ROLE, MISSING_SKILL, SKILL_LEVEL_LOW, DOUBLE_BOOKED, OVER_CAPACITY); multi-role/multi-skill resolution; leave range boundary; cross-user leave isolation.
+- `src/test/smartSchedule.test.ts` (8 tests): `generateSmartSchedule` — site-allowlist enforcement, leave exclusion, multi-day range, multi-slot headcount, role preference, no-double-booking invariant.
+- `src/test/csv.test.ts` (20 tests): `flatten` (nesting, deep keys, type coercion, null/undefined); `parseCsv` (simple, quoted commas, escaped quotes, CRLF); `buildI18nCsv` (header, 3-column invariant, sorted keys); `parseI18nCsv` (key-column guard, empty input, added/updated/skipped counts, override maps); `bundleStats`.
+- `src/test/i18n.localization.test.ts` (9 tests): EN/HU key parity (minimum 100 keys, ≤5% gap tolerance in each direction), empty-value regression, `bundleStats` tolerance, explicit critical-key assertions for `common.save`, `header.help`, `header.language`, and `organization.*` keys.
+
+**Validation**: `npx vitest run` → 83 tests, 0 failures.
+
+### Added — Phase 10 (Changelog, versioning, and rollout governance)
+
+- **Versioning file** `versioning/07052601_v3.1.0_phases_9_10_11.md`: canonical delivery artifact covering the full Phase 9–11 scope, regression protection matrix, feature flag status table, rollout guards, pre-existing known issues, and deployment sequence (zero-migration release).
+- Feature flag inventory and rollback procedure documented.
+- 5-step CI gate checklist (`vitest run`, `tsc --noEmit`, smoke test, mobile test, RLS check) codified as the merge-gate for all future waves.
+
+### Added — Phase 11 (Final implementation roadmap)
+
+- **6-wave delivery plan** defined in the versioning file:
+  - Wave 0: Foundation hardening (already delivered — localization, help system, organization module, onboarding, strategic capabilities).
+  - Wave 1: Approval orchestration hardening (delegation, escalation UI, simulation, mobile UX).
+  - Wave 2: Capacity engine v2 (precomputed snapshots, shortage/overload forecast, scenario compare, financial impact layer).
+  - Wave 3: Organization and onboarding production-readiness (org chart zoom/pan, deadline enforcement, member completion wizard).
+  - Wave 4: Integration health and external access (retry queue, webhook/polling hybrid, access approval routing, SCIM).
+  - Wave 5: Reporting, export, and compliance (field masking, retention policy, PDF renderer, new report datasets).
+  - Wave 6: Localization expansion (remaining help anchors, manual chapters, third-language scaffold, admin translation editor).
+- Dependency order and parallelization opportunities documented.
+- Open questions and risks (7 items) catalogued with owner and priority.
+
+### Non-Regression Contract
+- Zero schema changes — this is a test-and-documentation-only release.
+- Zero edge function changes.
+- Zero new npm runtime dependencies.
+- TypeScript error count unchanged at 18 (all pre-existing missing-peer-dep issues).
+- All existing UI tabs, routes, buttons, filters, exports, and workflows untouched.
+
+---
+
 ## 2026-05-06 — Jira integration repair + Boards (Kanban / Scrum / Gantt)
 
 ### Fixed
