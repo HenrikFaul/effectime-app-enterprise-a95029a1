@@ -116,6 +116,9 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
     activeTab === 'calendar' ? 'workspace.calendar' :
     activeTab === 'requests' ? 'workspace.approvals' :
     activeTab === 'workflows' ? 'workspace.workflows' :
+    activeTab === 'resources' ? 'workspace.resources' :
+    activeTab === 'reports-audit' ? 'workspace.reports' :
+    activeTab === 'settings' ? 'workspace.settings' :
     'workspace.members';
   useHelpAnchor({ id: helpAnchorId, crumbs: [workspace.name, activeTab] });
 
@@ -349,7 +352,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
             )}
 
             {hasRequestsAccess && (
-              <TabsContent value="requests">
+              <TabsContent value="requests" data-help-region="workspace.approvals">
                 <RequestsAndApprovalsTab
                   workspaceId={workspace.id}
                   userId={userId}
@@ -365,19 +368,19 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               </TabsContent>
             )}
 
-            <TabsContent value="resources" className="space-y-4">
+            <TabsContent value="resources" className="space-y-4" data-help-region="workspace.resources">
               <ResourcesTab workspaceId={workspace.id} userId={userId} isAdmin={isAdmin} />
               <CapacityDnaPanel workspaceId={workspace.id} isAdmin={isAdmin} />
             </TabsContent>
 
             {(canView('reports') || canView('audit') || canView('export')) && (
-              <TabsContent value="reports-audit">
+              <TabsContent value="reports-audit" data-help-region="workspace.reports">
                 <ReportsAndAuditTab workspaceId={workspace.id} userId={userId} />
               </TabsContent>
             )}
 
             {canView('settings') && (
-              <TabsContent value="settings">
+              <TabsContent value="settings" data-help-region="workspace.settings">
                 <WorkspaceSettings workspace={workspace} userRole={userRole} userId={userId} onRefresh={onRefresh} canViewPermissionConfig={userRole === 'owner' || canView('permission_config')} canViewLayoutSetting={userRole === 'owner' || canView('layout_setting')} />
               </TabsContent>
             )}

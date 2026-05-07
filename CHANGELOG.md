@@ -1,3 +1,22 @@
+## 2026-05-07 — v3.2.1 Help System Diagnosis & Hardening
+
+### Fixed
+- **`help-regenerator` edge function**: corrected fallback repo from `lovable-app/genisys` to `henrikfaul/effectime-app-enterprise-a95029a1` — the regenerator was silently reading the wrong repository on manual triggers with no `repo` payload.
+- **`WorkspaceDashboard` tab-to-anchor mapping**: `resources`, `reports-audit`, and `settings` tabs now correctly map to `workspace.resources`, `workspace.reports`, and `workspace.settings` anchors (previously all three fell back to `workspace.members`).
+- **Missing `data-help-region` attributes**: added to `resources`, `reports-audit`, `settings`, and `requests` `TabsContent` blocks so the drag-target ? icon can target those sections.
+
+### Added
+- **Schema migration `20260507120000`**: `is_active boolean` and `archived_at timestamptz` columns on `help_articles`; index `help_articles_active_idx (is_active, anchor_id, locale)`. The regenerator now archives stale articles (sets `is_active = false, archived_at = now()`) before upserting fresh ones — preserving full version history.
+- **`help-regenerator` improvements**: reads `docs/` directory in addition to `versioning/`; expanded mandatory anchor list from 8 → 30 topics; per-article `archiveStaleArticles` call before upsert; updated system prompt with full article structure requirement.
+- **`HelpDrawer` back-navigation**: arrow-left button appears when the user has navigated to a linked article, allowing them to return to the previous topic. History is cleared on drawer close.
+- **i18n fallback anchors** added for `workspace.resources`, `workspace.reports`, `workspace.settings`, and `workspace.agile` in both EN and HU bundles — these power the drawer when no DB article exists yet.
+- **Seed migration `20260507130000`**: 40 curated EN+HU help articles covering all major Effectime pages and features: Workspaces, Members, Organization, Calendar, Leave Request, Approval Flow, Workflows, Resources, Reports & Audit, Settings, Agile Boards, Capacity DNA, Org Chart, Coverage Planner, Localization Settings, Audit Log, Integration Health, Command Center, Quota Manager, Holiday Manager, Role Permissions, Decision Memory, Access Request. Uses `ON CONFLICT DO NOTHING` so regenerator-promoted articles are never overwritten.
+
+### Non-Regression Contract
+- Zero changes to existing RLS policies, approval engine, capacity engine, or any component outside of the help system.
+- `help_articles` schema changes are purely additive (new nullable columns + new index).
+- All existing help drawer functionality (drag-target, search, fallback i18n copy, ReactMarkdown rendering) preserved.
+
 ## 2026-05-07 — v3.2.0 Self-Updating Help System
 
 ### Added

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import {
   Sheet,
@@ -8,11 +8,12 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
 import { useHelpRegistry } from '@/lib/help/registry';
 import { useI18n } from '@/i18n/I18nProvider';
-import { CircleHelp, Search, X, Sparkles } from 'lucide-react';
+import { ArrowLeft, CircleHelp, Search, Sparkles, X } from 'lucide-react';
 import { useHelpArticleByAnchor, useHelpSearch } from '@/lib/help/useHelpArticles';
 
 interface AnchorCopy {
@@ -32,7 +33,7 @@ function resolveAnchorCopy(
   const summary = t(summaryKey);
   if (title === titleKey || summary === summaryKey) return null;
   const commonTasks: string[] = [];
-  for (let i = 0; i < 6; i += 1) {
+  for (let i = 0; i < 8; i += 1) {
     const k = `help.anchors.${id}.commonTasks.${i}`;
     const v = t(k);
     if (v && v !== k) commonTasks.push(v);
@@ -53,8 +54,31 @@ export function HelpDrawer() {
   const { t, locale } = useI18n();
   const [query, setQuery] = useState('');
 
-  // Resolve which anchor the drawer should show: drag-selected wins over current page anchor.
+  // History stack for back-navigation
+  const history = useRef<string[]>([]);
+
   const activeAnchorId = selectedAnchorId ?? current?.id ?? null;
+
+  // Track history when the active anchor changes
+  const prevAnchorRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const prev = prevAnchorRef.current;
+    if (activeAnchorId && activeAnchorId !== prev) {
+      if (prev) history.current.push(prev);
+      prevAnchorRef.current = activeAnchorId;
+    }
+  }, [activeAnchorId, drawerOpen]);
+
+  const canGoBack = history.current.length > 0;
+
+  const goBack = useCallback(() => {
+    const prev = history.current.pop();
+    if (prev) {
+      prevAnchorRef.current = prev;
+      setSelectedAnchorId(prev);
+    }
+  }, [setSelectedAnchorId]);
 
   const { article, loading } = useHelpArticleByAnchor(activeAnchorId, locale);
   const { results, loading: searching } = useHelpSearch(query, locale);
@@ -77,9 +101,13 @@ export function HelpDrawer() {
     };
   }, [activeAnchorId, drawerOpen, highlight, setHighlight]);
 
-  // Reset selection when drawer closes
+  // Reset on close
   useEffect(() => {
-    if (!drawerOpen) setQuery('');
+    if (!drawerOpen) {
+      setQuery('');
+      history.current = [];
+      prevAnchorRef.current = null;
+    }
   }, [drawerOpen]);
 
   return (
@@ -96,6 +124,17 @@ export function HelpDrawer() {
       >
         <SheetHeader>
           <div className="flex items-center gap-2">
+            {canGoBack && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 shrink-0"
+                onClick={goBack}
+                aria-label={t('common.back')}
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
               <CircleHelp className="h-4 w-4 text-primary" />
             </div>
