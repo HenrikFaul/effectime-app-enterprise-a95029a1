@@ -3144,6 +3144,8 @@ export type Database = {
           description: string | null
           favicon_url: string | null
           fiscal_year_start_month: number
+          help_ai_enabled: boolean
+          help_last_regenerated_at: string | null
           holidays_auto_sync: boolean
           holidays_last_sync_at: string | null
           id: string
@@ -3170,6 +3172,8 @@ export type Database = {
           description?: string | null
           favicon_url?: string | null
           fiscal_year_start_month?: number
+          help_ai_enabled?: boolean
+          help_last_regenerated_at?: string | null
           holidays_auto_sync?: boolean
           holidays_last_sync_at?: string | null
           id?: string
@@ -3196,6 +3200,8 @@ export type Database = {
           description?: string | null
           favicon_url?: string | null
           fiscal_year_start_month?: number
+          help_ai_enabled?: boolean
+          help_last_regenerated_at?: string | null
           holidays_auto_sync?: boolean
           holidays_last_sync_at?: string | null
           id?: string
@@ -3399,10 +3405,12 @@ export type Database = {
       help_articles: {
         Row: {
           anchor_id: string | null
+          archived_at: string | null
           body_md: string
           content_hash: string | null
           created_at: string
           id: string
+          is_active: boolean
           is_system_generated: boolean
           last_generated_at: string
           locale: string
@@ -3421,10 +3429,12 @@ export type Database = {
         }
         Insert: {
           anchor_id?: string | null
+          archived_at?: string | null
           body_md: string
           content_hash?: string | null
           created_at?: string
           id?: string
+          is_active?: boolean
           is_system_generated?: boolean
           last_generated_at?: string
           locale: string
@@ -3443,10 +3453,12 @@ export type Database = {
         }
         Update: {
           anchor_id?: string | null
+          archived_at?: string | null
           body_md?: string
           content_hash?: string | null
           created_at?: string
           id?: string
+          is_active?: boolean
           is_system_generated?: boolean
           last_generated_at?: string
           locale?: string
