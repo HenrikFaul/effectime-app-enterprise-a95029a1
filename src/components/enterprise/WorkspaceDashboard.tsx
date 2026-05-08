@@ -200,6 +200,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {isAdmin && <OrgPulseButton workspaceId={workspace.id} />}
             <NotificationBell workspaceId={workspace.id} userId={userId} />
             <Button size="sm" variant="outline" onClick={() => setShowMyProfile(true)}>
               <User className="h-4 w-4 mr-1" /> Profilom
