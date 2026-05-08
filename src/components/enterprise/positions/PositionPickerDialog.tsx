@@ -63,8 +63,12 @@ export function PositionPickerDialog({ open, onOpenChange, workspaceId, onPick }
   const [seniority, setSeniority] = useState<Seniority>('medior');
   const [loading, setLoading] = useState(false);
 
+  // True when we're displaying the global catalog because the workspace catalog is empty.
+  const [usingGlobalCatalog, setUsingGlobalCatalog] = useState(false);
+
   const loadCatalog = useCallback(async () => {
     setLoading(true);
+    // 1. Try workspace-level customization layer first (preferred — admin may have edited it)
     const [catRes, rolesRes] = await Promise.all([
       (supabase as any)
         .from('enterprise_workspace_role_categories')
@@ -79,23 +83,63 @@ export function PositionPickerDialog({ open, onOpenChange, workspaceId, onPick }
         .eq('is_active', true)
         .order('name'),
     ]);
-    setCategories((catRes.data as Category[]) || []);
-    setRoles((rolesRes.data as Role[]) || []);
+    let cats = (catRes.data as Category[]) || [];
+    let rs = (rolesRes.data as Role[]) || [];
+
+    // 2. If empty, fall back to the global catalog (already seeded with 100s of roles/skills)
+    if (cats.length === 0 && rs.length === 0) {
+      const [globalCatRes, globalRolesRes] = await Promise.all([
+        (supabase as any)
+          .from('enterprise_catalog_categories')
+          .select('id, name, is_active')
+          .eq('is_active', true)
+          .order('name'),
+        (supabase as any)
+          .from('enterprise_catalog_roles')
+          .select('id, category_id, name, is_active')
+          .eq('is_active', true)
+          .order('name'),
+      ]);
+      cats = (globalCatRes.data as Category[]) || [];
+      rs = (globalRolesRes.data as Role[]) || [];
+      setUsingGlobalCatalog(cats.length > 0 || rs.length > 0);
+    } else {
+      setUsingGlobalCatalog(false);
+    }
+
+    setCategories(cats);
+    setRoles(rs);
     setLoading(false);
   }, [workspaceId]);
 
-  const loadRoleSkills = useCallback(async (roleId: string) => {
+  const loadRoleSkills = useCallback(async (roleId: string, fromGlobal: boolean) => {
     setLoading(true);
-    const { data } = await (supabase as any)
-      .from('enterprise_workspace_role_skills')
-      .select('id, workspace_skill_id, required, min_experience_level, workspace_skill:enterprise_workspace_skills(id, name)')
-      .eq('workspace_id', workspaceId)
-      .eq('role_id', roleId)
-      .eq('approved', true);
-    const list = ((data as any[]) || []) as RoleSkill[];
-    setSkills(list);
-    // Default-include required skills
-    setIncludedSkillIds(new Set(list.filter((s) => s.required).map((s) => s.workspace_skill_id)));
+    if (fromGlobal) {
+      // Read from the global enterprise_catalog_role_skills + enterprise_catalog_skills
+      const { data } = await (supabase as any)
+        .from('enterprise_catalog_role_skills')
+        .select('id, skill_id, required, min_experience_level, skill:enterprise_catalog_skills(id, name)')
+        .eq('role_id', roleId);
+      const list = ((data as any[]) || []).map((r: any) => ({
+        id: r.id,
+        workspace_skill_id: r.skill_id,
+        required: r.required,
+        min_experience_level: r.min_experience_level,
+        workspace_skill: r.skill ? { id: r.skill.id, name: r.skill.name } : null,
+      })) as RoleSkill[];
+      setSkills(list);
+      setIncludedSkillIds(new Set(list.filter((s) => s.required).map((s) => s.workspace_skill_id)));
+    } else {
+      const { data } = await (supabase as any)
+        .from('enterprise_workspace_role_skills')
+        .select('id, workspace_skill_id, required, min_experience_level, workspace_skill:enterprise_workspace_skills(id, name)')
+        .eq('workspace_id', workspaceId)
+        .eq('role_id', roleId)
+        .eq('approved', true);
+      const list = ((data as any[]) || []) as RoleSkill[];
+      setSkills(list);
+      setIncludedSkillIds(new Set(list.filter((s) => s.required).map((s) => s.workspace_skill_id)));
+    }
     setLoading(false);
   }, [workspaceId]);
 
@@ -118,7 +162,7 @@ export function PositionPickerDialog({ open, onOpenChange, workspaceId, onPick }
 
   const handleSelectRole = async (r: Role) => {
     setSelectedRole(r);
-    await loadRoleSkills(r.id);
+    await loadRoleSkills(r.id, usingGlobalCatalog);
     setStep(3);
   };
 
@@ -162,6 +206,12 @@ export function PositionPickerDialog({ open, onOpenChange, workspaceId, onPick }
             {t('positions.review_skills')}
           </span>
         </div>
+
+        {usingGlobalCatalog && !loading ? (
+          <div className="rounded-md border border-primary/20 bg-primary/5 px-2 py-1.5 text-[11px] text-muted-foreground">
+            Globális katalógusból olvasunk — a workspace specifikus listát admin szerkesztheti a People → Pozíciók nézetben.
+          </div>
+        ) : null}
 
         {loading ? (
           <div className="py-6 text-center text-sm text-muted-foreground">{t('common.loading')}</div>

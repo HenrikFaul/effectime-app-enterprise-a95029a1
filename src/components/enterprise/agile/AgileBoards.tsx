@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, KanbanSquare, Trello, GanttChart, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { JiraIssueEditor } from './JiraIssueEditor';
 
 interface IntegrationMini {
   id: string;
   provider: 'jira' | 'azure_devops';
+  base_url?: string;
   project_key: string | null;
 }
 
@@ -45,6 +47,8 @@ const ISSUE_TYPE_COLOR: Record<string, string> = {
 export function AgileBoards({ integration }: { integration: IntegrationMini }) {
   const [issues, setIssues] = useState<IssueRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [editorKey, setEditorKey] = useState<string | null>(null);
+  const onCardClick = integration.provider === 'jira' ? setEditorKey : null;
 
   const refresh = async () => {
     const { data } = await (supabase as any)
@@ -94,19 +98,39 @@ export function AgileBoards({ integration }: { integration: IntegrationMini }) {
             <TabsTrigger value="scrum" className="gap-1"><Trello className="h-4 w-4" /> Scrum</TabsTrigger>
             <TabsTrigger value="gantt" className="gap-1"><GanttChart className="h-4 w-4" /> Gantt</TabsTrigger>
           </TabsList>
-          <TabsContent value="kanban"><KanbanView issues={issues} /></TabsContent>
-          <TabsContent value="scrum"><ScrumView issues={issues} /></TabsContent>
-          <TabsContent value="gantt"><GanttView issues={issues} /></TabsContent>
+          <TabsContent value="kanban"><KanbanView issues={issues} onOpen={onCardClick ?? undefined} /></TabsContent>
+          <TabsContent value="scrum"><ScrumView issues={issues} onOpen={onCardClick ?? undefined} /></TabsContent>
+          <TabsContent value="gantt"><GanttView issues={issues} onOpen={onCardClick ?? undefined} /></TabsContent>
         </Tabs>
+
+        {integration.provider === 'jira' && (
+          <JiraIssueEditor
+            open={!!editorKey}
+            onOpenChange={(o) => !o && setEditorKey(null)}
+            integration={integration as IntegrationMini & { base_url: string }}
+            issueKey={editorKey}
+            onSaved={refresh}
+          />
+        )}
       </CardContent>
     </Card>
   );
 }
 
 // ───── Card primitive ─────
-function IssueCard({ i }: { i: IssueRow }) {
+function IssueCard({ i, onOpen }: { i: IssueRow; onOpen?: (key: string) => void }) {
+  const clickable = !!onOpen;
   return (
-    <div className="rounded-md border bg-card p-2 shadow-sm hover:shadow-md transition-shadow space-y-1.5">
+    <div
+      className={cn(
+        'rounded-md border bg-card p-2 shadow-sm hover:shadow-md transition-shadow space-y-1.5',
+        clickable && 'cursor-pointer hover:border-primary/50',
+      )}
+      onClick={clickable ? () => onOpen!(i.external_key) : undefined}
+      onKeyDown={clickable ? (e) => { if (e.key === 'Enter') onOpen!(i.external_key); } : undefined}
+      role={clickable ? 'button' : undefined}
+      tabIndex={clickable ? 0 : undefined}
+    >
       <div className="text-[11px] leading-tight font-medium line-clamp-2">{i.summary}</div>
       {i.issue_type && (
         <Badge variant="outline" className={cn('text-[9px] px-1 py-0', ISSUE_TYPE_COLOR[i.issue_type] ?? '')}>
@@ -114,7 +138,13 @@ function IssueCard({ i }: { i: IssueRow }) {
         </Badge>
       )}
       <div className="flex items-center justify-between gap-1">
-        <a href={i.url ?? '#'} target="_blank" rel="noreferrer" className="text-[9px] font-mono text-primary hover:underline inline-flex items-center gap-0.5">
+        <a
+          href={i.url ?? '#'}
+          target="_blank"
+          rel="noreferrer"
+          className="text-[9px] font-mono text-primary hover:underline inline-flex items-center gap-0.5"
+          onClick={(e) => e.stopPropagation()}
+        >
           {i.external_key} <ExternalLink className="h-2.5 w-2.5" />
         </a>
         {typeof i.story_points === 'number' && (
@@ -137,7 +167,7 @@ function IssueCard({ i }: { i: IssueRow }) {
 }
 
 // ───── Kanban: group by status ─────
-function KanbanView({ issues }: { issues: IssueRow[] }) {
+function KanbanView({ issues, onOpen }: { issues: IssueRow[]; onOpen?: (key: string) => void }) {
   const groups = useMemo(() => {
     const map = new Map<string, IssueRow[]>();
     for (const i of issues) {
@@ -165,7 +195,7 @@ function KanbanView({ issues }: { issues: IssueRow[] }) {
               <Badge variant="secondary" className="text-[10px]">{list.length}</Badge>
             </div>
             <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
-              {list.map((i) => <IssueCard key={i.external_key} i={i} />)}
+              {list.map((i) => <IssueCard key={i.external_key} i={i} onOpen={onOpen} />)}
             </div>
           </div>
         ))}
@@ -175,7 +205,7 @@ function KanbanView({ issues }: { issues: IssueRow[] }) {
 }
 
 // ───── Scrum: group by sprint, then status sub-columns ─────
-function ScrumView({ issues }: { issues: IssueRow[] }) {
+function ScrumView({ issues, onOpen }: { issues: IssueRow[]; onOpen?: (key: string) => void }) {
   const sprints = useMemo(() => {
     const map = new Map<string, IssueRow[]>();
     for (const i of issues) {
@@ -213,7 +243,7 @@ function ScrumView({ issues }: { issues: IssueRow[] }) {
                   <div key={status} className="w-56 shrink-0">
                     <div className="text-[10px] uppercase mb-1 font-medium">{status} ({items.length})</div>
                     <div className="space-y-1.5 max-h-72 overflow-y-auto pr-1">
-                      {items.map((i) => <IssueCard key={i.external_key} i={i} />)}
+                      {items.map((i) => <IssueCard key={i.external_key} i={i} onOpen={onOpen} />)}
                     </div>
                   </div>
                 ))}
@@ -227,7 +257,7 @@ function ScrumView({ issues }: { issues: IssueRow[] }) {
 }
 
 // ───── Gantt: simple horizontal timeline ─────
-function GanttView({ issues }: { issues: IssueRow[] }) {
+function GanttView({ issues, onOpen }: { issues: IssueRow[]; onOpen?: (key: string) => void }) {
   const dated = issues.filter((i) => (i.start_date || i.due_date));
   if (dated.length === 0) return <Empty hint="Nincs start/due date a ticketeken" />;
 
@@ -267,7 +297,14 @@ function GanttView({ issues }: { issues: IssueRow[] }) {
               : i.issue_type === 'Story' ? 'bg-emerald-500'
               : 'bg-sky-500';
           return (
-            <div key={i.external_key} className="flex border-b items-center hover:bg-accent/30">
+            <div
+              key={i.external_key}
+              className={cn('flex border-b items-center hover:bg-accent/30', onOpen && 'cursor-pointer')}
+              onClick={onOpen ? () => onOpen(i.external_key) : undefined}
+              onKeyDown={onOpen ? (e) => { if (e.key === 'Enter') onOpen(i.external_key); } : undefined}
+              role={onOpen ? 'button' : undefined}
+              tabIndex={onOpen ? 0 : undefined}
+            >
               <div className="w-56 shrink-0 p-2 border-r">
                 <div className="text-[11px] font-medium truncate">{i.summary}</div>
                 <div className="text-[9px] text-muted-foreground font-mono">{i.external_key} • {i.assignee_name ?? '—'}</div>
