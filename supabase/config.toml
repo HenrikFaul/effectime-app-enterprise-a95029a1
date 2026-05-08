@@ -2,3 +2,6 @@ project_id = "oezlzzmzzvbvinuysxaz"
 
 [functions.help-regenerator]
 verify_jwt = false
+
+[functions.seed-demo-workspace]
+verify_jwt = true
