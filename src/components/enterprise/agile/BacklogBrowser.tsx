@@ -4,8 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, RefreshCw, ExternalLink } from 'lucide-react';
+import { Loader2, RefreshCw, ExternalLink, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
+import { JiraIssueEditor } from './JiraIssueEditor';
 
 interface IntegrationMini {
   id: string;
@@ -29,6 +30,7 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
   const [query, setQuery] = useState('');
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(false);
+  const [editorKey, setEditorKey] = useState<string | null>(null);
 
   const placeholder =
     integration.provider === 'jira'
@@ -124,6 +126,20 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
           A találatok elmentődnek a helyi cache-be (enterprise_agile_issues).
         </p>
 
+        {integration.provider === 'jira' && (
+          <p className="text-[10px] text-muted-foreground">
+            Tipp: kattints egy ticket címére vagy a ceruza ikonra a részletek megnyitásához és szerkesztéséhez. A mentés azonnal továbbítódik a Jira-ba.
+          </p>
+        )}
+
+        <JiraIssueEditor
+          open={!!editorKey}
+          onOpenChange={(o) => !o && setEditorKey(null)}
+          integration={integration}
+          issueKey={editorKey}
+          onSaved={loadFromCache}
+        />
+
         <div className="border rounded-md overflow-hidden">
           <table className="w-full text-xs">
             <thead className="bg-muted/50">
@@ -144,14 +160,36 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
               {issues.map((i) => (
                 <tr key={i.external_key} className="border-t hover:bg-accent/30">
                   <td className="p-2 font-mono">{i.external_key}</td>
-                  <td className="p-2">{i.summary}</td>
+                  <td className="p-2">
+                    {integration.provider === 'jira' ? (
+                      <button
+                        type="button"
+                        onClick={() => setEditorKey(i.external_key)}
+                        className="text-left hover:text-primary hover:underline"
+                      >
+                        {i.summary}
+                      </button>
+                    ) : (
+                      i.summary
+                    )}
+                  </td>
                   <td className="p-2"><Badge variant="outline" className="text-[10px]">{i.issue_type}</Badge></td>
                   <td className="p-2">{i.status}</td>
                   <td className="p-2">{i.assignee_name ?? '—'}</td>
                   <td className="p-2">{i.story_points ?? '—'}</td>
-                  <td className="p-2">
+                  <td className="p-2 flex items-center gap-2">
+                    {integration.provider === 'jira' && (
+                      <button
+                        type="button"
+                        onClick={() => setEditorKey(i.external_key)}
+                        className="text-muted-foreground hover:text-primary"
+                        title="Szerkesztés Effectime-ban"
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                    )}
                     {i.url && (
-                      <a href={i.url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+                      <a href={i.url} target="_blank" rel="noreferrer" className="text-primary hover:underline" title="Megnyitás a Jira-ban">
                         <ExternalLink className="h-3 w-3 inline" />
                       </a>
                     )}

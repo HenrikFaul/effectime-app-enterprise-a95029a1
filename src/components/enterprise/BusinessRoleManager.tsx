@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, Briefcase, UserPlus, Star } from 'lucide-react';
+import { Plus, Trash2, Briefcase, UserPlus, Star, ListChecks } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -14,6 +14,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { PositionPickerDialog, type PositionPickerResult } from './positions/PositionPickerDialog';
 
 interface Props {
   workspaceId: string;
@@ -59,6 +60,7 @@ export function BusinessRoleManager({ workspaceId, userId }: Props) {
   const [assignDialog, setAssignDialog] = useState<string | null>(null);
   const [selectedMemberId, setSelectedMemberId] = useState<string>('');
   const [assignPercentage, setAssignPercentage] = useState<number>(100);
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -147,6 +149,17 @@ export function BusinessRoleManager({ workspaceId, userId }: Props) {
     toast.success(`"${trimmed}" pozíció létrehozva (rendelj hozzá tagokat)`);
   };
 
+  const handlePickerResult = (result: PositionPickerResult) => {
+    const label = result.positionLabel.trim();
+    if (!label) return;
+    if (groups.some((g) => g.name.toLowerCase() === label.toLowerCase())) {
+      toast.message(`"${label}" már létezik — válassz másikat vagy rendelj hozzá tagokat.`);
+      return;
+    }
+    setGroups((prev) => [...prev, { name: label, members: [], totalPercentage: 0, totalHours: 0 }]);
+    toast.success(`"${label}" pozíció hozzáadva a katalógusból`);
+  };
+
   const handleAssignMember = async () => {
     if (!selectedMemberId || !assignDialog) return;
     const pct = Math.max(1, Math.min(100, assignPercentage));
@@ -219,17 +232,25 @@ export function BusinessRoleManager({ workspaceId, userId }: Props) {
             Minden allokált tag és a hozzárendelt %-os arány itt látszik. A napi órák: <code>napi alap óra × allokáció%</code>.
           </p>
 
-          <div className="flex gap-2">
-            <Input
-              placeholder="Új pozíció neve (pl. Senior Developer)"
-              value={newRoleName}
-              onChange={(e) => setNewRoleName(e.target.value)}
-              className="text-sm"
-              onKeyDown={(e) => e.key === 'Enter' && handleCreateRole()}
-            />
-            <Button size="sm" onClick={handleCreateRole} disabled={!newRoleName.trim()}>
-              <Plus className="h-4 w-4 mr-1" /> Létrehozás
-            </Button>
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <Input
+                placeholder="Új pozíció neve (pl. Senior Developer)"
+                value={newRoleName}
+                onChange={(e) => setNewRoleName(e.target.value)}
+                className="text-sm"
+                onKeyDown={(e) => e.key === 'Enter' && handleCreateRole()}
+              />
+              <Button size="sm" onClick={handleCreateRole} disabled={!newRoleName.trim()}>
+                <Plus className="h-4 w-4 mr-1" /> Létrehozás
+              </Button>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-muted-foreground">vagy válassz az előre definiált pozíciók közül:</span>
+              <Button size="sm" variant="outline" onClick={() => setPickerOpen(true)} className="h-7 gap-1">
+                <ListChecks className="h-3.5 w-3.5" /> Katalógus megnyitása
+              </Button>
+            </div>
           </div>
 
           {groups.length === 0 ? (
@@ -338,6 +359,13 @@ export function BusinessRoleManager({ workspaceId, userId }: Props) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <PositionPickerDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        workspaceId={workspaceId}
+        onPick={handlePickerResult}
+      />
     </div>
   );
 }

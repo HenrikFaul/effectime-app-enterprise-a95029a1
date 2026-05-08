@@ -234,18 +234,108 @@ async function jiraCreate(integ: IntegrationRow, payload: any) {
 }
 
 async function jiraUpdate(integ: IntegrationRow, key: string, payload: any) {
-  const url = `${jiraBaseUrl(integ.base_url)}/rest/api/3/issue/${encodeURIComponent(key)}`;
+  const base = jiraBaseUrl(integ.base_url);
+  const url = `${base}/rest/api/3/issue/${encodeURIComponent(key)}`;
   const fields: any = {};
-  if (payload.summary) fields.summary = payload.summary;
-  if (payload.labels) fields.labels = payload.labels;
-  if (payload.assignee_account_id) fields.assignee = { accountId: payload.assignee_account_id };
-  const r = await fetch(url, {
-    method: 'PUT',
-    headers: { Authorization: authHeader(integ), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fields }),
-  });
-  if (!r.ok && r.status !== 204) throw new Error(`Jira update ${r.status}: ${(await r.text()).slice(0, 250)}`);
+  if (payload.summary !== undefined) fields.summary = payload.summary;
+  if (payload.labels !== undefined) fields.labels = payload.labels;
+  if (payload.assignee_account_id !== undefined) {
+    fields.assignee = payload.assignee_account_id ? { accountId: payload.assignee_account_id } : null;
+  }
+  if (payload.priority !== undefined) {
+    fields.priority = payload.priority ? { name: payload.priority } : null;
+  }
+  if (payload.due_date !== undefined) fields.duedate = payload.due_date || null;
+  if (payload.story_points !== undefined) {
+    // Jira Cloud commonly stores story points as customfield_10016
+    fields.customfield_10016 = payload.story_points;
+  }
+  if (payload.description !== undefined) {
+    fields.description = payload.description
+      ? { type: 'doc', version: 1, content: [{ type: 'paragraph', content: [{ type: 'text', text: payload.description }] }] }
+      : null;
+  }
+  if (Object.keys(fields).length > 0) {
+    const r = await fetch(url, {
+      method: 'PUT',
+      headers: { Authorization: authHeader(integ), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields }),
+    });
+    if (!r.ok && r.status !== 204) throw new Error(`Jira update ${r.status}: ${(await r.text()).slice(0, 250)}`);
+  }
+
+  // Status changes go through the transitions endpoint, not the update endpoint
+  if (payload.status_transition_id) {
+    const tr = await fetch(`${url}/transitions`, {
+      method: 'POST',
+      headers: { Authorization: authHeader(integ), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ transition: { id: String(payload.status_transition_id) } }),
+    });
+    if (!tr.ok && tr.status !== 204) throw new Error(`Jira transition ${tr.status}: ${(await tr.text()).slice(0, 250)}`);
+  }
   return { ok: true };
+}
+
+async function jiraGetIssue(integ: IntegrationRow, key: string) {
+  const base = jiraBaseUrl(integ.base_url);
+  const url = `${base}/rest/api/3/issue/${encodeURIComponent(key)}?fields=*all&expand=names,renderedFields`;
+  const r = await fetch(url, { headers: { Authorization: authHeader(integ), Accept: 'application/json' } });
+  if (!r.ok) throw new Error(`Jira /issue/${key} ${r.status}: ${(await r.text()).slice(0, 250)}`);
+  const i = await r.json();
+  const f = i.fields ?? {};
+  const description = typeof f.description === 'string' ? f.description : adfToText(f.description);
+  return {
+    external_key: i.key,
+    external_id: i.id,
+    summary: f.summary ?? null,
+    description: description || '',
+    status: f.status?.name ?? null,
+    status_id: f.status?.id ?? null,
+    assignee_account_id: f.assignee?.accountId ?? null,
+    assignee_email: f.assignee?.emailAddress ?? null,
+    assignee_name: f.assignee?.displayName ?? null,
+    issue_type: f.issuetype?.name ?? null,
+    priority: f.priority?.name ?? null,
+    labels: f.labels ?? [],
+    components: (f.components ?? []).map((c: any) => c.name).filter(Boolean),
+    parent_key: f.parent?.key ?? null,
+    reporter_email: f.reporter?.emailAddress ?? f.reporter?.name ?? null,
+    reporter_name: f.reporter?.displayName ?? null,
+    sprint_name: f.customfield_10020?.[0]?.name ?? f.customfield_10007?.[0]?.name ?? null,
+    story_points: f.customfield_10016 ?? f.customfield_10026 ?? null,
+    due_date: f.duedate ?? null,
+    created: f.created ?? null,
+    updated: f.updated ?? null,
+    url: `${base}/browse/${i.key}`,
+  };
+}
+
+async function jiraGetTransitions(integ: IntegrationRow, key: string) {
+  const base = jiraBaseUrl(integ.base_url);
+  const url = `${base}/rest/api/3/issue/${encodeURIComponent(key)}/transitions`;
+  const r = await fetch(url, { headers: { Authorization: authHeader(integ), Accept: 'application/json' } });
+  if (!r.ok) throw new Error(`Jira transitions ${r.status}: ${(await r.text()).slice(0, 250)}`);
+  const data = await r.json();
+  return (data.transitions ?? []).map((t: any) => ({
+    id: t.id,
+    name: t.name,
+    to_status: t.to?.name ?? null,
+    to_status_id: t.to?.id ?? null,
+  }));
+}
+
+async function jiraSearchAssignableUsers(integ: IntegrationRow, key: string, query: string) {
+  const base = jiraBaseUrl(integ.base_url);
+  const url = `${base}/rest/api/3/user/assignable/search?issueKey=${encodeURIComponent(key)}&query=${encodeURIComponent(query)}&maxResults=20`;
+  const r = await fetch(url, { headers: { Authorization: authHeader(integ), Accept: 'application/json' } });
+  if (!r.ok) return [];
+  const data = await r.json();
+  return (data ?? []).map((u: any) => ({
+    account_id: u.accountId,
+    display_name: u.displayName,
+    email: u.emailAddress ?? null,
+    avatar: u.avatarUrls?.['24x24'] ?? null,
+  }));
 }
 
 
@@ -253,14 +343,41 @@ async function jiraSyncProjectConfig(integ: IntegrationRow) {
   if (!integ.project_key) throw new Error('sync_project_config: project_key is required on the integration record');
   const base = jiraBaseUrl(integ.base_url);
   const projectKey = integ.project_key;
-  const issueTypes = await fetch(`${base}/rest/api/3/issuetype/project?projectId=${encodeURIComponent(projectKey)}`, {
-    headers: { Authorization: authHeader(integ), Accept: 'application/json' },
-  }).then(async (r) => {
-    if (!r.ok) throw new Error(`Jira issuetype/project ${r.status}: ${(await r.text()).slice(0, 250)}`);
-    return r.json();
-  });
 
-  const fields = (issueTypes.values ?? issueTypes ?? []).map((it: any) => ({
+  // Strategy: GET /rest/api/3/project/{projectIdOrKey} returns the project with its issueTypes inline.
+  // This avoids the previous bug where we passed the project KEY into the projectId query param of
+  // /issuetype/project — that endpoint requires the numeric project ID and 500'd silently.
+  let issueTypes: any[] = [];
+  let projectName: string | null = null;
+  try {
+    const projRes = await fetch(`${base}/rest/api/3/project/${encodeURIComponent(projectKey)}`, {
+      headers: { Authorization: authHeader(integ), Accept: 'application/json' },
+    });
+    if (projRes.ok) {
+      const proj = await projRes.json();
+      projectName = proj?.name ?? null;
+      issueTypes = Array.isArray(proj?.issueTypes) ? proj.issueTypes : [];
+    } else {
+      // Fallback: legacy createmeta endpoint (still alive on most Jira Cloud tenants)
+      const metaRes = await fetch(
+        `${base}/rest/api/3/issue/createmeta?projectKeys=${encodeURIComponent(projectKey)}&expand=projects.issuetypes`,
+        { headers: { Authorization: authHeader(integ), Accept: 'application/json' } },
+      );
+      if (metaRes.ok) {
+        const meta = await metaRes.json();
+        const proj = (meta?.projects ?? [])[0];
+        projectName = proj?.name ?? null;
+        issueTypes = Array.isArray(proj?.issuetypes) ? proj.issuetypes : [];
+      } else {
+        const txt = await metaRes.text();
+        throw new Error(`Jira project/${projectKey} ${projRes.status} and createmeta ${metaRes.status}: ${txt.slice(0, 250)}`);
+      }
+    }
+  } catch (e) {
+    throw new Error(`Jira project metadata lookup failed: ${e instanceof Error ? e.message : String(e)}`);
+  }
+
+  const fields = issueTypes.map((it: any) => ({
     field_id: `jira.issuetype.${it.id}`,
     field_name: it.name,
     field_type: 'issuetype',
@@ -268,12 +385,22 @@ async function jiraSyncProjectConfig(integ: IntegrationRow) {
     schema: { id: it.id, subtask: !!it.subtask, description: it.description ?? null },
   }));
 
-  const labelIssues = await jiraSearch(integ, `project = ${projectKey} ORDER BY updated DESC`, 200);
-  const labels = Array.from(new Set(labelIssues.flatMap((i: any) => i.labels ?? []))).filter(Boolean).slice(0, 500);
-  const comps = Array.from(new Set(labelIssues.flatMap((i: any) => i.components ?? []))).filter(Boolean).slice(0, 500);
+  // Best-effort label/component discovery — never fail the whole sync if search hits a tenant quirk.
+  let labels: string[] = [];
+  let comps: string[] = [];
+  try {
+    const labelIssues = await jiraSearch(integ, `project = ${projectKey} ORDER BY updated DESC`, 200);
+    labels = Array.from(new Set(labelIssues.flatMap((i: any) => i.labels ?? []))).filter(Boolean).slice(0, 500) as string[];
+    comps = Array.from(new Set(labelIssues.flatMap((i: any) => i.components ?? []))).filter(Boolean).slice(0, 500) as string[];
+  } catch (e) {
+    console.warn('[jira-devops-proxy] label discovery skipped:', e instanceof Error ? e.message : String(e));
+  }
 
   fields.push({ field_id: 'jira.labels', field_name: 'Labels', field_type: 'labels', is_custom: false, schema: { options: labels } });
   fields.push({ field_id: 'jira.components', field_name: 'Components', field_type: 'components', is_custom: false, schema: { options: comps } });
+  if (projectName) {
+    fields.push({ field_id: 'jira.project_name', field_name: 'Project name', field_type: 'string', is_custom: false, schema: { value: projectName } });
+  }
   return fields;
 }
 
@@ -500,7 +627,64 @@ Deno.serve(async (req) => {
         if (!key) return jsonResponse({ error: 'key/id kötelező' }, 400);
         const updated = isJira ? await jiraUpdate(integ, key, params) : await adoUpdate(integ, key, params);
         await logSync(admin, integ, user.id, 'update_issue', 'success', { key });
+        // Refresh local cache so the UI sees updated values immediately
+        if (isJira) {
+          try {
+            const fresh = await jiraGetIssue(integ, key);
+            await admin.from('enterprise_agile_issues').upsert({
+              workspace_id: integ.workspace_id,
+              integration_id: integ.id,
+              provider,
+              project_key: integ.project_key,
+              external_key: fresh.external_key,
+              external_id: fresh.external_id,
+              summary: fresh.summary,
+              description: fresh.description,
+              status: fresh.status,
+              assignee_email: fresh.assignee_email,
+              assignee_name: fresh.assignee_name,
+              issue_type: fresh.issue_type,
+              priority: fresh.priority,
+              labels: fresh.labels,
+              parent_key: fresh.parent_key,
+              sprint_name: fresh.sprint_name,
+              story_points: fresh.story_points,
+              due_date: fresh.due_date,
+              external_updated_at: fresh.updated,
+              url: fresh.url,
+              last_synced_at: new Date().toISOString(),
+            } as any, { onConflict: 'integration_id,external_key' as any });
+          } catch (e) {
+            console.warn('[jira-devops-proxy] cache refresh after update_issue failed:', e instanceof Error ? e.message : String(e));
+          }
+        }
         return jsonResponse({ ok: true, updated });
+      }
+      case 'get_issue': {
+        const key = params?.key;
+        if (!key) return jsonResponse({ error: 'key/id kötelező' }, 400);
+        if (!isJira) return jsonResponse({ error: 'get_issue jelenleg csak Jira providerre támogatott' }, 400);
+        const [issue, transitions] = await Promise.all([
+          jiraGetIssue(integ, key),
+          jiraGetTransitions(integ, key).catch(() => []),
+        ]);
+        await logSync(admin, integ, user.id, 'get_issue', 'success', { key });
+        return jsonResponse({ ok: true, issue, transitions });
+      }
+      case 'get_transitions': {
+        const key = params?.key;
+        if (!key) return jsonResponse({ error: 'key/id kötelező' }, 400);
+        if (!isJira) return jsonResponse({ error: 'get_transitions jelenleg csak Jira providerre támogatott' }, 400);
+        const transitions = await jiraGetTransitions(integ, key);
+        return jsonResponse({ ok: true, transitions });
+      }
+      case 'search_assignable_users': {
+        const key = params?.key;
+        const query = (params?.query ?? '').toString();
+        if (!key) return jsonResponse({ error: 'key/id kötelező' }, 400);
+        if (!isJira) return jsonResponse({ ok: true, users: [] });
+        const users = await jiraSearchAssignableUsers(integ, key, query);
+        return jsonResponse({ ok: true, users });
       }
       default:
         return jsonResponse({ error: `Ismeretlen action: ${action}` }, 400);

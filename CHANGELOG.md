@@ -131,6 +131,58 @@
 `POST https://oezlzzmzzvbvinuysxaz.supabase.co/functions/v1/help-regenerator`
 Configure as a GitHub repository webhook with secret = `GITHUB_RELEASE_WEBHOOK_SECRET`, content-type `application/json`, event = "Releases".
 
+## 2026-05-08 — v3.1.1 Demo workspace, position catalog wiring, Jira sync fix, in-app Jira issue editor
+
+### Added — Demo workspace creation (full flow)
+- **`supabase/functions/seed-demo-workspace/index.ts`**: new edge function that creates a fully populated workspace in one call. Strategy: create real `auth.users` for 7 demo personas (`Anna Kovács`, `Bence Tóth`, `Csilla Nagy`, `Dávid Szabó`, `Eszter Kiss`, `Ferenc Horváth`, `Gizella Varga`) tagged with `app_metadata.is_demo_persona`, so all profile lookups, leave_requests, allocations, and skills work without schema changes. The function then seeds:
+  - 3 offices (Budapest HQ / Debrecen / Szeged) with real city addresses,
+  - 4 teams (Frontend / Backend / Operations / QA),
+  - 4 leave types (Éves szabadság / Betegszabadság / Fizetés nélküli / Otthoni munka),
+  - 8 HU public holidays for the current year,
+  - 9 skills (React, TypeScript, Node.js, PostgreSQL, Docker, AWS, Tailwind CSS, Cypress, Jest) with categories and colors,
+  - 7 memberships (1 owner + 6 demo personas) with city/office/role/team/working hours,
+  - 14–21 member-skill assignments (random level 1–5),
+  - 6 role allocations (1 per persona at 100%),
+  - 6 leave requests covering every status: approved past, approved upcoming, currently on leave, pending, rejected, sick leave,
+  - 25-day vacation allowance per member,
+  - 1 daily rule (max 2 off on Mondays),
+  - 1 office coverage rule (Budapest needs 1 dev present weekdays),
+  - 1 audit event recording the demo seed.
+- **`supabase/functions/cleanup-demo-workspace/index.ts`**: companion edge function that deletes the workspace AND removes the orphan demo `auth.users`. Owner-only authorization. Reads `enterprise_workspaces.settings.demo_user_ids` (stamped by the seeder) so cleanup can find the exact users to remove.
+- **`CreateWorkspaceDialog`**: new "Demo munkaterület" panel below the description field with a `Demo munkaterület létrehozása` button. Calls `seed-demo-workspace` and reports the seeded counts in the toast.
+- The demo flag is stored on `enterprise_workspaces.settings.is_demo` plus `demo_user_ids` and `demo_seed_tag` so the workspace is identifiable and safely cleanable.
+
+### Fixed — Position catalog now actually shows in Resources tab
+- **`BusinessRoleManager`** (Resources → Pozíciók): added `Katalógus megnyitása` button that opens `PositionPickerDialog`, alongside the existing free-text input. Picking a position from the catalog appends it as a new role group ready for member allocation.
+- **`PositionPickerDialog`** now falls back to the **global catalog** (`enterprise_catalog_categories` / `enterprise_catalog_roles` / `enterprise_catalog_role_skills` / `enterprise_catalog_skills`) when the workspace-scoped customization layer is empty — which is the case for every fresh workspace. The 558+ rows already seeded in `enterprise_catalog_skills` are now reachable from the UI. A small banner indicates when the global catalog is being read.
+
+### Fixed — Jira `sync_project_config` 500 error
+- **`jira-devops-proxy/jiraSyncProjectConfig`**: previous code passed `project_key` (e.g., `SYN`) into the `projectId` query parameter of `/rest/api/3/issuetype/project`, which expects a numeric ID and 500'd. Replaced with `GET /rest/api/3/project/{key}` (returns issueTypes inline) and a `/rest/api/3/issue/createmeta` fallback. Label/component discovery is now best-effort (warns instead of failing the whole sync).
+
+### Added — In-app Jira issue editor (open & edit Jira tickets without leaving Effectime)
+- **`JiraIssueEditor`** (`src/components/enterprise/agile/JiraIssueEditor.tsx`): new dialog that loads a Jira ticket with all primary fields (summary, description, priority, labels, due date, story points, assignee, status with available transitions, sprint, parent, components, reporter, timestamps) and lets users edit them in place. Save sends a single `update_issue` call to `jira-devops-proxy` and refreshes the local cache; status changes go through the Jira `/transitions` endpoint. Free-text where appropriate (summary, description, labels), select-from-list for priority/status/assignee.
+- **`jira-devops-proxy`** extended with three new actions:
+  - `get_issue` — fetches a single issue with `*all` fields + status transitions in parallel,
+  - `get_transitions` — lists allowed status transitions for a given key,
+  - `search_assignable_users` — type-ahead user search scoped to the issue.
+- **`update_issue`** now supports description, priority, due date, story points (customfield_10016), assignee account ID, and `status_transition_id`. After save, the proxy re-reads the issue and upserts the fresh row into `enterprise_agile_issues` so the cache stays current.
+- **`BacklogBrowser`** rows: clicking the summary or the new pencil icon opens `JiraIssueEditor`. The external link icon to the actual Jira site is preserved.
+- **`AgileBoards`** (Kanban / Scrum / Gantt): cards and Gantt rows are now keyboard- and click-actionable; opening a card launches the editor. The external Jira link on each card stops propagation so it still navigates externally.
+
+### Non-Regression Contract
+- `seed-demo-workspace` uses the existing `create_workspace_with_owner` RPC for the workspace itself (preserves owner-membership invariants), then service role for additive seeding only.
+- `cleanup-demo-workspace` only deletes workspaces where `created_by = auth.uid()`. RLS-protected.
+- `PositionPickerDialog` still tries the workspace-scoped tables first; the global catalog is a fallback, not a replacement.
+- All Jira proxy changes are additive (new actions). Existing `search_issues`, `create_issue`, `update_issue` behavior preserved; `update_issue` now accepts more optional fields but ignores those it doesn't recognize.
+- `JiraIssueEditor` is a brand-new component; no existing component was rewritten.
+- The previous BacklogBrowser external-link behavior is preserved alongside the new edit affordance.
+
+### Validation
+- `npx vitest run` → 83 tests, 0 failures (unchanged from v3.1.0).
+- `npx tsc --noEmit -p tsconfig.app.json` → 0 errors (cleaned up from the prior 18 baseline now that node_modules is installed).
+
+---
+
 ## 2026-05-07 — v3.1.0 Phases 9, 10, 11: QA Safety Net, Versioning & Rollout, Implementation Roadmap
 
 ### Added — Phase 9 (QA, testing, and release safety)
