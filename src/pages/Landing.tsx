@@ -104,19 +104,21 @@ export default function Landing() {
             <Button
               size="lg"
               className="rounded-xl gradient-primary text-primary-foreground px-8 gap-2 shadow-glow"
-              onClick={() => navigate('/auth')}
+              onClick={() => navigate(user ? '/app' : '/auth')}
             >
-              Kezdje el ingyen
+              {user ? 'Munkaterületre' : 'Kezdje el ingyen'}
               <ArrowRight className="h-4 w-4" />
             </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="rounded-xl px-8"
-              onClick={() => navigate('/auth')}
-            >
-              Bejelentkezés
-            </Button>
+            {!user && (
+              <Button
+                size="lg"
+                variant="outline"
+                className="rounded-xl px-8"
+                onClick={() => navigate('/auth')}
+              >
+                Bejelentkezés
+              </Button>
+            )}
           </div>
         </section>
 
