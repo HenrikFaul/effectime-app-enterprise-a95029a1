@@ -89,7 +89,7 @@ Deno.serve(async (req) => {
     // bypass RLS during seeding.
     const { data: wsId, error: rpcErr } = await userClient.rpc('create_workspace_with_owner', {
       _name: name,
-      _description: 'Demo munkaterület – minden modul azonnal tesztelhető előre kitöltött adatokkal.',
+      _description: body?.description?.toString().trim() || 'Demo munkaterület – minden modul azonnal tesztelhető előre kitöltött adatokkal.',
     });
     if (rpcErr) return jsonRes({ error: 'Workspace létrehozás sikertelen: ' + rpcErr.message }, 500);
     const workspaceId = wsId as string;

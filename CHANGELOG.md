@@ -1,3 +1,136 @@
+## 2026-05-08 — v3.2.4 Auth UX, Compact Org Pulse & Demo Workspace Seeder
+
+### Fixed
+- **`Landing`**: the "Bejelentkezés" CTA in the hero and the secondary CTA card no longer render while a user is signed in. Authenticated visitors now see "Munkaterületre" leading straight to `/app`.
+- **Build**: removed stale TanStack-flavored `src/integrations/supabase/auth-middleware.ts` (the project uses `react-router-dom`, not TanStack Start) — eliminated the `Cannot find module '@tanstack/react-start'` build break.
+
+### Changed
+- **Org Pulse → header popover (`OrgPulseButton`)**: replaced the persistent full-width `OrgPulseWidget` with a compact header button (`Activity` icon + "Org Pulse" label). A red badge with the count of active operational alerts (missing org-unit, missing manager, missing contract, missing leadership, approvals open >48h) is shown when `> 0`. Clicking opens a 360px `Popover` with the same privacy-safe (k≥5) cells, with alert cells highlighted. Wired into `WorkspaceDashboard` for admins; the previous `OrgPulseWidget` block is removed from the body.
+
+### Added
+- **`Demo munkaterület létrehozása` button** in `CreateWorkspaceDialog` — invokes new edge function `seed-demo-workspace`.
+- **Edge function `seed-demo-workspace`** (`verify_jwt = true`): calls `create_workspace_with_owner` as the user, then with the service role seeds:
+  - 3 demo auth users + profiles + memberships (assistant + 2 members), with team / city / business_role / capacity defaults
+  - 3 offices (Budapest, Debrecen, Szeged), members linked to their city's office
+  - 4 teams (Engineering, Product, Design, Operations)
+  - 4 leave types (Éves, Beteg, Otthoni, Fizetés nélküli) with colors and rules
+  - 3 sample Hungarian holidays
+  - 7 skills + 3 skill assignments per member with proficiency
+  - Annual leave quotas per membership (25 + 5 carryover)
+  - 18 leave requests across all members spanning past + future, mixing approved / rejected / pending statuses and three leave types
+- All seeded rows use `workspace_id = <new ws>`. Existing FK `ON DELETE CASCADE` on every workspace-scoped table guarantees full cleanup when the workspace is deleted — no orphaned records.
+
+### Architecture notes
+- Seeder is implemented as a single edge function so it can be extended module-by-module without touching UI code.
+- Uses the user's JWT to create the workspace (so it ends up owned by them and respects existing RPC), and the service role only for downstream child rows that need to bypass RLS for demo identities.
+
+## 2026-05-07 — v3.2.3 Help System — Admin Controls & Multi-Tab Fix
+
+### Fixed
+- **`useHelpArticleByAnchor` + `useHelpSearch`**: added `.order('last_generated_at', { ascending: false }).limit(1)` before every `.maybeSingle()` call — Supabase `.maybeSingle()` throws when multiple rows match (e.g. five articles shared `anchor_id = 'workspace.settings'`). This was the root cause of the "only Members tab shows help content" bug: the thrown error was silently caught and `article` was set to `null`.
+- **`HelpDrawer` i18n fallback (`resolveAnchorCopy`)**: rewrote to import raw bundle objects directly (`import en from '@/i18n/resources/en'`) and use literal key access (`anchors[id]`) instead of calling `t()`. The `lookup()` function splits on `.` which broke all dotted anchor IDs like `workspace.calendar` — the traversal tried `anchors['workspace']['calendar']` instead of `anchors['workspace.calendar']`.
+
+### Added
+- **`HelpSystemSettings` component** (`src/components/enterprise/settings/HelpSystemSettings.tsx`): new admin-only settings card with:
+  - `Switch` toggle to enable/disable AI help content regeneration (persisted to `enterprise_workspaces.help_ai_enabled`)
+  - "Regenerate now" button that immediately invokes the `help-regenerator` Supabase Edge Function
+  - Last-regenerated timestamp display
+  - Result badge (success/error) after manual regeneration
+- **Schema migration `20260507150000`**: two new additive columns on `enterprise_workspaces`:
+  - `help_ai_enabled boolean NOT NULL DEFAULT true`
+  - `help_last_regenerated_at timestamptz`
+- **`WorkspaceDashboard` Settings tab**: `HelpSystemSettings` wired in as an admin-only `SettingsSection` (after Integration Health Center)
+- **i18n keys** `help_settings.*` added to both EN and HU bundles (9 keys each)
+
+### Non-Regression Contract
+- Zero changes to existing RLS policies, approval engine, capacity engine, or any component outside of the help system.
+- Schema migration is purely additive — `ADD COLUMN IF NOT EXISTS` with safe defaults.
+- All existing i18n keys preserved; only new keys added.
+
+## 2026-05-07 — v3.2.2 Help System — Full Documentation Suite & Gap Closure
+
+### Fixed
+- **`useHelpArticleByAnchor`**: added `.eq('is_active', true)` filter — archived articles were surfacing in the drawer when a topic had been regenerated and the old version archived.
+- **`useHelpSearch`**: added `.eq('is_active', true)` filter — same root cause; search results could return stale archived articles.
+- **HelpDrawer release badge**: label changed from `help.section_label` ("Section") to `help.generated_label` ("Generated") — the badge now correctly reads "Generated · v3.2.0" instead of "Section · v3.2.0".
+
+### Added — `data-help-region` completeness
+- **`ResourcesTab`**: `<TabsContent value="agile">` now carries `data-help-region="workspace.agile"` — the drag-target ? icon can now target the Agile board section for context-specific help.
+
+### Added — i18n fallback anchors
+- **EN + HU bundles**: 13 new fallback anchor entries covering all gaps between the drawer and seed data:
+  `workspace.requests`, `capacity-dna`, `command-center`, `decision-memory`, `coverage-planner`, `org-chart`, `audit-log`, `quota-manager`, `holiday-manager`, `localization-settings`, `integration-health`, `role-permissions`, `access-request`.
+- `workspace.approvals` enhanced with `commonTasks` list (both locales).
+- New i18n key `help.generated_label` added in both EN (`'Generated'`) and HU (`'Generálva'`).
+
+### Added — Seed migration `20260507140000`
+- **14 new curated help articles** (7 topics × 2 locales) filling the mandatory anchor gaps:
+  - `time-entry` (EN + HU) — step-by-step leave request submission with conflict engine flow diagram
+  - `onboarding-template` (EN + HU) — template creation, step types, publish/archive lifecycle
+  - `agile-kanban` (EN + HU) — Kanban board view, card anatomy, sync workflow
+  - `agile-scrum` (EN + HU) — Scrum board with per-sprint totals and story point headers
+  - `agile-gantt` (EN + HU) — Gantt timeline, type colour coding, date requirements
+  - `jira-integration` (EN + HU) — connection setup, test connection, project config sync, troubleshooting
+  - `export-center` (EN + HU) — CSV export workflow, field list, encoding note
+- All rows use `ON CONFLICT DO NOTHING` — safe to re-run and regenerator-upserts are never overwritten.
+
+### Added — `docs/help/` documentation suite
+- **8 structured EN help articles** under `docs/help/en/` with Mermaid flowcharts, step-by-step guides, common actions tables, and troubleshooting sections:
+  - `00-index.md` — feature map with anchor-to-article cross-reference
+  - `01-getting-started.md` — sign-in, workspace selector, first steps
+  - `02-leave-requests-and-approvals.md` — full leave request and approval chain flows
+  - `03-members-and-organization.md` — invite flow, org module, position catalog, org chart
+  - `04-calendar-and-capacity.md` — four calendar views, coverage planner, Capacity DNA
+  - `05-workflows-onboarding-access.md` — onboarding templates, access systems and templates, access inbox
+  - `06-resources-agile-capacity.md` — capacity heatmap, projects, all three agile board views, Capacity Fit
+  - `07-reports-audit-export.md` — KPI dashboard, immutable audit log, CSV export
+  - `08-settings-admin.md` — all settings sections, approval chains, Recovery Mode, Decision Memory, Command Center
+- **`docs/help-reference.md`** — top-level canonical feature map consumed by the AI regenerator: all anchor IDs, navigation paths, and business rule summaries.
+
+### Added — `help-regenerator` improvements
+- Now scans **three** source directories instead of two: `versioning/`, `docs/` (root), and `docs/help/en/` (up to 8 articles).
+- The EN help articles serve as style and content reference for Gemini — generated articles will mirror the established structure and tone.
+- `changed_files.count` in `help_releases` now correctly reflects all three source sets.
+
+### Non-Regression Contract
+- Zero changes to existing RLS policies, approval engine, capacity engine, or any component outside of the help system.
+- The `is_active` filter is purely additive — it uses the index `help_articles_active_idx` added in v3.2.1.
+- All existing `data-help-region` attributes preserved; only one new attribute added.
+- All existing i18n keys preserved; only new keys added.
+- Seed migration uses `ON CONFLICT DO NOTHING` — cannot overwrite existing content.
+
+## 2026-05-07 — v3.2.1 Help System Diagnosis & Hardening
+
+### Fixed
+- **`help-regenerator` edge function**: corrected fallback repo from `lovable-app/genisys` to `henrikfaul/effectime-app-enterprise-a95029a1` — the regenerator was silently reading the wrong repository on manual triggers with no `repo` payload.
+- **`WorkspaceDashboard` tab-to-anchor mapping**: `resources`, `reports-audit`, and `settings` tabs now correctly map to `workspace.resources`, `workspace.reports`, and `workspace.settings` anchors (previously all three fell back to `workspace.members`).
+- **Missing `data-help-region` attributes**: added to `resources`, `reports-audit`, `settings`, and `requests` `TabsContent` blocks so the drag-target ? icon can target those sections.
+
+### Added
+- **Schema migration `20260507120000`**: `is_active boolean` and `archived_at timestamptz` columns on `help_articles`; index `help_articles_active_idx (is_active, anchor_id, locale)`. The regenerator now archives stale articles (sets `is_active = false, archived_at = now()`) before upserting fresh ones — preserving full version history.
+- **`help-regenerator` improvements**: reads `docs/` directory in addition to `versioning/`; expanded mandatory anchor list from 8 → 30 topics; per-article `archiveStaleArticles` call before upsert; updated system prompt with full article structure requirement.
+- **`HelpDrawer` back-navigation**: arrow-left button appears when the user has navigated to a linked article, allowing them to return to the previous topic. History is cleared on drawer close.
+- **i18n fallback anchors** added for `workspace.resources`, `workspace.reports`, `workspace.settings`, and `workspace.agile` in both EN and HU bundles — these power the drawer when no DB article exists yet.
+- **Seed migration `20260507130000`**: 40 curated EN+HU help articles covering all major Effectime pages and features: Workspaces, Members, Organization, Calendar, Leave Request, Approval Flow, Workflows, Resources, Reports & Audit, Settings, Agile Boards, Capacity DNA, Org Chart, Coverage Planner, Localization Settings, Audit Log, Integration Health, Command Center, Quota Manager, Holiday Manager, Role Permissions, Decision Memory, Access Request. Uses `ON CONFLICT DO NOTHING` so regenerator-promoted articles are never overwritten.
+
+### Non-Regression Contract
+- Zero changes to existing RLS policies, approval engine, capacity engine, or any component outside of the help system.
+- `help_articles` schema changes are purely additive (new nullable columns + new index).
+- All existing help drawer functionality (drag-target, search, fallback i18n copy, ReactMarkdown rendering) preserved.
+
+## 2026-05-07 — v3.2.0 Self-Updating Help System
+
+### Added
+- **DB**: `help_articles` (topic_key, locale, title, summary, body_md, route, anchor_id, taxonomy, tags, synonyms, related_topics, search_tokens tsvector) + `help_releases` for release-driven regeneration tracking. RLS: public read, service-role write only.
+- **Edge function `help-regenerator`**: GitHub release webhook entrypoint (HMAC-verified via `GITHUB_RELEASE_WEBHOOK_SECRET`). Pulls `CHANGELOG.md` + `versioning/*.md` from the repo, calls **Google Gemini 2.0 Flash** with a structured-JSON system prompt to produce EN+HU end-user help articles, and upserts them into `help_articles`. Tracks each run in `help_releases` (pending/running/succeeded/failed).
+- **Frontend Help Drawer redesign**: search bar with debounced autocomplete across title/summary/body, locale-aware results with EN fallback, markdown body rendering (react-markdown), release tag badge, dark glass surface.
+- **Drag-target ? icon**: pointerdown on the ? button now starts a drag session — moving over any `[data-help-region]` element highlights it (`.help-target-hover`), and releasing on it opens the drawer with that region's article. Click without movement still opens the page-level help.
+- **`useHelpArticleByAnchor` / `useHelpSearch` hooks** in `src/lib/help/useHelpArticles.ts`.
+
+### Webhook URL
+`POST https://oezlzzmzzvbvinuysxaz.supabase.co/functions/v1/help-regenerator`
+Configure as a GitHub repository webhook with secret = `GITHUB_RELEASE_WEBHOOK_SECRET`, content-type `application/json`, event = "Releases".
+
 ## 2026-05-08 — v3.1.1 Demo workspace, position catalog wiring, Jira sync fix, in-app Jira issue editor
 
 ### Added — Demo workspace creation (full flow)

@@ -50,6 +50,7 @@ const en = {
     related: 'Related',
     open_manual: 'Open full manual',
     section_label: 'Section',
+    generated_label: 'Generated',
     anchors: {
       'home.overview': {
         title: 'Workspaces',
@@ -99,6 +100,144 @@ const en = {
         title: 'Approvals',
         summary:
           'The approval inbox lists every leave, onboarding, and access request awaiting your decision. Decisions are logged in the immutable audit trail.',
+        commonTasks: [
+          'Review and approve a pending leave request',
+          'Bulk-approve multiple requests at once',
+          'Reject a request with a reason',
+          'View the decision history',
+        ],
+      },
+      'workspace.requests': {
+        title: 'Requests',
+        summary:
+          'Submit and track your own leave requests. View the status of pending, approved, and rejected requests, add substitutes, and attach supporting documents.',
+        commonTasks: [
+          'Submit a new leave request',
+          'Add a substitute to cover your absence',
+          'Cancel a pending request',
+          'Download an iCal feed of approved leave',
+        ],
+      },
+      'capacity-dna': {
+        title: 'Capacity DNA',
+        summary:
+          'Capacity DNA gives a daily snapshot of how many people are truly available versus committed or on leave. Use it to spot overload and shortage trends before they affect delivery.',
+        commonTasks: [
+          'Generate a snapshot for today',
+          'View the 30-day shortage and overload trend',
+          'Compare baseline vs. effective capacity',
+        ],
+      },
+      'command-center': {
+        title: 'Command Center',
+        summary:
+          'The Command Center widget at the top of the workspace shows live counters for pending approvals, in-progress onboarding, open access requests, and members with missing org metadata.',
+        commonTasks: [
+          'Click a counter to navigate to the relevant section',
+          'Activate or deactivate Recovery Mode',
+          'Monitor workspace health at a glance',
+        ],
+      },
+      'decision-memory': {
+        title: 'Decision Memory',
+        summary:
+          'Decision Memory lets you attach rationale and expected outcomes to any approval or policy decision. After a defined window you can capture observed outcomes — closing the learning loop.',
+        commonTasks: [
+          'Attach a rationale to a decision',
+          'Record the observed outcome after the fact',
+          'Review stale memos in the Decision Memory inbox',
+        ],
+      },
+      'coverage-planner': {
+        title: 'Coverage Planner',
+        summary:
+          'The Coverage Planner shows whether each site meets its daily staffing rules. It compares required headcount (from coverage rules) against actual presence and flags shortfalls in red.',
+        commonTasks: [
+          'Switch between weekly and monthly view',
+          'Identify dates where coverage falls below the rule',
+          'Navigate to the site rule configuration',
+        ],
+      },
+      'org-chart': {
+        title: 'Org Chart',
+        summary:
+          'The Org Chart visualises the manager hierarchy across your workspace. It is auto-generated from the manager relationships on each member profile. Admins can regenerate a snapshot at any time.',
+        commonTasks: [
+          'View the reporting hierarchy',
+          'Search for a specific person',
+          'Regenerate the snapshot to reflect recent changes',
+        ],
+      },
+      'audit-log': {
+        title: 'Audit Log',
+        summary:
+          'The immutable audit log records every significant action in the workspace — approvals, role changes, invitations, and config updates. It cannot be edited or deleted.',
+        commonTasks: [
+          'Filter events by actor or event type',
+          'Export the audit log to CSV',
+          'Verify when a specific decision was made',
+        ],
+      },
+      'quota-manager': {
+        title: 'Quota Manager',
+        summary:
+          'Quota Manager lets admins define and adjust annual leave allowances per member. It tracks used, remaining, and carried-over days for each leave type.',
+        commonTasks: [
+          'Set or adjust a member\'s annual allowance',
+          'View used vs. remaining days',
+          'Carry over unused days to the next year',
+        ],
+      },
+      'holiday-manager': {
+        title: 'Holiday Manager',
+        summary:
+          'Holiday Manager defines public holidays and blocked dates for the workspace. Leave requests that overlap a public holiday are flagged during submission.',
+        commonTasks: [
+          'Add a public holiday',
+          'Block a date for the whole workspace',
+          'Import holidays from an external source',
+        ],
+      },
+      'localization-settings': {
+        title: 'Localization Settings',
+        summary:
+          'Admins can export the full translation CSV, edit entries offline, and re-import to apply custom wording without code changes. Live key counters show any gaps.',
+        commonTasks: [
+          'Export the bilingual translation CSV',
+          'Import a corrected translation file',
+          'Review missing-key counts per locale',
+          'Set the workspace default language',
+        ],
+      },
+      'integration-health': {
+        title: 'Integration Health Center',
+        summary:
+          'Integration Health shows the status of each connected external system (Jira, Azure DevOps, etc.). It summarises recent sync logs and surfaces error excerpts inline.',
+        commonTasks: [
+          'Check the health badge of a connected integration',
+          'View the last three error excerpts',
+          'Trigger a manual sync',
+        ],
+      },
+      'role-permissions': {
+        title: 'Role Permissions',
+        summary:
+          'Role Permissions let admins control which features each role (Owner, Resource Assistant, Member) can view or edit. The permission tree mirrors the application navigation hierarchy.',
+        commonTasks: [
+          'Grant or restrict view access to a feature',
+          'Grant or restrict edit access to a feature',
+          'Reset permissions to workspace defaults',
+        ],
+      },
+      'access-request': {
+        title: 'Access Requests',
+        summary:
+          'Access Requests manage who gets provisioned to external systems (Jira, Confluence, ERP, etc.) as part of onboarding or role changes. Requests flow through the existing approval chain.',
+        commonTasks: [
+          'Submit an access request for a member',
+          'Approve or reject a pending access request',
+          'Mark an approved request as granted',
+        ],
       },
       'workspace.workflows': {
         title: 'Workflows',
@@ -119,6 +258,56 @@ const en = {
           'Switch the active language from the header flag',
           'Set the workspace default language (admins)',
           'Review missing-key counts',
+        ],
+      },
+      'workspace.resources': {
+        title: 'Resources',
+        summary:
+          'The Resources tab gives you a full picture of team capacity, project timelines, agile integration, and skill availability. Use it to plan workload and identify gaps before they become problems.',
+        commonTasks: [
+          'View capacity heatmap across the team',
+          'Add or edit projects and milestones',
+          'Connect Jira or Azure DevOps for agile syncing',
+          'Generate a capacity DNA snapshot',
+          'Review skill coverage and shortfalls',
+        ],
+      },
+      'workspace.reports': {
+        title: 'Reports & Audit',
+        summary:
+          'The Reports tab provides KPI dashboards, leave trend charts, and an immutable audit log. Use it to track team health, export data for payroll or compliance, and investigate activity history.',
+        commonTasks: [
+          'View KPI summary cards',
+          'Filter the audit log by actor or event type',
+          'Export leave data to CSV',
+          'Schedule a recurring report delivery',
+          'Pin a report widget to the dashboard',
+        ],
+      },
+      'workspace.settings': {
+        title: 'Settings',
+        summary:
+          'Workspace settings let you configure branding, localization, iCal feeds, calendar filter order, role permissions, and integration connections. Only owners and resource assistants can change most settings.',
+        commonTasks: [
+          'Update workspace name and branding',
+          'Configure leave types, holidays, and blocked dates',
+          'Manage daily coverage rules',
+          'Set up Jira or Azure DevOps integration',
+          'Export or import translation overrides',
+          'Configure role permissions',
+          'Activate or deactivate recovery mode',
+        ],
+      },
+      'workspace.agile': {
+        title: 'Agile (Jira / Azure DevOps)',
+        summary:
+          'The Agile panel connects your Jira or Azure DevOps projects to Effectime. Browse the backlog, check sprint capacity against leave, create or update issues, and run what-if simulations.',
+        commonTasks: [
+          'Search issues using JQL or WIQL',
+          'View sprint capacity vs. leave overlap',
+          'Create or update a Jira or ADO issue',
+          'Run a what-if simulation for leave impact',
+          'Switch between Kanban, Scrum, and Gantt views',
         ],
       },
     } as Record<
@@ -413,6 +602,19 @@ const en = {
     last_sync: 'Last sync',
     success: 'Success',
     error: 'Error',
+  },
+  help_settings: {
+    title: 'AI Help Content',
+    ai_toggle_label: 'AI content regeneration',
+    ai_toggle_description:
+      'When enabled, the help system can regenerate articles automatically on new releases.',
+    regenerate_now: 'Regenerate now',
+    regenerating: 'Regenerating…',
+    regenerate_description:
+      'Triggers an immediate AI regeneration of all help articles from the latest codebase.',
+    last_regenerated: 'Last regenerated:',
+    regen_success: 'Done — {{count}} articles updated.',
+    regen_error: 'Regeneration failed',
   },
 } as const;
 

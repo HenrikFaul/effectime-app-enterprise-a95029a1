@@ -3144,6 +3144,8 @@ export type Database = {
           description: string | null
           favicon_url: string | null
           fiscal_year_start_month: number
+          help_ai_enabled: boolean
+          help_last_regenerated_at: string | null
           holidays_auto_sync: boolean
           holidays_last_sync_at: string | null
           id: string
@@ -3170,6 +3172,8 @@ export type Database = {
           description?: string | null
           favicon_url?: string | null
           fiscal_year_start_month?: number
+          help_ai_enabled?: boolean
+          help_last_regenerated_at?: string | null
           holidays_auto_sync?: boolean
           holidays_last_sync_at?: string | null
           id?: string
@@ -3196,6 +3200,8 @@ export type Database = {
           description?: string | null
           favicon_url?: string | null
           fiscal_year_start_month?: number
+          help_ai_enabled?: boolean
+          help_last_regenerated_at?: string | null
           holidays_auto_sync?: boolean
           holidays_last_sync_at?: string | null
           id?: string
@@ -3393,6 +3399,131 @@ export type Database = {
           requester_id?: string
           status?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      help_articles: {
+        Row: {
+          anchor_id: string | null
+          archived_at: string | null
+          body_md: string
+          content_hash: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          is_system_generated: boolean
+          last_generated_at: string
+          locale: string
+          related_topics: string[]
+          release_id: string | null
+          route: string | null
+          search_tokens: unknown
+          source_release_tag: string | null
+          summary: string | null
+          synonyms: string[]
+          tags: string[]
+          taxonomy: string
+          title: string
+          topic_key: string
+          updated_at: string
+        }
+        Insert: {
+          anchor_id?: string | null
+          archived_at?: string | null
+          body_md: string
+          content_hash?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_system_generated?: boolean
+          last_generated_at?: string
+          locale: string
+          related_topics?: string[]
+          release_id?: string | null
+          route?: string | null
+          search_tokens?: unknown
+          source_release_tag?: string | null
+          summary?: string | null
+          synonyms?: string[]
+          tags?: string[]
+          taxonomy?: string
+          title: string
+          topic_key: string
+          updated_at?: string
+        }
+        Update: {
+          anchor_id?: string | null
+          archived_at?: string | null
+          body_md?: string
+          content_hash?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_system_generated?: boolean
+          last_generated_at?: string
+          locale?: string
+          related_topics?: string[]
+          release_id?: string | null
+          route?: string | null
+          search_tokens?: unknown
+          source_release_tag?: string | null
+          summary?: string | null
+          synonyms?: string[]
+          tags?: string[]
+          taxonomy?: string
+          title?: string
+          topic_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "help_articles_release_id_fkey"
+            columns: ["release_id"]
+            isOneToOne: false
+            referencedRelation: "help_releases"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      help_releases: {
+        Row: {
+          changed_files: Json | null
+          commit_sha: string | null
+          completed_at: string | null
+          created_at: string
+          error: string | null
+          id: string
+          started_at: string
+          status: string
+          summary: string | null
+          triggered_by: string | null
+          version_tag: string
+        }
+        Insert: {
+          changed_files?: Json | null
+          commit_sha?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          summary?: string | null
+          triggered_by?: string | null
+          version_tag: string
+        }
+        Update: {
+          changed_files?: Json | null
+          commit_sha?: string | null
+          completed_at?: string | null
+          created_at?: string
+          error?: string | null
+          id?: string
+          started_at?: string
+          status?: string
+          summary?: string | null
+          triggered_by?: string | null
+          version_tag?: string
         }
         Relationships: []
       }

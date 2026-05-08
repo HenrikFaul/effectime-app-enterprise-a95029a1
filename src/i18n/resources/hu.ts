@@ -50,6 +50,7 @@ const hu = {
     related: 'Kapcsolódó',
     open_manual: 'Teljes kézikönyv megnyitása',
     section_label: 'Szakasz',
+    generated_label: 'Generálva',
     anchors: {
       'home.overview': {
         title: 'Munkaterületek',
@@ -99,6 +100,144 @@ const hu = {
         title: 'Jóváhagyások',
         summary:
           'A jóváhagyási inbox listázza az összes döntésre váró távollét-, onboarding- és hozzáférés-kérelmet. A döntések megváltoztathatatlan audit napló bejegyzést kapnak.',
+        commonTasks: [
+          'Függő kérelem átnézése és jóváhagyása',
+          'Több kérelem egyszerre jóváhagyása',
+          'Kérelem elutasítása indoklással',
+          'Döntési előzmények megtekintése',
+        ],
+      },
+      'workspace.requests': {
+        title: 'Kérelmek',
+        summary:
+          'Saját távolléti kérelmek beküldése és nyomon követése. Megtekintheted a függő, jóváhagyott és elutasított kérelmek állapotát, hozzáadhatsz helyettest és csatolmányt.',
+        commonTasks: [
+          'Új távolléti kérelem beküldése',
+          'Helyettes hozzáadása a hiányzás idejére',
+          'Függő kérelem visszavonása',
+          'Jóváhagyott távollétek iCal letöltése',
+        ],
+      },
+      'capacity-dna': {
+        title: 'Kapacitás DNS',
+        summary:
+          'A Kapacitás DNS napi pillanatképet ad arról, hány fő valóban elérhető a lekötöttekkel és távollevőkkel szemben. Segít a túlterheltséget és hiányokat időben felismerni.',
+        commonTasks: [
+          'Mai pillanatkép generálása',
+          '30 napos hiány- és túlterhelési trend megtekintése',
+          'Alap- és effektív kapacitás összehasonlítása',
+        ],
+      },
+      'command-center': {
+        title: 'Parancsnoki Központ',
+        summary:
+          'A munkaterület tetején lévő widget élő számláló panelt mutat: függő jóváhagyások, onboarding folyamatban, nyitott hozzáférés-kérelmek és hiányos szervezeti adatú tagok.',
+        commonTasks: [
+          'Kattints a számlálóra a releváns részhez való navigáláshoz',
+          'Helyreállítási üzemmód aktiválása vagy deaktiválása',
+          'Munkaterület állapotának áttekintése egy pillantással',
+        ],
+      },
+      'decision-memory': {
+        title: 'Döntési Emléktár',
+        summary:
+          'A Döntési Emléktár lehetővé teszi, hogy indoklást és elvárt eredményt csatolj bármely jóváhagyási vagy szabályozási döntéshez. Meghatározott idő elteltével rögzítheted a tényleges kimenetelt.',
+        commonTasks: [
+          'Indoklás csatolása döntéshez',
+          'Tényleges kimenetel rögzítése utólag',
+          'Elavult feljegyzések áttekintése az Emléktár bejövőjében',
+        ],
+      },
+      'coverage-planner': {
+        title: 'Lefedettség-tervező',
+        summary:
+          'A Lefedettség-tervező megmutatja, hogy az egyes telephelyek teljesítik-e a napi személyzeti szabályokat. Összehasonlítja az elvárt létszámot a tényleges jelenléttel és piros jelöléssel jelzi a hiányokat.',
+        commonTasks: [
+          'Váltás heti és havi nézet között',
+          'Szabály alatti napok azonosítása',
+          'Navigálás a telephely-szabály konfigurációhoz',
+        ],
+      },
+      'org-chart': {
+        title: 'Szervezeti Diagram',
+        summary:
+          'A Szervezeti Diagram vizualizálja a munkaterület vezető-beosztott hierarchiáját. Automatikusan generálódik a tagprofilokban beállított közvetlen vezető kapcsolatokból. Az adminok bármikor frissíthetik a pillanatképet.',
+        commonTasks: [
+          'Alárendeltségi hierarchia megtekintése',
+          'Konkrét személy keresése',
+          'Pillanatkép újragenerálása a legutóbbi változások tükrözéséhez',
+        ],
+      },
+      'audit-log': {
+        title: 'Audit Napló',
+        summary:
+          'A megváltoztathatatlan audit napló rögzíti a munkaterület összes fontos műveletét — jóváhagyásokat, szerepkör-változásokat, meghívókat és beállítás-módosításokat. Nem szerkeszthető és nem törölhető.',
+        commonTasks: [
+          'Esemény szűrése szereplő vagy típus alapján',
+          'Audit napló exportálása CSV-be',
+          'Egy adott döntés időpontjának ellenőrzése',
+        ],
+      },
+      'quota-manager': {
+        title: 'Kvóta Kezelő',
+        summary:
+          'A Kvóta Kezelő lehetővé teszi az adminoknak az éves szabadság-keretek meghatározását és módosítását tagonként. Nyomon követi a felhasznált, fennmaradó és átvitt napokat távolléttípusonként.',
+        commonTasks: [
+          'Tag éves keretének beállítása vagy módosítása',
+          'Felhasznált és fennmaradó napok megtekintése',
+          'Felhasználatlan napok átvitele következő évre',
+        ],
+      },
+      'holiday-manager': {
+        title: 'Ünnepnap Kezelő',
+        summary:
+          'Az Ünnepnap Kezelő meghatározza a munkaterület állami ünnepnapjait és tiltott dátumait. Az ünnepnapra eső távolléti kérelmek beküldéskor megjelölésre kerülnek.',
+        commonTasks: [
+          'Ünnepnap hozzáadása',
+          'Dátum blokkolása az egész munkaterületre',
+          'Ünnepnapok importálása külső forrásból',
+        ],
+      },
+      'localization-settings': {
+        title: 'Nyelvi Beállítások',
+        summary:
+          'Az adminok exportálhatják a teljes fordítási CSV-t, offline szerkeszthetik és visszaimportálhatják az egyéni szövegezés alkalmazásához kód nélkül. Élő kulcsszámlálók jelzik a hiányokat.',
+        commonTasks: [
+          'Kétnyelvű fordítási CSV exportálása',
+          'Javított fordítási fájl importálása',
+          'Hiányzó kulcsok számának ellenőrzése locale-onként',
+          'Munkaterület alapnyelvének beállítása',
+        ],
+      },
+      'integration-health': {
+        title: 'Integrációs Állapotközpont',
+        summary:
+          'Az Integrációs Állapotközpont megmutatja az egyes csatlakoztatott külső rendszerek (Jira, Azure DevOps, stb.) állapotát. Összegzi a legutóbbi szinkronizálási naplókat és inline hibaüzeneteket is megjelenít.',
+        commonTasks: [
+          'Integráció állapotjelvényének ellenőrzése',
+          'Utolsó három hibaüzenet megtekintése',
+          'Manuális szinkronizálás indítása',
+        ],
+      },
+      'role-permissions': {
+        title: 'Szerepkör Jogosultságok',
+        summary:
+          'A Szerepkör Jogosultságok lehetővé teszik az adminoknak, hogy meghatározzák, melyik szerepkör (Tulajdonos, Erőforrás-asszisztens, Tag) mit tekinthet meg vagy szerkeszthet. A jogosultságfa az alkalmazás navigációs hierarchiáját tükrözi.',
+        commonTasks: [
+          'Megtekintési hozzáférés megadása vagy korlátozása',
+          'Szerkesztési hozzáférés megadása vagy korlátozása',
+          'Jogosultságok visszaállítása az alapértelmezettekre',
+        ],
+      },
+      'access-request': {
+        title: 'Hozzáférés-kérelmek',
+        summary:
+          'A Hozzáférés-kérelmek kezelik, ki kap hozzáférést külső rendszerekhez (Jira, Confluence, ERP stb.) onboarding vagy szerepkör-változás során. A kérelmek a meglévő jóváhagyási láncon futnak át.',
+        commonTasks: [
+          'Hozzáférés-kérelem beküldése tag részére',
+          'Függő hozzáférés-kérelem jóváhagyása vagy elutasítása',
+          'Jóváhagyott kérelem megjelölése teljesítettként',
+        ],
       },
       'workspace.workflows': {
         title: 'Folyamatok',
@@ -119,6 +258,56 @@ const hu = {
           'Nyelv váltása a fejlécbeli zászlóval',
           'Munkaterület alapnyelvének beállítása (admin)',
           'Hiányzó kulcsok áttekintése',
+        ],
+      },
+      'workspace.resources': {
+        title: 'Erőforrások',
+        summary:
+          'Az Erőforrások fül teljes képet ad a csapat kapacitásáról, projekt idővonalakról, agile integrációról és skill elérhetőségről. Használd munkaterhelés tervezéshez és hiányok korai azonosításához.',
+        commonTasks: [
+          'Kapacitás hőtérkép megtekintése',
+          'Projektek és mérföldkövek hozzáadása vagy szerkesztése',
+          'Jira vagy Azure DevOps csatlakoztatása',
+          'Kapacitás DNA pillanatkép generálása',
+          'Skill lefedettség és hiányok áttekintése',
+        ],
+      },
+      'workspace.reports': {
+        title: 'Riportok és Audit',
+        summary:
+          'A Riportok fül KPI dashboardokat, távolléti trend diagramokat és megváltoztathatatlan audit naplót kínál. Csapatállapot nyomon követésére, bérszámfejtési vagy megfelelési adatexportra és tevékenységelőzmény vizsgálatára használható.',
+        commonTasks: [
+          'KPI összefoglaló kártyák megtekintése',
+          'Audit napló szűrése szereplő vagy eseménytípus alapján',
+          'Távolléti adatok exportálása CSV-be',
+          'Ismétlődő riport ütemezése',
+          'Riport widget kitűzése a dashboardra',
+        ],
+      },
+      'workspace.settings': {
+        title: 'Beállítások',
+        summary:
+          'A munkaterület beállításaiban konfigurálható a megjelenés, lokalizáció, iCal feed, naptárszűrők sorrendje, jogosultságok és integrációk. A legtöbb beállítást csak tulajdonosok és erőforrás-asszisztensek módosíthatják.',
+        commonTasks: [
+          'Munkaterület nevének és megjelenésének módosítása',
+          'Távolléttípusok, ünnepnapok és tiltott napok kezelése',
+          'Napi lefedettségi szabályok beállítása',
+          'Jira vagy Azure DevOps integráció beállítása',
+          'Fordítási felülbírálatok exportálása vagy importálása',
+          'Szerepkör-jogosultságok konfigurálása',
+          'Helyreállítási üzemmód aktiválása vagy deaktiválása',
+        ],
+      },
+      'workspace.agile': {
+        title: 'Agile (Jira / Azure DevOps)',
+        summary:
+          'Az Agile panel összeköti a Jira vagy Azure DevOps projekteket az Effectime-mal. Böngészd a backlogot, ellenőrizd a sprint kapacitást a távollétek tükrében, hozz létre vagy frissíts issue-kat, és futtass mi-lenne-ha szimulációkat.',
+        commonTasks: [
+          'Issue-k keresése JQL vagy WIQL segítségével',
+          'Sprint kapacitás és távolléti átfedés megtekintése',
+          'Jira vagy ADO issue létrehozása vagy frissítése',
+          'Mi-lenne-ha szimuláció futtatása távolléti hatás elemzésére',
+          'Váltás Kanban, Scrum és Gantt nézetek között',
         ],
       },
     } as Record<
@@ -413,6 +602,19 @@ const hu = {
     last_sync: 'Utolsó szinkron',
     success: 'Sikeres',
     error: 'Hiba',
+  },
+  help_settings: {
+    title: 'AI súgó tartalom',
+    ai_toggle_label: 'AI tartalom-újragenerálás',
+    ai_toggle_description:
+      'Ha be van kapcsolva, a súgórendszer új kiadásokkor automatikusan tudja frissíteni a cikkeket.',
+    regenerate_now: 'Újragenerálás most',
+    regenerating: 'Újragenerálás…',
+    regenerate_description:
+      'Azonnali AI újragenerálást indít el a legfrissebb kódbázis alapján.',
+    last_regenerated: 'Utoljára generálva:',
+    regen_success: 'Kész — {{count}} cikk frissítve.',
+    regen_error: 'Újragenerálás sikertelen',
   },
 } as const;
 

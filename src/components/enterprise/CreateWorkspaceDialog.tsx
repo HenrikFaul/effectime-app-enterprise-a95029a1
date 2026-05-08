@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { toast } from 'sonner';
+import { Separator } from '@/components/ui/separator';
 import { Sparkles, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Props {
   open: boolean;
@@ -19,7 +20,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange, userId: _userId, onC
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
-  const [demoLoading, setDemoLoading] = useState(false);
+  const [seedingDemo, setSeedingDemo] = useState(false);
 
   const handleCreate = async () => {
     if (!name.trim()) {
@@ -49,21 +50,25 @@ export function CreateWorkspaceDialog({ open, onOpenChange, userId: _userId, onC
   };
 
   const handleCreateDemo = async () => {
-    setDemoLoading(true);
+    setSeedingDemo(true);
+    const toastId = toast.loading('Demo munkaterület készítése folyamatban... ez 5-10 másodperc');
     try {
       const { data, error } = await supabase.functions.invoke('seed-demo-workspace', {
         body: {
           name: name.trim() || `Demo munkaterület ${new Date().toLocaleDateString('hu-HU')}`,
+          description: description.trim() || null,
         },
       });
       if (error) throw error;
-      const payload = data as { ok?: boolean; error?: string; summary?: Record<string, number> } | null;
+      const payload = data as { ok?: boolean; error?: string; summary?: Record<string, number>; members_created?: number } | null;
       if (!payload?.ok) {
         throw new Error(payload?.error ?? 'Ismeretlen hiba a demo seederben');
       }
       const s = payload.summary ?? {};
+      const memberCount = s.members ?? payload.members_created ?? 0;
       toast.success(
-        `Demo munkaterület kész! ${s.members ?? 0} tag · ${s.leave_requests ?? 0} kérelem · ${s.skills ?? 0} készség · ${s.holidays ?? 0} ünnepnap`,
+        `Demo munkaterület kész! ${memberCount} tag · ${s.leave_requests ?? 0} kérelem · ${s.skills ?? 0} készség · ${s.holidays ?? 0} ünnepnap`,
+        { id: toastId },
       );
       setName('');
       setDescription('');
@@ -72,11 +77,13 @@ export function CreateWorkspaceDialog({ open, onOpenChange, userId: _userId, onC
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error('[CreateWorkspaceDialog] demo seed failed', err);
-      toast.error('Hiba a demo munkaterület létrehozásakor: ' + msg);
+      toast.error('Hiba a demo munkaterület létrehozásakor: ' + msg, { id: toastId });
     } finally {
-      setDemoLoading(false);
+      setSeedingDemo(false);
     }
   };
+
+  const busy = loading || seedingDemo;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -96,6 +103,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange, userId: _userId, onC
               onChange={(e) => setName(e.target.value)}
               placeholder="pl. Marketing csapat"
               maxLength={100}
+              disabled={busy}
             />
           </div>
           <div>
@@ -107,8 +115,11 @@ export function CreateWorkspaceDialog({ open, onOpenChange, userId: _userId, onC
               placeholder="Opcionális leírás..."
               rows={3}
               maxLength={500}
+              disabled={busy}
             />
           </div>
+
+          <Separator />
 
           <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 space-y-2">
             <div className="flex items-center gap-2 text-sm font-medium">
@@ -119,23 +130,24 @@ export function CreateWorkspaceDialog({ open, onOpenChange, userId: _userId, onC
               Egy kattintással létrehoz egy teljesen feltöltött munkaterületet: 7 demo taggal, csapatokkal, irodákkal, készségekkel, szabadság-típusokkal, kvótákkal, ünnepnapokkal és vegyes (jóváhagyott / elutasított / függő) kérelmekkel — minden modul azonnal tesztelhető.
             </p>
             <Button
+              type="button"
               variant="outline"
               size="sm"
               onClick={handleCreateDemo}
-              disabled={demoLoading || loading}
+              disabled={busy}
               className="w-full gap-1.5"
             >
-              {demoLoading
+              {seedingDemo
                 ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Demo létrehozás folyamatban…</>
                 : <><Sparkles className="h-3.5 w-3.5" /> Demo munkaterület létrehozása</>}
             </Button>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={demoLoading || loading}>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>
             Mégse
           </Button>
-          <Button onClick={handleCreate} disabled={loading || demoLoading || !name.trim()}>
+          <Button onClick={handleCreate} disabled={busy || !name.trim()}>
             {loading ? 'Létrehozás...' : 'Létrehozás'}
           </Button>
         </DialogFooter>
