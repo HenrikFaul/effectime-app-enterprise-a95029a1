@@ -271,7 +271,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               onOpenTab={setActiveTab}
               recoveryMode={recoveryMode}
             />
-            {isAdmin ? <OrgPulseWidget workspaceId={workspace.id} /> : null}
+            {null}
             {canView('members') && (
               <TabsContent value="members" className="space-y-3">
                 {canView('invitations') && (
