@@ -1,14 +1,12 @@
-// Demo Workspace Seeder
-// ----------------------
+// Demo Workspace Seeder — Comprehensive Edition
+// ------------------------------------------------
 // Creates a fully populated demo workspace for the calling user.
-// Strategy: spin up real auth.users for demo personas (so leave_requests, profiles,
-// memberships all work without schema changes), then seed every workspace-scoped
-// module with realistic data.
+// Seeds EVERY entity type the application supports so every tab/section
+// has real data on first visit.
 //
-// All demo personas get an `app_metadata.is_demo_persona = true` flag so they
-// can be cleaned up later. The owning workspace stores the seeded demo user_ids
-// in `enterprise_workspaces.settings.demo_user_ids` to enable safe cleanup
-// when the workspace is deleted.
+// Cleanup: `cleanup-demo-workspace` deletes the workspace (all workspace-scoped
+// data cascades via FK) and then removes the demo auth.users stored in
+// enterprise_workspaces.settings.demo_user_ids.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
 import { corsHeaders } from '../_shared/cors.ts';
@@ -20,56 +18,110 @@ function jsonRes(data: unknown, status = 200) {
   });
 }
 
-function fmtDate(d: Date): string {
-  return d.toISOString().slice(0, 10);
-}
-
+function fmtDate(d: Date): string { return d.toISOString().slice(0, 10); }
 function addDays(d: Date, days: number): Date {
-  const r = new Date(d);
-  r.setUTCDate(r.getUTCDate() + days);
-  return r;
+  const r = new Date(d); r.setUTCDate(r.getUTCDate() + days); return r;
+}
+function pickN<T>(arr: T[], n: number): T[] {
+  return [...arr].sort(() => Math.random() - 0.5).slice(0, n);
 }
 
-function pickOne<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
+// ── Static data ──────────────────────────────────────────────────────────────
 
 const DEMO_PERSONAS = [
-  { display_name: 'Anna Kovács', team: 'Frontend', city: 'Budapest', position: 'Senior Frontend Developer', seniority: 'senior' as const },
-  { display_name: 'Bence Tóth', team: 'Backend', city: 'Budapest', position: 'Backend Developer', seniority: 'medior' as const },
-  { display_name: 'Csilla Nagy', team: 'Operations', city: 'Debrecen', position: 'Operations Lead', seniority: 'lead' as const },
-  { display_name: 'Dávid Szabó', team: 'Frontend', city: 'Budapest', position: 'Junior Frontend Developer', seniority: 'junior' as const },
-  { display_name: 'Eszter Kiss', team: 'QA', city: 'Szeged', position: 'QA Engineer', seniority: 'medior' as const },
-  { display_name: 'Ferenc Horváth', team: 'Backend', city: 'Budapest', position: 'Senior Backend Developer', seniority: 'senior' as const },
-  { display_name: 'Gizella Varga', team: 'Operations', city: 'Debrecen', position: 'Operations Specialist', seniority: 'medior' as const },
+  { display_name: 'Anna Kovács',    team: 'Frontend',    city: 'Budapest', position: 'Senior Frontend Developer',  seniority: 'senior' as const },
+  { display_name: 'Bence Tóth',     team: 'Backend',     city: 'Budapest', position: 'Backend Developer',           seniority: 'medior' as const },
+  { display_name: 'Csilla Nagy',    team: 'Operations',  city: 'Debrecen', position: 'Operations Lead',             seniority: 'lead'   as const },
+  { display_name: 'Dávid Szabó',    team: 'Frontend',    city: 'Budapest', position: 'Junior Frontend Developer',   seniority: 'junior' as const },
+  { display_name: 'Eszter Kiss',    team: 'QA',          city: 'Szeged',   position: 'QA Engineer',                 seniority: 'medior' as const },
+  { display_name: 'Ferenc Horváth', team: 'Backend',     city: 'Budapest', position: 'Senior Backend Developer',    seniority: 'senior' as const },
+  { display_name: 'Gizella Varga',  team: 'Operations',  city: 'Debrecen', position: 'Operations Specialist',      seniority: 'medior' as const },
 ];
 
 const SKILL_NAMES = ['React', 'TypeScript', 'Node.js', 'PostgreSQL', 'Docker', 'AWS', 'Tailwind CSS', 'Cypress', 'Jest'];
+const SKILL_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#a855f7', '#06b6d4', '#22c55e', '#f97316', '#ec4899'];
+
 const OFFICE_DEFS = [
-  { name: 'Budapest HQ', city: 'Budapest', address: 'Andrássy út 1, 1061 Budapest' },
-  { name: 'Debrecen Office', city: 'Debrecen', address: 'Piac u. 20, 4024 Debrecen' },
-  { name: 'Szeged Office', city: 'Szeged', address: 'Kárász u. 5, 6720 Szeged' },
-];
-const TEAM_DEFS = [
-  { name: 'Frontend', description: 'Frontend / web app team' },
-  { name: 'Backend', description: 'Backend / API team' },
-  { name: 'Operations', description: 'Operations and infrastructure' },
-  { name: 'QA', description: 'Quality assurance' },
-];
-const LEAVE_TYPE_DEFS = [
-  { name: 'Éves szabadság', color: '#3b82f6', is_paid: true, requires_approval: true },
-  { name: 'Betegszabadság', color: '#ef4444', is_paid: true, requires_approval: false },
-  { name: 'Fizetés nélküli', color: '#a855f7', is_paid: false, requires_approval: true },
-  { name: 'Otthoni munka', color: '#10b981', is_paid: true, requires_approval: false },
+  { name: 'Budapest HQ',    city: 'Budapest', address: 'Andrássy út 1, 1061 Budapest' },
+  { name: 'Debrecen Office',city: 'Debrecen', address: 'Piac u. 20, 4024 Debrecen' },
+  { name: 'Szeged Office',  city: 'Szeged',   address: 'Kárász u. 5, 6720 Szeged' },
 ];
 
+const TEAM_DEFS = [
+  { name: 'Frontend',   description: 'Frontend / web app team' },
+  { name: 'Backend',    description: 'Backend / API team' },
+  { name: 'Operations', description: 'Operations and infrastructure' },
+  { name: 'QA',         description: 'Quality assurance' },
+];
+
+const LEAVE_TYPE_DEFS = [
+  { name: 'Éves szabadság',   color: '#3b82f6', is_paid: true,  requires_approval: true  },
+  { name: 'Betegszabadság',   color: '#ef4444', is_paid: true,  requires_approval: false },
+  { name: 'Fizetés nélküli',  color: '#a855f7', is_paid: false, requires_approval: true  },
+  { name: 'Otthoni munka',    color: '#10b981', is_paid: true,  requires_approval: false },
+];
+
+const HU_HOLIDAYS_TEMPLATE = [
+  { month: '01-01', name: 'Újév' },
+  { month: '03-15', name: 'Nemzeti ünnep' },
+  { month: '05-01', name: 'Munka ünnepe' },
+  { month: '08-20', name: 'Államalapítás ünnepe' },
+  { month: '10-23', name: '1956-os forradalom' },
+  { month: '11-01', name: 'Mindenszentek' },
+  { month: '12-25', name: 'Karácsony' },
+  { month: '12-26', name: 'Karácsony másnapja' },
+];
+
+const PROJECT_DEFS = [
+  {
+    name: 'Customer Portal 2.0',
+    description: 'Ügyféli önkiszolgáló portál modernizálása React + TypeScript alapokon.',
+    status: 'active', color: '#3b82f6', offsetStart: -30, offsetEnd: 90,
+    roles: ['Senior Frontend Developer', 'Backend Developer', 'QA Engineer'],
+    skillNames: ['React', 'TypeScript', 'Cypress'],
+    billRates: { 'Senior Frontend Developer': 120, 'Backend Developer': 110, 'QA Engineer': 90 },
+  },
+  {
+    name: 'Backend API Refactor',
+    description: 'Monolitikus backend mikro-szolgáltatásokra bontása Node.js és PostgreSQL.',
+    status: 'active', color: '#10b981', offsetStart: -15, offsetEnd: 120,
+    roles: ['Senior Backend Developer', 'Backend Developer'],
+    skillNames: ['Node.js', 'PostgreSQL', 'Docker'],
+    billRates: { 'Senior Backend Developer': 130, 'Backend Developer': 110 },
+  },
+  {
+    name: 'QA Automation Framework',
+    description: 'End-to-end tesztelési keretrendszer kiépítése Cypress és Jest alapokon.',
+    status: 'active', color: '#f59e0b', offsetStart: 0, offsetEnd: 60,
+    roles: ['QA Engineer', 'Senior Frontend Developer'],
+    skillNames: ['Cypress', 'Jest', 'TypeScript'],
+    billRates: { 'QA Engineer': 95, 'Senior Frontend Developer': 115 },
+  },
+  {
+    name: 'Cloud Migration',
+    description: 'On-premise infrastruktúra migrálása AWS-re (ECS, RDS, CloudFront).',
+    status: 'planning', color: '#8b5cf6', offsetStart: 30, offsetEnd: 180,
+    roles: ['Operations Lead', 'Operations Specialist', 'Senior Backend Developer'],
+    skillNames: ['AWS', 'Docker', 'PostgreSQL'],
+    billRates: { 'Operations Lead': 140, 'Operations Specialist': 100, 'Senior Backend Developer': 125 },
+  },
+];
+
+const NOTIFICATION_EVENT_TYPES = [
+  'leave_request.submitted', 'leave_request.approved', 'leave_request.rejected',
+  'substitute.requested', 'substitute.confirmed', 'approval.escalated',
+  'onboarding.assigned', 'access_request.submitted', 'access_request.approved',
+];
+
+// ── Main ─────────────────────────────────────────────────────────────────────
+
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
-  }
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
 
   try {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
-    const SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const ANON_KEY     = Deno.env.get('SUPABASE_ANON_KEY')!;
 
     const authz = req.headers.get('Authorization');
     if (!authz) return jsonRes({ error: 'Unauthorized' }, 401);
@@ -80,113 +132,86 @@ Deno.serve(async (req) => {
     const ownerId = userData.user.id;
 
     const body = await req.json().catch(() => ({}));
-    const name: string = (body?.name ?? '').toString().trim() || `Demo munkaterület ${new Date().toLocaleDateString('hu-HU')}`;
+    const name: string = (body?.name ?? '').toString().trim() ||
+      `Demo munkaterület ${new Date().toLocaleDateString('hu-HU')}`;
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    // ── 1. Create workspace via the RPC. SECURITY DEFINER + auth.uid() requires the user JWT,
-    // so call it through the user-scoped client. Subsequent inserts use the admin client to
-    // bypass RLS during seeding.
+    // ── A1. Create workspace ────────────────────────────────────────────────
     const { data: wsId, error: rpcErr } = await userClient.rpc('create_workspace_with_owner', {
       _name: name,
-      _description: body?.description?.toString().trim() || 'Demo munkaterület – minden modul azonnal tesztelhető előre kitöltött adatokkal.',
+      _description: body?.description?.toString().trim() ||
+        'Demo munkaterület – minden modul azonnal tesztelhető előre kitöltött adatokkal.',
     });
     if (rpcErr) return jsonRes({ error: 'Workspace létrehozás sikertelen: ' + rpcErr.message }, 500);
     const workspaceId = wsId as string;
     if (!workspaceId) return jsonRes({ error: 'Workspace ID nem elérhető' }, 500);
 
-    // ── 2. Create demo auth users (real users, marked as demo personas)
+    const today = new Date();
+    const year  = today.getUTCFullYear();
+
+    // ── A2. Demo auth users ─────────────────────────────────────────────────
     const demoUserIds: { user_id: string; persona: typeof DEMO_PERSONAS[number] }[] = [];
     const seedTag = Math.random().toString(36).slice(2, 9);
     for (const persona of DEMO_PERSONAS) {
-      const slug = persona.display_name.toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '');
+      const slug  = persona.display_name.toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '');
       const email = `demo-${slug}-${seedTag}@effectime-demo.local`;
-      const password = `Demo!${crypto.randomUUID().slice(0, 12)}`;
       const { data: created, error: createErr } = await admin.auth.admin.createUser({
         email,
-        password,
+        password: `Demo!${crypto.randomUUID().slice(0, 12)}`,
         email_confirm: true,
         user_metadata: { display_name: persona.display_name },
         app_metadata: { is_demo_persona: true, demo_workspace_id: workspaceId },
       });
-      if (createErr || !created?.user) {
-        console.error('[seed-demo-workspace] createUser failed', createErr?.message);
-        continue;
-      }
+      if (createErr || !created?.user) { console.error('[seed] createUser failed', createErr?.message); continue; }
       demoUserIds.push({ user_id: created.user.id, persona });
-      // Ensure profile exists (handle_new_user trigger should auto-create, but force-upsert anyway)
-      await admin.from('profiles').upsert({
-        user_id: created.user.id,
-        display_name: persona.display_name,
-      } as any, { onConflict: 'user_id' });
+      await admin.from('profiles').upsert({ user_id: created.user.id, display_name: persona.display_name } as any, { onConflict: 'user_id' });
     }
 
-    // ── 3. Persist demo user ids on the workspace so cleanup can find them
+    // ── A3. Persist demo user ids on workspace ──────────────────────────────
     await admin.from('enterprise_workspaces').update({
-      settings: {
-        is_demo: true,
-        demo_user_ids: demoUserIds.map((d) => d.user_id),
-        demo_seed_tag: seedTag,
-      },
+      settings: { is_demo: true, demo_user_ids: demoUserIds.map(d => d.user_id), demo_seed_tag: seedTag },
     } as any).eq('id', workspaceId);
 
-    // ── 4. Offices
-    const { data: offices } = await admin.from('enterprise_offices').insert(
-      OFFICE_DEFS.map((o) => ({ ...o, workspace_id: workspaceId })),
-    ).select('id, name, city');
+    // ── A4. Offices ─────────────────────────────────────────────────────────
+    const { data: offices } = await admin.from('enterprise_offices')
+      .insert(OFFICE_DEFS.map(o => ({ ...o, workspace_id: workspaceId }))).select('id,name,city');
     const officeByCity = new Map<string, string>();
     (offices ?? []).forEach((o: any) => officeByCity.set(o.city, o.id));
 
-    // ── 5. Teams
-    const { data: teams } = await admin.from('enterprise_teams').insert(
-      TEAM_DEFS.map((t) => ({ ...t, workspace_id: workspaceId, created_by: ownerId })),
-    ).select('id, name');
+    // ── A5. Teams ───────────────────────────────────────────────────────────
+    const { data: teams } = await admin.from('enterprise_teams')
+      .insert(TEAM_DEFS.map(t => ({ ...t, workspace_id: workspaceId, created_by: ownerId }))).select('id,name');
     const teamByName = new Map<string, string>();
     (teams ?? []).forEach((t: any) => teamByName.set(t.name, t.id));
 
-    // ── 6. Leave types
-    const { data: leaveTypes } = await admin.from('enterprise_leave_types').insert(
-      LEAVE_TYPE_DEFS.map((lt, idx) => ({
-        ...lt, workspace_id: workspaceId, sort_order: idx, is_active: true,
-      })),
-    ).select('id, name');
+    // ── A6. Leave types ─────────────────────────────────────────────────────
+    const { data: leaveTypes } = await admin.from('enterprise_leave_types')
+      .insert(LEAVE_TYPE_DEFS.map((lt, idx) => ({ ...lt, workspace_id: workspaceId, sort_order: idx, is_active: true })))
+      .select('id,name');
     const annualLeaveTypeId = (leaveTypes ?? []).find((l: any) => l.name === 'Éves szabadság')?.id ?? null;
 
-    // ── 7. Holidays — common HU public holidays this year and next
-    const year = new Date().getUTCFullYear();
-    const HU_HOLIDAYS = [
-      { date: `${year}-01-01`, name: 'Újév' },
-      { date: `${year}-03-15`, name: 'Nemzeti ünnep' },
-      { date: `${year}-05-01`, name: 'Munka ünnepe' },
-      { date: `${year}-08-20`, name: 'Államalapítás ünnepe' },
-      { date: `${year}-10-23`, name: '1956-os forradalom' },
-      { date: `${year}-11-01`, name: 'Mindenszentek' },
-      { date: `${year}-12-25`, name: 'Karácsony' },
-      { date: `${year}-12-26`, name: 'Karácsony másnapja' },
-    ];
+    // ── A7. Public holidays ─────────────────────────────────────────────────
     await admin.from('enterprise_holidays').insert(
-      HU_HOLIDAYS.map((h) => ({
+      HU_HOLIDAYS_TEMPLATE.map(h => ({
         workspace_id: workspaceId,
-        holiday_date: h.date,
+        holiday_date: `${year}-${h.month}`,
         name: h.name,
         is_recurring: true,
-      })),
+      }))
     );
 
-    // ── 8. Skills (catalog)
-    const { data: skills } = await admin.from('enterprise_skills').insert(
-      SKILL_NAMES.map((s, idx) => ({
-        workspace_id: workspaceId,
-        name: s,
+    // ── A8. Skills ──────────────────────────────────────────────────────────
+    const { data: skills } = await admin.from('enterprise_skills')
+      .insert(SKILL_NAMES.map((s, idx) => ({
+        workspace_id: workspaceId, name: s,
         category: idx < 4 ? 'Engineering' : idx < 7 ? 'Infrastructure' : 'QA',
-        color: ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#a855f7', '#06b6d4', '#22c55e'][idx % 7],
-      })),
-    ).select('id, name');
+        color: SKILL_COLORS[idx % SKILL_COLORS.length],
+      }))).select('id,name');
     const skillByName = new Map<string, string>();
     (skills ?? []).forEach((s: any) => skillByName.set(s.name, s.id));
 
-    // ── 9. Memberships (for owner + demo personas)
-    // Owner is already a member from create_workspace_with_owner. Update its base_working_hours.
+    // ── A9. Memberships ─────────────────────────────────────────────────────
     await admin.from('enterprise_memberships').update({
       base_working_hours: 8, weekly_capacity_hours: 40,
     } as any).eq('workspace_id', workspaceId).eq('user_id', ownerId);
@@ -203,196 +228,722 @@ Deno.serve(async (req) => {
       business_role: d.persona.position,
       base_working_hours: 8,
       weekly_capacity_hours: 40,
-      joined_at: new Date().toISOString(),
+      joined_at: addDays(today, -(30 + idx * 20)).toISOString(),
     }));
-    const { data: insertedMemberships } = await admin.from('enterprise_memberships').insert(memberInserts).select('id, user_id, business_role');
+    const { data: insertedMemberships } = await admin.from('enterprise_memberships')
+      .insert(memberInserts).select('id,user_id,business_role');
     const membershipByUser = new Map<string, { id: string; business_role: string | null }>();
     (insertedMemberships ?? []).forEach((m: any) => membershipByUser.set(m.user_id, { id: m.id, business_role: m.business_role }));
 
-    // ── 10. Member-skills (each demo member gets 2-4 random skills)
+    // ── A10. Member skills ──────────────────────────────────────────────────
     const memberSkillRows: any[] = [];
     for (const { user_id } of demoUserIds) {
       const m = membershipByUser.get(user_id);
       if (!m) continue;
-      const nSkills = 2 + Math.floor(Math.random() * 3);
-      const shuffled = [...SKILL_NAMES].sort(() => Math.random() - 0.5).slice(0, nSkills);
+      const shuffled = pickN(SKILL_NAMES, 3 + Math.floor(Math.random() * 3));
       for (const skillName of shuffled) {
         const skillId = skillByName.get(skillName);
-        if (!skillId) continue;
-        memberSkillRows.push({
-          workspace_id: workspaceId,
-          membership_id: m.id,
-          skill_id: skillId,
+        if (skillId) memberSkillRows.push({
+          workspace_id: workspaceId, membership_id: m.id, skill_id: skillId,
           level: 1 + Math.floor(Math.random() * 5),
         });
       }
     }
-    if (memberSkillRows.length) {
-      await admin.from('enterprise_member_skills').insert(memberSkillRows);
-    }
+    if (memberSkillRows.length) await admin.from('enterprise_member_skills').insert(memberSkillRows);
 
-    // ── 11. Allocations (1 row per member, 100% to their position)
-    const allocationRows = demoUserIds.map((d) => {
+    // ── A11. Role allocations ───────────────────────────────────────────────
+    const allocationRows = demoUserIds.map(d => {
       const m = membershipByUser.get(d.user_id);
-      if (!m) return null;
-      return {
-        workspace_id: workspaceId,
-        membership_id: m.id,
-        business_role: d.persona.position,
-        percentage: 100,
-        is_priority: true,
-      };
+      return m ? { workspace_id: workspaceId, membership_id: m.id, business_role: d.persona.position, percentage: 100, is_priority: true } : null;
     }).filter(Boolean);
-    if (allocationRows.length) {
-      await admin.from('enterprise_member_role_allocations').insert(allocationRows);
+    if (allocationRows.length) await admin.from('enterprise_member_role_allocations').insert(allocationRows);
+
+    // ════════════════════════════════════════════════════════════════════════
+    // B. ORGANIZATION STRUCTURE
+    // ════════════════════════════════════════════════════════════════════════
+
+    // ── B1. Job families ────────────────────────────────────────────────────
+    await admin.from('enterprise_job_families').insert([
+      { workspace_id: workspaceId, code: 'engineering', label: 'Engineering' },
+      { workspace_id: workspaceId, code: 'operations',  label: 'Operations' },
+      { workspace_id: workspaceId, code: 'qa',          label: 'Quality Assurance' },
+      { workspace_id: workspaceId, code: 'management',  label: 'Management' },
+    ]).select('id').then(() => {});
+
+    // ── B2. Leadership levels ────────────────────────────────────────────────
+    const { data: leadershipLevels } = await admin.from('enterprise_leadership_levels').insert([
+      { workspace_id: workspaceId, code: 'strategic',   label: 'Strategic',   sort_order: 10 },
+      { workspace_id: workspaceId, code: 'operational', label: 'Operational', sort_order: 20 },
+      { workspace_id: workspaceId, code: 'technical',   label: 'Technical',   sort_order: 30 },
+      { workspace_id: workspaceId, code: 'execution',   label: 'Execution',   sort_order: 40 },
+    ]).select('id,code');
+    const llByCode = new Map<string, string>();
+    (leadershipLevels ?? []).forEach((l: any) => llByCode.set(l.code, l.id));
+
+    // ── B3. Contract types ────────────────────────────────────────────────────
+    const { data: contractTypes } = await admin.from('enterprise_contract_types').insert([
+      { workspace_id: workspaceId, code: 'employee',      label: 'Alkalmazott',          is_default: true  },
+      { workspace_id: workspaceId, code: 'contractor',    label: 'Megbízásos',           is_default: false },
+      { workspace_id: workspaceId, code: 'subcontractor', label: 'Alvállalkozó',         is_default: false },
+      { workspace_id: workspaceId, code: 'consultant',    label: 'Tanácsadó',            is_default: false },
+    ]).select('id,code');
+    const ctByCode = new Map<string, string>();
+    (contractTypes ?? []).forEach((c: any) => ctByCode.set(c.code, c.id));
+
+    // ── B4. Industries ────────────────────────────────────────────────────────
+    await admin.from('enterprise_industries').insert([
+      { workspace_id: workspaceId, code: 'software',  label: 'Szoftverfejlesztés', is_default: true  },
+      { workspace_id: workspaceId, code: 'fintech',   label: 'Fintech',            is_default: false },
+      { workspace_id: workspaceId, code: 'ecommerce', label: 'E-kereskedelem',     is_default: false },
+    ]).then(() => {});
+
+    // ── B5. Work categories ───────────────────────────────────────────────────
+    const { data: workCats } = await admin.from('enterprise_work_categories').insert([
+      { workspace_id: workspaceId, code: 'development', label: 'Fejlesztés' },
+      { workspace_id: workspaceId, code: 'testing',     label: 'Tesztelés' },
+      { workspace_id: workspaceId, code: 'operations',  label: 'Üzemeltetés' },
+      { workspace_id: workspaceId, code: 'meetings',    label: 'Megbeszélések' },
+    ]).select('id,code');
+    const wcById = ((workCats ?? []) as any[]).reduce((m: any, c: any) => { m[c.code] = c.id; return m; }, {});
+    // Sub-category
+    if (wcById['development']) {
+      await admin.from('enterprise_work_categories').insert([
+        { workspace_id: workspaceId, code: 'frontend_dev', label: 'Frontend fejlesztés', parent_id: wcById['development'] },
+        { workspace_id: workspaceId, code: 'backend_dev',  label: 'Backend fejlesztés',  parent_id: wcById['development'] },
+      ]).then(() => {});
     }
 
-    // ── 12. Leave requests — mix of approved / pending / rejected
-    const today = new Date();
-    const leaveRequests: any[] = [];
-    const personas = demoUserIds.slice(); // copy
-    if (annualLeaveTypeId !== null && personas.length >= 3) {
-      // Approved past
-      leaveRequests.push({
-        workspace_id: workspaceId,
-        user_id: personas[0].user_id,
-        leave_type: 'vacation',
-        start_date: fmtDate(addDays(today, -20)),
-        end_date: fmtDate(addDays(today, -16)),
-        status: 'approved',
-        reviewer_id: ownerId,
-        reviewed_at: addDays(today, -22).toISOString(),
-        comment: 'Tavaszi pihenés',
-      });
-      // Approved upcoming
-      leaveRequests.push({
-        workspace_id: workspaceId,
-        user_id: personas[1].user_id,
-        leave_type: 'vacation',
-        start_date: fmtDate(addDays(today, 7)),
-        end_date: fmtDate(addDays(today, 11)),
-        status: 'approved',
-        reviewer_id: ownerId,
-        reviewed_at: addDays(today, -1).toISOString(),
-        comment: 'Családi nyaralás',
-      });
-      // Pending (this week)
-      leaveRequests.push({
-        workspace_id: workspaceId,
-        user_id: personas[2].user_id,
-        leave_type: 'vacation',
-        start_date: fmtDate(addDays(today, 14)),
-        end_date: fmtDate(addDays(today, 18)),
-        status: 'pending',
-        comment: 'Pihenőnap',
-      });
-      // Pending (sick leave style)
-      if (personas[3]) leaveRequests.push({
-        workspace_id: workspaceId,
-        user_id: personas[3].user_id,
-        leave_type: 'sick_leave',
-        start_date: fmtDate(addDays(today, 1)),
-        end_date: fmtDate(addDays(today, 2)),
-        status: 'pending',
-        comment: 'Megbetegedés',
-      });
-      // Rejected
-      if (personas[4]) leaveRequests.push({
-        workspace_id: workspaceId,
-        user_id: personas[4].user_id,
-        leave_type: 'vacation',
-        start_date: fmtDate(addDays(today, 30)),
-        end_date: fmtDate(addDays(today, 35)),
-        status: 'rejected',
-        reviewer_id: ownerId,
-        reviewed_at: addDays(today, -2).toISOString(),
-        review_comment: 'Sprint záráshoz szükséges erőforrás',
-      });
-      // Approved (yesterday-today, currently on leave)
-      if (personas[5]) leaveRequests.push({
-        workspace_id: workspaceId,
-        user_id: personas[5].user_id,
-        leave_type: 'vacation',
-        start_date: fmtDate(addDays(today, -1)),
-        end_date: fmtDate(addDays(today, 1)),
-        status: 'approved',
-        reviewer_id: ownerId,
-        reviewed_at: addDays(today, -5).toISOString(),
-        comment: 'Tervezett szabadság',
-      });
-    }
-    if (leaveRequests.length) {
-      await admin.from('leave_requests').insert(leaveRequests);
+    // ── B6. Org units (hierarchical) ──────────────────────────────────────────
+    const { data: topOrgUnits } = await admin.from('enterprise_org_units').insert([
+      { workspace_id: workspaceId, name: 'Mérnöki részleg',     unit_type: 'division',    sort_order: 1 },
+      { workspace_id: workspaceId, name: 'Üzemeltetés',         unit_type: 'division',    sort_order: 2 },
+    ]).select('id,name');
+    const ouByName = new Map<string, string>();
+    (topOrgUnits ?? []).forEach((o: any) => ouByName.set(o.name, o.id));
+    const engDivId = ouByName.get('Mérnöki részleg');
+    if (engDivId) {
+      const { data: subUnits } = await admin.from('enterprise_org_units').insert([
+        { workspace_id: workspaceId, parent_id: engDivId, name: 'Frontend csapat',  unit_type: 'team', sort_order: 1 },
+        { workspace_id: workspaceId, parent_id: engDivId, name: 'Backend csapat',   unit_type: 'team', sort_order: 2 },
+        { workspace_id: workspaceId, parent_id: engDivId, name: 'QA csapat',        unit_type: 'team', sort_order: 3 },
+      ]).select('id,name');
+      (subUnits ?? []).forEach((o: any) => ouByName.set(o.name, o.id));
     }
 
-    // ── 13. Daily rules (1 simple max-off rule)
-    await admin.from('enterprise_daily_rules').insert({
-      workspace_id: workspaceId,
-      day_of_week: 1, // Monday
-      max_off: 2,
-      is_active: true,
-    } as any);
+    // ── B7. Team roles ────────────────────────────────────────────────────────
+    const teamRoleRows: any[] = [
+      { team: 'Frontend',   roles: ['Senior Frontend Developer', 'Junior Frontend Developer'] },
+      { team: 'Backend',    roles: ['Senior Backend Developer', 'Backend Developer'] },
+      { team: 'Operations', roles: ['Operations Lead', 'Operations Specialist'] },
+      { team: 'QA',         roles: ['QA Engineer'] },
+    ];
+    const allTeamRoleInserts: any[] = [];
+    for (const { team, roles } of teamRoleRows) {
+      const teamId = teamByName.get(team);
+      if (!teamId) continue;
+      for (const role of roles) {
+        allTeamRoleInserts.push({ team_id: teamId, workspace_id: workspaceId, business_role: role });
+      }
+    }
+    if (allTeamRoleInserts.length) await admin.from('enterprise_team_roles').insert(allTeamRoleInserts);
 
-    // ── 14. Office coverage rule (Budapest needs 1 dev present)
+    // ── B8. Update memberships with org structure references ─────────────────
+    const orgAssignments: { user_id: string; org_unit: string; leadership: string; contract: string }[] = [
+      { user_id: demoUserIds[0]?.user_id ?? '', org_unit: 'Frontend csapat',  leadership: 'technical',   contract: 'employee' },
+      { user_id: demoUserIds[1]?.user_id ?? '', org_unit: 'Backend csapat',   leadership: 'execution',   contract: 'employee' },
+      { user_id: demoUserIds[2]?.user_id ?? '', org_unit: 'Üzemeltetés',      leadership: 'operational', contract: 'employee' },
+      { user_id: demoUserIds[3]?.user_id ?? '', org_unit: 'Frontend csapat',  leadership: 'execution',   contract: 'employee' },
+      { user_id: demoUserIds[4]?.user_id ?? '', org_unit: 'QA csapat',        leadership: 'execution',   contract: 'employee' },
+      { user_id: demoUserIds[5]?.user_id ?? '', org_unit: 'Backend csapat',   leadership: 'technical',   contract: 'contractor' },
+      { user_id: demoUserIds[6]?.user_id ?? '', org_unit: 'Üzemeltetés',      leadership: 'execution',   contract: 'employee' },
+    ];
+    // Also set manager chain: persona[0] (Anna) manages persona[3] (Dávid); persona[2] (Csilla) manages persona[6] (Gizella)
+    const mIdByUserId = new Map<string, string>();
+    (insertedMemberships ?? []).forEach((m: any) => mIdByUserId.set(m.user_id, m.id));
+
+    for (let i = 0; i < orgAssignments.length; i++) {
+      const asgn = orgAssignments[i];
+      if (!asgn.user_id) continue;
+      const mId = mIdByUserId.get(asgn.user_id);
+      if (!mId) continue;
+      const updates: any = {
+        org_unit_id:         ouByName.get(asgn.org_unit) ?? null,
+        leadership_level_id: llByCode.get(asgn.leadership) ?? null,
+        contract_type_id:    ctByCode.get(asgn.contract) ?? null,
+        leadership_category: asgn.leadership === 'operational' ? 'operational' : 'technical',
+        seniority:           DEMO_PERSONAS[i]?.seniority ?? null,
+      };
+      // Set manager_id for junior/specialist members
+      if (i === 3 && demoUserIds[0]) updates.manager_id = mIdByUserId.get(demoUserIds[0].user_id) ?? null;
+      if (i === 6 && demoUserIds[2]) updates.manager_id = mIdByUserId.get(demoUserIds[2].user_id) ?? null;
+      await admin.from('enterprise_memberships').update(updates as any).eq('id', mId);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // C. LEAVE MANAGEMENT EXTENSIONS
+    // ════════════════════════════════════════════════════════════════════════
+
+    // ── C1. Allowance type definitions ───────────────────────────────────────
+    await admin.from('enterprise_allowances').insert([
+      { workspace_id: workspaceId, name: 'Éves alapszabadság',  unit: 'days', ignore_limit: false, sort_order: 0, is_archived: false },
+      { workspace_id: workspaceId, name: 'Betegszabadság keret', unit: 'days', ignore_limit: true,  sort_order: 1, is_archived: false },
+      { workspace_id: workspaceId, name: 'Extra szabadnapok',    unit: 'days', ignore_limit: false, sort_order: 2, is_archived: false },
+    ]).then(() => {});
+
+    // ── C2. Leave quotas (per-member, proper schema) ─────────────────────────
+    const quotaRows: any[] = [];
+    for (const { user_id } of demoUserIds) {
+      const m = membershipByUser.get(user_id);
+      if (!m) continue;
+      quotaRows.push(
+        { workspace_id: workspaceId, membership_id: m.id, leave_type: 'vacation',    year, initial_days: 25, carryover_days: 2, manual_adjustment_days: 0 },
+        { workspace_id: workspaceId, membership_id: m.id, leave_type: 'sick_leave',  year, initial_days: 15, carryover_days: 0, manual_adjustment_days: 0 },
+        { workspace_id: workspaceId, membership_id: m.id, leave_type: 'unpaid_leave',year, initial_days: 10, carryover_days: 0, manual_adjustment_days: 0 },
+        { workspace_id: workspaceId, membership_id: m.id, leave_type: 'other',       year, initial_days: 52, carryover_days: 0, manual_adjustment_days: 0 },
+      );
+    }
+    if (quotaRows.length) {
+      const { error: qErr } = await admin.from('enterprise_leave_quotas').insert(quotaRows);
+      if (qErr) console.warn('[seed] leave_quotas insert skipped:', qErr.message);
+    }
+
+    // ── C3. Company leave days (collective days off) ──────────────────────────
+    await admin.from('enterprise_company_leave_days').insert([
+      { workspace_id: workspaceId, leave_date: `${year}-12-24`, name: 'Karácsony előestéje', is_recurring: true,  created_by: ownerId },
+      { workspace_id: workspaceId, leave_date: `${year}-12-27`, name: 'Karácsonyi szünet',   is_recurring: false, created_by: ownerId },
+    ]).then(() => {});
+
+    // ── C4. Blocked dates ────────────────────────────────────────────────────
+    await admin.from('enterprise_blocked_dates').insert([
+      { workspace_id: workspaceId, blocked_date: fmtDate(addDays(today, 21)), reason: 'Éves csapat-összejövetel – minden kolléga jelenlétére szükség van', created_by: ownerId },
+      { workspace_id: workspaceId, blocked_date: fmtDate(addDays(today, 22)), reason: 'Éves csapat-összejövetel – második nap', created_by: ownerId },
+    ]).then(() => {});
+
+    // ── C5. Additional daily rules ────────────────────────────────────────────
+    await admin.from('enterprise_daily_rules').insert([
+      { workspace_id: workspaceId, day_of_week: 1, max_off: 2, is_active: true } as any,
+      { workspace_id: workspaceId, day_of_week: 5, max_off: 3, is_active: true } as any,
+    ]);
+
+    // ── C6. Office coverage rule ─────────────────────────────────────────────
     const budapestOfficeId = officeByCity.get('Budapest');
     if (budapestOfficeId) {
       await admin.from('enterprise_office_coverage_rules').insert({
-        workspace_id: workspaceId,
-        office_id: budapestOfficeId,
-        days_of_week: [1, 2, 3, 4, 5],
-        min_headcount: 1,
-        business_roles: ['Senior Frontend Developer', 'Senior Backend Developer'],
+        workspace_id: workspaceId, office_id: budapestOfficeId,
+        days_of_week: [1, 2, 3, 4, 5], min_headcount: 1,
+        business_roles: ['Senior Frontend Developer', 'Senior Backend Developer'], is_active: true,
+      } as any);
+    }
+
+    // ── C7. Leave requests ────────────────────────────────────────────────────
+    const personas = demoUserIds.slice();
+    const leaveRequests: any[] = [];
+    if (annualLeaveTypeId && personas.length >= 3) {
+      leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[0].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, -20)), end_date: fmtDate(addDays(today, -16)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -22).toISOString(), comment: 'Tavaszi pihenés',
+      });
+      leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[1].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, 7)), end_date: fmtDate(addDays(today, 11)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -1).toISOString(), comment: 'Családi nyaralás',
+      });
+      leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[2].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, 14)), end_date: fmtDate(addDays(today, 18)),
+        status: 'pending', comment: 'Pihenőnap',
+      });
+      if (personas[3]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[3].user_id, leave_type: 'sick_leave',
+        start_date: fmtDate(addDays(today, 1)), end_date: fmtDate(addDays(today, 2)),
+        status: 'pending', comment: 'Megbetegedés',
+      });
+      if (personas[4]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[4].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, 30)), end_date: fmtDate(addDays(today, 35)),
+        status: 'rejected', reviewer_id: ownerId, reviewed_at: addDays(today, -2).toISOString(),
+        review_comment: 'Sprint záráshoz szükséges erőforrás',
+      });
+      if (personas[5]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[5].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, -1)), end_date: fmtDate(addDays(today, 1)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -5).toISOString(), comment: 'Tervezett szabadság',
+      });
+      if (personas[6]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[6].user_id, leave_type: 'other',
+        start_date: fmtDate(today), end_date: fmtDate(today), status: 'approved',
+        reviewer_id: ownerId, reviewed_at: addDays(today, -1).toISOString(), comment: 'Otthoni munkanap',
+        is_half_day: false,
+      });
+    }
+    const { data: insertedLeaves } = leaveRequests.length
+      ? await admin.from('leave_requests').insert(leaveRequests).select('id,status,user_id')
+      : { data: [] };
+
+    // ── C8. Approval decisions (for decided requests) ─────────────────────────
+    const approvalDecisionRows: any[] = [];
+    for (const lr of (insertedLeaves ?? []) as any[]) {
+      if (lr.status === 'approved') {
+        approvalDecisionRows.push({
+          leave_request_id: lr.id, workspace_id: workspaceId,
+          decided_by: ownerId, decision: 'approved', comment: 'Jóváhagyva.',
+        });
+      } else if (lr.status === 'rejected') {
+        approvalDecisionRows.push({
+          leave_request_id: lr.id, workspace_id: workspaceId,
+          decided_by: ownerId, decision: 'rejected', comment: 'Erőforrás szükséges a sprint záráshoz.',
+        });
+      }
+    }
+    if (approvalDecisionRows.length) {
+      const { error: adErr } = await admin.from('approval_decisions').insert(approvalDecisionRows);
+      if (adErr) console.warn('[seed] approval_decisions insert skipped:', adErr.message);
+    }
+
+    // ── C9. Leave substitutes (for pending requests) ──────────────────────────
+    const pendingLeaves = ((insertedLeaves ?? []) as any[]).filter(lr => lr.status === 'pending');
+    const substituteRows: any[] = [];
+    for (const lr of pendingLeaves) {
+      const otherPersona = demoUserIds.find(d => d.user_id !== lr.user_id);
+      if (otherPersona) {
+        substituteRows.push({
+          workspace_id: workspaceId, leave_request_id: lr.id,
+          substitute_user_id: otherPersona.user_id, order_index: 0, status: 'pending',
+        });
+      }
+    }
+    if (substituteRows.length) {
+      const { error: sErr } = await admin.from('leave_request_substitutes').insert(substituteRows);
+      if (sErr) console.warn('[seed] leave_request_substitutes insert skipped:', sErr.message);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // D. RESOURCE MANAGEMENT
+    // ════════════════════════════════════════════════════════════════════════
+
+    // ── D1. Projects ─────────────────────────────────────────────────────────
+    const projectInserts = PROJECT_DEFS.map(p => ({
+      workspace_id: workspaceId, name: p.name, description: p.description, status: p.status,
+      color: p.color, created_by: ownerId,
+      start_date: fmtDate(addDays(today, p.offsetStart)),
+      end_date:   fmtDate(addDays(today, p.offsetEnd)),
+      is_open_ended: false,
+    }));
+    const { data: projects } = await admin.from('enterprise_projects').insert(projectInserts).select('id,name');
+    const projectByName = new Map<string, string>();
+    (projects ?? []).forEach((p: any) => projectByName.set(p.name, p.id));
+
+    // ── D2. Project assignments (members → projects) ──────────────────────────
+    const projectAssignmentRows: any[] = [];
+    const roleMemberMap: Record<string, string | undefined> = {};
+    for (const d of demoUserIds) {
+      const m = membershipByUser.get(d.user_id);
+      if (m) roleMemberMap[d.persona.position] = m.id;
+    }
+    for (const pDef of PROJECT_DEFS) {
+      const projectId = projectByName.get(pDef.name);
+      if (!projectId) continue;
+      for (const role of pDef.roles) {
+        const membershipId = roleMemberMap[role];
+        if (!membershipId) continue;
+        projectAssignmentRows.push({
+          workspace_id: workspaceId, project_id: projectId, membership_id: membershipId,
+          business_role: role, allocated_percentage: 50,
+          start_date: fmtDate(addDays(today, pDef.offsetStart)),
+          end_date:   fmtDate(addDays(today, pDef.offsetEnd)),
+          notes: 'Demo hozzárendelés',
+        });
+      }
+    }
+    if (projectAssignmentRows.length) {
+      const { error: paErr } = await admin.from('enterprise_project_assignments').insert(projectAssignmentRows);
+      if (paErr) console.warn('[seed] project_assignments insert skipped:', paErr.message);
+    }
+
+    // ── D3. Project resource requirements ─────────────────────────────────────
+    const reqRows: any[] = [];
+    for (const pDef of PROJECT_DEFS) {
+      const projectId = projectByName.get(pDef.name);
+      if (!projectId) continue;
+      for (const role of pDef.roles) {
+        reqRows.push({ workspace_id: workspaceId, project_id: projectId, business_role: role, required_percentage: 50 });
+      }
+    }
+    if (reqRows.length) {
+      const { error: rrErr } = await admin.from('enterprise_project_resource_requirements').insert(reqRows);
+      if (rrErr) console.warn('[seed] project_resource_requirements insert skipped:', rrErr.message);
+    }
+
+    // ── D4. Project skill requirements ────────────────────────────────────────
+    const skillReqRows: any[] = [];
+    for (const pDef of PROJECT_DEFS) {
+      const projectId = projectByName.get(pDef.name);
+      if (!projectId) continue;
+      for (const skillName of pDef.skillNames) {
+        const skillId = skillByName.get(skillName);
+        if (skillId) skillReqRows.push({ workspace_id: workspaceId, project_id: projectId, skill_id: skillId, min_level: 3 });
+      }
+    }
+    if (skillReqRows.length) {
+      const { error: srErr } = await admin.from('enterprise_project_skill_requirements').insert(skillReqRows);
+      if (srErr) console.warn('[seed] project_skill_requirements insert skipped:', srErr.message);
+    }
+
+    // ── D5. Member rates (cost rates) ─────────────────────────────────────────
+    const costRateByPosition: Record<string, number> = {
+      'Senior Frontend Developer': 85, 'Junior Frontend Developer': 45,
+      'Backend Developer': 75, 'Senior Backend Developer': 95,
+      'Operations Lead': 90, 'Operations Specialist': 65, 'QA Engineer': 60,
+    };
+    const memberRateRows: any[] = [];
+    for (const d of demoUserIds) {
+      const m = membershipByUser.get(d.user_id);
+      if (!m) continue;
+      memberRateRows.push({
+        workspace_id: workspaceId, membership_id: m.id,
+        cost_rate: costRateByPosition[d.persona.position] ?? 70,
+        currency: 'EUR', effective_from: fmtDate(addDays(today, -90)),
+      });
+    }
+    if (memberRateRows.length) {
+      const { error: mrErr } = await admin.from('enterprise_member_rates').insert(memberRateRows);
+      if (mrErr) console.warn('[seed] member_rates insert skipped:', mrErr.message);
+    }
+
+    // ── D6. Project rates (billing rates) ─────────────────────────────────────
+    const projectRateRows: any[] = [];
+    for (const pDef of PROJECT_DEFS) {
+      const projectId = projectByName.get(pDef.name);
+      if (!projectId) continue;
+      for (const [role, rate] of Object.entries(pDef.billRates)) {
+        projectRateRows.push({ workspace_id: workspaceId, project_id: projectId, business_role: role, bill_rate: rate, currency: 'EUR' });
+      }
+    }
+    if (projectRateRows.length) {
+      const { error: prErr } = await admin.from('enterprise_project_rates').insert(projectRateRows);
+      if (prErr) console.warn('[seed] project_rates insert skipped:', prErr.message);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // E. SCENARIO PLANNING
+    // ════════════════════════════════════════════════════════════════════════
+
+    const { data: scenarios } = await admin.from('enterprise_scenarios').insert([
+      { workspace_id: workspaceId, name: 'Alaptervez (Baseline)', description: 'Jelenlegi kapacitástervez.', is_baseline: true, created_by: ownerId },
+      { workspace_id: workspaceId, name: 'Bővítési forgatókönyv', description: 'Mi lenne, ha új fejlesztőt vennénk fel Q3-ban?', is_baseline: false, created_by: ownerId },
+    ]).select('id,name');
+    const scenarioByName = new Map<string, string>();
+    (scenarios ?? []).forEach((s: any) => scenarioByName.set(s.name, s.id));
+
+    const scenarioAssRows: any[] = [];
+    const baselineId = scenarioByName.get('Alaptervez (Baseline)');
+    const expansionId = scenarioByName.get('Bővítési forgatókönyv');
+    const cpProjectId = projectByName.get('Customer Portal 2.0');
+    if (baselineId && cpProjectId && demoUserIds[0]) {
+      const m0 = membershipByUser.get(demoUserIds[0].user_id);
+      if (m0) {
+        scenarioAssRows.push({ workspace_id: workspaceId, scenario_id: baselineId, project_id: cpProjectId, membership_id: m0.id, business_role: demoUserIds[0].persona.position, allocated_percentage: 50, start_date: fmtDate(today), end_date: fmtDate(addDays(today, 90)) });
+      }
+    }
+    if (expansionId && cpProjectId && demoUserIds[3]) {
+      const m3 = membershipByUser.get(demoUserIds[3].user_id);
+      if (m3) {
+        scenarioAssRows.push({ workspace_id: workspaceId, scenario_id: expansionId, project_id: cpProjectId, membership_id: m3.id, business_role: demoUserIds[3].persona.position, allocated_percentage: 100, start_date: fmtDate(addDays(today, 30)), end_date: fmtDate(addDays(today, 90)) });
+      }
+    }
+    if (scenarioAssRows.length) {
+      const { error: saErr } = await admin.from('enterprise_scenario_assignments').insert(scenarioAssRows);
+      if (saErr) console.warn('[seed] scenario_assignments insert skipped:', saErr.message);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // F. WORKFLOW & RULES
+    // ════════════════════════════════════════════════════════════════════════
+
+    // ── F1. Approval chains ───────────────────────────────────────────────────
+    await admin.from('enterprise_approval_chains').insert([
+      { workspace_id: workspaceId, step_order: 1, approver_role: 'resourceAssistant', is_active: true },
+      { workspace_id: workspaceId, step_order: 2, approver_role: 'owner',             is_active: true },
+    ]).then(() => {});
+
+    // ── F2. Escalation rules ──────────────────────────────────────────────────
+    await admin.from('enterprise_escalation_rules').insert({
+      workspace_id: workspaceId, escalate_after_hours: 48, escalate_to_role: 'owner', notify_owner: true, is_active: true,
+    } as any);
+
+    // ── F3. Rule templates ────────────────────────────────────────────────────
+    await admin.from('enterprise_rule_templates').insert([
+      {
+        workspace_id: workspaceId, name: 'Max 2 absent Monday', created_by: ownerId, version: 1, is_archived: false,
+        description: 'Hétfőnként maximum 2 fő lehet szabadságon egyidejűleg.',
+        template_data: { day_of_week: 1, max_off: 2, scope: 'workspace' },
+      },
+      {
+        workspace_id: workspaceId, name: 'No leave during sprint close', created_by: ownerId, version: 1, is_archived: false,
+        description: 'Sprint lezárási napokon korlátozza a szabadságkérelmeket.',
+        template_data: { rule_type: 'sprint_close_block', notify_requestor: true },
+      },
+    ]).then(() => {});
+
+    // ════════════════════════════════════════════════════════════════════════
+    // G. REPORTING
+    // ════════════════════════════════════════════════════════════════════════
+
+    const { data: reports } = await admin.from('enterprise_reports').insert([
+      {
+        workspace_id: workspaceId, created_by: ownerId, name: 'Szabadság egyenlegek – ' + year,
+        description: 'Minden kolléga fennmaradó szabadság egyenlege az aktuális évben.',
+        data_source: 'leave_balance', chart_type: 'table', is_template: false, is_shared: true, is_pinned: true,
+        config: { year, group_by: 'team', show_remaining: true },
+      },
+      {
+        workspace_id: workspaceId, created_by: ownerId, name: 'Kapacitás terhelés – projekt szinten',
+        description: 'Projekt-alapú kapacitás kihasználtság az összes aktív projekten.',
+        data_source: 'capacity_utilization', chart_type: 'bar', is_template: false, is_shared: true, is_pinned: true,
+        config: { period: '3m', group_by: 'project', include_tentative: false },
+      },
+      {
+        workspace_id: workspaceId, created_by: ownerId, name: 'Jóváhagyási napló',
+        description: 'Az utóbbi 90 nap összes jóváhagyási döntése.',
+        data_source: 'approval_log', chart_type: 'table', is_template: false, is_shared: true, is_pinned: false,
+        config: { days: 90, include_comments: true },
+      },
+      {
+        workspace_id: workspaceId, created_by: ownerId, name: 'Csapat havi jelenléti összesítő',
+        description: 'Csapatonkénti havi jelenlét és hiányzás statisztika.',
+        data_source: 'attendance_summary', chart_type: 'heatmap', is_template: true, is_shared: true, is_pinned: false,
+        config: { group_by: 'team', period: '1m' },
+      },
+    ]).select('id,name');
+    const reportByName = new Map<string, string>();
+    (reports ?? []).forEach((r: any) => reportByName.set(r.name, r.id));
+
+    // ── G2. Report schedules ──────────────────────────────────────────────────
+    const scheduleReportId = reportByName.get('Szabadság egyenlegek – ' + year);
+    if (scheduleReportId) {
+      await admin.from('enterprise_report_schedules').insert({
+        workspace_id: workspaceId, report_id: scheduleReportId, created_by: ownerId,
+        frequency: 'weekly', day_of_week: 1, hour_of_day: 8,
+        recipients: demoUserIds.slice(0, 3).map(d => `demo-${d.user_id.slice(0, 8)}@effectime-demo.local`),
         is_active: true,
       } as any);
     }
 
-    // ── 15. Allowances (vacation 25 days/year for each member)
-    const allowanceRows = demoUserIds.map((d) => {
-      const m = membershipByUser.get(d.user_id);
-      if (!m) return null;
-      return {
-        workspace_id: workspaceId,
-        membership_id: m.id,
-        leave_type: 'vacation',
-        days_per_year: 25,
-        carried_over_days: 0,
-        year: year,
-      };
-    }).filter(Boolean);
-    if (allowanceRows.length) {
-      // Some installations use enterprise_allowances; ignore failures gracefully.
-      const { error: allowErr } = await admin.from('enterprise_allowances').insert(allowanceRows);
-      if (allowErr) console.warn('[seed-demo-workspace] allowance insert skipped:', allowErr.message);
+    // ════════════════════════════════════════════════════════════════════════
+    // H. ONBOARDING & ACCESS
+    // ════════════════════════════════════════════════════════════════════════
+
+    // ── H1. Access systems ────────────────────────────────────────────────────
+    const { data: accessSystems } = await admin.from('enterprise_access_systems').insert([
+      { workspace_id: workspaceId, name: 'Jira',          kind: 'external', description: 'Projektkövetési rendszer' },
+      { workspace_id: workspaceId, name: 'Confluence',    kind: 'external', description: 'Tudásbázis és dokumentáció' },
+      { workspace_id: workspaceId, name: 'GitHub',        kind: 'external', description: 'Forráskód-kezelés' },
+      { workspace_id: workspaceId, name: 'AWS Console',   kind: 'external', description: 'Felhő infrastruktúra' },
+      { workspace_id: workspaceId, name: 'Belépőrendszer',kind: 'internal', description: 'Irodai beléptető kártyarendszer' },
+    ]).select('id,name');
+    const sysByName = new Map<string, string>();
+    (accessSystems ?? []).forEach((s: any) => sysByName.set(s.name, s.id));
+
+    // ── H2. Access template (standard developer onboarding kit) ───────────────
+    const { data: accTemplates } = await admin.from('enterprise_access_templates').insert([
+      { workspace_id: workspaceId, name: 'Fejlesztői alap-hozzáférés' },
+      { workspace_id: workspaceId, name: 'Ops teljes hozzáférés' },
+    ]).select('id,name');
+    const atByName = new Map<string, string>();
+    (accTemplates ?? []).forEach((t: any) => atByName.set(t.name, t.id));
+
+    const devTemplateId = atByName.get('Fejlesztői alap-hozzáférés');
+    if (devTemplateId) {
+      const atsRows: any[] = [];
+      for (const sysName of ['Jira', 'Confluence', 'GitHub']) {
+        const sysId = sysByName.get(sysName);
+        if (sysId) atsRows.push({ template_id: devTemplateId, system_id: sysId, mandatory: true, optional: false, sort_order: atsRows.length });
+      }
+      if (atsRows.length) {
+        const { error: atsErr } = await admin.from('enterprise_access_template_systems').insert(atsRows);
+        if (atsErr) console.warn('[seed] access_template_systems insert skipped:', atsErr.message);
+      }
     }
 
-    // ── 16. Audit event log line
-    await admin.from('enterprise_audit_events').insert({
-      workspace_id: workspaceId,
-      actor_user_id: ownerId,
-      event_type: 'workspace.demo_seeded',
-      entity_type: 'workspace',
-      entity_id: workspaceId,
-      metadata: {
-        members: demoUserIds.length,
-        offices: (offices ?? []).length,
-        teams: (teams ?? []).length,
-        leave_types: (leaveTypes ?? []).length,
-        skills: (skills ?? []).length,
-        leaves: leaveRequests.length,
+    // ── H3. Access requests (for the newest member) ───────────────────────────
+    const newestMember = demoUserIds[demoUserIds.length - 1];
+    const newestMembership = newestMember ? membershipByUser.get(newestMember.user_id) : null;
+    if (newestMembership) {
+      const accessReqRows: any[] = [];
+      for (const [sysName, status] of [['Jira', 'granted'], ['Confluence', 'pending'], ['AWS Console', 'pending']] as [string, string][]) {
+        const sysId = sysByName.get(sysName);
+        if (sysId) accessReqRows.push({
+          workspace_id: workspaceId, member_id: newestMembership.id, system_id: sysId,
+          status, reason: 'Projekthez szükséges hozzáférés', requested_by: newestMember.user_id,
+          template_id: devTemplateId ?? null,
+        });
+      }
+      if (accessReqRows.length) {
+        const { error: arErr } = await admin.from('enterprise_access_requests').insert(accessReqRows);
+        if (arErr) console.warn('[seed] access_requests insert skipped:', arErr.message);
+      }
+    }
+
+    // ── H4. Onboarding templates ───────────────────────────────────────────────
+    const { data: onboardTemplates } = await admin.from('enterprise_onboarding_templates').insert([
+      { workspace_id: workspaceId, name: 'Fejlesztői beilleszkedési terv', description: 'Standard fejlesztői onboarding – 4 hetes program.', status: 'published', version: 1 },
+      { workspace_id: workspaceId, name: 'Ops beilleszkedési terv',        description: 'Ops/infrastruktúra csapat onboarding.', status: 'draft', version: 1 },
+    ]).select('id,name');
+    const otByName = new Map<string, string>();
+    (onboardTemplates ?? []).forEach((t: any) => otByName.set(t.name, t.id));
+
+    // ── H5. Onboarding template steps ─────────────────────────────────────────
+    const devTplId = otByName.get('Fejlesztői beilleszkedési terv');
+    let stepIds: string[] = [];
+    if (devTplId) {
+      const { data: steps } = await admin.from('enterprise_onboarding_template_steps').insert([
+        { template_id: devTplId, sort_order: 1, title: 'Eszközök átvétele',              step_type: 'task',        due_offset_days: 1,  mandatory: true,  owner_role: 'owner' },
+        { template_id: devTplId, sort_order: 2, title: 'HR papírok aláírása',             step_type: 'acknowledge', due_offset_days: 2,  mandatory: true,  owner_role: 'owner' },
+        { template_id: devTplId, sort_order: 3, title: 'Dev környezet felállítása',       step_type: 'task',        due_offset_days: 3,  mandatory: true,  owner_role: 'resourceAssistant' },
+        { template_id: devTplId, sort_order: 4, title: 'Első code review',                step_type: 'task',        due_offset_days: 7,  mandatory: true,  owner_role: 'member' },
+        { template_id: devTplId, sort_order: 5, title: 'Architektúra bemutató megtekintése', step_type: 'read',     due_offset_days: 5,  mandatory: false, owner_role: 'member' },
+        { template_id: devTplId, sort_order: 6, title: 'Biztonsági tréning',              step_type: 'training',   due_offset_days: 14, mandatory: true,  owner_role: 'owner' },
+      ]).select('id');
+      stepIds = (steps ?? []).map((s: any) => s.id);
+    }
+
+    // ── H6. Onboarding instances (newest member goes through the dev template) ──
+    if (devTplId && newestMembership) {
+      const { data: instances } = await admin.from('enterprise_onboarding_instances').insert([
+        {
+          workspace_id: workspaceId, member_id: newestMembership.id, template_id: devTplId,
+          template_version: 1, status: 'in_progress',
+          started_at: addDays(today, -7).toISOString(),
+          due_at: addDays(today, 21).toISOString(),
+        },
+      ]).select('id');
+      const instanceId = (instances ?? [])[0]?.id;
+
+      // ── H7. Step completions ────────────────────────────────────────────────
+      if (instanceId && stepIds.length) {
+        const completionRows: any[] = stepIds.map((stepId, idx) => ({
+          instance_id: instanceId,
+          step_id: stepId,
+          status: idx < 3 ? 'completed' : idx === 3 ? 'in_progress' : 'pending',
+          completed_by: idx < 3 ? ownerId : null,
+          completed_at: idx < 3 ? addDays(today, -(5 - idx)).toISOString() : null,
+        }));
+        const { error: scErr } = await admin.from('enterprise_onboarding_step_completions').insert(completionRows);
+        if (scErr) console.warn('[seed] onboarding_step_completions insert skipped:', scErr.message);
+      }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // I. STRATEGIC / ANALYTICS
+    // ════════════════════════════════════════════════════════════════════════
+
+    // ── I1. Decision memory ────────────────────────────────────────────────────
+    // Attach decisions to actual leave request IDs where possible
+    const approvedLeave = ((insertedLeaves ?? []) as any[]).find(lr => lr.status === 'approved');
+    const rejectedLeave = ((insertedLeaves ?? []) as any[]).find(lr => lr.status === 'rejected');
+    const decisionMemoryRows: any[] = [
+      {
+        workspace_id: workspaceId, subject_type: 'workspace_policy', subject_id: workspaceId,
+        rationale: 'Max 2 kolléga hiányozhat egyidejűleg hétfőnként, hogy biztosítsuk a stand-up meeting hatékonyságát.',
+        expected_outcome: 'Minden hétfői állásjelentés megtartható legalább 60%-os részvételi aránnyal.',
+        authored_by: ownerId,
+      },
+    ];
+    if (approvedLeave) {
+      decisionMemoryRows.push({
+        workspace_id: workspaceId, subject_type: 'leave_request', subject_id: approvedLeave.id,
+        rationale: 'A kérelem a csapat kapacitásának 30%-át sem érinti, jóváhagyható.',
+        expected_outcome: 'A kolléga pihen, visszatérve motiváltan folytatja a projektet.',
+        authored_by: ownerId,
+      });
+    }
+    if (rejectedLeave) {
+      decisionMemoryRows.push({
+        workspace_id: workspaceId, subject_type: 'leave_request', subject_id: rejectedLeave.id,
+        rationale: 'A kért időszak egybeesik a sprint zárásával; a fejlesztői jelenlét kötelező.',
+        expected_outcome: 'A sprint időben lezárul, a kolléga a következő ciklusban újra kérheti.',
+        authored_by: ownerId,
+      });
+    }
+    const dmErr = await admin.from('enterprise_decision_memory').insert(decisionMemoryRows).then(r => r.error);
+    if (dmErr) console.warn('[seed] decision_memory insert skipped:', dmErr.message);
+
+    // ── I2. Capacity snapshot ─────────────────────────────────────────────────
+    const totalMembers = demoUserIds.length + 1;
+    await admin.from('enterprise_capacity_snapshots').insert({
+      workspace_id: workspaceId, snapshot_date: fmtDate(today),
+      baseline_fte: totalMembers, effective_fte: totalMembers - 0.5,
+      committed_fte: 5.5, available_fte: totalMembers - 5.5 - 0.5,
+      shortage_score: 0.12, overload_score: 0.05,
+      payload: {
+        generated_by: 'seed-demo-workspace',
+        projects_count: PROJECT_DEFS.length,
+        on_leave_today: 1,
       },
     } as any);
 
+    // ════════════════════════════════════════════════════════════════════════
+    // J. NOTIFICATIONS
+    // ════════════════════════════════════════════════════════════════════════
+    const notifPrefRows: any[] = [];
+    const allDemoAndOwner = [{ user_id: ownerId }, ...demoUserIds];
+    for (const { user_id } of allDemoAndOwner) {
+      for (const eventType of NOTIFICATION_EVENT_TYPES) {
+        notifPrefRows.push({
+          workspace_id: workspaceId, user_id, event_type: eventType,
+          channel_email: true, channel_push: false,
+        });
+      }
+    }
+    if (notifPrefRows.length) {
+      const { error: npErr } = await admin.from('enterprise_notification_preferences').insert(notifPrefRows);
+      if (npErr) console.warn('[seed] notification_preferences insert skipped:', npErr.message);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // K. AUDIT EVENT (summary)
+    // ════════════════════════════════════════════════════════════════════════
+    await admin.from('enterprise_audit_events').insert({
+      workspace_id: workspaceId,
+      actor_id: ownerId,
+      action: 'workspace.demo_seeded',
+      target_type: 'workspace',
+      target_id: workspaceId,
+      metadata: {
+        members:          demoUserIds.length,
+        offices:          (offices ?? []).length,
+        teams:            (teams ?? []).length,
+        leave_types:      (leaveTypes ?? []).length,
+        skills:           (skills ?? []).length,
+        projects:         (projects ?? []).length,
+        leave_requests:   leaveRequests.length,
+        scenarios:        (scenarios ?? []).length,
+        reports:          (reports ?? []).length,
+        onboarding_tpls:  (onboardTemplates ?? []).length,
+        access_systems:   (accessSystems ?? []).length,
+      },
+    } as any);
+
+    // ── Return summary ────────────────────────────────────────────────────────
     return jsonRes({
       ok: true,
       workspace_id: workspaceId,
       summary: {
-        members: demoUserIds.length + 1,
-        offices: (offices ?? []).length,
-        teams: (teams ?? []).length,
-        leave_types: (leaveTypes ?? []).length,
-        skills: (skills ?? []).length,
-        leave_requests: leaveRequests.length,
-        holidays: HU_HOLIDAYS.length,
+        members:           demoUserIds.length + 1,
+        offices:           (offices ?? []).length,
+        teams:             (teams ?? []).length,
+        leave_types:       (leaveTypes ?? []).length,
+        skills:            (skills ?? []).length,
+        projects:          (projects ?? []).length,
+        scenarios:         (scenarios ?? []).length,
+        reports:           (reports ?? []).length,
+        leave_requests:    leaveRequests.length,
+        holidays:          HU_HOLIDAYS_TEMPLATE.length,
+        access_systems:    (accessSystems ?? []).length,
+        onboarding_tpls:   (onboardTemplates ?? []).length,
+        org_units:         (topOrgUnits ?? []).length + 3,
+        notification_prefs: notifPrefRows.length,
       },
     });
   } catch (err) {
