@@ -183,11 +183,6 @@ export default function Landing() {
           </div>
         </section>
       </main>
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
 
       {/* Footer */}
       <footer className="border-t border-border py-8">
