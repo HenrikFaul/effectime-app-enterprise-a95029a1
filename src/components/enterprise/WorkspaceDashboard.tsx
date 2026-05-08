@@ -66,7 +66,7 @@ import { WorkflowsModule } from './workflows/WorkflowsModule';
 import { CommandCenter } from './CommandCenter';
 import { RecoveryModeSettings } from './settings/RecoveryModeSettings';
 import { CapacityDnaPanel } from './CapacityDnaPanel';
-import { OrgPulseWidget } from './OrgPulseWidget';
+import { OrgPulseButton } from './OrgPulseButton';
 import { IntegrationHealthCenter } from './settings/IntegrationHealthCenter';
 import { HelpSystemSettings } from './settings/HelpSystemSettings';
 import { DecisionMemoryStaleInbox } from './DecisionMemoryStaleInbox';
