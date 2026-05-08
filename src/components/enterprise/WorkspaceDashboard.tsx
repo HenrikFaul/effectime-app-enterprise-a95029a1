@@ -66,7 +66,7 @@ import { WorkflowsModule } from './workflows/WorkflowsModule';
 import { CommandCenter } from './CommandCenter';
 import { RecoveryModeSettings } from './settings/RecoveryModeSettings';
 import { CapacityDnaPanel } from './CapacityDnaPanel';
-import { OrgPulseWidget } from './OrgPulseWidget';
+import { OrgPulseButton } from './OrgPulseButton';
 import { IntegrationHealthCenter } from './settings/IntegrationHealthCenter';
 import { HelpSystemSettings } from './settings/HelpSystemSettings';
 import { DecisionMemoryStaleInbox } from './DecisionMemoryStaleInbox';
@@ -200,6 +200,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {isAdmin && <OrgPulseButton workspaceId={workspace.id} />}
             <NotificationBell workspaceId={workspace.id} userId={userId} />
             <Button size="sm" variant="outline" onClick={() => setShowMyProfile(true)}>
               <User className="h-4 w-4 mr-1" /> Profilom
@@ -270,7 +271,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               onOpenTab={setActiveTab}
               recoveryMode={recoveryMode}
             />
-            {isAdmin ? <OrgPulseWidget workspaceId={workspace.id} /> : null}
+            {null}
             {canView('members') && (
               <TabsContent value="members" className="space-y-3">
                 {canView('invitations') && (

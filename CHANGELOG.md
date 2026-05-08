@@ -1,3 +1,29 @@
+## 2026-05-08 — v3.2.4 Auth UX, Compact Org Pulse & Demo Workspace Seeder
+
+### Fixed
+- **`Landing`**: the "Bejelentkezés" CTA in the hero and the secondary CTA card no longer render while a user is signed in. Authenticated visitors now see "Munkaterületre" leading straight to `/app`.
+- **Build**: removed stale TanStack-flavored `src/integrations/supabase/auth-middleware.ts` (the project uses `react-router-dom`, not TanStack Start) — eliminated the `Cannot find module '@tanstack/react-start'` build break.
+
+### Changed
+- **Org Pulse → header popover (`OrgPulseButton`)**: replaced the persistent full-width `OrgPulseWidget` with a compact header button (`Activity` icon + "Org Pulse" label). A red badge with the count of active operational alerts (missing org-unit, missing manager, missing contract, missing leadership, approvals open >48h) is shown when `> 0`. Clicking opens a 360px `Popover` with the same privacy-safe (k≥5) cells, with alert cells highlighted. Wired into `WorkspaceDashboard` for admins; the previous `OrgPulseWidget` block is removed from the body.
+
+### Added
+- **`Demo munkaterület létrehozása` button** in `CreateWorkspaceDialog` — invokes new edge function `seed-demo-workspace`.
+- **Edge function `seed-demo-workspace`** (`verify_jwt = true`): calls `create_workspace_with_owner` as the user, then with the service role seeds:
+  - 3 demo auth users + profiles + memberships (assistant + 2 members), with team / city / business_role / capacity defaults
+  - 3 offices (Budapest, Debrecen, Szeged), members linked to their city's office
+  - 4 teams (Engineering, Product, Design, Operations)
+  - 4 leave types (Éves, Beteg, Otthoni, Fizetés nélküli) with colors and rules
+  - 3 sample Hungarian holidays
+  - 7 skills + 3 skill assignments per member with proficiency
+  - Annual leave quotas per membership (25 + 5 carryover)
+  - 18 leave requests across all members spanning past + future, mixing approved / rejected / pending statuses and three leave types
+- All seeded rows use `workspace_id = <new ws>`. Existing FK `ON DELETE CASCADE` on every workspace-scoped table guarantees full cleanup when the workspace is deleted — no orphaned records.
+
+### Architecture notes
+- Seeder is implemented as a single edge function so it can be extended module-by-module without touching UI code.
+- Uses the user's JWT to create the workspace (so it ends up owned by them and respects existing RPC), and the service role only for downstream child rows that need to bypass RLS for demo identities.
+
 ## 2026-05-07 — v3.2.3 Help System — Admin Controls & Multi-Tab Fix
 
 ### Fixed
