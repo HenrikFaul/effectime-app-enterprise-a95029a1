@@ -81,6 +81,7 @@ const PRIORITIES = ['Highest', 'High', 'Medium', 'Low', 'Lowest'];
 export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onSaved }: Props) {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [issue, setIssue] = useState<IssueDetail | null>(null);
   const [transitions, setTransitions] = useState<Transition[]>([]);
   const [users, setUsers] = useState<AssignableUser[]>([]);
@@ -99,6 +100,7 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
   const load = useCallback(async () => {
     if (!issueKey) return;
     setLoading(true);
+    setLoadError(null);
     try {
       const { data, error } = await supabase.functions.invoke('jira-devops-proxy', {
         body: { action: 'get_issue', integration_id: integration.id, params: { key: issueKey } },
@@ -119,6 +121,7 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
       setTransitionId('');
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
+      setLoadError(msg);
       toast.error('Ticket betöltés sikertelen: ' + msg);
     } finally {
       setLoading(false);
@@ -130,6 +133,7 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
       load();
     } else if (!open) {
       setIssue(null);
+      setLoadError(null);
       setUsers([]);
       setUserQuery('');
     }
@@ -226,6 +230,23 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
         {loading && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
+            <span className="ml-2 text-sm text-muted-foreground">Ticket betöltése…</span>
+          </div>
+        )}
+
+        {!loading && loadError && (
+          <div className="py-10 text-center space-y-3">
+            <p className="text-sm text-destructive font-medium">Nem sikerült betölteni a ticketet.</p>
+            <p className="text-xs text-muted-foreground max-w-sm mx-auto break-words">{loadError}</p>
+            <Button variant="outline" size="sm" onClick={load} className="gap-1">
+              <RefreshCw className="h-3 w-3" /> Újrapróbál
+            </Button>
+          </div>
+        )}
+
+        {!loading && !loadError && !issue && issueKey && (
+          <div className="py-10 text-center text-muted-foreground text-sm">
+            Nincs adat — a ticket nem található vagy üres a válasz.
           </div>
         )}
 

@@ -429,14 +429,37 @@ Deno.serve(async (req) => {
       { workspace_id: workspaceId, day_of_week: 5, max_off: 3, is_active: true } as any,
     ]);
 
-    // ── C6. Office coverage rule ─────────────────────────────────────────────
+    // ── C6. Office coverage rules ────────────────────────────────────────────
     const budapestOfficeId = officeByCity.get('Budapest');
     if (budapestOfficeId) {
-      await admin.from('enterprise_office_coverage_rules').insert({
-        workspace_id: workspaceId, office_id: budapestOfficeId,
+      const { error: ocrErr } = await admin.from('enterprise_office_coverage_rules').insert([
+        {
+          workspace_id: workspaceId, office_id: budapestOfficeId,
+          name: 'Budapest HQ – minimum jelenlét (fejlesztők)',
+          business_roles: ['Senior Frontend Developer', 'Senior Backend Developer'],
+          days_of_week: [1, 2, 3, 4, 5], min_headcount: 2,
+          status: 'active', created_by: ownerId,
+        },
+        {
+          workspace_id: workspaceId, office_id: budapestOfficeId,
+          name: 'Budapest HQ – minimum jelenlét (QA)',
+          business_roles: ['QA Engineer'],
+          days_of_week: [2, 3, 4], min_headcount: 1,
+          status: 'active', created_by: ownerId,
+        },
+      ] as any);
+      if (ocrErr) console.warn('[seed] office_coverage_rules insert skipped:', ocrErr.message);
+    }
+    const debrecenOfficeId = officeByCity.get('Debrecen');
+    if (debrecenOfficeId) {
+      const { error: ocrErr2 } = await admin.from('enterprise_office_coverage_rules').insert({
+        workspace_id: workspaceId, office_id: debrecenOfficeId,
+        name: 'Debrecen Office – ops jelenlét',
+        business_roles: ['Operations Lead', 'Operations Specialist'],
         days_of_week: [1, 2, 3, 4, 5], min_headcount: 1,
-        business_roles: ['Senior Frontend Developer', 'Senior Backend Developer'], is_active: true,
+        status: 'active', created_by: ownerId,
       } as any);
+      if (ocrErr2) console.warn('[seed] office_coverage_rules debrecen insert skipped:', ocrErr2.message);
     }
 
     // ── C7. Leave requests ────────────────────────────────────────────────────
