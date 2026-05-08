@@ -173,11 +173,16 @@ export default function Landing() {
                 <Button
                   size="lg"
                   className="rounded-xl gradient-primary text-primary-foreground gap-2 shadow-glow"
-                  onClick={() => navigate('/auth')}
+                  onClick={() => navigate(user ? '/app' : '/auth')}
                 >
-                  Ingyenes regisztráció
+                  {user ? 'Munkaterületre' : 'Ingyenes regisztráció'}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
               </div>
             </div>
           </div>
