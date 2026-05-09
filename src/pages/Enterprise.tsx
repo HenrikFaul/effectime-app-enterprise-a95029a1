@@ -445,8 +445,8 @@ export default function Enterprise() {
             </>
           )}
         </div>
+        </div>
       </AppShell>
-    </>
 
       <CreateWorkspaceDialog
         open={showCreate}
@@ -508,6 +508,7 @@ export default function Enterprise() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </>
   );
+}
 }
