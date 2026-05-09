@@ -298,7 +298,7 @@ export default function Enterprise() {
   }
 
   // ────────────────────── Workspace picker (redesigned shell) ──────────────────────
-  const [filter, setFilter] = useState('');
+  // (filter useState moved above the early-return — Rules of Hooks)
   const filteredWorkspaces = workspaces.filter((w) =>
     !filter ? true : (w.name + ' ' + (w.description ?? '')).toLowerCase().includes(filter.toLowerCase())
   );
