@@ -190,92 +190,72 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   const hasRequestsAccess = canView('requests_own') || canView('requests_team') || canEdit('leave_requests_submit');
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur px-4 py-3">
-        <div
-          className="flex items-center justify-between max-w-5xl mx-auto gap-2"
-          data-help-region={helpAnchorId}
-        >
-          <div className="flex items-center gap-2 min-w-0">
-            <HelpButton />
-            <Button variant="ghost" size="icon" onClick={onBack} aria-label="Back">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="min-w-0">
-              <h1 className="text-lg font-semibold truncate">{workspace.name}</h1>
-              {workspace.description && (
-                <p className="text-xs text-muted-foreground truncate">{workspace.description}</p>
-              )}
+    <SidebarProvider>
+      <SkipToContent />
+      <div className="min-h-screen flex w-full bg-background">
+        <WorkspaceSidebar
+          workspaceName={workspace.name}
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          onBack={onBack}
+          canViewMembers={canView('members')}
+          hasCalendarAccess={hasCalendarAccess}
+          hasRequestsAccess={hasRequestsAccess}
+          canViewReports={canView('reports') || canView('audit') || canView('export')}
+          canViewSettings={canView('settings')}
+        />
+        <SidebarInset className="min-w-0 flex-1">
+          <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur px-[var(--shell-pad-x,1rem)] py-2">
+            <div
+              className="flex items-center justify-between gap-2 w-full"
+              data-help-region={helpAnchorId}
+            >
+              <div className="flex items-center gap-2 min-w-0">
+                <SidebarTrigger />
+                <HelpButton />
+                <div className="min-w-0">
+                  <h1 className="text-base font-semibold truncate">{workspace.name}</h1>
+                  {workspace.description && (
+                    <p className="text-xs text-muted-foreground truncate">{workspace.description}</p>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 flex-wrap justify-end">
+                {isAdmin && <CommandCenterButton workspaceId={workspace.id} onOpenTab={setActiveTab} recoveryMode={recoveryMode} />}
+                {isAdmin && <OrgPulseButton workspaceId={workspace.id} />}
+                <NotificationBell workspaceId={workspace.id} userId={userId} />
+                <DensityToggle workspaceId={workspace.id} />
+                <Button size="sm" variant="outline" onClick={() => setShowMyProfile(true)}>
+                  <User className="h-4 w-4 mr-1" /> Profilom
+                </Button>
+                {isAdmin && (
+                  <Button size="sm" onClick={() => setShowInvite(true)}>
+                    <UserPlus className="h-4 w-4 mr-1" /> Meghívás
+                  </Button>
+                )}
+                <LanguageSelector />
+                <Button size="sm" variant="destructive" onClick={signOut} className="gap-1.5">
+                  <LogOut className="h-4 w-4" /> Kilépés
+                </Button>
+              </div>
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {isAdmin && <CommandCenterButton workspaceId={workspace.id} onOpenTab={setActiveTab} recoveryMode={recoveryMode} />}
-            {isAdmin && <OrgPulseButton workspaceId={workspace.id} />}
-            <NotificationBell workspaceId={workspace.id} userId={userId} />
-            <Button size="sm" variant="outline" onClick={() => setShowMyProfile(true)}>
-              <User className="h-4 w-4 mr-1" /> Profilom
-            </Button>
-            {isAdmin && (
-              <Button size="sm" onClick={() => setShowInvite(true)}>
-                <UserPlus className="h-4 w-4 mr-1" /> Meghívás
-              </Button>
-            )}
-            <LanguageSelector />
-            <Button size="sm" variant="destructive" onClick={signOut} className="gap-1.5">
-              <LogOut className="h-4 w-4" /> Kilépés
-            </Button>
-          </div>
-        </div>
-      </header>
+          </header>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className="sticky top-[57px] z-20 bg-background/95 backdrop-blur border-b px-4">
-          <div className="max-w-5xl mx-auto">
-            <TabsList className="flex overflow-x-auto w-full justify-start gap-1 h-auto flex-nowrap p-1 bg-transparent rounded-none border-0 shadow-none">
-              {canView('members') && (
-                <TabsTrigger value="members" className="gap-1">
-                  <Users className="h-4 w-4" /> Tagok
-                </TabsTrigger>
-              )}
-              {canView('members') && (
-                <TabsTrigger value="organization" className="gap-1">
-                  <Building2 className="h-4 w-4" /> Szervezet
-                </TabsTrigger>
-              )}
-              {hasCalendarAccess && (
-                <TabsTrigger value="calendar" className="gap-1">
-                  <CalendarDays className="h-4 w-4" /> Naptár
-                </TabsTrigger>
-              )}
-              {hasRequestsAccess && (
-                <TabsTrigger value="requests" className="gap-1">
-                  <FileText className="h-4 w-4" /> Kérelmek
-                </TabsTrigger>
-              )}
-              {canView('members') && (
-                <TabsTrigger value="workflows" className="gap-1">
-                  <GitMerge className="h-4 w-4" /> Folyamatok
-                </TabsTrigger>
-              )}
-              <TabsTrigger value="resources" className="gap-1">
-                <Briefcase className="h-4 w-4" /> Erőforrások
-              </TabsTrigger>
-              {(canView('reports') || canView('audit') || canView('export')) && (
-                <TabsTrigger value="reports-audit" className="gap-1">
-                  <BarChart3 className="h-4 w-4" /> Riportok és Audit
-                </TabsTrigger>
-              )}
-              {canView('settings') && (
-                <TabsTrigger value="settings" className="gap-1">
-                  <Settings className="h-4 w-4" /> Beállítások
-                </TabsTrigger>
-              )}
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            {/* Legacy TabsList kept (visually hidden) — primary nav is the sidebar. */}
+            <TabsList className="sr-only">
+              <TabsTrigger value="members">Tagok</TabsTrigger>
+              <TabsTrigger value="organization">Szervezet</TabsTrigger>
+              <TabsTrigger value="calendar">Naptár</TabsTrigger>
+              <TabsTrigger value="requests">Kérelmek</TabsTrigger>
+              <TabsTrigger value="workflows">Folyamatok</TabsTrigger>
+              <TabsTrigger value="resources">Erőforrások</TabsTrigger>
+              <TabsTrigger value="reports-audit">Riportok</TabsTrigger>
+              <TabsTrigger value="settings">Beállítások</TabsTrigger>
             </TabsList>
-          </div>
-        </div>
 
-        <main className="max-w-5xl mx-auto p-4">
-          <div className="space-y-4">
+            <main id="main-content" className="w-full px-[var(--shell-pad-x,1rem)] py-[var(--shell-pad-y,1rem)]">
+              <div className="space-y-4 w-full">
             {null}
             {canView('members') && (
               <TabsContent value="members" className="space-y-3">
