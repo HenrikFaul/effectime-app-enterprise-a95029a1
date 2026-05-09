@@ -51,11 +51,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
+  const getAppUrl = (path = '/app') => {
+    const normalized = path.startsWith('/') ? path : `/${path}`;
+    return `${window.location.origin}/#${normalized}`;
+  };
+
   const signUp = async (email: string, password: string, displayName: string, redirectTo = '/app') => {
-    const signupRedirectUrl = new URL('/auth', window.location.origin);
-    if (redirectTo.startsWith('/')) {
-      signupRedirectUrl.searchParams.set('redirect', redirectTo);
-    }
+    const signupRedirectUrl = new URL('/', window.location.origin);
+    signupRedirectUrl.hash = `/auth?redirect=${encodeURIComponent(redirectTo.startsWith('/') ? redirectTo : `/${redirectTo}`)}`;
     const { error } = await supabase.auth.signUp({
       email,
       password,
