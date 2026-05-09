@@ -712,3 +712,28 @@ redesign Phase 1 bevezeti a shell és density rendszert úgy, hogy a meglévő
 ugyanazt a `?tab=` paramétert hajtja, így zero state-loss), TopBar az
 értesítésekkel/profil menüvel, és a bento grid widgetekkel a dashboard
 áttekintő nézethez.
+
+---
+
+## [LESSON-REDESIGN-SHELL-002] Persistent collapsible sidebar a workspace nézethez (zero functional regression)
+
+**Dátum:** 2026-05-09  
+**Kontextus:** A teljes Effectime Enterprise redesign Phase 2 — a horizontális, túlcsorduló tab-csík lecserélése egy összecsukható oldalsávra a /app munkaterület-nézetben, miközben minden meglévő tab-érték (members, organization, calendar, requests, workflows, resources, reports-audit, settings) változatlanul működik.
+
+### Probléma
+- A WorkspaceDashboard 1076 soros monolit; a tabok URL paraméteren keresztül vezéreltek (?tab=...).
+- A horizontális TabsList kis viewporton túlcsordul, és nem skálázódik ultrawide-ra (max-w-5xl mx-auto).
+- Funkcionalitás-regresszió tilos: a Tabs/TabsContent kontraktnak változatlanul kell maradnia.
+
+### Megoldás (minimálisan invazív)
+1. Új `src/components/shell/WorkspaceSidebar.tsx`: shadcn `Sidebar collapsible="icon"` — kapja az `activeTab`-ot és `onTabChange`-t props-ként, plus per-permission visible flageket. Csak `setActiveTab(value)`-t hív, semmilyen Tabs-belső API-hoz nem nyúl.
+2. WorkspaceDashboard outer wrapper: `<SidebarProvider><WorkspaceSidebar/><SidebarInset>…</SidebarInset></SidebarProvider>`. A header SidebarTrigger-rel kibővítve, max-w-5xl korlát eltávolítva, full-bleed padding density tokenből (`--shell-pad-x`/`--shell-pad-y` fallback 1rem).
+3. A régi horizontális TabsList nem törölve, hanem `className="sr-only"` — Radix Tabs továbbra is megtalálja a triggereket, screen reader/keyboard-flow megmarad, vizuálisan a sidebar veszi át.
+4. DensityToggle bekerült a workspace headerbe `workspaceId` propszal — workspace-onként mentett preferencia (`effectime.density.ws.<id>` localStorage), auto fallback a viewportra.
+
+### Tanulság
+- **Sose töröld a meglévő Tabs-triggereket**, ha külső navigációval cseréled le őket — `sr-only`-vel rejtsd el; így a Radix value-mapping és a billentyűzet-flow változatlan, nincs regresszió.
+- A shadcn `Sidebar` `collapsible="icon"` mód mind desktopon, mind tableten egyaránt használható; mobilra `offcanvas` automatikusan érvényesül a komponens belső breakpointja miatt — nem kell külön mobile drawer.
+- A sidebar gyökérblokk **kötelezően** `<div className="min-h-screen flex w-full">` — `w-full` nélkül a Tailwind 4 + sidebar layout összeomlik (ld. tailwind4-sidebar-width-fix).
+- Ne nest-elj `<main>` elemeket: `SidebarInset` már main; a belső skip-target div legyen `id="main-content"`.
+
