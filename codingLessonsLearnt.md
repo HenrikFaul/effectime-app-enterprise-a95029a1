@@ -641,3 +641,12 @@
 - **Probléma**: The inline org chart view is constrained to 520 px height. Users need a way to see the full hierarchy without leaving the page.
 - **Javítás**: Add `containerHeight?: string` prop (default `'520px'`) to `OrgChartPremiumView`. In `OrgChart`, add a `Maximize2` button (visible only in premium view) that opens a Radix `Dialog` (`max-w-[95vw]`). Inside the dialog, render `<OrgChartPremiumView ... containerHeight=”calc(90vh - 80px)” />` — same data, same functionality, but 90 % of the viewport height. The dialog overlay handles close on backdrop click.
 - **Megelőzés**: For any complex visualization (charts, diagrams, boards), design a `containerHeight` escape hatch from the start. Reusing the existing component inside a Dialog is zero-duplication fullscreen — no separate “fullscreen component” needed.
+
+### [LESSON-TIMELINE-FETCH-001] Promise.allSettled + debounce a hónapváltás "Failed to fetch" bug ellen
+- **Dátum**: 2026-05-09 (v3.3.2)
+- **Fájl**: `src/components/enterprise/calendar/TimelineView.tsx`
+- **Probléma**: Az Idővonal nézet `Promise.all`-ba csomagolt 7 párhuzamos Supabase queryt. Gyors hónapváltásnál egyszerre futó kérések terhelték a kapcsolatot (vagy a böngésző abortálta a régi kéréseket), ami "TypeError: Failed to fetch" hibát okozott még az aktuális kérésnél is.
+- **Javítás**:
+  1. `Promise.all` → `Promise.allSettled` + `toRes()` helper: nem-kritikus queryek (leaves, holidays, skills) hálózati hibán is üres tömbbel degradálnak, nem dobnak.
+  2. 250 ms debounce a `useEffect`-ben: `loadTimerRef`-ből futtató `setTimeout(load, 250)` — gyors navigálásnál csak az utolsó klikk indít tényleges hálózati kérést.
+- **Megelőzés**: Bármelyik nézetben, ahol hónapváltás → új lekérdezés, mindig debounce-old a triggert (250–300 ms) és használj `allSettled`-et a resilience miatt. Soha ne feltételezd, hogy párhuzamos `Promise.all` stabil — különösen Supabase pooler limites környezetben.

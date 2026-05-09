@@ -1,3 +1,18 @@
+## 2026-05-09 — v3.3.2 Timeline fetch fix + expanded leave seed
+
+### Fixed — `TimelineView` hónapváltás hiba (`src/components/enterprise/calendar/TimelineView.tsx`)
+- **Root cause**: A hét párhuzamos Supabase query-t `Promise.all`-ba csomagoltuk; gyors hónapváltásnál egyszerre futó kérések terhelték a kapcsolatot → "TypeError: Failed to fetch".
+- **Fix 1 — Debounce (250 ms)**: A `useEffect` mostantól 250 ms késéssel hívja `load()`-ot; rapid kattintásoknál csak az utolsó ütközik le, az előzőek törlődnek.
+- **Fix 2 — `Promise.allSettled`**: Ha egy nem kritikus query (pl. leaves, holidays, skills) hálózati hibán esik el, a többi adat még betöltődik; csak a taglistás (`enterprise_memberships`) hiba dobja vissza a hibát.
+
+### Enhanced — Demo seed: szabadság lefedettség (`supabase/functions/seed-demo-workspace/index.ts`)
+- Kibővítve 7 → **38 leave request**-re, amely lefedi: 3 hónapot visszamenőleg, az aktuális hónapot és 3 hónapot előre.
+- Minden típus képviselt: `vacation`, `sick_leave`, `unpaid_leave`, `other`.
+- Minden státusz képviselt: `approved`, `pending`, `rejected`, `cancelled`.
+- Mind a 22 demo persona kapott legalább egy szabadságot; a visszamenőlegesek mind `approved` státuszú, a jövőbeliek vegyesen `approved`/`pending`/`rejected`.
+
+---
+
 ## 2026-05-09 — v3.3.1 Org Chart — Pan, Zoom & Popup Modal
 
 ### Enhanced — `OrgChartPremiumView` + `OrgChart`
