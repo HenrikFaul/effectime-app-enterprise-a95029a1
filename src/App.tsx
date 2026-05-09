@@ -6,6 +6,7 @@ import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from "r
 import { useEffect } from "react";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { DensityProvider } from "@/hooks/useDensity";
 import { I18nProvider } from "@/i18n/I18nProvider";
 import { HelpRegistryProvider } from "@/lib/help/registry";
 import { HelpDrawer } from "@/components/help/HelpDrawer";
@@ -81,31 +82,33 @@ const SpaRedirectHandler = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
-      <AuthProvider>
-        <I18nProvider>
-          <HelpRegistryProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <HelpDrawer />
-              <HashRouter>
-                <SpaRedirectHandler />
-                <Routes>
-                  <Route path="/" element={<Landing />} />
-                  <Route path="/app" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
-                  <Route path="/enterprise" element={<ProtectedRoute><Navigate to="/app" replace /></ProtectedRoute>} />
-                  <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                  <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-                  <Route path="/unsubscribe" element={<Unsubscribe />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </HashRouter>
-            </TooltipProvider>
-          </HelpRegistryProvider>
-        </I18nProvider>
-      </AuthProvider>
+      <DensityProvider>
+        <AuthProvider>
+          <I18nProvider>
+            <HelpRegistryProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <HelpDrawer />
+                <HashRouter>
+                  <SpaRedirectHandler />
+                  <Routes>
+                    <Route path="/" element={<Landing />} />
+                    <Route path="/app" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
+                    <Route path="/enterprise" element={<ProtectedRoute><Navigate to="/app" replace /></ProtectedRoute>} />
+                    <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                    <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+                    <Route path="/unsubscribe" element={<Unsubscribe />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </HashRouter>
+              </TooltipProvider>
+            </HelpRegistryProvider>
+          </I18nProvider>
+        </AuthProvider>
+      </DensityProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );

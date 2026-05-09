@@ -1,0 +1,137 @@
+/*
+ * Density token layer — Phase 1 of the Effectime redesign.
+ *
+ * Three density tiers map to the same semantic CSS variables so any component
+ * that reads `var(--density-*)` automatically scales. The active tier is
+ * chosen by:
+ *   1) explicit user preference written to <html data-density="...">
+ *      (managed by useDensity — workspace-scoped localStorage)
+ *   2) automatic fallback driven by viewport width (media queries below)
+ *
+ * Components must NOT hardcode paddings/heights for layout chrome — read the
+ * tokens instead, so the experience scales gracefully on laptops, ultrawide,
+ * tablets, and mobile.
+ */
+
+:root {
+  /* Comfortable defaults — used on regular laptops/desktops */
+  --density-row-h: 44px;
+  --density-pad-x: 1rem;
+  --density-pad-y: 0.625rem;
+  --density-gap: 0.75rem;
+  --density-card-pad: 1.25rem;
+  --density-section-gap: 1.25rem;
+  --density-page-pad-x: 1.25rem;
+  --density-page-pad-y: 1.25rem;
+  --density-text-base: 0.9375rem;
+  --density-text-sm: 0.8125rem;
+
+  /* Full-bleed page wrapper helpers (intentional: NO max-width cap, only padding) */
+  --shell-content-max: 100%;
+}
+
+/* Compact — tablets, dense workspaces, power users on smaller laptops */
+@media (max-width: 1023px) {
+  :root {
+    --density-row-h: 40px;
+    --density-pad-x: 0.75rem;
+    --density-pad-y: 0.5rem;
+    --density-gap: 0.5rem;
+    --density-card-pad: 1rem;
+    --density-section-gap: 1rem;
+    --density-page-pad-x: 1rem;
+    --density-page-pad-y: 1rem;
+    --density-text-base: 0.875rem;
+    --density-text-sm: 0.75rem;
+  }
+}
+
+/* Expansive — ultrawide and large desktops, more breathing room */
+@media (min-width: 1536px) {
+  :root {
+    --density-row-h: 48px;
+    --density-pad-x: 1.25rem;
+    --density-pad-y: 0.75rem;
+    --density-gap: 1rem;
+    --density-card-pad: 1.5rem;
+    --density-section-gap: 1.5rem;
+    --density-page-pad-x: 2rem;
+    --density-page-pad-y: 1.75rem;
+  }
+}
+
+@media (min-width: 1920px) {
+  :root {
+    --density-row-h: 52px;
+    --density-page-pad-x: 2.5rem;
+    --density-page-pad-y: 2rem;
+    --density-card-pad: 1.75rem;
+    --density-section-gap: 1.75rem;
+  }
+}
+
+/* Explicit overrides driven by useDensity — these win over media queries */
+html[data-density="compact"] {
+  --density-row-h: 36px;
+  --density-pad-x: 0.625rem;
+  --density-pad-y: 0.375rem;
+  --density-gap: 0.5rem;
+  --density-card-pad: 0.875rem;
+  --density-section-gap: 0.875rem;
+  --density-page-pad-x: 0.875rem;
+  --density-page-pad-y: 0.875rem;
+  --density-text-base: 0.875rem;
+  --density-text-sm: 0.75rem;
+}
+
+html[data-density="comfortable"] {
+  --density-row-h: 44px;
+  --density-pad-x: 1rem;
+  --density-pad-y: 0.625rem;
+  --density-gap: 0.75rem;
+  --density-card-pad: 1.25rem;
+  --density-section-gap: 1.25rem;
+  --density-page-pad-x: 1.25rem;
+  --density-page-pad-y: 1.25rem;
+  --density-text-base: 0.9375rem;
+  --density-text-sm: 0.8125rem;
+}
+
+html[data-density="expansive"] {
+  --density-row-h: 52px;
+  --density-pad-x: 1.5rem;
+  --density-pad-y: 0.875rem;
+  --density-gap: 1.125rem;
+  --density-card-pad: 1.75rem;
+  --density-section-gap: 1.75rem;
+  --density-page-pad-x: 2.5rem;
+  --density-page-pad-y: 2rem;
+  --density-text-base: 1rem;
+  --density-text-sm: 0.875rem;
+}
+
+/* Full-bleed shell utilities — the redesign deliberately drops max-w-* caps.
+   Plain CSS (not in @layer) so this file can be imported standalone. */
+.shell-page {
+  width: 100%;
+  padding-left: var(--density-page-pad-x);
+  padding-right: var(--density-page-pad-x);
+  padding-top: var(--density-page-pad-y);
+  padding-bottom: var(--density-page-pad-y);
+}
+
+.shell-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--density-section-gap);
+}
+
+.shell-grid-bento {
+  display: grid;
+  gap: var(--density-gap);
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+@media (min-width: 640px)  { .shell-grid-bento { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .shell-grid-bento { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1536px) { .shell-grid-bento { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 1920px) { .shell-grid-bento { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
