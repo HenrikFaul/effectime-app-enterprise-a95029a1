@@ -8,3 +8,4 @@
 @tailwind utilities;
 
 @import "./styles/themes.css";
+@import "./styles/density.css";
