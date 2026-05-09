@@ -369,9 +369,11 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                 <WorkspaceSettings workspace={workspace} userRole={userRole} userId={userId} onRefresh={onRefresh} canViewPermissionConfig={userRole === 'owner' || canView('permission_config')} canViewLayoutSetting={userRole === 'owner' || canView('layout_setting')} />
               </TabsContent>
             )}
-          </div>
-        </main>
-      </Tabs>
+              </div>
+            </main>
+          </Tabs>
+        </SidebarInset>
+      </div>
 
       <InviteMemberDialog
         open={showInvite}
@@ -392,7 +394,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
           showEmail={true}
         />
       )}
-    </div>
+    </SidebarProvider>
   );
 }
 
