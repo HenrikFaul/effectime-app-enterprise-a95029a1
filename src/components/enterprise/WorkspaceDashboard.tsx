@@ -97,6 +97,17 @@ interface Props {
   onTabChange?: (tab: string) => void;
 }
 
+const WORKSPACE_TOP_NAV_ITEMS = [
+  { value: 'members', label: 'Tagok', icon: Users },
+  { value: 'organization', label: 'Szervezet', icon: Building2 },
+  { value: 'calendar', label: 'Naptár', icon: CalendarDays },
+  { value: 'requests', label: 'Kérelmek', icon: FileText },
+  { value: 'workflows', label: 'Folyamatok', icon: GitMerge },
+  { value: 'resources', label: 'Erőforrások', icon: Briefcase },
+  { value: 'reports-audit', label: 'Riportok', icon: BarChart3 },
+  { value: 'settings', label: 'Beállítások', icon: Settings },
+] as const;
+
 export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefresh, activeTab: externalTab, onTabChange }: Props) {
   const { signOut } = useAuth();
   const { loadWorkspaceOverrides } = useI18n();
@@ -252,15 +263,33 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
           </header>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className={layout === 'sidebar' ? 'sr-only' : 'flex h-auto w-full justify-start overflow-x-auto rounded-none border-b bg-transparent px-[var(--shell-pad-x,1rem)] py-2'}>
-              <TabsTrigger value="members">Tagok</TabsTrigger>
-              <TabsTrigger value="organization">Szervezet</TabsTrigger>
-              <TabsTrigger value="calendar">Naptár</TabsTrigger>
-              <TabsTrigger value="requests">Kérelmek</TabsTrigger>
-              <TabsTrigger value="workflows">Folyamatok</TabsTrigger>
-              <TabsTrigger value="resources">Erőforrások</TabsTrigger>
-              <TabsTrigger value="reports-audit">Riportok</TabsTrigger>
-              <TabsTrigger value="settings">Beállítások</TabsTrigger>
+            <TabsList className={layout === 'sidebar' ? 'sr-only' : 'flex h-auto w-full justify-start gap-2 overflow-x-auto rounded-none border-b bg-background/98 px-[var(--shell-pad-x,1rem)] py-2.5'}>
+              {WORKSPACE_TOP_NAV_ITEMS.map((item) => {
+                const Icon = item.icon;
+                const visible =
+                  item.value === 'members' ? canView('members') :
+                  item.value === 'organization' ? canView('members') :
+                  item.value === 'calendar' ? hasCalendarAccess :
+                  item.value === 'requests' ? hasRequestsAccess :
+                  item.value === 'workflows' ? canView('members') :
+                  item.value === 'resources' ? true :
+                  item.value === 'reports-audit' ? (canView('reports') || canView('audit') || canView('export')) :
+                  item.value === 'settings' ? canView('settings') :
+                  true;
+
+                if (!visible) return null;
+
+                return (
+                  <TabsTrigger
+                    key={item.value}
+                    value={item.value}
+                    className="group h-11 shrink-0 gap-2 rounded-xl border border-transparent bg-transparent px-3.5 text-sm font-medium text-muted-foreground data-[state=active]:border-border data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </TabsTrigger>
+                );
+              })}
             </TabsList>
 
             <div id="main-content" className="w-full px-[var(--shell-pad-x,1rem)] py-[var(--shell-pad-y,1rem)]">
