@@ -373,3 +373,47 @@
 - **Gyökérok**: Nem volt korai validáció a project_key meglétére.
 - **Javítás**: Explicit `if (!integ.project_key) throw new Error(...)` a függvény elején.
 - **Megelőzés**: Minden külső API-hívás előtt validáld az összes kötelező paramétert, ne hagyd a null/empty értéket „csendesen" az API-nak.
+
+---
+
+## ➕ APPEND — 2026-05-09 Demo workspace seeder v8 tanulságok
+
+### [LESSON-SEED-001] Supabase Auth Admin API — közvetlen fetch Deno edge functionban
+- **Dátum**: 2026-05-09 (v8 seeder)
+- **Fájl**: `supabase/functions/seed-demo-workspace/index.ts`
+- **Probléma**: A `@supabase/supabase-js` SDK `auth.admin.createUser()` metódusa nem mindig érhető el megbízhatóan Deno edge function kontextusból — vagy hiányzó header, vagy undefined visszatérési érték, vagy runtime-version-függő viselkedés.
+- **Gyökérok**: A Supabase JS SDK service-role auth.admin wrapperje edge function futtatásnál nem feltétlenül küldi el a szükséges `Authorization: Bearer <service_role_key>` headert, ami néma hibát okoz.
+- **Javítás**: Közvetlen `fetch` hívás a Supabase REST Admin API-ra: `fetch(\`\${SUPABASE_URL}/auth/v1/admin/users\`, { method: 'POST', headers: { Authorization: \`Bearer \${SERVICE_ROLE_KEY}\`, apikey: SERVICE_ROLE_KEY, 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })`. Az érkező JSON-ból `resp.json()` kell, és a `id` mező az auth user UUID.
+- **Megelőzés**: Ha edge functionből service role-lal kell auth user-t létrehozni, MINDIG közvetlen REST API fetch mintát használj, ne a JS SDK `auth.admin.*` metódusaira bízd. Documéntáld a fejléceket kommentben a kódban.
+
+### [LESSON-SEED-002] PERSONA_ORG_ASSIGNMENTS — adatvezérelt lookup tábla az összes personára
+- **Dátum**: 2026-05-09 (v8 seeder)
+- **Fájl**: `supabase/functions/seed-demo-workspace/seed-data.ts`
+- **Probléma**: A v7-es seeder hardcoded if-else blokkokban csak 7/22 personának rendelt org_unit / manager / leadership_level / contract_type értéket. A maradék 15 tag hiányos org-struktúrával jött létre — SQL-ellenőrzés igazolta: `has_org_unit: 7/23`.
+- **Gyökérok**: Személynév-alapú hardcoded hozzárendelés nem skálázható; ha új persona kerül be, a B8 blokkot kézzel kell bővíteni, és könnyen kihagyható valaki.
+- **Javítás**: `PERSONA_ORG_ASSIGNMENTS: Record<string, PersonaOrgAssignment>` lookup objektum minden persona `display_name`-jéhez hozzárendeli az `{orgUnit, llCode, contractCode, leadershipCategory, seniority, managerName?}` struktúrát. A B8 seeding blokk egyszerűen iterál minden `demoUserId`-n, megkeresi a display_name-t, majd lookup-ol.
+- **Megelőzés**: Összetett hierarchikus adat (org-struktúra, manager-lánc, több mező kombinációja) SOHA ne legyen hardcoded if-else mint — mindig `Record<string, T>` lookup tábla vagy konfigurációs objektum a `seed-data.ts`-ben.
+
+### [LESSON-SEED-003] Min-enforced slice pattern a katalógus insert blokkokban
+- **Dátum**: 2026-05-09 (v8 seeder)
+- **Fájl**: `supabase/functions/seed-demo-workspace/index.ts`
+- **Probléma**: Ha a felhasználó a seed config UI-ban pl. `leadership_levels=1`-et állít be, de a B8 blokk 4 különböző `llCode`-ot próbál feloldani (`strategic`, `operational`, `technical`, `execution`), az FK lookup `undefined`-ot ad vissza, és az UPDATE meghiúsul.
+- **Gyökérok**: A seed config mennyiségeket a felhasználó szabadon csökkenthetné, ami letörheti a downstream FK-függőségeket.
+- **Javítás**: `DEFS.slice(0, Math.max(MIN_COUNT, seedQty.key))` — a `MIN_COUNT` értékét minden katalógusnál a downstream FK-függőségek alapján kell meghatározni (pl. leadership levels min=4, contract types min=2).
+- **Megelőzés**: Ha egy katalógus INSERT blokk más blokkok FK-forrása, MINDIG adj hozzá `Math.max(min, qty)` védelmet a slice-ba. Kommentben dokumentáld a min értéket és a függőség okát.
+
+### [LESSON-SEED-004] Map-alapú FK-feloldás multi-entity seeder blokkokban
+- **Dátum**: 2026-05-09 (v8 seeder)
+- **Fájl**: `supabase/functions/seed-demo-workspace/index.ts`
+- **Probléma**: A katalógus INSERT után UUID-k szükségesek a downstream FK mezőkhöz (`leadership_level_id`, `contract_type_id`, stb.). Iteratív DB lekérdezés minden egyes member-hez O(n) extra round-trip-et jelent.
+- **Gyökérok**: Az INSERT eredmény UUID-jai elvesznek, ha nem tároljuk el; a következő blokk már nem tudja FK-ként feloldani őket anélkül, hogy újra lekérdezné.
+- **Javítás**: Az INSERT válasz után azonnal Map-et építsünk: `const llByCode = new Map(llRows.map(r => [r.code, r.id]))`. A downstream blokk egyszerűen `llByCode.get(assignment.llCode)` — nulla extra DB round-trip.
+- **Megelőzés**: Multi-entity seederben minden katalógus INSERT után AZONNAL építsd fel a `code→UUID` (vagy `name→UUID`) Map-et. A teljes seeder futás O(1) lookup-okkal dolgozzon, ne O(n) extra query-kel. Kövesd ezt a sorrendet: INSERT → `new Map(rows.map(...))` → downstream block uses Map.
+
+### [LESSON-GOVERNANCE-001] entity-creation-inventory.md — governance source of truth az összes seedelt entitáshoz
+- **Dátum**: 2026-05-09 (v8 seeder)
+- **Fájl**: `.governance/entity-creation-inventory.md`
+- **Probléma**: Az új katalógus entity típusok (job families, leadership levels, contract types, industries, work categories) be lettek illesztve a seederbe, de a governance dokumentum nem tükrözte ezt — audit trail hiány, és a következő fejlesztő nem látja, mi van seedelve.
+- **Gyökérok**: A fejlesztés a governance dokumentum frissítése nélkül haladt.
+- **Javítás**: Az `entity-creation-inventory.md` 2.1–2.5 szekciói frissítve ✅ markerekkel és seed config kulcsokkal.
+- **Megelőzés**: Minden új seeded entity type bevezetésekor ELŐSZÖR frissítsd az `entity-creation-inventory.md`-t, MAJD implementáld a seeder kódot. A governance dokumentum a source of truth — a kód azt kövesse, ne fordítva.
