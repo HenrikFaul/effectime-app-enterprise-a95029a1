@@ -1,3 +1,34 @@
+## 2026-05-09 — v3.2.7 Database-wide RLS Coverage Hardening + Governance "fetch main first" rule
+
+### Security — RLS audit & migration `rls_coverage_hardening_2026_05_09`
+Audited every RLS-enabled table in the `oezlzzmzzvbvinuysxaz` (Effectime) project. All `public` tables already had at least a SELECT policy; the migration closed the genuine gaps and resolved every advisor lint that wasn't intentional design.
+
+- **`enterprise_invitations`** — added missing `UPDATE` policy for owners + resourceAssistants. Admins can now revoke / extend / re-role pending invitations from the UI without going through service-role hops.
+- **`enterprise_org_pulse_membership` view** — converted from SECURITY DEFINER to `security_invoker = true`. The view now respects the caller's RLS on `enterprise_memberships` rather than aggregating across all workspaces. (Resolved advisor `security_definer_view` ERROR.)
+- **`SET search_path = public, pg_temp`** pinned on 5 SECURITY DEFINER / trigger functions — prevents search_path injection:
+  - `seed_default_access_systems(uuid)`
+  - `seed_default_contract_types(uuid)`
+  - `seed_default_leadership_levels(uuid)`
+  - `enterprise_memberships_check_manager_cycle()`
+  - `set_updated_at()`
+- **Legacy schema cleanup** — 53 tables in `plannermaster` and 10 in `syncfolk` (0-row leftovers from a prior external-DB migration target) now have a `legacy_deny_all` policy. No application code touches these schemas; the policy silences the linter without changing behaviour.
+
+### Governance — `fetch + rebase main first` rule (LESSON-GIT-REBASE-MAIN-FIRST-001)
+Documented and enforced via three governance files after a CHANGELOG conflict on this PR (the branch had `v3.2.5`, but `main` already had a different `v3.2.5` and `v3.2.6` that landed via PRs #28 and the seeder PRs):
+- `CLAUDE.md` — added explicit "ALWAYS fetch + rebase on `origin/main` BEFORE writing code or editing CHANGELOG.md" rule + "verify next free version on main" rule
+- `.governance/controller.md` — same rule promoted to a numbered Core rule (#3)
+- `AI_EXECUTION_PROMPTS.md` — expanded "Branch and commit discipline" section with the failure modes (CHANGELOG conflicts, version-number reuse, stale baseline)
+- `codingLessonsLearnt.md` — `[LESSON-GIT-REBASE-MAIN-FIRST-001]` entry with the concrete failure case and prevention checklist
+
+### Architecture notes
+- Append-only tables (`enterprise_audit_events`, `*_sync_log`, `*_quota_transactions`, `approval_decisions`, `enterprise_access_decisions`) intentionally retain SELECT+INSERT only — the immutability is by design.
+- Junction tables (`enterprise_team_roles`, `event_participants`) have no UPDATE-able columns; the DELETE+INSERT pattern is the canonical mutation.
+- `enterprise_export_jobs` and `enterprise_access_requests` keep DELETE off — they're historical records.
+- `anon/authenticated_security_definer_function_executable` advisor WARNs on `is_enterprise_member`, `has_enterprise_role`, `can_access_event` etc. are **intentional** — these functions are invoked from RLS USING/WITH CHECK clauses and must remain callable by `authenticated`.
+- Legacy `plannermaster` + `syncfolk` schemas are kept (not dropped) since dropping requires explicit user approval; they hold no live data and the deny-all policy makes them safe.
+
+---
+
 ## 2026-05-09 — v3.2.6 Premium Org Chart: card-based view with employee detail drawer (PR #28)
 
 ### Added — `OrgChartPremiumView` component (`src/components/enterprise/organization/OrgChartPremiumView.tsx`)

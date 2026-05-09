@@ -557,3 +557,15 @@
 - **Gyökérok**: Szabad szöveges AI output variábilis formátumot produkál, amely nehezen parseable és megbízhatatlanul illeszkedik a DB sémához.
 - **Javítás**: `responseMimeType: "application/json"` + `temperature: 0.3` + strukturált JSON array system prompt. A model `[{ "topic_key": "...", "locale": "en", "title": "...", ... }]` formátumban ad vissza eredményt, amely közvetlenül upsertálható.
 - **Megelőzés**: Ha AI-t használsz strukturált adatok generálásához (DB insert, API payload), MINDIG `responseMimeType: "application/json"`-t alkalmazz, és add meg a pontos JSON struktúrát a system promptban. `temperature: 0.3` → konzisztens, alacsony variabilitású output.
+
+### [LESSON-GIT-REBASE-MAIN-FIRST-001] CHANGELOG conflict + verzió-ütközés: mindig sync `origin/main`-nel a munka előtt
+- **Dátum**: 2026-05-09 (v3.2.7)
+- **Fájl**: `CLAUDE.md`, `.governance/controller.md`, `AI_EXECUTION_PROMPTS.md`
+- **Probléma**: A feature branch (`claude/org-chart-menu-development-mQEhU`) ágon `v3.2.5` CHANGELOG bejegyzést írtam, miközben időközben más PR-ek mergelődtek `main`-be és ott már `v3.2.5` (Seeder v8) és `v3.2.6` (Premium Org Chart) verziók voltak. Ezért a PR mergelhetetlen lett: két `v3.2.5` szakasz ütközött a CHANGELOG.md tetején.
+- **Gyökérok**: A munka megkezdése előtt nem futtattam `git fetch origin main && git rebase origin/main`-t, így nem láttam, hogy a verziószámaim már foglaltak. Emellett a CHANGELOG bejegyzés írásakor sem ellenőriztem újra a `main` aktuális tetejét.
+- **Javítás**: Branch `--hard reset`-elve `origin/main`-re (a redundáns commit eldobva, mert a kódváltozások már main-ben voltak egy korábbi merge-ből). Új CHANGELOG bejegyzés **csak az új RLS hardening tartalommal**, a következő szabad verziószámon (`v3.2.7`).
+- **Megelőzés**:
+  1. **Minden session elején**: `git fetch origin main && git rebase origin/main` (vagy `git pull --rebase origin main`)
+  2. **Minden CHANGELOG.md edit előtt MÉG EGYSZER**: re-fetch + re-rebase, hogy biztosan a legfrissebb `main`-ről indulj
+  3. **Verziószám választás**: olvasd el a `CHANGELOG.md` aktuális tetejét `origin/main`-en (`git show origin/main:CHANGELOG.md | head -3`) és a következő SZABAD verziót használd
+  4. **Soha ne tételezd fel**, hogy a saját branched egy verzió-számot lefoglalhat — más PR-ek párhuzamosan haladhatnak
