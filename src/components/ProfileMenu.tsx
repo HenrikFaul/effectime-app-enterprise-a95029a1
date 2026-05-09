@@ -213,7 +213,7 @@ export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {})
             Admin Panel
           </DropdownMenuItem>
         )}
-        <DropdownMenuItem onClick={() => navigate('/app')} className="rounded-lg cursor-pointer">
+        <DropdownMenuItem onClick={() => navigate('/app?select=1')} className="rounded-lg cursor-pointer">
           <Building2 className="mr-2 h-4 w-4" />
           Munkaterület
         </DropdownMenuItem>
