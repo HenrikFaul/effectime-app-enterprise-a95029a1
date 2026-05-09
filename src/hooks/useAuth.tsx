@@ -52,10 +52,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string, displayName: string, redirectTo = '/app') => {
-    const signupRedirectUrl = new URL('/auth', window.location.origin);
-    if (redirectTo.startsWith('/')) {
-      signupRedirectUrl.searchParams.set('redirect', redirectTo);
-    }
+    const signupRedirectUrl = new URL('/', window.location.origin);
+    signupRedirectUrl.hash = `/auth?redirect=${encodeURIComponent(redirectTo.startsWith('/') ? redirectTo : `/${redirectTo}`)}`;
     const { error } = await supabase.auth.signUp({
       email,
       password,

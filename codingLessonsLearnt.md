@@ -608,3 +608,15 @@
 - **Probléma**: Agile issues may have progress data from multiple sources with inconsistent coverage: some have `completed_hours/original_estimate_hours`, some only have `status`, some have neither.
 - **Javítás**: Priority cascade: (1) status = Done/Closed → 100%, (2) `completed_hours` + `original_estimate_hours` both present → ratio (clamped 0–1), (3) `In Review` → 65%, `In Progress` → 40%, (4) else 0. The new `progress_pct` DB column (added in migration) provides a manual override path for future use.
 - **Megelőzés**: Any progress/completion indicator in a planning tool should implement a multi-source cascade like this. Never assume a single field will always be populated — use the richest available signal with graceful fallbacks.
+
+### [LESSON-ROUTING-HASH-001] Static host + React Router: a hash routing az egyetlen biztos „örök” refresh-safe megoldás
+- **Dátum**: 2026-05-09
+- **Fájl**: `src/App.tsx`, `src/pages/Auth.tsx`, `src/hooks/useAuth.tsx`, `src/components/enterprise/InviteMemberDialog.tsx`
+- **Probléma**: Published környezetben a `/app?tab=organization` és más belső útvonalak frissítéskor vagy közvetlen megnyitáskor időnként nyers szerveroldali `Not Found` választ adtak, tehát az app shell el sem indult.
+- **Gyökérok**: A `BrowserRouter` arra épít, hogy a host minden belső route-ra az SPA entrypointot szolgálja ki. Ha a hosting réteg vagy a preview/publish infrastruktúra ezt csak részben vagy intermittensen teszi meg, a kliensoldali router már nem tud helyreállni, mert a böngésző még az app betöltése előtt 404-et kap.
+- **Javítás**:
+  1. `BrowserRouter` → `HashRouter`, így a szerver mindig csak a `/` oldalt kapja meg.
+  2. Minden auth callback URL hash-alapú lett (`/#/auth?...`, `/#/reset-password`).
+  3. A query-param olvasást a router aktuális `location.search` értékére kell kötni, nem a `window.location.search`-re, mert hash-routernél a keresőparaméterek a hash-részben élnek.
+  4. Meghívó- és email-linkeknél is hash-alapú belső linket kell generálni, különben a felhasználó ismét szerveroldali 404-re eshet.
+- **Megelőzés**: Ha egy React Router app static/published hoston **akár csak egyszer is** intermittens refresh-404-ot produkál belső route-okon, ne told tovább rewrite/404 fallback hackekkel. A tartós megoldás: `HashRouter`, és minden külső callback / email / OAuth redirect URL-t ehhez kell igazítani.

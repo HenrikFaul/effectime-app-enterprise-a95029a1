@@ -224,8 +224,8 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
       }
 
       const inviteRedirectPath = invData?.token ? `/app?invite=${invData.token}` : '/app';
-      const signInUrl = new URL('/auth', window.location.origin);
-      signInUrl.searchParams.set('redirect', inviteRedirectPath);
+      const signInUrl = new URL('/', window.location.origin);
+      signInUrl.hash = `/auth?redirect=${encodeURIComponent(inviteRedirectPath)}`;
       const roleLabel = getRoleLabel(role);
 
       const { error: emailError } = await supabase.functions.invoke('send-transactional-email', {

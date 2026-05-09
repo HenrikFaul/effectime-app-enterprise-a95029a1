@@ -25,11 +25,8 @@ const GOOGLE_OAUTH_PROVIDER = "google";
 const EMAIL_ACTIVATION_QUERY_PARAM = "email_activation_token";
 
 const buildAuthRedirectUrl = (redirectPath: string) => {
-  const url = new URL("/auth", window.location.origin);
-  if (redirectPath.startsWith("/")) {
-    url.searchParams.set("redirect", redirectPath);
-  }
-  return url.toString();
+  const normalized = redirectPath.startsWith("/") ? redirectPath : `/${redirectPath}`;
+  return `${window.location.origin}/#/auth?redirect=${encodeURIComponent(normalized)}`;
 };
 
 const features = [
@@ -375,7 +372,7 @@ const Auth = () => {
     }
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: `${window.location.origin}/#/reset-password`,
     });
 
     if (error) {
@@ -390,9 +387,11 @@ const Auth = () => {
   const handleGoogleSignIn = async () => {
     setLoading(true);
 
-    const callbackUri = new URL("/auth", window.location.origin);
-    callbackUri.searchParams.set(GOOGLE_OAUTH_QUERY_PARAM, GOOGLE_OAUTH_PROVIDER);
-    callbackUri.searchParams.set("redirect", redirectTo);
+    const callbackUri = new URL("/", window.location.origin);
+    callbackUri.hash = `/auth?${new URLSearchParams({
+      [GOOGLE_OAUTH_QUERY_PARAM]: GOOGLE_OAUTH_PROVIDER,
+      redirect: redirectTo,
+    }).toString()}`;
 
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",

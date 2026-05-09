@@ -40,7 +40,7 @@ void SIBLING_GAP;
 
 // ─── colour palette ───────────────────────────────────────────────────────────
 
-const AVATAR_PALETTE = [
+const AVATAR_PALETTE: [string, string][] = [
   ['#10b981', '#0d9488'], // emerald → teal
   ['#38bdf8', '#6366f1'], // sky → indigo
   ['#e879f9', '#a855f7'], // fuchsia → purple

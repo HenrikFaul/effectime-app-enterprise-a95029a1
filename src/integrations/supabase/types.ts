@@ -3574,6 +3574,30 @@ export type Database = {
           },
         ]
       }
+      enterprise_seed_config: {
+        Row: {
+          config: Json
+          created_at: string
+          id: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          id?: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          id?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       enterprise_shift_assignments: {
         Row: {
           business_role: string | null
