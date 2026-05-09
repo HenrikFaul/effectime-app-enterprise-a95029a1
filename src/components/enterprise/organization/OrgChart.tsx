@@ -5,6 +5,12 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import {
   RefreshCw,
   Search,
   ChevronDown,
@@ -13,6 +19,7 @@ import {
   Users,
   List,
   Sparkles,
+  Maximize2,
 } from 'lucide-react';
 import { useT } from '@/i18n/I18nProvider';
 import { OrgChartPremiumView, PremiumNode } from './OrgChartPremiumView';
@@ -88,6 +95,7 @@ export function OrgChart({ workspaceId, isAdmin }: Props) {
   const [search, setSearch] = useState('');
   const [snapshotAt, setSnapshotAt] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [view, setView] = useState<ViewStyle>(() => {
     try {
       const saved = localStorage.getItem(VIEW_STYLE_KEY);
@@ -281,12 +289,47 @@ export function OrgChart({ workspaceId, isAdmin }: Props) {
             {snapshotAt ? ` · ${new Date(snapshotAt).toLocaleString()}` : ''}
           </div>
 
+          {view === 'premium' && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="gap-1"
+              onClick={() => setFullscreenOpen(true)}
+              title="Megnyitás nagyobb nézetben"
+            >
+              <Maximize2 className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Teljes nézet</span>
+            </Button>
+          )}
+
           <Button onClick={handleRegenerate} size="sm" variant="outline" className="gap-1">
             <RefreshCw className="h-3.5 w-3.5" />
             {t('organization.chart.regenerate')}
           </Button>
         </CardContent>
       </Card>
+
+      {/* ── fullscreen popup ── */}
+      <Dialog open={fullscreenOpen} onOpenChange={setFullscreenOpen}>
+        <DialogContent className="max-w-[95vw] w-[95vw] p-0 overflow-hidden">
+          <DialogHeader className="px-4 pt-4 pb-2 border-b border-border/40">
+            <DialogTitle className="text-sm font-semibold flex items-center gap-2">
+              <Sparkles className="h-4 w-4 text-primary" />
+              {t('organization.chart.title') || 'Szervezeti diagram'}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-2">
+            <OrgChartPremiumView
+              tree={tree as PremiumNode[]}
+              matches={matches as (n: PremiumNode) => boolean}
+              isAnyVisible={isAnyVisible as (n: PremiumNode) => boolean}
+              workspaceId={workspaceId}
+              allNodes={allNodes as PremiumNode[]}
+              containerHeight="calc(90vh - 80px)"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* ── content ── */}
       {loading ? (

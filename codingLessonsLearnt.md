@@ -620,3 +620,24 @@
   3. A query-param olvasást a router aktuális `location.search` értékére kell kötni, nem a `window.location.search`-re, mert hash-routernél a keresőparaméterek a hash-részben élnek.
   4. Meghívó- és email-linkeknél is hash-alapú belső linket kell generálni, különben a felhasználó ismét szerveroldali 404-re eshet.
 - **Megelőzés**: Ha egy React Router app static/published hoston **akár csak egyszer is** intermittens refresh-404-ot produkál belső route-okon, ne told tovább rewrite/404 fallback hackekkel. A tartós megoldás: `HashRouter`, és minden külső callback / email / OAuth redirect URL-t ehhez kell igazítani.
+
+### [LESSON-ORGCHART-PANZOOM-001] CSS transform for diagram pan/zoom — single state, no scroll container
+- **Dátum**: 2026-05-09 (v3.3.1)
+- **Fájl**: `src/components/enterprise/organization/OrgChartPremiumView.tsx`
+- **Probléma**: An org chart with hundreds of nodes can't be scrolled with `overflow: auto` alone — the diagram is too wide/tall for a fixed viewport. Adding drag/zoom requires either a complex scrollable canvas or a transform layer.
+- **Javítás**: Use `overflow: hidden` on the outer container + an absolutely positioned inner div with `transform: translate(${offsetX}px, ${offsetY}px) scale(${scale})`. Pan state `(offsetX, offsetY)` updated in `onMouseMove`; zoom `scale` updated in `onWheel` / button clicks. This entirely avoids scroll infrastructure and gives pixel-perfect control.
+- **Megelőzés**: For diagrams (org charts, flowcharts, mind maps), prefer a `transform`-based pan/zoom over scroll containers — it supports infinite canvas semantics and allows zoom-in-place via `transform-origin`.
+
+### [LESSON-ORGCHART-DRAG-CLICK-001] Distinguishing drag vs click with a pixel threshold + capture-phase stop
+- **Dátum**: 2026-05-09 (v3.3.1)
+- **Fájl**: `src/components/enterprise/organization/OrgChartPremiumView.tsx`
+- **Probléma**: When the user finishes a pan drag, the `mouseup` event fires and immediately triggers the card's `onClick` handler — unintentionally opening the employee drawer.
+- **Javítás**: Track `hasDragged` ref (`useRef(false)`). In `onMouseMove`, set `hasDragged.current = true` only once the total displacement from `dragStart` exceeds `DRAG_THRESHOLD` (6 px). In a capture-phase `onClickCapture` handler on the container, call `e.stopPropagation()` and reset `hasDragged` if it was true — the card's bubbled click never fires.
+- **Megelőzés**: Any draggable canvas with clickable children MUST use capture-phase interception to block click after drag. The 6 px threshold prevents false drag detection from accidental mouse jitter.
+
+### [LESSON-ORGCHART-POPUP-001] Near-fullscreen popup via Radix Dialog + containerHeight prop
+- **Dátum**: 2026-05-09 (v3.3.1)
+- **Fájl**: `src/components/enterprise/organization/OrgChart.tsx`
+- **Probléma**: The inline org chart view is constrained to 520 px height. Users need a way to see the full hierarchy without leaving the page.
+- **Javítás**: Add `containerHeight?: string` prop (default `'520px'`) to `OrgChartPremiumView`. In `OrgChart`, add a `Maximize2` button (visible only in premium view) that opens a Radix `Dialog` (`max-w-[95vw]`). Inside the dialog, render `<OrgChartPremiumView ... containerHeight=”calc(90vh - 80px)” />` — same data, same functionality, but 90 % of the viewport height. The dialog overlay handles close on backdrop click.
+- **Megelőzés**: For any complex visualization (charts, diagrams, boards), design a `containerHeight` escape hatch from the start. Reusing the existing component inside a Dialog is zero-duplication fullscreen — no separate “fullscreen component” needed.
