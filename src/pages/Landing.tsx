@@ -52,6 +52,11 @@ export default function Landing() {
   const { user, signOut } = useAuth();
   const [searchParams] = useSearchParams();
 
+  // From the landing page we always land on the workspace picker, never on
+  // whichever workspace was last opened. Pass ?select=1 so Enterprise.tsx
+  // skips auto-selecting from localStorage.
+  const goToWorkspaceSelector = () => navigate('/app?select=1');
+
   useEffect(() => {
     if (!user) return;
     if (searchParams.get('oauth') !== 'google') return;
@@ -68,7 +73,7 @@ export default function Landing() {
           <div className="flex items-center gap-2">
             {user ? (
               <>
-                <Button variant="outline" size="sm" onClick={() => navigate('/app')} className="rounded-xl">
+                <Button variant="outline" size="sm" onClick={goToWorkspaceSelector} className="rounded-xl">
                   Munkaterület
                 </Button>
                 <Button variant="destructive" size="sm" onClick={signOut} className="rounded-xl gap-1.5">
@@ -104,7 +109,7 @@ export default function Landing() {
             <Button
               size="lg"
               className="rounded-xl gradient-primary text-primary-foreground px-8 gap-2 shadow-glow"
-              onClick={() => navigate(user ? '/app' : '/auth')}
+              onClick={() => (user ? goToWorkspaceSelector() : navigate('/auth'))}
             >
               {user ? 'Munkaterületre' : 'Kezdje el ingyen'}
               <ArrowRight className="h-4 w-4" />
@@ -173,7 +178,7 @@ export default function Landing() {
                 <Button
                   size="lg"
                   className="rounded-xl gradient-primary text-primary-foreground gap-2 shadow-glow"
-                  onClick={() => navigate(user ? '/app' : '/auth')}
+                  onClick={() => (user ? goToWorkspaceSelector() : navigate('/auth'))}
                 >
                   {user ? 'Munkaterületre' : 'Ingyenes regisztráció'}
                   <ArrowRight className="h-4 w-4" />
