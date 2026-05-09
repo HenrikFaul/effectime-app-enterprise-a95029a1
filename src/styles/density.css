@@ -110,29 +110,28 @@ html[data-density="expansive"] {
   --density-text-sm: 0.875rem;
 }
 
-/* Full-bleed shell utilities — the redesign deliberately drops max-w-* caps */
-@layer utilities {
-  .shell-page {
-    width: 100%;
-    padding-left: var(--density-page-pad-x);
-    padding-right: var(--density-page-pad-x);
-    padding-top: var(--density-page-pad-y);
-    padding-bottom: var(--density-page-pad-y);
-  }
-
-  .shell-section {
-    display: flex;
-    flex-direction: column;
-    gap: var(--density-section-gap);
-  }
-
-  .shell-grid-bento {
-    display: grid;
-    gap: var(--density-gap);
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-  }
-  @media (min-width: 640px)  { .shell-grid-bento { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  @media (min-width: 1024px) { .shell-grid-bento { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-  @media (min-width: 1536px) { .shell-grid-bento { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
-  @media (min-width: 1920px) { .shell-grid-bento { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+/* Full-bleed shell utilities — the redesign deliberately drops max-w-* caps.
+   Plain CSS (not in @layer) so this file can be imported standalone. */
+.shell-page {
+  width: 100%;
+  padding-left: var(--density-page-pad-x);
+  padding-right: var(--density-page-pad-x);
+  padding-top: var(--density-page-pad-y);
+  padding-bottom: var(--density-page-pad-y);
 }
+
+.shell-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--density-section-gap);
+}
+
+.shell-grid-bento {
+  display: grid;
+  gap: var(--density-gap);
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+@media (min-width: 640px)  { .shell-grid-bento { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1024px) { .shell-grid-bento { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (min-width: 1536px) { .shell-grid-bento { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (min-width: 1920px) { .shell-grid-bento { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
