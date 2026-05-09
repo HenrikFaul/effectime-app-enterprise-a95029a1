@@ -14,6 +14,8 @@ Read order every session:
 7. Latest `versioning/*.md` relevant to the task
 
 Required behavior:
+- **ALWAYS fetch + rebase on `origin/main` BEFORE writing code or editing CHANGELOG.md.** Other PRs may have merged into `main` since the feature branch was created — failing to rebase causes CHANGELOG conflicts and version-number collisions. Run `git fetch origin main && git rebase origin/main` (or `git pull --rebase origin main`) at the start of every session, and again before any CHANGELOG edit. Resolve conflicts manually; never force-push without verifying nothing was lost.
+- When adding a CHANGELOG entry, first read the **current top of `CHANGELOG.md` on `origin/main`** to pick the next free version number (do not duplicate an existing version).
 - Preserve existing working features
 - Prefer minimal-risk fixes
 - Update `CHANGELOG.md` + `codingLessonsLearnt.md` when naturally implied by the task

@@ -345,5 +345,10 @@ If a change removes, renames, or fundamentally alters an existing feature:
 ### Branch and commit discipline
 - Development branch: always use the branch specified in session context (see system prompt / CLAUDE.md)
 - Never push to `main` directly
+- **Always sync with `origin/main` before doing any work and again before any CHANGELOG.md edit.** Run `git fetch origin main && git rebase origin/main` (or `git pull --rebase origin main`) at the start of every session. Other PRs may have merged into `main` since this feature branch was created — failing to sync produces:
+  - Merge conflicts in `CHANGELOG.md` (most common cause)
+  - Reused/duplicated version numbers (e.g. two `v3.2.5` entries)
+  - Stale code being built on a stale baseline
+  Before adding any CHANGELOG entry, **read the current top of `CHANGELOG.md` on `origin/main`** and pick the next free version number. Never reuse a version that is already on `main`.
 - Commit message format: `type(scope): short description` where type ∈ {feat, fix, refactor, docs, chore}
 - Governance-only commits use type `docs`
