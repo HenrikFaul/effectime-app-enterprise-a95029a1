@@ -10,6 +10,9 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { DATA_SOURCE_LABELS } from './reportTemplates';
 import type { SavedReport } from './ReportLibrary';
 
+const normalizeGroupBy = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+
 interface Props {
   report: SavedReport;
   workspaceId: string;
@@ -54,9 +57,10 @@ export function ReportRunner({ report, workspaceId, onBack, onEdit }: Props) {
   // Plain-language summary of the report
   const summary = useMemo(() => {
     const cfg = report.config;
+    const groupBy = normalizeGroupBy((cfg as any)?.group_by);
     const parts: string[] = [];
     parts.push(`Forrás: ${DATA_SOURCE_LABELS[report.data_source] || report.data_source}.`);
-    if (cfg.group_by?.length) parts.push(`Csoportosítva: ${cfg.group_by.join(', ')}.`);
+    if (groupBy.length) parts.push(`Csoportosítva: ${groupBy.join(', ')}.`);
     if (cfg.aggregations?.length) parts.push(`Mutatók: ${cfg.aggregations.map(a => a.alias || `${a.fn}(${a.field})`).join(', ')}.`);
     if (cfg.filters?.length) parts.push(`Szűrők: ${cfg.filters.length} aktív.`);
     return parts.join(' ');
