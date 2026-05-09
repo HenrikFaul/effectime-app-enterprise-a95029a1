@@ -16,6 +16,8 @@ import {
   TRANSLATION_OVERRIDE_DEFS, INTEGRATION_DEF, AGILE_ISSUE_DEFS, AGILE_FIELD_METADATA_DEFS,
   DAILY_RULE_DEFS, OFFICE_COVERAGE_RULE_DEFS, RULE_TEMPLATE_DEFS,
   APPROVAL_CHAIN_DEFS, DEFAULT_SEED_QUANTITIES,
+  JOB_FAMILY_DEFS, LEADERSHIP_LEVEL_DEFS, CONTRACT_TYPE_DEFS,
+  INDUSTRY_DEFS, WORK_CATEGORY_DEFS, PERSONA_ORG_ASSIGNMENTS,
 } from './seed-data.ts';
 
 const corsHeaders = {
@@ -272,49 +274,42 @@ Deno.serve(async (req) => {
     // ════════════════════════════════════════════════════════════════════════
 
     // ── B1. Job families ────────────────────────────────────────────────────
-    await admin.from('enterprise_job_families').insert([
-      { workspace_id: workspaceId, code: 'engineering', label: 'Engineering' },
-      { workspace_id: workspaceId, code: 'operations',  label: 'Operations' },
-      { workspace_id: workspaceId, code: 'qa',          label: 'Quality Assurance' },
-      { workspace_id: workspaceId, code: 'management',  label: 'Management' },
-    ]).select('id').then(() => {});
+    const jfToInsert = JOB_FAMILY_DEFS.slice(0, Math.max(1, seedQty.job_families));
+    const { error: jfErr } = await admin.from('enterprise_job_families')
+      .insert(jfToInsert.map(d => ({ ...d, workspace_id: workspaceId })));
+    if (jfErr) console.warn('[seed] job_families insert skipped:', jfErr.message);
 
     // ── B2. Leadership levels ────────────────────────────────────────────────
-    const { data: leadershipLevels } = await admin.from('enterprise_leadership_levels').insert([
-      { workspace_id: workspaceId, code: 'strategic',   label: 'Strategic',   sort_order: 10 },
-      { workspace_id: workspaceId, code: 'operational', label: 'Operational', sort_order: 20 },
-      { workspace_id: workspaceId, code: 'technical',   label: 'Technical',   sort_order: 30 },
-      { workspace_id: workspaceId, code: 'execution',   label: 'Execution',   sort_order: 40 },
-    ]).select('id,code');
+    // Minimum 4 required: strategic/operational/technical/execution are used in B8.
+    const llToInsert = LEADERSHIP_LEVEL_DEFS.slice(0, Math.max(4, seedQty.leadership_levels));
+    const { data: leadershipLevels, error: llErr } = await admin.from('enterprise_leadership_levels')
+      .insert(llToInsert.map(d => ({ ...d, workspace_id: workspaceId }))).select('id,code');
+    if (llErr) console.warn('[seed] leadership_levels insert skipped:', llErr.message);
     const llByCode = new Map<string, string>();
     (leadershipLevels ?? []).forEach((l: any) => llByCode.set(l.code, l.id));
 
     // ── B3. Contract types ────────────────────────────────────────────────────
-    const { data: contractTypes } = await admin.from('enterprise_contract_types').insert([
-      { workspace_id: workspaceId, code: 'employee',      label: 'Alkalmazott',          is_default: true  },
-      { workspace_id: workspaceId, code: 'contractor',    label: 'Megbízásos',           is_default: false },
-      { workspace_id: workspaceId, code: 'subcontractor', label: 'Alvállalkozó',         is_default: false },
-      { workspace_id: workspaceId, code: 'consultant',    label: 'Tanácsadó',            is_default: false },
-    ]).select('id,code');
+    // Minimum 2 required: employee + contractor are used in B8.
+    const ctToInsert = CONTRACT_TYPE_DEFS.slice(0, Math.max(2, seedQty.contract_types));
+    const { data: contractTypes, error: ctErr } = await admin.from('enterprise_contract_types')
+      .insert(ctToInsert.map(d => ({ ...d, workspace_id: workspaceId }))).select('id,code');
+    if (ctErr) console.warn('[seed] contract_types insert skipped:', ctErr.message);
     const ctByCode = new Map<string, string>();
     (contractTypes ?? []).forEach((c: any) => ctByCode.set(c.code, c.id));
 
     // ── B4. Industries ────────────────────────────────────────────────────────
-    await admin.from('enterprise_industries').insert([
-      { workspace_id: workspaceId, code: 'software',  label: 'Szoftverfejlesztés', is_default: true  },
-      { workspace_id: workspaceId, code: 'fintech',   label: 'Fintech',            is_default: false },
-      { workspace_id: workspaceId, code: 'ecommerce', label: 'E-kereskedelem',     is_default: false },
-    ]).then(() => {});
+    const indToInsert = INDUSTRY_DEFS.slice(0, Math.max(1, seedQty.industries));
+    const { error: indErr } = await admin.from('enterprise_industries')
+      .insert(indToInsert.map(d => ({ ...d, workspace_id: workspaceId })));
+    if (indErr) console.warn('[seed] industries insert skipped:', indErr.message);
 
     // ── B5. Work categories ───────────────────────────────────────────────────
-    const { data: workCats } = await admin.from('enterprise_work_categories').insert([
-      { workspace_id: workspaceId, code: 'development', label: 'Fejlesztés' },
-      { workspace_id: workspaceId, code: 'testing',     label: 'Tesztelés' },
-      { workspace_id: workspaceId, code: 'operations',  label: 'Üzemeltetés' },
-      { workspace_id: workspaceId, code: 'meetings',    label: 'Megbeszélések' },
-    ]).select('id,code');
+    const wcToInsert = WORK_CATEGORY_DEFS.slice(0, Math.max(1, seedQty.work_categories));
+    const { data: workCats, error: wcErr } = await admin.from('enterprise_work_categories')
+      .insert(wcToInsert.map(d => ({ ...d, workspace_id: workspaceId }))).select('id,code');
+    if (wcErr) console.warn('[seed] work_categories insert skipped:', wcErr.message);
     const wcById = ((workCats ?? []) as any[]).reduce((m: any, c: any) => { m[c.code] = c.id; return m; }, {});
-    // Sub-category
+    // Sub-categories under 'development'
     if (wcById['development']) {
       await admin.from('enterprise_work_categories').insert([
         { workspace_id: workspaceId, code: 'frontend_dev', label: 'Frontend fejlesztés', parent_id: wcById['development'] },
@@ -356,35 +351,29 @@ Deno.serve(async (req) => {
     }
     if (allTeamRoleInserts.length) await admin.from('enterprise_team_roles').insert(allTeamRoleInserts);
 
-    // ── B8. Update memberships with org structure references ─────────────────
-    const orgAssignments: { user_id: string; org_unit: string; leadership: string; contract: string }[] = [
-      { user_id: demoUserIds[0]?.user_id ?? '', org_unit: 'Frontend csapat',  leadership: 'technical',   contract: 'employee' },
-      { user_id: demoUserIds[1]?.user_id ?? '', org_unit: 'Backend csapat',   leadership: 'execution',   contract: 'employee' },
-      { user_id: demoUserIds[2]?.user_id ?? '', org_unit: 'Üzemeltetés',      leadership: 'operational', contract: 'employee' },
-      { user_id: demoUserIds[3]?.user_id ?? '', org_unit: 'Frontend csapat',  leadership: 'execution',   contract: 'employee' },
-      { user_id: demoUserIds[4]?.user_id ?? '', org_unit: 'QA csapat',        leadership: 'execution',   contract: 'employee' },
-      { user_id: demoUserIds[5]?.user_id ?? '', org_unit: 'Backend csapat',   leadership: 'technical',   contract: 'contractor' },
-      { user_id: demoUserIds[6]?.user_id ?? '', org_unit: 'Üzemeltetés',      leadership: 'execution',   contract: 'employee' },
-    ];
-    // Also set manager chain: persona[0] (Anna) manages persona[3] (Dávid); persona[2] (Csilla) manages persona[6] (Gizella)
+    // ── B8. Org structure for ALL demo members (data-driven via PERSONA_ORG_ASSIGNMENTS) ─
     const mIdByUserId = new Map<string, string>();
     (insertedMemberships ?? []).forEach((m: any) => mIdByUserId.set(m.user_id, m.id));
 
-    for (let i = 0; i < orgAssignments.length; i++) {
-      const asgn = orgAssignments[i];
-      if (!asgn.user_id) continue;
-      const mId = mIdByUserId.get(asgn.user_id);
+    // Build display_name → user_id map for manager lookups
+    const userIdByPersonaName = new Map<string, string>();
+    demoUserIds.forEach(d => userIdByPersonaName.set(d.persona.display_name, d.user_id));
+
+    for (const d of demoUserIds) {
+      const mId = mIdByUserId.get(d.user_id);
       if (!mId) continue;
+      const asgn = PERSONA_ORG_ASSIGNMENTS[d.persona.display_name];
+      if (!asgn) continue;
+      const managerUserId = asgn.managerName ? userIdByPersonaName.get(asgn.managerName) : undefined;
+      const managerId = managerUserId ? (mIdByUserId.get(managerUserId) ?? null) : null;
       const updates: any = {
-        org_unit_id:         ouByName.get(asgn.org_unit) ?? null,
-        leadership_level_id: llByCode.get(asgn.leadership) ?? null,
-        contract_type_id:    ctByCode.get(asgn.contract) ?? null,
-        leadership_category: asgn.leadership === 'operational' ? 'operational' : 'technical',
-        seniority:           DEMO_PERSONAS[i]?.seniority ?? null,
+        org_unit_id:         ouByName.get(asgn.orgUnit) ?? null,
+        leadership_level_id: llByCode.get(asgn.llCode) ?? null,
+        contract_type_id:    ctByCode.get(asgn.contractCode) ?? null,
+        leadership_category: asgn.leadershipCategory,
+        seniority:           d.persona.seniority,
       };
-      // Set manager_id for junior/specialist members
-      if (i === 3 && demoUserIds[0]) updates.manager_id = mIdByUserId.get(demoUserIds[0].user_id) ?? null;
-      if (i === 6 && demoUserIds[2]) updates.manager_id = mIdByUserId.get(demoUserIds[2].user_id) ?? null;
+      if (managerId) updates.manager_id = managerId;
       await admin.from('enterprise_memberships').update(updates as any).eq('id', mId);
     }
 

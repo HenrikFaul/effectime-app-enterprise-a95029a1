@@ -345,6 +345,91 @@ export const APPROVAL_CHAIN_DEFS = [
   { step_order: 2, approver_role: 'owner',             is_active: true },
 ];
 
+// ── P. SZERVEZET: KATALÓGUS DEFINÍCIÓK ──────────────────────────────────────
+// Szervezet → Katalógus szerkesztő (CatalogListEditor) — minden tábla az
+// (id, workspace_id, code, label, archived_at, sort_order) sémát követi.
+
+export const JOB_FAMILY_DEFS = [
+  { code: 'engineering', label: 'Engineering',       sort_order: 10 },
+  { code: 'operations',  label: 'Operations',        sort_order: 20 },
+  { code: 'qa',          label: 'Quality Assurance', sort_order: 30 },
+  { code: 'management',  label: 'Management',        sort_order: 40 },
+  { code: 'design',      label: 'Design',            sort_order: 50 },
+  { code: 'product',     label: 'Product',           sort_order: 60 },
+];
+
+export const LEADERSHIP_LEVEL_DEFS = [
+  { code: 'strategic',   label: 'Strategic',   sort_order: 10 },
+  { code: 'operational', label: 'Operational', sort_order: 20 },
+  { code: 'technical',   label: 'Technical',   sort_order: 30 },
+  { code: 'execution',   label: 'Execution',   sort_order: 40 },
+  { code: 'specialist',  label: 'Specialist',  sort_order: 50 },
+];
+
+export const CONTRACT_TYPE_DEFS = [
+  { code: 'employee',      label: 'Alkalmazott',  is_default: true  },
+  { code: 'contractor',    label: 'Megbízásos',   is_default: false },
+  { code: 'subcontractor', label: 'Alvállalkozó', is_default: false },
+  { code: 'consultant',    label: 'Tanácsadó',    is_default: false },
+  { code: 'intern',        label: 'Gyakornok',    is_default: false },
+];
+
+export const INDUSTRY_DEFS = [
+  { code: 'software',   label: 'Szoftverfejlesztés', is_default: true  },
+  { code: 'fintech',    label: 'Fintech',            is_default: false },
+  { code: 'ecommerce',  label: 'E-kereskedelem',     is_default: false },
+  { code: 'healthcare', label: 'Egészségügy',        is_default: false },
+  { code: 'logistics',  label: 'Logisztika',         is_default: false },
+];
+
+export const WORK_CATEGORY_DEFS = [
+  { code: 'development', label: 'Fejlesztés' },
+  { code: 'testing',     label: 'Tesztelés' },
+  { code: 'operations',  label: 'Üzemeltetés' },
+  { code: 'meetings',    label: 'Megbeszélések' },
+  { code: 'design',      label: 'Tervezés' },
+];
+
+// ── Q. SZERVEZETI STRUKTÚRA HOZZÁRENDELÉSEK ──────────────────────────────────
+// Minden persona display_name-jéhez megadja:
+//   managerName — kinek a közvetlen beosztottja (undefined = top-level)
+//   orgUnit     — melyik szervezeti egységbe tartozik
+//   llCode      — LEADERSHIP_LEVEL_DEFS.code
+//   contractCode — CONTRACT_TYPE_DEFS.code
+//   leadershipCategory — 'operational' | 'technical'
+// index.ts B8 szekciója ezt a táblát olvassa az összes demo tag frissítéséhez.
+
+export const PERSONA_ORG_ASSIGNMENTS: Record<string, {
+  managerName?: string;
+  orgUnit: string;
+  llCode: string;
+  contractCode: string;
+  leadershipCategory: 'operational' | 'technical';
+}> = {
+  'Anna Kovács':        { managerName: 'Viktor Mátyás',   orgUnit: 'Frontend csapat',  llCode: 'technical',   contractCode: 'employee',   leadershipCategory: 'technical'   },
+  'Bence Tóth':         { managerName: 'Ferenc Horváth',  orgUnit: 'Backend csapat',   llCode: 'execution',   contractCode: 'employee',   leadershipCategory: 'technical'   },
+  'Csilla Nagy':        { managerName: 'Viktor Mátyás',   orgUnit: 'Üzemeltetés',      llCode: 'operational', contractCode: 'employee',   leadershipCategory: 'operational' },
+  'Dávid Szabó':        { managerName: 'Anna Kovács',     orgUnit: 'Frontend csapat',  llCode: 'execution',   contractCode: 'employee',   leadershipCategory: 'technical'   },
+  'Eszter Kiss':        { managerName: 'Judit Molnár',    orgUnit: 'QA csapat',        llCode: 'execution',   contractCode: 'employee',   leadershipCategory: 'technical'   },
+  'Ferenc Horváth':     { managerName: 'Viktor Mátyás',   orgUnit: 'Backend csapat',   llCode: 'technical',   contractCode: 'employee',   leadershipCategory: 'technical'   },
+  'Gizella Varga':      { managerName: 'Csilla Nagy',     orgUnit: 'Üzemeltetés',      llCode: 'execution',   contractCode: 'employee',   leadershipCategory: 'operational' },
+  'Henrietta Fekete':   { managerName: 'Anna Kovács',     orgUnit: 'Frontend csapat',  llCode: 'execution',   contractCode: 'employee',   leadershipCategory: 'technical'   },
+  'István Papp':        { managerName: 'Ferenc Horváth',  orgUnit: 'Backend csapat',   llCode: 'execution',   contractCode: 'employee',   leadershipCategory: 'technical'   },
+  'Judit Molnár':       { managerName: 'Viktor Mátyás',   orgUnit: 'QA csapat',        llCode: 'operational', contractCode: 'employee',   leadershipCategory: 'operational' },
+  'Kristóf Balogh':     { managerName: 'Csilla Nagy',     orgUnit: 'Üzemeltetés',      llCode: 'execution',   contractCode: 'employee',   leadershipCategory: 'operational' },
+  'László Szőke':       { managerName: 'Ferenc Horváth',  orgUnit: 'Backend csapat',   llCode: 'execution',   contractCode: 'employee',   leadershipCategory: 'technical'   },
+  'Mária Tóth':         { managerName: 'Anna Kovács',     orgUnit: 'Frontend csapat',  llCode: 'execution',   contractCode: 'employee',   leadershipCategory: 'technical'   },
+  'Nikolett Farkas':    { managerName: 'Judit Molnár',    orgUnit: 'QA csapat',        llCode: 'execution',   contractCode: 'employee',   leadershipCategory: 'technical'   },
+  'Olivér Lengyel':     { managerName: 'Csilla Nagy',     orgUnit: 'Üzemeltetés',      llCode: 'technical',   contractCode: 'contractor', leadershipCategory: 'technical'   },
+  'Petra Szász':        { managerName: 'Anna Kovács',     orgUnit: 'Frontend csapat',  llCode: 'technical',   contractCode: 'employee',   leadershipCategory: 'technical'   },
+  'Richárd Kővári':     { managerName: 'Judit Molnár',    orgUnit: 'QA csapat',        llCode: 'technical',   contractCode: 'contractor', leadershipCategory: 'technical'   },
+  'Sándor Veres':       { managerName: 'Ferenc Horváth',  orgUnit: 'Backend csapat',   llCode: 'technical',   contractCode: 'employee',   leadershipCategory: 'technical'   },
+  'Tímea Bodnár':       { managerName: 'Anna Kovács',     orgUnit: 'Frontend csapat',  llCode: 'execution',   contractCode: 'employee',   leadershipCategory: 'technical'   },
+  'Uzonka Pálfi':       { managerName: 'Csilla Nagy',     orgUnit: 'Üzemeltetés',      llCode: 'execution',   contractCode: 'employee',   leadershipCategory: 'operational' },
+  'Viktor Mátyás':      {                                 orgUnit: 'Mérnöki részleg',  llCode: 'strategic',   contractCode: 'employee',   leadershipCategory: 'operational' },
+  'Zsuzsanna Hegedűs':  { managerName: 'Viktor Mátyás',   orgUnit: 'Mérnöki részleg',  llCode: 'operational', contractCode: 'employee',   leadershipCategory: 'operational' },
+};
+
 // ── DEFAULT SEED QUANTITIES ───────────────────────────────────────────────────
 // Ezek az alapértelmezett mennyiségek ha az enterprise_seed_config-ban
 // nincs mentett konfiguráció. A UI-ban felül lehet írni.
@@ -356,6 +441,12 @@ export const DEFAULT_SEED_QUANTITIES = {
   leave_types:            4,
   holidays:               8,
   skills:                12,
+  job_families:           6,
+  leadership_levels:      4,
+  contract_types:         4,
+  industries:             3,
+  work_categories:        5,
+  org_units:              5,
   projects:               5,
   daily_rules:            7,
   office_coverage_rules: 10,
@@ -364,7 +455,7 @@ export const DEFAULT_SEED_QUANTITIES = {
   reports:                4,
   scenarios:              2,
   access_systems:         4,
-  onboarding_templates:   3,
+  onboarding_templates:   2,
   role_definitions:       3,
   member_templates:       5,
   translation_overrides:  4,
