@@ -145,6 +145,7 @@ Deno.serve(async (req) => {
     const createUserErrors: string[] = [];
     const seedTag = Math.random().toString(36).slice(2, 9);
     const personasToCreate = DEMO_PERSONAS.slice(0, Math.max(1, seedQty.members));
+    console.log(`[seed] Creating ${personasToCreate.length} demo auth users (seedTag=${seedTag})`);
     for (const persona of personasToCreate) {
       const slug  = slugify(persona.display_name);
       const email = `demo-${slug}-${seedTag}@effectime-demo.test`;
@@ -162,6 +163,7 @@ Deno.serve(async (req) => {
       demoUserIds.push({ user_id: result.id, persona });
       await admin.from('profiles').upsert({ user_id: result.id, display_name: persona.display_name } as any, { onConflict: 'user_id' });
     }
+    console.log(`[seed] Auth users done: ${demoUserIds.length} created, ${createUserErrors.length} failed`);
 
     // ── A3. Persist demo user ids on workspace ──────────────────────────────
     await admin.from('enterprise_workspaces').update({
@@ -231,8 +233,14 @@ Deno.serve(async (req) => {
       weekly_capacity_hours: 40,
       joined_at: addDays(today, -(30 + idx * 20)).toISOString(),
     }));
-    const { data: insertedMemberships } = await admin.from('enterprise_memberships')
-      .insert(memberInserts).select('id,user_id,business_role');
+    const { data: insertedMemberships, error: membershipsErr } = memberInserts.length > 0
+      ? await admin.from('enterprise_memberships').insert(memberInserts).select('id,user_id,business_role')
+      : { data: [] as any[], error: null };
+    if (membershipsErr) {
+      console.error('[seed] memberships insert FAILED:', membershipsErr.message, JSON.stringify(membershipsErr));
+    } else {
+      console.log(`[seed] Memberships inserted: ${(insertedMemberships ?? []).length}`);
+    }
     const membershipByUser = new Map<string, { id: string; business_role: string | null }>();
     (insertedMemberships ?? []).forEach((m: any) => membershipByUser.set(m.user_id, { id: m.id, business_role: m.business_role }));
 
