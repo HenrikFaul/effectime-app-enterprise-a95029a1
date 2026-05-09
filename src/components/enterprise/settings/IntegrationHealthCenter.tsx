@@ -46,7 +46,7 @@ export function IntegrationHealthCenter({ workspaceId }: Props) {
   const load = useCallback(async () => {
     setLoading(true);
     const { data } = await (supabase as any)
-      .from('enterprise_integrations')
+      .from('enterprise_workspace_integrations')
       .select('id, provider, base_url, is_active, project_key')
       .eq('workspace_id', workspaceId)
       .order('provider');
