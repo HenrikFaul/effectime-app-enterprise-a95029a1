@@ -332,12 +332,15 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
                 onChange={(e) => setUserQuery(e.target.value)}
                 className="h-8 text-sm mb-1"
               />
-              <Select value={assigneeAccountId} onValueChange={setAssigneeAccountId}>
+              <Select
+                value={assigneeAccountId || '__none__'}
+                onValueChange={(v) => setAssigneeAccountId(v === '__none__' ? '' : v)}
+              >
                 <SelectTrigger className="h-8 text-sm">
                   <SelectValue placeholder={issue.assignee_name ?? 'Nincs hozzárendelve'} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">— Hozzárendelés törlése —</SelectItem>
+                  <SelectItem value="__none__">— Hozzárendelés törlése —</SelectItem>
                   {users.map((u) => (
                     <SelectItem key={u.account_id} value={u.account_id}>
                       {u.display_name} {u.email ? `(${u.email})` : ''}
@@ -350,12 +353,15 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
             {transitions.length > 0 && (
               <div>
                 <Label>Státusz váltás</Label>
-                <Select value={transitionId} onValueChange={setTransitionId}>
+                <Select
+                  value={transitionId || '__keep__'}
+                  onValueChange={(v) => setTransitionId(v === '__keep__' ? '' : v)}
+                >
                   <SelectTrigger className="h-8 text-sm">
                     <SelectValue placeholder="Tartja a jelenlegit" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Tartja: {issue.status ?? '—'}</SelectItem>
+                    <SelectItem value="__keep__">Tartja: {issue.status ?? '—'}</SelectItem>
                     {transitions.map((t) => (
                       <SelectItem key={t.id} value={t.id}>
                         → {t.to_status ?? t.name} ({t.name})
