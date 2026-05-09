@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Settings, LogOut, Building2, Trash2, Loader2 } from 'lucide-react';
+import { Plus, Settings, LogOut, Building2, Trash2, Loader2, SlidersHorizontal } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { CreateWorkspaceDialog } from '@/components/enterprise/CreateWorkspaceDialog';
 import { WorkspaceDashboard } from '@/components/enterprise/WorkspaceDashboard';
+import { DemoSeedConfigDialog } from '@/components/enterprise/DemoSeedConfigDialog';
 import { EffectimeLogo } from '@/components/EffectimeLogo';
 import { HelpButton } from '@/components/help/HelpButton';
 import { LanguageSelector } from '@/components/i18n/LanguageSelector';
@@ -60,6 +61,7 @@ export default function Enterprise() {
   const [userClearedWorkspace, setUserClearedWorkspace] = useState(false);
   const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [showSeedConfig, setShowSeedConfig] = useState(false);
 
   const activeTab = searchParams.get('tab') || 'members';
   const inviteToken = searchParams.get('invite') || null;
@@ -304,6 +306,16 @@ export default function Enterprise() {
             <Button onClick={() => setShowCreate(true)} size="sm">
               <Plus className="h-4 w-4 mr-1" /> {t('header.new_workspace')}
             </Button>
+            <Button
+              onClick={() => setShowSeedConfig(true)}
+              size="sm"
+              variant="outline"
+              className="gap-1.5"
+              title="Demo workspace alapértelmezett entitások konfigurálása"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              <span className="hidden sm:inline">Demo konfig</span>
+            </Button>
             <LanguageSelector />
             <Button onClick={signOut} size="sm" variant="destructive" className="gap-1.5">
               <LogOut className="h-4 w-4" /> {t('header.sign_out')}
@@ -390,6 +402,12 @@ export default function Enterprise() {
           await fetchWorkspaces();
           setShowCreate(false);
         }}
+      />
+
+      <DemoSeedConfigDialog
+        open={showSeedConfig}
+        onOpenChange={setShowSeedConfig}
+        userId={user?.id || ''}
       />
 
       <AlertDialog

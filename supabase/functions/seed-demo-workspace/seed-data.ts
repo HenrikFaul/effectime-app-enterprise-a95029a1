@@ -13,26 +13,43 @@
 // ============================================================
 
 // ── A. TAGOK ─────────────────────────────────────────────────────────────────
+// 22 demo persona — enterprise nagyvállalati méret szimulálásához.
+// A seed függvény az enterprise_seed_config.members értékéig vesz belőlük.
 
 export const DEMO_PERSONAS = [
-  { display_name: 'Anna Kovács',    team: 'Frontend',    city: 'Budapest', position: 'Senior Frontend Developer',  seniority: 'senior' as const },
-  { display_name: 'Bence Tóth',     team: 'Backend',     city: 'Budapest', position: 'Backend Developer',           seniority: 'medior' as const },
-  { display_name: 'Csilla Nagy',    team: 'Operations',  city: 'Debrecen', position: 'Operations Lead',             seniority: 'lead'   as const },
-  { display_name: 'Dávid Szabó',    team: 'Frontend',    city: 'Budapest', position: 'Junior Frontend Developer',   seniority: 'junior' as const },
-  { display_name: 'Eszter Kiss',    team: 'QA',          city: 'Szeged',   position: 'QA Engineer',                 seniority: 'medior' as const },
-  { display_name: 'Ferenc Horváth', team: 'Backend',     city: 'Budapest', position: 'Senior Backend Developer',    seniority: 'senior' as const },
-  { display_name: 'Gizella Varga',  team: 'Operations',  city: 'Debrecen', position: 'Operations Specialist',       seniority: 'medior' as const },
+  { display_name: 'Anna Kovács',       team: 'Frontend',    city: 'Budapest', position: 'Senior Frontend Developer',   seniority: 'senior' as const },
+  { display_name: 'Bence Tóth',        team: 'Backend',     city: 'Budapest', position: 'Backend Developer',            seniority: 'medior' as const },
+  { display_name: 'Csilla Nagy',       team: 'Operations',  city: 'Debrecen', position: 'Operations Lead',              seniority: 'lead'   as const },
+  { display_name: 'Dávid Szabó',       team: 'Frontend',    city: 'Budapest', position: 'Junior Frontend Developer',    seniority: 'junior' as const },
+  { display_name: 'Eszter Kiss',       team: 'QA',          city: 'Szeged',   position: 'QA Engineer',                  seniority: 'medior' as const },
+  { display_name: 'Ferenc Horváth',    team: 'Backend',     city: 'Budapest', position: 'Senior Backend Developer',     seniority: 'senior' as const },
+  { display_name: 'Gizella Varga',     team: 'Operations',  city: 'Debrecen', position: 'Operations Specialist',        seniority: 'medior' as const },
+  { display_name: 'Henrietta Fekete',  team: 'Frontend',    city: 'Budapest', position: 'Frontend Developer',           seniority: 'medior' as const },
+  { display_name: 'István Papp',       team: 'Backend',     city: 'Budapest', position: 'Backend Developer',            seniority: 'medior' as const },
+  { display_name: 'Judit Molnár',      team: 'QA',          city: 'Szeged',   position: 'QA Lead',                      seniority: 'lead'   as const },
+  { display_name: 'Kristóf Balogh',   team: 'Operations',  city: 'Debrecen', position: 'DevOps Engineer',              seniority: 'medior' as const },
+  { display_name: 'László Szőke',      team: 'Backend',     city: 'Budapest', position: 'Junior Backend Developer',     seniority: 'junior' as const },
+  { display_name: 'Mária Tóth',        team: 'Frontend',    city: 'Budapest', position: 'Frontend Developer',           seniority: 'medior' as const },
+  { display_name: 'Nikolett Farkas',   team: 'QA',          city: 'Szeged',   position: 'QA Engineer',                  seniority: 'junior' as const },
+  { display_name: 'Olivér Lengyel',    team: 'Operations',  city: 'Debrecen', position: 'Cloud Architect',              seniority: 'senior' as const },
+  { display_name: 'Petra Szász',       team: 'Frontend',    city: 'Budapest', position: 'Senior Frontend Developer',    seniority: 'senior' as const },
+  { display_name: 'Richárd Kővári',   team: 'QA',          city: 'Szeged',   position: 'Senior QA Engineer',           seniority: 'senior' as const },
+  { display_name: 'Sándor Veres',      team: 'Backend',     city: 'Budapest', position: 'Senior Backend Developer',     seniority: 'senior' as const },
+  { display_name: 'Tímea Bodnár',      team: 'Frontend',    city: 'Budapest', position: 'UX Designer',                  seniority: 'medior' as const },
+  { display_name: 'Uzonka Pálfi',      team: 'Operations',  city: 'Debrecen', position: 'Operations Engineer',          seniority: 'junior' as const },
+  { display_name: 'Viktor Mátyás',     team: 'Backend',     city: 'Budapest', position: 'Tech Lead',                    seniority: 'lead'   as const },
+  { display_name: 'Zsuzsanna Hegedűs', team: 'Operations',  city: 'Budapest', position: 'Scrum Master',                 seniority: 'medior' as const },
 ];
 
-export const SKILL_NAMES = ['React', 'TypeScript', 'Node.js', 'PostgreSQL', 'Docker', 'AWS', 'Tailwind CSS', 'Cypress', 'Jest'];
-export const SKILL_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#a855f7', '#06b6d4', '#22c55e', '#f97316', '#ec4899'];
+export const SKILL_NAMES = ['React', 'TypeScript', 'Node.js', 'PostgreSQL', 'Docker', 'AWS', 'Tailwind CSS', 'Cypress', 'Jest', 'Python', 'Kubernetes', 'Redis'];
+export const SKILL_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#a855f7', '#06b6d4', '#22c55e', '#f97316', '#ec4899', '#14b8a6', '#8b5cf6', '#f43f5e'];
 
 // ── B. IRODÁK ─────────────────────────────────────────────────────────────────
 
 export const OFFICE_DEFS = [
-  { name: 'Budapest HQ',    city: 'Budapest', address: 'Andrássy út 1, 1061 Budapest' },
+  { name: 'Budapest HQ',     city: 'Budapest', address: 'Andrássy út 1, 1061 Budapest' },
   { name: 'Debrecen Office', city: 'Debrecen', address: 'Piac u. 20, 4024 Debrecen' },
-  { name: 'Szeged Office',  city: 'Szeged',   address: 'Kárász u. 5, 6720 Szeged' },
+  { name: 'Szeged Office',   city: 'Szeged',   address: 'Kárász u. 5, 6720 Szeged' },
 ];
 
 // ── C. CSAPATOK ──────────────────────────────────────────────────────────────
@@ -101,6 +118,14 @@ export const PROJECT_DEFS = [
     skillNames: ['AWS', 'Docker', 'PostgreSQL'],
     billRates: { 'Operations Lead': 140, 'Operations Specialist': 100, 'Senior Backend Developer': 125 },
   },
+  {
+    name: 'Mobile App MVP',
+    description: 'React Native alapú mobilalkalmazás prototípus belső eszközökhöz.',
+    status: 'planning', color: '#f43f5e', offsetStart: 60, offsetEnd: 180,
+    roles: ['Senior Frontend Developer', 'Backend Developer', 'QA Engineer'],
+    skillNames: ['React', 'TypeScript', 'Jest'],
+    billRates: { 'Senior Frontend Developer': 125, 'Backend Developer': 105, 'QA Engineer': 90 },
+  },
 ];
 
 // ── G. ÉRTESÍTÉSEK ───────────────────────────────────────────────────────────
@@ -112,7 +137,6 @@ export const NOTIFICATION_EVENT_TYPES = [
 ];
 
 // ── H. SZERVEZET: JOGOSULTSÁG DEFINÍCIÓK ─────────────────────────────────────
-// Szervezet → Jogosultság-menedzsment → enterprise_role_definitions + enterprise_role_permissions
 
 export const ROLE_DEFINITION_DEFS = [
   { role_key: 'team_lead',        display_name: 'Team Lead',        description: 'Csapatvezető – szabadság-jóváhagyás és ütemezés', sort_order: 10 },
@@ -133,18 +157,16 @@ export const ROLE_PERMISSION_DEFS = [
 ];
 
 // ── I. TAGOK: MEGHÍVÓ SABLONOK ───────────────────────────────────────────────
-// Tagok → Meghívás → enterprise_member_templates
 
 export const MEMBER_TEMPLATE_DEFS = [
-  { template_name: 'Frontend fejlesztő',    default_role: 'member', default_team: 'Frontend',   default_business_role: 'Junior Frontend Developer',  default_city: 'Budapest', default_location: 'Budapest' },
-  { template_name: 'Backend fejlesztő',     default_role: 'member', default_team: 'Backend',    default_business_role: 'Backend Developer',           default_city: 'Budapest', default_location: 'Budapest' },
-  { template_name: 'Ops mérnök',            default_role: 'member', default_team: 'Operations', default_business_role: 'Operations Specialist',       default_city: 'Debrecen', default_location: 'Debrecen' },
-  { template_name: 'QA mérnök',             default_role: 'member', default_team: 'QA',         default_business_role: 'QA Engineer',                 default_city: 'Szeged',   default_location: 'Szeged' },
+  { template_name: 'Frontend fejlesztő',    default_role: 'member', default_team: 'Frontend',   default_business_role: 'Junior Frontend Developer',   default_city: 'Budapest', default_location: 'Budapest' },
+  { template_name: 'Backend fejlesztő',     default_role: 'member', default_team: 'Backend',    default_business_role: 'Backend Developer',            default_city: 'Budapest', default_location: 'Budapest' },
+  { template_name: 'Ops mérnök',            default_role: 'member', default_team: 'Operations', default_business_role: 'Operations Specialist',        default_city: 'Debrecen', default_location: 'Debrecen' },
+  { template_name: 'QA mérnök',             default_role: 'member', default_team: 'QA',         default_business_role: 'QA Engineer',                  default_city: 'Szeged',   default_location: 'Szeged' },
   { template_name: 'Resource Assistant',    default_role: 'resourceAssistant', default_team: 'Frontend', default_business_role: 'Senior Frontend Developer', default_city: 'Budapest', default_location: 'Budapest' },
 ];
 
 // ── J. LOKALIZÁCIÓ: SZÖVEG FELÜLÍRÁSOK ──────────────────────────────────────
-// Beállítások → Lokalizáció → enterprise_translation_overrides
 
 export const TRANSLATION_OVERRIDE_DEFS = [
   { locale: 'hu', key: 'workspace.members_label',  value: 'Csapattagok',      source: 'manual' },
@@ -154,8 +176,6 @@ export const TRANSLATION_OVERRIDE_DEFS = [
 ];
 
 // ── K. INTEGRÁCIÓ (Jira demo) ────────────────────────────────────────────────
-// Beállítások → Integrációk → enterprise_workspace_integrations
-// Erőforrások → Agile panel → enterprise_agile_issues / enterprise_agile_field_metadata
 
 export const INTEGRATION_DEF = {
   provider: 'jira' as const,
@@ -208,3 +228,146 @@ export const AGILE_FIELD_METADATA_DEFS = [
   { provider: 'jira', project_key: 'DEMO', field_id: 'capacity_risk',field_name: 'Capacity Risk',field_type: 'select',  is_custom: true,  schema: { values: ['low', 'medium', 'high'] } },
   { provider: 'jira', project_key: 'DEMO', field_id: 'fit_score',    field_name: 'Fit Score',    field_type: 'number',  is_custom: true,  schema: { min: 0, max: 1 } },
 ];
+
+// ── L. NAPI SZABÁLYOK (enterprise_daily_rules) ───────────────────────────────
+// Szabadság → Napi szabályok
+
+export const DAILY_RULE_DEFS = [
+  { day_of_week: 1, max_off: 3, is_active: true },   // Hétfő
+  { day_of_week: 2, max_off: 4, is_active: true },   // Kedd
+  { day_of_week: 3, max_off: 4, is_active: true },   // Szerda
+  { day_of_week: 4, max_off: 4, is_active: true },   // Csütörtök
+  { day_of_week: 5, max_off: 5, is_active: true },   // Péntek
+  { day_of_week: 6, max_off: 2, is_active: false },  // Szombat (inaktív)
+  { day_of_week: 0, max_off: 2, is_active: false },  // Vasárnap (inaktív)
+];
+
+// ── M. JELENLÉT SZABÁLYOK (enterprise_office_coverage_rules) ─────────────────
+// Szabadság → Jelenlét szabályok
+
+export const OFFICE_COVERAGE_RULE_DEFS = [
+  {
+    officeName: 'Budapest HQ',
+    name: 'Budapest HQ – minimum jelenlét (fejlesztők)',
+    business_roles: ['Senior Frontend Developer', 'Senior Backend Developer'],
+    days_of_week: [1, 2, 3, 4, 5], min_headcount: 2, status: 'active',
+  },
+  {
+    officeName: 'Budapest HQ',
+    name: 'Budapest HQ – minimum jelenlét (QA)',
+    business_roles: ['QA Engineer'],
+    days_of_week: [2, 3, 4], min_headcount: 1, status: 'active',
+  },
+  {
+    officeName: 'Budapest HQ',
+    name: 'Budapest HQ – hétfő belső meeting (összes fejlesztő)',
+    business_roles: ['Frontend Developer', 'Backend Developer', 'Senior Frontend Developer', 'Senior Backend Developer'],
+    days_of_week: [1], min_headcount: 3, status: 'active',
+  },
+  {
+    officeName: 'Debrecen Office',
+    name: 'Debrecen Office – ops jelenlét',
+    business_roles: ['Operations Lead', 'Operations Specialist', 'DevOps Engineer'],
+    days_of_week: [1, 2, 3, 4, 5], min_headcount: 1, status: 'active',
+  },
+  {
+    officeName: 'Debrecen Office',
+    name: 'Debrecen Office – cloud architect minimum',
+    business_roles: ['Cloud Architect'],
+    days_of_week: [1, 2, 3], min_headcount: 1, status: 'active',
+  },
+  {
+    officeName: 'Szeged Office',
+    name: 'Szeged Office – QA jelenlét',
+    business_roles: ['QA Engineer', 'Senior QA Engineer', 'QA Lead'],
+    days_of_week: [1, 2, 3, 4, 5], min_headcount: 1, status: 'active',
+  },
+  {
+    officeName: 'Budapest HQ',
+    name: 'Budapest HQ – sprint zárás (összes team)',
+    business_roles: ['Senior Frontend Developer', 'Senior Backend Developer', 'Tech Lead'],
+    days_of_week: [4, 5], min_headcount: 2, status: 'active',
+  },
+  {
+    officeName: 'Budapest HQ',
+    name: 'Budapest HQ – UX review nap',
+    business_roles: ['UX Designer', 'Senior Frontend Developer'],
+    days_of_week: [3], min_headcount: 1, status: 'active',
+  },
+  {
+    officeName: 'Debrecen Office',
+    name: 'Debrecen Office – infrastruktúra karbantartás',
+    business_roles: ['DevOps Engineer', 'Cloud Architect'],
+    days_of_week: [2], min_headcount: 1, status: 'active',
+  },
+  {
+    officeName: 'Budapest HQ',
+    name: 'Budapest HQ – scrum master jelenlét',
+    business_roles: ['Scrum Master'],
+    days_of_week: [1, 3, 5], min_headcount: 1, status: 'active',
+  },
+];
+
+// ── N. SZABÁLY SABLONOK (enterprise_rule_templates) ──────────────────────────
+
+export const RULE_TEMPLATE_DEFS = [
+  {
+    name: 'Max 3 absent Monday',
+    description: 'Hétfőnként maximum 3 fő lehet szabadságon egyidejűleg.',
+    template_data: { day_of_week: 1, max_off: 3, scope: 'workspace' },
+  },
+  {
+    name: 'No leave during sprint close',
+    description: 'Sprint lezárási napokon korlátozza a szabadságkérelmeket.',
+    template_data: { rule_type: 'sprint_close_block', notify_requestor: true },
+  },
+  {
+    name: 'Minimum 2 seniors present',
+    description: 'Minden napon legalább 2 senior fejlesztőnek jelenlétére szükség van.',
+    template_data: { role_filter: ['senior'], min_headcount: 2, scope: 'team' },
+  },
+  {
+    name: 'No leave during product launch',
+    description: 'Termékindítási időszakban tilos szabadságot kivenni.',
+    template_data: { rule_type: 'launch_block', advance_notice_days: 14 },
+  },
+  {
+    name: 'Friday afternoon WFH allowed',
+    description: 'Péntek délután home office engedélyezve minden tagnak.',
+    template_data: { day_of_week: 5, from_hour: 13, type: 'wfh_allowed' },
+  },
+];
+
+// ── O. JÓVÁHAGYÁSI LÁNC (enterprise_approval_chains) ─────────────────────────
+
+export const APPROVAL_CHAIN_DEFS = [
+  { step_order: 1, approver_role: 'resourceAssistant', is_active: true },
+  { step_order: 2, approver_role: 'owner',             is_active: true },
+];
+
+// ── DEFAULT SEED QUANTITIES ───────────────────────────────────────────────────
+// Ezek az alapértelmezett mennyiségek ha az enterprise_seed_config-ban
+// nincs mentett konfiguráció. A UI-ban felül lehet írni.
+
+export const DEFAULT_SEED_QUANTITIES = {
+  members:               22,
+  offices:                3,
+  teams:                  4,
+  leave_types:            4,
+  holidays:               8,
+  skills:                12,
+  projects:               5,
+  daily_rules:            7,
+  office_coverage_rules: 10,
+  approval_chains:        2,
+  rule_templates:         5,
+  reports:                4,
+  scenarios:              2,
+  access_systems:         4,
+  onboarding_templates:   3,
+  role_definitions:       3,
+  member_templates:       5,
+  translation_overrides:  4,
+  agile_issues:           4,
+  ical_tokens:            4,
+};
