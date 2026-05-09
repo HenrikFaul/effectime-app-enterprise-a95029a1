@@ -1,3 +1,42 @@
+## 2026-05-09 — v3.2.7 Demo UX: instant-user names, 33 agile issues, 5-level org hierarchy, configurable seed limits
+
+### Added — `src/config/demo-seed-limits.ts` (new file)
+- Single user-editable TypeScript file exporting `DEMO_SEED_MAX_LIMITS` — the canonical source for all maximum element counts in the demo seed config dialog.
+- `DemoSeedConfigDialog.tsx` now imports from this file via a `lim(key)` helper; hardcoded `max` values removed from the dialog tree.
+- Edit only this one file to change any slider maximum — change takes effect on next page load.
+
+### Changed — `create-instant-enterprise-member`: realistic Hungarian names
+- Added `INSTANT_PERSONA_POOL` — 25 realistic Hungarian personas distinct from `DEMO_PERSONAS` (no name collisions).
+- Name selection prefers unused names in the workspace first; falls back to full pool when all are taken.
+- `business_role` uses a role already present in the workspace catalog first, falls back to the pool persona's own position.
+- Result: instant users now get names like "Balázs Fekete" instead of "Instant User ###".
+
+### Changed — `seed-data.ts`: AGILE_ISSUE_DEFS expanded from 4 → 33 tickets
+- **3 Epics**: Customer Portal 2.0, Backend API Refactor, QA & DevOps — spanning Sprint 10–13 with 6–9 week Gantt ranges.
+- **12 Stories**: children of Epics via `parent_key`; cover Sprint 11/12/13 with varied statuses (Done/In Progress/In Review/To Do).
+- **8 Bugs**: mixed priorities and sprint assignments, several with `parent_key` to Epics.
+- **6 Tasks**: standalone team tasks across Frontend/Backend/Ops/QA.
+- **4 Sub-tasks**: children of Stories (DEMO-4, DEMO-8, DEMO-9).
+- All tickets carry: `story_points`, `assignee_name`, `reporter_email`, `original_estimate_hours`, `remaining_hours`, `completed_hours`, `capacity_risk`, `fit_score`, `suggested_role`.
+- Date offsets via `startOff`/`dueOff` (integer day offsets from today) — computed to actual dates at seed time in `index.ts` via `addDays(today, offset)`.
+
+### Changed — `seed-data.ts`: 5-level org hierarchy
+- `PERSONA_ORG_ASSIGNMENTS` restructured from 3-level flat to 5-level deep tree:
+  - L1 (strategic): Viktor Mátyás — VP Engineering, no manager
+  - L2 (operational): Ferenc Horváth, Csilla Nagy, Judit Molnár, Zsuzsanna Hegedűs
+  - L3 (technical): Anna Kovács, Sándor Veres, Olivér Lengyel, Gizella Varga, Richárd Kővári
+  - L4 (execution): Petra Szász, Tímea Bodnár, István Papp, Kristóf Balogh, Eszter Kiss, Nikolett Farkas
+  - L5 (specialist): Henrietta Fekete, Mária Tóth, Dávid Szabó, Bence Tóth, László Szőke, Uzonka Pálfi
+- `LEADERSHIP_LEVEL_DEFS` extended to 5 levels (added `specialist` as L5).
+- Seeder leadership guard raised to `Math.max(5, seedQty.leadership_levels)`.
+- `agile_issues` default and max both set to 33.
+
+### Non-Regression
+- All previously seeded entity types unaffected.
+- `DemoSeedConfigDialog` behavior identical — only the source of `max` values changed (now from `demo-seed-limits.ts`).
+
+---
+
 ## 2026-05-09 — v3.2.6 Premium Org Chart: card-based view with employee detail drawer (PR #28)
 
 ### Added — `OrgChartPremiumView` component (`src/components/enterprise/organization/OrgChartPremiumView.tsx`)
