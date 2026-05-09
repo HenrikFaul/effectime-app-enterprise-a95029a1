@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -100,6 +100,11 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   const [myMembership, setMyMembership] = useState<any>(null);
   const [allMembers, setAllMembers] = useState<any[]>([]);
   const [timelineReport, setTimelineReport] = useState<{ userIds: string[]; range: { from: Date; to: Date } } | null>(null);
+  // Stable callback reference — prevents infinite re-render loop in TimelineView
+  const handleFilteredUsersChange = useCallback(
+    (userIds: string[], range: { from: Date; to: Date }) => setTimelineReport({ userIds, range }),
+    []
+  );
   const [internalTab, setInternalTab] = useState('members');
   const [recoveryMode, setRecoveryMode] = useState<boolean>(false);
   const activeTab = externalTab || internalTab;
@@ -317,9 +322,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                   <TabsContent value="calendar-timeline" className="space-y-3">
                     <TimelineView
                       workspaceId={workspace.id}
-                      onFilteredUsersChange={(userIds, range) =>
-                        setTimelineReport({ userIds, range })
-                      }
+                      onFilteredUsersChange={handleFilteredUsersChange}
                     />
                     {timelineReport && timelineReport.userIds.length > 0 && (
                       <SkillCapacityReport

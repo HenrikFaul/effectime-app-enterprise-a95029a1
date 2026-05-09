@@ -642,6 +642,16 @@
 - **Javítás**: Add `containerHeight?: string` prop (default `'520px'`) to `OrgChartPremiumView`. In `OrgChart`, add a `Maximize2` button (visible only in premium view) that opens a Radix `Dialog` (`max-w-[95vw]`). Inside the dialog, render `<OrgChartPremiumView ... containerHeight=”calc(90vh - 80px)” />` — same data, same functionality, but 90 % of the viewport height. The dialog overlay handles close on backdrop click.
 - **Megelőzés**: For any complex visualization (charts, diagrams, boards), design a `containerHeight` escape hatch from the start. Reusing the existing component inside a Dialog is zero-duplication fullscreen — no separate “fullscreen component” needed.
 
+### [LESSON-TIMELINE-INFINITE-LOOP-001] Inline callback prop → végtelen React újrarenderelés + skeleton freeze
+- **Dátum**: 2026-05-09 (v3.3.3)
+- **Fájl**: `src/components/enterprise/WorkspaceDashboard.tsx`, `src/components/enterprise/calendar/TimelineView.tsx`
+- **Hibaüzenet**: "Maximum update depth exceeded" (React, runtime); UI: az Idővonal örökre skeleton állapotban marad.
+- **Gyökérok**: `WorkspaceDashboard` JSX-ben inline arrow fn volt az `onFilteredUsersChange` propba: `(userIds, range) => setTimelineReport(...)`. Minden szülő-render új fn referenciát adott. `TimelineView`-ban `useEffect([..., onFilteredUsersChange])` ezt a referenciát dep-ként figyelte → effect újrafut → `setTimelineReport` → szülő újrarendel → új fn → loop → ~50 iteráció után React kidobja a hibát → az összetevő megfagy, `setLoading(false)` sohasem hívódik meg → skeleton.
+- **Javítás**:
+  1. **Szülőben**: `useCallback(() => setTimelineReport(...), [])` — stabil referencia, mert `setTimelineReport` (useState setter) maga is stabil.
+  2. **Gyermekben**: `useRef` pattern a callbackre: külön mellékhatás frissíti `ref.current = prop`; a notify-effect `ref.current?.()`-t hív, és **nem** sorolja fel a prop-ot a dep-tömbben. Guard: `if (loading || members.length === 0) return` — megakadályozza a korai (üres adattal való) tüzelést mount után.
+- **Megelőzés**: Ha egy gyermek-komponens szülőnek `callback` propot hív `useEffect`-ből, a propot SOHA ne listázd a dep-tömbben közvetlenül — ez garantált végtelen loop, ha a szülő inline-ban adja át. Mindig: `useCallback` a szülőben VAGY `useRef`-es indirection a gyermekben (mindkettő), soha egyik sem önmagában nem elégséges, ha a szülő nem stabilan adja át.
+
 ### [LESSON-TIMELINE-FETCH-001] Promise.allSettled + debounce a hónapváltás "Failed to fetch" bug ellen
 - **Dátum**: 2026-05-09 (v3.3.2)
 - **Fájl**: `src/components/enterprise/calendar/TimelineView.tsx`

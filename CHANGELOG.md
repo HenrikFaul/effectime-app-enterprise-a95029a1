@@ -1,3 +1,12 @@
+## 2026-05-09 — v3.3.3 Timeline infinite re-render loop fix
+
+### Fixed — Végtelen újrarenderelés → skeleton freeze (`WorkspaceDashboard` + `TimelineView`)
+- **Gyökérok**: `WorkspaceDashboard` inline arrow functiont adott át `onFilteredUsersChange` propként. Minden szülő-render új fn-referenciát generált → `TimelineView` `useEffect`-je (amely a propot dep-ként figyelte) újrafutott → `setTimelineReport` → szülő újrarendel → új referencia → végtelen loop. ~50 iteráció után React dobta a "Maximum update depth exceeded" hibát; a komponens megfagyott utolsó skeleton állapotában, a `setLoading(false)` sohasem hívódott meg.
+- **Fix 1 — `WorkspaceDashboard.tsx`**: `useCallback(() => setTimelineReport(...), [])` stabil referenciát biztosít — `setTimelineReport` maga is stabil (useState setter), ezért az üres dep-tömb helyes.
+- **Fix 2 — `TimelineView.tsx`**: `useRef`-alapú callback indirection — `onFilteredUsersChangeRef` ref frissítő mellékhatás (deps nélkül), a notify-effect `ref.current?.()`-t hív és **nem** sorolja fel a prop-ot dep-ként; guard `if (loading || members.length === 0) return` megakadályozza a korai tüzelést mount után.
+
+---
+
 ## 2026-05-09 — v3.3.2 Timeline fetch fix + expanded leave seed
 
 ### Fixed — `TimelineView` hónapváltás hiba (`src/components/enterprise/calendar/TimelineView.tsx`)
