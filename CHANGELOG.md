@@ -251,14 +251,24 @@ Documented in the v3.2.5 entry above.
 
 ### Added
 - **DB**: `help_articles` (topic_key, locale, title, summary, body_md, route, anchor_id, taxonomy, tags, synonyms, related_topics, search_tokens tsvector) + `help_releases` for release-driven regeneration tracking. RLS: public read, service-role write only.
-- **Edge function `help-regenerator`**: GitHub release webhook entrypoint (HMAC-verified via `GITHUB_RELEASE_WEBHOOK_SECRET`). Pulls `CHANGELOG.md` + `versioning/*.md` from the repo, calls **Google Gemini 2.0 Flash** with a structured-JSON system prompt to produce EN+HU end-user help articles, and upserts them into `help_articles`. Tracks each run in `help_releases` (pending/running/succeeded/failed).
-- **Frontend Help Drawer redesign**: search bar with debounced autocomplete across title/summary/body, locale-aware results with EN fallback, markdown body rendering (react-markdown), release tag badge, dark glass surface.
-- **Drag-target ? icon**: pointerdown on the ? button now starts a drag session — moving over any `[data-help-region]` element highlights it (`.help-target-hover`), and releasing on it opens the drawer with that region's article. Click without movement still opens the page-level help.
-- **`useHelpArticleByAnchor` / `useHelpSearch` hooks** in `src/lib/help/useHelpArticles.ts`.
+- **DB schema**:
+  - `help_articles` — per-(topic_key, locale) article storage with: title, summary, body_md, route, anchor_id, taxonomy, tags[], synonyms[], related_topics[], release_id FK, content_hash SHA-256, is_system_generated, search_tokens tsvector, last_generated_at. Trigger `help_articles_search_trigger` rebuilds tsvector on insert/update with weighted A (title), B (summary+tags+synonyms), C (body). GIN indexes on tags and search_tokens. `is_active` + `archived_at` columns for soft-delete (added v3.2.1).
+  - `help_releases` — one row per regeneration run: version_tag UNIQUE, commit_sha, status enum, summary, error, triggered_by, started_at, completed_at.
+  - RLS: public SELECT only (no INSERT/UPDATE/DELETE policy — service role only writes).
+- **Edge function `help-regenerator`**:
+  - **HMAC-SHA256 verification** of `x-hub-signature-256` against `GITHUB_RELEASE_WEBHOOK_SECRET`. If secret env var is unset, verification is **skipped** (allows manual testing without a secret). Does NOT fail — this is intentional to allow local curl invocations.
+  - Fetches `CHANGELOG.md` + last 10 `versioning/*.md` via `raw.githubusercontent.com`.
+  - Calls **Google Gemini 2.0 Flash** (`generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent`) with `responseMimeType: "application/json"`, `temperature: 0.3`, structured JSON array output.
+  - Upserts each EN+HU variant on conflict `(topic_key, locale)`; computes SHA-256 content hash.
+  - Archives previous article versions by setting `archived_at` before upsert; new version gets `is_active = true`.
+- **Frontend Help Drawer redesign** (`HelpDrawer.tsx`): search bar with debounced autocomplete (200 ms), locale-aware results with EN fallback, markdown body rendering (`react-markdown`), release tag badge, dark glass surface.
+- **Drag-target ? icon** (`HelpButton.tsx`): `pointerdown` → tracks pointer movement. If movement exceeds **6px threshold**, switches to drag mode. While dragging, `document.elementFromPoint()` finds the nearest `[data-help-region]` and toggles `.help-target-hover` (primary-tinted ring + brightness boost). On `pointerup` over an anchor, opens drawer with that anchor's article. Pure click (< 6px movement) opens the page-level help as before.
+- **`useHelpArticleByAnchor` / `useHelpSearch` hooks** in `src/lib/help/useHelpArticles.ts`: anchor lookup with EN fallback, ilike full-text search.
 
-### Webhook URL
-`POST https://oezlzzmzzvbvinuysxaz.supabase.co/functions/v1/help-regenerator`
-Configure as a GitHub repository webhook with secret = `GITHUB_RELEASE_WEBHOOK_SECRET`, content-type `application/json`, event = "Releases".
+### Webhook configuration
+`POST https://oezlzzmzzvbvinuysxaz.supabase.co/functions/v1/help-regenerator`  
+GitHub repo Settings → Webhooks → Content type: `application/json`, Secret: `GITHUB_RELEASE_WEBHOOK_SECRET`, Events: "Releases" only.  
+Manual trigger: `curl -X POST <url> -H 'content-type: application/json' -d '{"repo":"OWNER/REPO","ref":"main","version_tag":"v3.x.x"}'`
 
 ## 2026-05-08 — v3.1.1 Demo workspace, position catalog wiring, Jira sync fix, in-app Jira issue editor
 
@@ -357,14 +367,37 @@ Configure as a GitHub repository webhook with secret = `GITHUB_RELEASE_WEBHOOK_S
 
 ## 2026-05-06 — Jira integration repair + Boards (Kanban / Scrum / Gantt)
 
-### Fixed
-- **Jira search 410/empty result regression** — `jira-devops-proxy` now requests `*all` fields and falls back through `POST /rest/api/3/search/jql → GET /rest/api/3/search/jql → GET /rest/api/3/search` so tenants on either the new or legacy endpoint succeed.
-- Removed leftover `auth-middleware.ts` / `client.server.ts` TanStack stubs that were re-created in a previous session and broke the Vite SPA build (`Cannot find module '@tanstack/react-start'`).
+### Fixed — Jira search 410 / empty result regression
+- **Root cause**: `jiraSearch()` was calling a single fixed endpoint and requesting only a hardcoded subset of fields. After Atlassian migrated tenants to the new search API (`/rest/api/3/search/jql`), the old endpoint returned 410 Gone or zero results.
+- **Fix** (`supabase/functions/jira-devops-proxy/index.ts`):
+  1. Request `fields: ['*all']` so Jira returns every navigable + custom field.
+  2. Cascade three endpoints: `POST /rest/api/3/search/jql` → `GET /rest/api/3/search/jql` → `GET /rest/api/3/search` (legacy). First 2xx wins.
+  3. Map description from **Atlassian Document Format (ADF)** JSON to plain text via a recursive `adfToText()` walker that handles `text`, `paragraph`, `heading`, `bulletList`, `listItem`, `codeBlock`, and `inlineCard` node types.
+  4. Resolve `sprint`, `team`, `start_date`, `story_points` across the most common Jira customfield IDs: `customfield_10020 / 10007 / 10010` (sprint), `customfield_10001` (team), `customfield_10015` (start date), `customfield_10016 / 10026` (story points).
+- Removed leftover `auth-middleware.ts` / `client.server.ts` TanStack stubs that broke the Vite SPA build (`Cannot find module '@tanstack/react-start'`).
 
 ### Added — Extended Jira field ingest
 The proxy now imports and caches the following fields per issue (Jira Cloud):
-`assignee, reporter, status, issue_type, summary, description (ADF→plain text), key, parent_key, sprint_name, labels (full), due_date, team_name, start_date, priority, story_points`.
-Schema: two new columns on `enterprise_agile_issues` — `description text`, `team_name text`.
+
+| Field | Source |
+|-------|--------|
+| assignee | `fields.assignee.displayName` |
+| reporter | `fields.reporter.displayName` |
+| status | `fields.status.name` |
+| issue_type | `fields.issuetype.name` |
+| summary | `fields.summary` |
+| description | `adfToText(fields.description)` |
+| key | `issue.key` |
+| parent_key | `fields.parent.key` |
+| sprint_name | `customfield_10020 / 10007 / 10010` |
+| labels | `fields.labels` (full array) |
+| due_date | `fields.duedate` |
+| team_name | `customfield_10001 / fields.team` |
+| start_date | `customfield_10015 / fields.startdate` |
+| priority | `fields.priority.name` |
+| story_points | `customfield_10016 / 10026` |
+
+Schema migration: two new columns on `enterprise_agile_issues` — `description text`, `team_name text`.
 
 ### Added — Boards tab (Kanban / Scrum / Gantt)
 New `AgileBoards` component, mounted as a dedicated tab in `AgilePanel`:

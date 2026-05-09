@@ -505,3 +505,55 @@
 - **Gyökérok**: Közvetlenül Tailwind szín-class-ok komponens szinten, nincs CSS változó réteg.
 - **Javítás**: `themes.css`-ben CSS változók definiálva minden témához (`enterprise`, `nebula`, `aurora`, `graphite`, `sunrise`, `mono`). `<html>` root osztályváltás (`document.documentElement.classList`) + `localStorage` perzisztencia. Komponensek ugyanazon token neveket használják — csak a gyökerükön definiált értékek változnak.
 - **Megelőzés**: Témát igénylő alkalmazásoknál MINDIG CSS változó token réteget vezess be. A komponensek ne hard-coded Tailwind színeket (`bg-purple-600`) használjanak, hanem semantic token osztályokat (`bg-primary`). A témaváltás egyetlen osztálycsere legyen a `<html>` elemen.
+
+---
+
+## ➕ APPEND — 2026-05-09 Versioning fájlokból kinyert mélyebb technikai tanulságok
+
+### [LESSON-JIRA-PROJECTID-001] Jira API: numeric project ID vs. project key — különböző endpointok különbözőt várnak
+- **Dátum**: 2026-05-08 (v3.1.1, versioning: 08052601)
+- **Fájl**: `supabase/functions/jira-devops-proxy/index.ts`
+- **Probléma**: `jiraSyncProjectConfig` a `/rest/api/3/issuetype/project?projectId=SYN` formát használta. Az `issuetype/project` endpoint a `projectId` query paramétereként **numerikus ID-t** vár (pl. `10000`), nem projekt kulcsot (pl. `SYN`) — Jira 500-at dobott.
+- **Gyökérok**: A Jira API különböző endpointokon különböző azonosítótípust vár: `projectId` (numerikus) vs. `projectIdOrKey` (mindkettő elfogadott). A project key ≠ project ID.
+- **Javítás**: `GET /rest/api/3/project/{projectIdOrKey}` — ez visszaadja a projektet annak `issueTypes` tömbjével együtt. Fallback idősebb tenant-okhoz: `GET /rest/api/3/issue/createmeta?projectKeys={key}`.
+- **Megelőzés**: Minden Jira API hívásnál ellenőrizd az endpoint dokumentációját: `projectId` (numerikus) vs. `projectIdOrKey` (string kulcs is elfogadott). Ha nem vagy biztos, a `/project/{projectIdOrKey}` az univerzálisan biztonságos form.
+
+### [LESSON-JIRA-SEARCH-CASCADE-001] Jira search API: háromszintű endpoint cascade a kompatibilitáshoz
+- **Dátum**: 2026-05-06 (v3.0.1, versioning: 06052601)
+- **Fájl**: `supabase/functions/jira-devops-proxy/index.ts`
+- **Probléma**: A Jira Cloud tenant-ok különböző API verziókra vannak, és nem minden tenant válaszol ugyanazon a search endpoint-on. Egyetlen fixen beégetett endpoint 410 Gone vagy üres eredmény hibát adott.
+- **Gyökérok**: Az Atlassian a `/rest/api/3/search`-t deprecálta a `/rest/api/3/search/jql` javára, de a migráció tenant-szintű és lépcsőzetes — nem minden tenant frissített.
+- **Javítás**: Cascade sorrend: `POST /rest/api/3/search/jql` → `GET /rest/api/3/search/jql` → `GET /rest/api/3/search` (legacy). Az első 2xx válasz nyer.
+- **Megelőzés**: Külső SaaS API hívásoknál, ahol a provider fokozatosan deprecál endpointokat, mindig implementálj fallback cascade-et. Ne feltételezd, hogy minden tenant azonos API verziót futtat.
+
+### [LESSON-ADF-PLAINTEXT-001] Jira description Atlassian Document Format (ADF) — plain text konverzió kötelező
+- **Dátum**: 2026-05-06 (v3.0.1, versioning: 06052601)
+- **Fájl**: `supabase/functions/jira-devops-proxy/index.ts`
+- **Probléma**: A Jira `fields.description` mező **nem plain text** — Atlassian Document Format (ADF) JSON objektum érkezik vissza. Közvetlen mentés az `enterprise_agile_issues.description`-be ADF JSON-t tárol, ami az UI-ban megjeleníthetetlen.
+- **Gyökérok**: Az ADF a Jira modern rich-text formátuma: `{ "type": "doc", "content": [{ "type": "paragraph", "content": [{ "type": "text", "text": "..." }] }] }`. Nem kompatibilis plain text mezőkkel.
+- **Javítás**: Rekurzív `adfToText(node)` walker implementáció, amely kezeli: `text`, `paragraph`, `heading`, `bulletList`, `listItem`, `codeBlock`, `inlineCard` node típusokat. Minden egyéb node-ot figyelmen kívül hagy.
+- **Megelőzés**: Jira leírás mező feldolgozásakor MINDIG `adfToText()` konverziót alkalmazz. A raw ADF JSON-t SOHA ne mentsd közvetlenül felhasználói felületre szánt szöveges mezőbe.
+
+### [LESSON-DEMO-PERSONA-STRATEGY-001] Demo felhasználók: valódi auth.users + app_metadata tag = legkisebb schema változás
+- **Dátum**: 2026-05-08 (v3.1.1, versioning: 08052601)
+- **Fájl**: `supabase/functions/seed-demo-workspace/index.ts`
+- **Probléma**: Demo munkaterület seedelésekor szükség van valódi felhasználószerű entitásokra (profilok, tagságok, szabadságkérelmek, skill assignmentek) — de anélkül hogy új sémát kellene bevezetni vagy meglévő componenseket módosítani.
+- **Gyökérok**: Ha "fake" user ID-kat használsz, az összes meglévő komponens (profil lookup, leave_request user display, member-skill join) meghibásodik vagy nullt ad vissza.
+- **Javítás**: Valódi `auth.users` rekordok létrehozása `admin.createUser({ email_confirm: true, app_metadata: { is_demo_persona: true } })` hívással. Az `is_demo_persona: true` app_metadata tag azonosítja a demo usereket a cleanup folyamathoz. Minden meglévő komponens transzparensen működik velük.
+- **Megelőzés**: Demo/teszt usereket MINDIG valódi auth.users rekordként hozz létre, `app_metadata.is_demo_persona: true` taggel. Ne vezess be mock user entity típust — ez schema változást és component módosítást igényel. A cleanup a tag alapján azonosítja és törli őket.
+
+### [LESSON-WEBHOOK-HMAC-SKIP-001] Webhook HMAC verifikáció: skip ha nincs secret beállítva (ne fail)
+- **Dátum**: 2026-05-07 (v3.2.0, versioning: 07052602)
+- **Fájl**: `supabase/functions/help-regenerator/index.ts`
+- **Probléma**: Ha a HMAC webhook secret env var nincs beállítva, a strict verify meghiúsítja az összes manuális teszthívást (`curl`) — még fejlesztés/debug közben is.
+- **Gyökérok**: A szigorú "ha nincs secret → fail" policy blokkolja a fejlesztési workflow-t és a manuális regenerálást.
+- **Javítás**: `if (!GITHUB_RELEASE_WEBHOOK_SECRET) { /* skip verification */ }` — ha a secret nincs beállítva, a verifikáció ki van hagyva. Ha be van állítva, HMAC-SHA256 kötelező.
+- **Megelőzés**: Webhook HMAC verifikációnál kövesd ezt a mintát: SECRET_SET → verify (fail ha mismatch), SECRET_NOT_SET → skip (allow). Ez teszi lehetővé a manuális tesztelést secret nélkül, miközben production-ban a webhook biztonságos.
+
+### [LESSON-AI-STRUCTURED-OUTPUT-001] Gemini 2.0 Flash: strukturált JSON output generálás help rendszerhez
+- **Dátum**: 2026-05-07 (v3.2.0, versioning: 07052602)
+- **Fájl**: `supabase/functions/help-regenerator/index.ts`
+- **Probléma**: Az AI-generált help cikkeket konzisztens struktúrában (title, summary, body_md, taxonomy, tags, anchor_id stb.) kell tárolni — szabad szöveges AI output nem parseable.
+- **Gyökérok**: Szabad szöveges AI output variábilis formátumot produkál, amely nehezen parseable és megbízhatatlanul illeszkedik a DB sémához.
+- **Javítás**: `responseMimeType: "application/json"` + `temperature: 0.3` + strukturált JSON array system prompt. A model `[{ "topic_key": "...", "locale": "en", "title": "...", ... }]` formátumban ad vissza eredményt, amely közvetlenül upsertálható.
+- **Megelőzés**: Ha AI-t használsz strukturált adatok generálásához (DB insert, API payload), MINDIG `responseMimeType: "application/json"`-t alkalmazz, és add meg a pontos JSON struktúrát a system promptban. `temperature: 0.3` → konzisztens, alacsony variabilitású output.
