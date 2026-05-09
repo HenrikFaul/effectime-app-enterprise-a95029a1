@@ -445,7 +445,6 @@ export default function Enterprise() {
             </>
           )}
         </div>
-        </div>
       </AppShell>
 
       <CreateWorkspaceDialog
@@ -510,5 +509,4 @@ export default function Enterprise() {
       </AlertDialog>
     </>
   );
-}
 }
