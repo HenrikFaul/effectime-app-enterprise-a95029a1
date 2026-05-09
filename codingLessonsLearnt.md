@@ -660,3 +660,55 @@
   1. `Promise.all` → `Promise.allSettled` + `toRes()` helper: nem-kritikus queryek (leaves, holidays, skills) hálózati hibán is üres tömbbel degradálnak, nem dobnak.
   2. 250 ms debounce a `useEffect`-ben: `loadTimerRef`-ből futtató `setTimeout(load, 250)` — gyors navigálásnál csak az utolsó klikk indít tényleges hálózati kérést.
 - **Megelőzés**: Bármelyik nézetben, ahol hónapváltás → új lekérdezés, mindig debounce-old a triggert (250–300 ms) és használj `allSettled`-et a resilience miatt. Soha ne feltételezd, hogy párhuzamos `Promise.all` stabil — különösen Supabase pooler limites környezetben.
+
+---
+
+## [LESSON-REDESIGN-SHELL-001] Adaptive shell + density tokens (Phase 1)
+
+**Context:** A teljes app eddig `max-w-5xl mx-auto` köré szorult — ultrawide
+(1536px+) képernyőn üres oldalsávok, density tablet és 4K-n is azonos. A
+redesign Phase 1 bevezeti a shell és density rendszert úgy, hogy a meglévő
+`WorkspaceDashboard` (1076 sor) **érintetlen marad** — zero regresszió.
+
+**Új architektúra:**
+- `src/styles/density.css` — három density tier (`compact` / `comfortable` /
+  `expansive`) + `auto` (viewport-alapú). Tokenek: `--density-row-h`,
+  `--density-pad-x/y`, `--density-gap`, `--density-card-pad`,
+  `--density-section-gap`, `--density-page-pad-x/y`. A `<html data-density>`
+  attribútum felülírja a media query-ket.
+- `src/hooks/useDensity.tsx` — `DensityProvider` + `useDensity()`. Munkaterület
+  scope-olt preferencia (`effectime.density.ws.<id>` localStorage), fallback
+  globális (`effectime.density`), végül `auto`. **Soha nem `auto`-t alkalmaz**
+  a DOM-ra — mindig feloldja viewportból.
+- `src/components/shell/AppShell.tsx` — root layout primitív. Soha nem ad
+  `max-width`-et a `<main>`-re. `SkipToContent` a11y-hez.
+- `src/components/shell/PageHeader.tsx` — title + description + crumbs +
+  actions, density-token alapú padding.
+- `src/components/shell/DensityToggle.tsx` — fejlécbe ágyazható toggle 4
+  opcióval (Auto/Tömör/Kényelmes/Tágas).
+
+**Use-on-page:**
+- `Enterprise.tsx` workspace picker átállt: full-bleed grid (`shell-grid-bento`
+  → 1/2/3/4/5 col 640/1024/1536/1920px-en), modern kártyák gradient ikon
+  badge-dzsel, billentyűzettel navigálható (Enter/Space).
+- `Landing.tsx` — full-bleed hero `clamp()` típusskálával, feature grid 4
+  oszlopra megy 2xl-en, benefit szekció 1400px-ig nyúlik ultrawide-on.
+- `App.tsx` — `<DensityProvider>` a gyökér szinten.
+
+**KRITIKUS REGRESSZIÓ-VÉDELEM:**
+1. `WorkspaceDashboard.tsx` **nem módosult** — minden tab content, integráció,
+   Supabase query, RLS hívás, edge function, audit log érintetlen.
+2. URL search params (`?tab=`, `?ws=`, `?invite=`, `?select=1`) viselkedése
+   bit-pontosan megegyezik az eredetivel.
+3. Auth flow (HashRouter, OAuth callback, invite token, password reset)
+   érintetlen.
+4. A density tokenek **csak akkor hatnak** ha egy komponens explicit
+   `var(--density-*)`-ot használ. A meglévő tailwind paddingek (`p-4`, stb.)
+   változatlanul működnek — semmi nem törik attól, hogy a `data-density`
+   attribútum megjelenik a `<html>`-en.
+
+**Phase 2 előkészítve:** a shell komponensek készek arra, hogy a
+`WorkspaceDashboard` belsejét körülöleljék — modul-szintű sidebar nav (ami
+ugyanazt a `?tab=` paramétert hajtja, így zero state-loss), TopBar az
+értesítésekkel/profil menüvel, és a bento grid widgetekkel a dashboard
+áttekintő nézethez.
