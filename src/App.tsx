@@ -21,6 +21,36 @@ import Unsubscribe from "./pages/Unsubscribe";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
+const HASH_ROUTE_QUERY_KEYS = new Set(['redirect', 'oauth', 'email_activation_token', 'select', 'tab', 'ws', 'invite']);
+
+function HashRouteBridge() {
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.location.hash) return;
+
+    const { pathname, search } = window.location;
+    const incomingParams = new URLSearchParams(search);
+    const globalParams = new URLSearchParams();
+    const routeParams = new URLSearchParams();
+
+    incomingParams.forEach((value, key) => {
+      if (HASH_ROUTE_QUERY_KEYS.has(key)) routeParams.set(key, value);
+      else globalParams.set(key, value);
+    });
+
+    const needsBridge = pathname !== '/' || routeParams.size > 0;
+    if (!needsBridge) return;
+
+    const globalSearch = globalParams.toString();
+    const routeSearch = routeParams.toString();
+    const hashPath = `${pathname}${routeSearch ? `?${routeSearch}` : ''}`;
+    const nextUrl = `${window.location.origin}/${globalSearch ? `?${globalSearch}` : ''}#${hashPath}`;
+
+    window.history.replaceState(null, '', nextUrl);
+  }, []);
+
+  return null;
+}
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -90,6 +120,7 @@ const App = () => (
                 <Toaster />
                 <Sonner />
                 <HelpDrawer />
+                <HashRouteBridge />
                 <HashRouter>
                   <SpaRedirectHandler />
                   <Routes>
