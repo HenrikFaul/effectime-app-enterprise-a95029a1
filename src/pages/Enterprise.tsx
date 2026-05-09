@@ -295,108 +295,158 @@ export default function Enterprise() {
     }
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur px-4 py-3">
-        <div
-          className="flex items-center justify-between max-w-5xl mx-auto gap-2"
-          data-help-region="home.overview"
-        >
-          <div className="flex items-center gap-2">
-            <HelpButton />
-            <EffectimeLogo size={34} variant="full" />
-          </div>
-          <div className="flex items-center gap-2">
-            <Button onClick={() => setShowCreate(true)} size="sm">
-              <Plus className="h-4 w-4 mr-1" /> {t('header.new_workspace')}
-            </Button>
-            <Button
-              onClick={() => setShowSeedConfig(true)}
-              size="sm"
-              variant="outline"
-              className="gap-1.5"
-              title="Demo workspace alapértelmezett entitások konfigurálása"
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              <span className="hidden sm:inline">Demo konfig</span>
-            </Button>
-            <LanguageSelector />
-            <Button onClick={signOut} size="sm" variant="destructive" className="gap-1.5">
-              <LogOut className="h-4 w-4" /> {t('header.sign_out')}
-            </Button>
-          </div>
-        </div>
-      </header>
+  // ────────────────────── Workspace picker (redesigned shell) ──────────────────────
+  const [filter, setFilter] = useState('');
+  const filteredWorkspaces = workspaces.filter((w) =>
+    !filter ? true : (w.name + ' ' + (w.description ?? '')).toLowerCase().includes(filter.toLowerCase())
+  );
 
-      <main className="max-w-5xl mx-auto p-4 space-y-4">
-        {loading || acceptingInvite ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          </div>
-        ) : workspaces.length === 0 ? (
-          <Card className="text-center py-12">
-            <CardContent>
-              <Building2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h2 className="text-xl font-semibold mb-2">Még nincs munkaterületed</h2>
-              <p className="text-muted-foreground mb-4">
-                Hozz létre egy munkaterületet a csapatod távolléteinek kezeléséhez.
-              </p>
-              <Button onClick={() => setShowCreate(true)}>
-                <Plus className="h-4 w-4 mr-1" /> Munkaterület létrehozása
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {workspaces.map((ws) => {
-              const role = getRoleForWorkspace(ws.id);
-              const canDelete = role === 'owner';
-              return (
-                <Card
-                  key={ws.id}
-                  className="cursor-pointer hover:border-primary/50 transition-colors group relative"
-                  onClick={() => setSelectedWorkspaceId(ws.id)}
+  return (
+    <>
+      <SkipToContent />
+      <AppShell
+        topbar={
+          <PageHeader
+            title={
+              <span className="flex items-center gap-3">
+                <EffectimeLogo size={30} variant="full" />
+                <span className="sr-only">Effectime</span>
+              </span>
+            }
+            description="Válassz munkaterületet vagy hozz létre újat. A teljes szervezet erőforrásai egy helyen."
+            crumbs={[{ label: 'Effectime' }, { label: 'Munkaterületek' }]}
+            actions={
+              <>
+                <HelpButton />
+                <DensityToggle />
+                <LanguageSelector />
+                <Button onClick={() => setShowCreate(true)} size="sm" className="gap-1.5">
+                  <Plus className="h-4 w-4" /> {t('header.new_workspace')}
+                </Button>
+                <Button
+                  onClick={() => setShowSeedConfig(true)}
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5"
+                  title="Demo workspace alapértelmezett entitások konfigurálása"
                 >
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between gap-2">
-                      <CardTitle className="text-base">{ws.name}</CardTitle>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Badge variant={getRoleBadgeVariant(role)}>{getRoleLabel(role)}</Badge>
-                        {canDelete && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                            aria-label={`„${ws.name}" törlése`}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setWorkspaceToDelete(ws);
-                            }}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                  <SlidersHorizontal className="h-4 w-4" />
+                  <span className="hidden md:inline">Demo konfig</span>
+                </Button>
+                <Button onClick={signOut} size="sm" variant="ghost" className="gap-1.5 text-muted-foreground hover:text-destructive">
+                  <LogOut className="h-4 w-4" />
+                  <span className="hidden md:inline">{t('header.sign_out')}</span>
+                </Button>
+              </>
+            }
+          />
+        }
+      >
+        <div className="shell-page shell-section" data-help-region="home.overview">
+          {loading || acceptingInvite ? (
+            <div className="flex items-center justify-center py-24">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            </div>
+          ) : workspaces.length === 0 ? (
+            <Card className="text-center py-16 border-dashed">
+              <CardContent className="flex flex-col items-center gap-4">
+                <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Building2 className="h-8 w-8 text-primary" />
+                </div>
+                <div className="max-w-md">
+                  <h2 className="text-xl font-semibold mb-2">Még nincs munkaterületed</h2>
+                  <p className="text-muted-foreground mb-6">
+                    Hozz létre egy munkaterületet a csapatod távolléteinek és erőforrásainak kezeléséhez.
+                  </p>
+                </div>
+                <Button onClick={() => setShowCreate(true)} size="lg" className="gap-2">
+                  <Plus className="h-4 w-4" /> Munkaterület létrehozása
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {workspaces.length > 4 && (
+                <div className="relative max-w-md">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+                  <Input
+                    value={filter}
+                    onChange={(e) => setFilter(e.target.value)}
+                    placeholder="Munkaterület keresése…"
+                    className="pl-9"
+                  />
+                </div>
+              )}
+              <div className="shell-grid-bento">
+                {filteredWorkspaces.map((ws) => {
+                  const role = getRoleForWorkspace(ws.id);
+                  const canDelete = role === 'owner';
+                  return (
+                    <Card
+                      key={ws.id}
+                      className="group relative cursor-pointer transition-all hover:border-primary/60 hover:shadow-elevated focus-within:ring-2 focus-within:ring-ring"
+                      onClick={() => setSelectedWorkspaceId(ws.id)}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`Belépés: ${ws.name}`}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setSelectedWorkspaceId(ws.id);
+                        }
+                      }}
+                    >
+                      <CardHeader className="pb-3">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-primary/20 to-accent/20 flex items-center justify-center shrink-0">
+                              <Building2 className="h-5 w-5 text-primary" />
+                            </div>
+                            <CardTitle className="text-base truncate">{ws.name}</CardTitle>
+                          </div>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <Badge variant={getRoleBadgeVariant(role)} className="text-[10px]">
+                              {getRoleLabel(role)}
+                            </Badge>
+                            {canDelete && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                                aria-label={`„${ws.name}" törlése`}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setWorkspaceToDelete(ws);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                        {ws.description && (
+                          <CardDescription className="line-clamp-2 mt-1">{ws.description}</CardDescription>
                         )}
-                      </div>
-                    </div>
-                    {ws.description && (
-                      <CardDescription className="line-clamp-2">{ws.description}</CardDescription>
-                    )}
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Settings className="h-3 w-3" />
-                        {ws.timezone}
-                      </span>
-                      <span>{new Date(ws.created_at).toLocaleDateString('hu-HU')}</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
-        )}
-      </main>
+                      </CardHeader>
+                      <CardContent className="pt-0 flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground min-w-0">
+                          <span className="flex items-center gap-1 truncate">
+                            <Settings className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{ws.timezone}</span>
+                          </span>
+                          <span className="shrink-0">{new Date(ws.created_at).toLocaleDateString('hu-HU')}</span>
+                        </div>
+                        <ArrowRight className="h-4 w-4 text-muted-foreground translate-x-0 group-hover:translate-x-1 group-hover:text-primary transition-all" />
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </div>
+      </AppShell>
+    </>
 
       <CreateWorkspaceDialog
         open={showCreate}
