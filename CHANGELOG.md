@@ -1,3 +1,25 @@
+## 2026-05-09 — v3.2.6 Premium Org Chart: card-based view with employee detail drawer (PR #28)
+
+### Added — `OrgChartPremiumView` component (`src/components/enterprise/organization/OrgChartPremiumView.tsx`)
+- **Card-based org chart** with gradient accent cards, hover lift effects, and recursive branch rendering with collapsible nodes.
+- **Employee detail drawer** — side panel that opens on card click, showing: org unit name, team, role, manager name, direct reports list (up to 8 with overflow indicator), location/city, skill count, and join date. Org unit names and skill counts fetched from Supabase on demand and cached in component state.
+- **Three view styles** in the `OrgChart` component:
+  - **Premium** (new default) — card-based with side drawer
+  - **Diagram** — existing tree view (renamed from "Tree")
+  - **List** — existing flat list
+  - View preference persisted to `localStorage` (`orgchart_view_preference`).
+- **Enhanced membership query**: added `location`, `city`, `team`, and `joined_at` fields; search filtering now includes `role` and `team`.
+- **Flattened node tree**: pre-built `flatNodes: Map<string, OrgNode>` before rendering enables O(1) manager/child lookups — avoids recursive traversal on every card render.
+- **Loading skeleton** during initial data fetch.
+- **i18n**: `Premium`, `Diagram`, `List` labels + drawer section labels added to EN and HU bundles.
+- **Accessibility**: `tabIndex`, `onKeyDown` (Enter/Space to open drawer), ARIA labels, semantic HTML.
+
+### Non-Regression
+- Existing tree and list views unchanged; premium is opt-in via the style switcher.
+- No schema or edge-function changes.
+
+---
+
 ## 2026-05-09 — v3.2.5 Demo workspace seeder v8: data-driven catalogs + full org-structure for all 22 members
 
 ### Fixed — Demo workspace seeder: org-structure assignment was missing for 15/22 members
@@ -29,6 +51,79 @@ All five catalog entity types are now seeded from typed `DEFS` arrays in `seed-d
 - All catalog `DEFS` arrays and `PERSONA_ORG_ASSIGNMENTS` are defined once in `seed-data.ts` (single source of truth) and imported by `index.ts`.
 - `.governance/entity-creation-inventory.md` updated with ✅ markers for all newly seeded entity types (sections 2.1–2.5).
 - Edge function deployed as **version 8 (ACTIVE)** to production Supabase project.
+
+---
+
+## 2026-05-09 — Demo workspace seeder build chronicle: v1 → v8 (PRs #20–27)
+
+The seeder evolved through 8 versions on 2026-05-08/09. This section captures each iteration's root cause, fix, and architectural decision for future reference.
+
+### v1 — Comprehensive seeder (PR #20, 2026-05-08)
+First fully comprehensive implementation: 22 personas, `corsHeaders` inlined (fixes Supabase MCP bundler resolution failure), covering all major modules: offices, teams, leave types, holidays, skills, memberships, allocations, leave requests, quotas, daily rules, office coverage rules, audit event.
+
+### v2/v3 — Bug fixes: SelectItem crash, org pulse, Jira editor dark screen (PR #21, 2026-05-09)
+- **`SelectItem` empty-value crash**: Radix UI `SelectItem` throws a runtime error when `value=""` (empty string). Any dropdown using an empty string as the "unselected" sentinel crashed silently. Fixed by replacing all `value=""` instances with non-empty placeholder values.
+- **Org Pulse view** not displaying membership data — query scope fix.
+- **Translation overrides table** not rendering correctly — component state fix.
+- **Jira editor dark screen** on modal open — z-index/stacking context fix.
+
+### v4 — Supabase SDK upgrade + admin client health check (PR #23, 2026-05-09)
+- **Root cause**: Supabase JS `v2.45.0` admin client silently failed **all** insert operations in the Deno edge function runtime — no error thrown, no rows inserted, no log.
+- **Fix**: upgraded to `v2.98.0` (matching `create-instant-enterprise-member`, which worked correctly). Added explicit auth options: `autoRefreshToken: false, persistSession: false, detectSessionInUrl: false`.
+- Added `SERVICE_KEY` null guard (returns clear HTTP 500 instead of silent failure).
+- Added admin client smoke test at startup (fails fast with a descriptive error if service role auth is broken).
+- Added explicit error logging for offices / teams / leave_types / holidays / skills insert blocks.
+
+### v5 — All entity types seeded; seed-data.ts as single source of truth (PR #24, 2026-05-09)
+Previously missing entity types added (blocks L–S):
+
+| Block | Table | App module |
+|-------|-------|------------|
+| L | `enterprise_role_definitions` + `enterprise_role_permissions` | Jogosultság-menedzsment |
+| M | `enterprise_member_templates` | Meghívó sablonok |
+| N | `enterprise_translation_overrides` | Lokalizáció |
+| O | `enterprise_workspace_integrations` + `enterprise_agile_issues` + `enterprise_agile_field_metadata` | Jira integráció |
+| P | `enterprise_ical_tokens` | iCal előfizetés |
+| Q | `enterprise_shift_assignments` | Kapacitástervező |
+| R | `enterprise_member_site_priorities` | Telephely prioritás |
+| S | `enterprise_access_decisions` | Hozzáférés döntések |
+
+**Architecture**: `seed-data.ts` declared as machine-readable single source of truth for all demo seed data; `.governance/entity-creation-inventory.md` as the human-readable governance counterpart. Rule: both files must be updated together whenever a new entity type is added.
+
+### v6 — 22 personas, Auth Admin REST fix, DemoSeedConfigDialog (PR #25, 2026-05-09)
+- **Auth Admin API fix**: replaced `supabase.auth.admin.createUser()` (silently dropped all user creations due to SDK session-layer routing issues) with direct `fetch` to `/auth/v1/admin/users` with explicit `Authorization: Bearer <service_role_key>` header.
+- **`slugify()`** helper for Hungarian diacritic normalization in email generation (e.g., `"Mátyás"` → `"matyas@demo.test"`).
+- Email domain changed from `.local` to `.test` (universally valid for testing).
+- 3-attempt retry with exponential backoff; per-user errors surfaced individually in the response body.
+- `DEMO_PERSONAS` expanded from 7 to **22** (full enterprise team simulation).
+- New DEF arrays in `seed-data.ts`: `DAILY_RULE_DEFS` (7), `OFFICE_COVERAGE_RULE_DEFS` (10), `RULE_TEMPLATE_DEFS` (5), `APPROVAL_CHAIN_DEFS` (2). `DEFAULT_SEED_QUANTITIES` introduced.
+- **`enterprise_seed_config`** table (new migration): per-owner configurable seed quantities, RLS owner-only read/write.
+- **`DemoSeedConfigDialog`** (`src/components/enterprise/DemoSeedConfigDialog.tsx`): collapsible tree UI showing every entity type with its app-location path and a quantity input. Persisted to `enterprise_seed_config`.
+- **"Demo konfig"** button added to `Enterprise.tsx` header.
+
+### v7 — Silent membership error captured (PR #26, 2026-05-09)
+- The membership bulk-insert never destructured `error` from the Supabase response — silent failures showed 0 members seeded with no log output.
+- Added explicit `{ data, error }` destructuring, `console.error` on failure, empty-array guard to skip insert when `demoUserIds` is empty, and separate progress log entries for auth-user count vs. membership-insert count.
+
+### v8 — Full org-structure for all 22 members + data-driven B1–B5 catalogs (PR #27)
+Documented in the v3.2.5 entry above.
+
+---
+
+## 2026-05-09 — Infrastructure & UX fixes: catalog RLS, workspace selector, deletion (PR #22)
+
+### Fixed — Position catalog returns 0 rows for every user
+- `enterprise_catalog_*` tables (categories, roles, skills, role_skills) had RLS **enabled but no policies**, so every authenticated query returned 0 rows regardless of the user's role.
+- **Fix**: added `SELECT` policy for the `authenticated` role on all four global catalog tables. The `PositionPickerDialog` (and 550+ seeded skills) now load correctly for all workspace members.
+
+### Added — Workspace selector always shown first
+- Landing page "Munkaterület" button navigates to `/app?select=1`.
+- `Enterprise.tsx` detects `?select=1` and suppresses the auto-select-last-workspace shortcut — user always sees the picker grid.
+
+### Added — Workspace deletion by owner
+- Owner-only delete button per workspace card with `AlertDialog` confirmation.
+- `DELETE` on `enterprise_workspaces`; all ~70 workspace-scoped tables already carry `ON DELETE CASCADE` → atomic cleanup of members, rules, projects, leave requests, integrations, quotas, audit log, etc.
+- Clears `localStorage` key `active_workspace_id` if the deleted workspace was the previously cached one.
 
 ---
 
@@ -278,6 +373,29 @@ New `AgileBoards` component, mounted as a dedicated tab in `AgilePanel`:
 - **Gantt** — horizontal month-grid timeline driven by `start_date → due_date` with type-coloured bars (Bug=red, Epic=purple, Story=emerald, Task/other=sky).
 All three views read from the cached `enterprise_agile_issues` so they remain available offline; a `Szinkron` button forces a fresh pull.
 
+---
+
+## 2026-05-06 — Navigation restructure: NotificationBell + Rules consolidation (PR #12)
+
+### Changed — `WorkspaceDashboard` top-level tab bar
+- **Removed** the standalone `Értesítések` (Notifications) tab.
+- **Removed** the standalone `Szabályok` (Rules) tab.
+- Tab bar simplified from 8 → 6 primary tabs.
+
+### Added — `NotificationBell` in workspace header
+- Bell icon next to the `Profilom` button; displays **unread count badge** (capped at `99+`).
+- Badge count refreshes every 60 s and on popover close.
+- Clicking opens a `Popover` containing the existing `EnterpriseNotifications` component unchanged.
+- `canView('notifications')` permission still gates visibility.
+
+### Changed — All rule managers moved into `Kérelmek` tab
+- New **Szabályok** collapsible section inside `Kérelmek` containing all rule managers: Approval chains, Leave types, Holidays, Company days, Blocked dates, Daily rules, Office coverage rules, Rule template library.
+- All top-level sections in `Kérelmek` (Jóváhagyások, Kérelmek, Szabályok) start **collapsed by default**; each sub-section is independently collapsible.
+- `canView('rules')` permission still gates the entire section.
+- All rule managers render functionally unchanged inside their new collapsible wrappers.
+
+---
+
 ## 2026-05-05 — v3.0.0 Phase 8 implementation: persistent translation overrides, predictive forecaster v1, Org Pulse, Integration Health Center, Decision Memory observed-outcome capture
 
 ### Added — Persistent translation overrides
@@ -464,6 +582,63 @@ All three views read from the cached `enterprise_agile_issues` so they remain av
 ### Notes
 - This commit is **specification-only**. No `src/`, no migrations, no edge function changes. Runtime behavior is unchanged.
 - Implementation begins under `versioning/05052601_v3.0.0_ai_dev_prompts.md` Phase 1.
+
+---
+
+## 2026-05-05 — Enterprise role/category/skill catalog schema foundation (PR #9)
+
+### Added — Global catalog + workspace override layer
+- **Migration** `supabase/migrations/20260505110000_enterprise_role_skill_catalog.sql`:
+  - **Global inventory**: `enterprise_catalog_categories`, `enterprise_catalog_roles`, `enterprise_catalog_skills`, `enterprise_catalog_role_skills` (role→skill mapping with `min_experience_level`).
+  - **Workspace override layer**: `enterprise_workspace_role_categories`, `enterprise_workspace_roles`, `enterprise_workspace_skills`, `enterprise_workspace_role_skills` (workspace-local copies with `approved`/`required` flags).
+  - **`enterprise_experience_level`** enum: `junior` / `medior` / `senior` / `lead` / `principal`.
+  - **`enterprise_memberships.business_role_id`** FK to `enterprise_workspace_roles.id` (additive; legacy `business_role` text column preserved for backward compat).
+  - Indexes for workspace lookups, `updated_at` triggers on mutable tables, RLS policies (member read, admin write) on workspace-scoped tables.
+- Seeded with 23 categories, 366+ roles, 550+ skills.
+- Foundation consumed by `PositionPickerDialog` (Phase 3 of v3.0.0) for the 3-step drill-down (category → role → skill review).
+
+---
+
+## 2026-05-04 — URL canonicalization, branding, theme system, positions integrity (PRs #3–7)
+
+### Changed — URL structure: `/enterprise` → `/app`; workspace UUID removed from URL (PR #3)
+- `Enterprise.tsx` resolves the active workspace from: (1) legacy `?ws=` param once for backward compat → (2) `localStorage.active_workspace_id` → (3) first available workspace, then strips `?ws=` via `history.replaceState`.
+- `/enterprise` preserved as a redirect alias → `/app`. Deep-link `?tab=` preserved.
+- Invite acceptance sets workspace in state/storage without re-injecting `?ws=`.
+- Files: `App.tsx`, `Enterprise.tsx`, `Auth.tsx`, `Landing.tsx`, `useAuth.tsx`, `InviteMemberDialog.tsx`, `Admin.tsx`, `Profile.tsx`, `ProfileMenu.tsx`.
+
+### Added — `EffectimeLogo` component + sticky workspace tab navigation (PR #4)
+- **`EffectimeLogo`** (`src/components/EffectimeLogo.tsx`): SVG gradient, dual-meaning `M` glyph (reads as "effectiMe" full-M and "effectiVe" inner-V). Two variants: `mark` (icon only) and `full` (with wordmark). Deployed to `SiteNav`, `Enterprise.tsx` header, landing page header + footer, `SiteFooter`.
+- **Sticky workspace tabs**: `TabsList` moved outside scrollable content into a `sticky top-[57px]` container with `backdrop-blur`, `bg-background/95`, `z-20`, `border-b`. Tabs remain visible while users scroll tab content.
+- `canViewPermissionConfig` prop added to `WorkspaceSettings`; `RolePermissionManager` conditionally rendered.
+
+### Added — 6-template theme system with role-gated Layout Setting (PR #5)
+- `ThemeStyle` enum extended: `enterprise`, `nebula`, `aurora`, `graphite`, `sunrise`, `mono`. Root-class toggle on `<html>` + `localStorage` persistence in `useTheme.tsx`.
+- Tokenized CSS definitions in `src/styles/themes.css` — components continue using the same CSS variable tokens; only values change per template. Fixed-dark templates (`nebula`, `graphite`) bypass light/dark toggle.
+- `layout_setting` permission key added to the feature catalog; owners retain access via owner check.
+- "Layout Setting" section in Workspace Settings lets authorized users pick a template from the 6 options.
+
+### Fixed — Positions data integrity in `TeamManager` and `InviteMemberDialog` (PR #6)
+- Both components built `availableRoles` exclusively from `enterprise_memberships.business_role` (legacy text column). Positions that existed only in `enterprise_member_role_allocations` (the canonical junction table) were silently absent from every dropdown.
+- **Fix**: both components now query `enterprise_member_role_allocations` in parallel and merge the two sets, so every created position is always selectable.
+
+### Fixed — Triple-layer SPA routing (PR #7)
+- `public/404.html`: captures full path + query + hash in `sessionStorage`, redirects to `/?r=...` for the SPA shell.
+- `src/App.tsx`: `SpaRedirectHandler` reads `sessionStorage`/`?r=` and navigates client-side.
+- `src/pages/Auth.tsx`: full split-screen redesign (left trust panel with 6 badges + calendar mockup, right scrollable auth card); all auth logic — `signIn`, `signUp`, `OTP`, `Google OAuth`, `reset` — preserved verbatim.
+
+---
+
+## 2026-05-04 — Google OAuth callback fix: URL fragment session restoration (PRs #1, #2)
+
+### Fixed — Session not restored from URL fragment after Google OAuth (PR #1)
+- Google OAuth returns `access_token` + `refresh_token` in `window.location.hash` (`#access_token=...`). The app didn't parse the fragment, leaving the session unhydrated and stalling on `/auth`.
+- **Fix**: added explicit hash-token handling in `Auth.tsx` activated when `?oauth=google` and user is not yet hydrated. Reads `access_token`/`refresh_token` from `window.location.hash`, calls `setSessionFromTokens(...)` from auth context, clears hash via `history.replaceState`.
+
+### Fixed — OAuth `redirectTo` causing hard-404 on SPA (PR #2)
+- `redirectTo: '/auth'` caused the OAuth provider to redirect to `/auth`, which returned HTTP 404 from origin (SPA shell not served for direct navigation).
+- **Fix**: changed `redirectTo` to `/` (root, always served by static hosts). Post-login navigation handled on the landing page: once `session` + `?oauth=google` is present, navigates to the `redirect` target (default `/app`).
+- Fragment-based session restoration centralized in `AuthProvider` (`useAuth.tsx`): processes `#access_token` at app bootstrap and clears the URL fragment immediately.
 
 ---
 
