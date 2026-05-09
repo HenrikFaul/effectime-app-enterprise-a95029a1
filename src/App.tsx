@@ -6,6 +6,7 @@ import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from "r
 import { useEffect } from "react";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
+import { DensityProvider } from "@/hooks/useDensity";
 import { I18nProvider } from "@/i18n/I18nProvider";
 import { HelpRegistryProvider } from "@/lib/help/registry";
 import { HelpDrawer } from "@/components/help/HelpDrawer";
@@ -81,9 +82,10 @@ const SpaRedirectHandler = () => {
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
-      <AuthProvider>
-        <I18nProvider>
-          <HelpRegistryProvider>
+      <DensityProvider>
+        <AuthProvider>
+          <I18nProvider>
+            <HelpRegistryProvider>
             <TooltipProvider>
               <Toaster />
               <Sonner />
