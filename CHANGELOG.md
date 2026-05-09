@@ -1,3 +1,75 @@
+## 2026-05-09 — v3.3.0 GiGanttIc — Flagship Branded Planning Board
+
+### Added — `GiGanttIcBoard` (`src/components/enterprise/agile/GiGanttIcBoard.tsx`)
+Effectime's flagship planning board, replacing the generic "Gantt" tab inside **Agile → Boards**.
+
+**Brand & UX:**
+- Branded as **GiGanttIc** — premium flagship name with teal accent styling ("Gi" + "Gantt" + italic "Ic").
+- Tab trigger in `AgileBoards.tsx` redesigned with `Sparkles` icon + gradient-accented text label; `data-[state=active]` teal highlight distinguishes it from standard tabs.
+- Obsidian/charcoal dark surface (`#0d0f14` base) with layered depth, teal/cyan accents used surgically.
+- Status bar legend, "BOARD" badge, and per-row status dots for instant visual scanning.
+
+**Core Board Features:**
+- **Split-pane layout**: sticky left task grid (292 px) + horizontally scrollable timeline chart — single `overflow: auto` scroll container using `position: sticky` for both axes, no JS scroll-sync needed.
+- **Zoom modes**: `week` (12 px/day, weekly columns), `month` (4.5 px/day, monthly/quarterly columns), `quarter` (2 px/day, full-year span). Toolbar lets users switch instantly.
+- **Sticky timeline header**: two-row header (primary = quarters/years, secondary = months/weeks) with `isCurrent` teal tint for the present period.
+- **Today marker**: teal dashed vertical SVG line + "TODAY" label spanning all rows; "Jump to Today" toolbar button centers the viewport.
+
+**Hierarchy & Scheduling:**
+- Parent-child tree built from `parent_key`; Epics auto-expanded on mount.
+- Expand/collapse per row (chevron toggle) + "Expand All / None" toolbar shortcuts.
+- Depth-indented left grid rows (18 px per level).
+- Bar colors by type: Epic = violet, Story = teal, Task = sky, Bug = red, Sub-task = amber, Milestone = gold diamond, Done = emerald, Overdue = red.
+- Progress fill overlay on bars derived from `completed_hours / original_estimate_hours` (falls back to status-based estimate).
+- Milestone diamond shape (`rotate(45deg)` div) distinct from task bars.
+- Overdue indicator: `AlertTriangle` in left grid + red bar color.
+
+**Dependencies (SVG):**
+- Smooth Bézier S-curve connectors drawn on an SVG overlay positioned over the chart area for all visible parent→child relationships where both issues have dates.
+- Arrow marker (`gg-arrow`) at curve end, teal 28% opacity — visible but non-distracting.
+
+**Details Inspector Panel:**
+- Right-side drawer opens on row click (or tapping selected row closes it).
+- Shows: type badge, status, overdue indicator, progress bar, schedule (start/end/duration), effort (estimate/logged/remaining), assignee avatar + reporter, hierarchy (parent + up to 5 children), labels, capacity risk alert.
+- "Open in Jira" and direct URL links when applicable.
+- Closes with × button or re-clicking the row.
+
+**Toolbar:**
+- Zoom switcher, Today jump, Expand All / Collapse All, Search (summary / key / assignee), Type filter dropdown, issue count readout, Fullscreen toggle.
+
+**Critical Path / Risk Signal:**
+- Issues with `due_date < today && status ≠ Done/Closed` rendered in red (overdue).
+- `capacity_risk = 'high'` shows red alert badge in inspector panel.
+- Architecture ready for full CPM via `enterprise_ganttIc_dependencies` table.
+
+**Empty / Loading states:**
+- `GiGanttEmptyState` — obsidian card with Sparkles icon and branded name.
+- `GiGanttLoadingState` — exported for parent use, animated shimmer bar.
+
+### Added — `supabase/migrations/20260509030000_giganttIc_scheduling_fields.sql`
+**Schema extensions (all additive, `IF NOT EXISTS`, backward-compatible):**
+- `enterprise_agile_issues`: `is_milestone`, `progress_pct` (0–100, check constraint), `dependency_keys text[]`, `critical_path boolean`, `gantt_color`, `gantt_row_order`.
+- **New table** `enterprise_ganttIc_dependencies`: explicit FS/SS/FF/SF dependency edges with `lag_days`, `is_auto` flag, and `UNIQUE(integration_id, predecessor, successor)`.
+- RLS: `gg_deps_select` (all members), `gg_deps_modify` (owner + resourceAssistant).
+- `ganttIc_has_dependency_cycle(workspace, integration, predecessor, successor)` PL/pgSQL function using a recursive CTE BFS — returns `true` if adding the edge would create a cycle. Call this guard before any INSERT.
+- `set_gg_deps_updated_at` trigger (reuses existing `set_updated_at()` function).
+- `SET search_path = public, pg_temp` on the new SECURITY DEFINER function (consistent with v3.2.7 hardening pattern).
+
+### Changed — `AgileBoards.tsx`
+- Removed: `GanttChart` icon import, old `GanttView` function (~65 lines of basic bar renderer).
+- Added: `GiGanttIcBoard` import, `GiGanttIssueRow` type re-export, `Sparkles` icon.
+- `TabsTrigger` for "gantt" value: redesigned with `Sparkles` icon + branded typography; `data-[state=active]` teal styling.
+- `TabsContent value="gantt"`: now renders `<GiGanttIcBoard issues={issues as GiGanttIssueRow[]} onOpen={...} />`.
+
+### Non-Regression
+- Kanban and Scrum tabs in `AgileBoards` unchanged.
+- `AgilePanel`, `ResourcesTab`, `WorkspaceDashboard` nav unchanged.
+- All existing `enterprise_agile_issues` queries unaffected (additive columns only, no NOT NULL without defaults).
+- `GanttTimeline.tsx` (project-level timeline in Resources tab) unchanged.
+- No existing RLS policies touched.
+
+---
+
 ## 2026-05-09 — v3.2.8 Demo UX + CommandCenter header button
 
 ### Added — `CommandCenterButton` in workspace header

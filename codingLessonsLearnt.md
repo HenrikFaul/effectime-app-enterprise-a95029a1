@@ -569,3 +569,42 @@
   2. **Minden CHANGELOG.md edit előtt MÉG EGYSZER**: re-fetch + re-rebase, hogy biztosan a legfrissebb `main`-ről indulj
   3. **Verziószám választás**: olvasd el a `CHANGELOG.md` aktuális tetejét `origin/main`-en (`git show origin/main:CHANGELOG.md | head -3`) és a következő SZABAD verziót használd
   4. **Soha ne tételezd fel**, hogy a saját branched egy verzió-számot lefoglalhat — más PR-ek párhuzamosan haladhatnak
+
+---
+
+## ➕ APPEND — 2026-05-09 GiGanttIc flagship Gantt board (v3.3.0)
+
+### [LESSON-GANTT-STICKY-001] Single-container sticky scroll: no JS needed for synced Gantt axes
+- **Dátum**: 2026-05-09 (v3.3.0)
+- **Fájl**: `src/components/enterprise/agile/GiGanttIcBoard.tsx`
+- **Probléma**: A classic two-panel Gantt (left grid + right chart) requires synchronized vertical scroll (left follows right) and synchronized horizontal scroll (header follows chart). JS-based scroll sync via `onScroll` + `ref.scrollLeft =` is fragile and causes visual lag/jitter.
+- **Javítás**: Single `overflow: auto` container holding the full content width (`LEFT_W + chartWidth`). Left task cells use `position: sticky; left: 0; z-index: 10` — they stay pinned during horizontal scroll. Timeline header uses `position: sticky; top: 0; z-index: 20` — it stays pinned during vertical scroll. The top-left intersection cell uses `position: sticky; top: 0; left: 0; z-index: 30`. All rows scroll together naturally.
+- **Megelőzés**: For any split-pane board (Gantt, spreadsheet, timeline), prefer this single-container sticky approach over dual-container JS scroll sync. Requirements: (1) inner content `width = leftW + chartW`, (2) left cells sticky-left, (3) header row sticky-top, (4) both cells carry a solid background color so scrolled content doesn't bleed through.
+
+### [LESSON-GANTT-SVG-OVERLAY-001] Absolute SVG overlay for cross-row dependency lines
+- **Dátum**: 2026-05-09 (v3.3.0)
+- **Fájl**: `src/components/enterprise/agile/GiGanttIcBoard.tsx`
+- **Probléma**: Dependency lines in a Gantt connect rows at different vertical positions. Rendering them per-row (one SVG per row div) can't span across rows. Using `position: fixed` won't scroll with the content.
+- **Javítás**: Place a single SVG with `position: absolute; left: LEFT_W; top: 0; pointer-events: none; z-index: 6` inside the rows wrapper div. The SVG is `width = chartWidth; height = totalRows * ROW_H`. Since it's inside the single scroll container (not fixed), it scrolls naturally with the content. Row y-positions are computed as `rowIndex * ROW_H + BAR_Y + BAR_H/2`.
+- **Megelőzés**: Any overlay spanning multiple rows (dependency lines, highlight bands, today marker) should be an absolutely positioned SVG/div inside the scroll container — NOT position:fixed, NOT one element per row.
+
+### [LESSON-GANTT-CYCLE-GUARD-001] Dependency cycle prevention with recursive CTE BFS
+- **Dátum**: 2026-05-09 (v3.3.0)
+- **Fájl**: `supabase/migrations/20260509030000_giganttIc_scheduling_fields.sql`
+- **Probléma**: Allowing circular dependencies in a Gantt breaks topological sort, critical path computation, and can cause infinite loops in rendering logic.
+- **Javítás**: `ganttIc_has_dependency_cycle(workspace, integration, predecessor, successor)` PL/pgSQL function uses a `WITH RECURSIVE reachable AS (...)` CTE BFS starting from `successor`, checking if `predecessor` is reachable. If yes → cycle detected → return true → caller blocks the INSERT.
+- **Megelőzés**: Any scheduling system with dependency edges MUST implement cycle detection before INSERT. The recursive CTE BFS in PostgreSQL is the idiomatic, set-based approach — avoid application-side graph traversal for this guard (it races with concurrent writes). Use SECURITY DEFINER + `SET search_path` to prevent injection.
+
+### [LESSON-GANTT-BRANDING-001] Premium flagship tab: teal accent + data-[state=active] class for branded active state
+- **Dátum**: 2026-05-09 (v3.3.0)
+- **Fájl**: `src/components/enterprise/agile/AgileBoards.tsx`
+- **Probléma**: Standard Radix `TabsTrigger` active state uses the theme's default ring/underline, which looks identical to other tabs — no visual hierarchy for flagship features.
+- **Javítás**: Add `data-[state=active]:bg-teal-500/15 data-[state=active]:text-teal-300 data-[state=active]:border-teal-500/30` to the flagship tab's className. Inside the trigger, use span elements with alternating color classes (`text-teal-400` for "Gi" and italic "Ic", neutral for "Gantt") to create a branded typographic treatment. A `Sparkles` icon preceding the text signals premium status.
+- **Megelőzés**: For any flagship or premium-tier tab/nav item, use `data-[state=active]` variant classes to apply custom active styling without overriding the global tab component. Branded typography (colored portions of a product name) is more tasteful than heavy badges — use it for feature-level identity.
+
+### [LESSON-GANTT-PROGRESS-001] Multi-source progress: hours → status fallback → manual override
+- **Dátum**: 2026-05-09 (v3.3.0)
+- **Fájl**: `src/components/enterprise/agile/GiGanttIcBoard.tsx`
+- **Probléma**: Agile issues may have progress data from multiple sources with inconsistent coverage: some have `completed_hours/original_estimate_hours`, some only have `status`, some have neither.
+- **Javítás**: Priority cascade: (1) status = Done/Closed → 100%, (2) `completed_hours` + `original_estimate_hours` both present → ratio (clamped 0–1), (3) `In Review` → 65%, `In Progress` → 40%, (4) else 0. The new `progress_pct` DB column (added in migration) provides a manual override path for future use.
+- **Megelőzés**: Any progress/completion indicator in a planning tool should implement a multi-source cascade like this. Never assume a single field will always be populated — use the richest available signal with graceful fallbacks.
