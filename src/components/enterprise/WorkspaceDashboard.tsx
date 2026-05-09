@@ -71,6 +71,10 @@ import { IntegrationHealthCenter } from './settings/IntegrationHealthCenter';
 import { HelpSystemSettings } from './settings/HelpSystemSettings';
 import { DecisionMemoryStaleInbox } from './DecisionMemoryStaleInbox';
 import { useI18n } from '@/i18n/I18nProvider';
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/sidebar';
+import { WorkspaceSidebar } from '@/components/shell/WorkspaceSidebar';
+import { DensityToggle } from '@/components/shell/DensityToggle';
+import { SkipToContent } from '@/components/shell/AppShell';
 
 interface Workspace {
   id: string;
