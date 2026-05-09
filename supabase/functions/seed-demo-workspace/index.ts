@@ -9,6 +9,12 @@
 // enterprise_workspaces.settings.demo_user_ids.
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.98.0';
+import {
+  DEMO_PERSONAS, SKILL_NAMES, SKILL_COLORS, OFFICE_DEFS, TEAM_DEFS,
+  LEAVE_TYPE_DEFS, HU_HOLIDAYS_TEMPLATE, PROJECT_DEFS, NOTIFICATION_EVENT_TYPES,
+  ROLE_DEFINITION_DEFS, ROLE_PERMISSION_DEFS, MEMBER_TEMPLATE_DEFS,
+  TRANSLATION_OVERRIDE_DEFS, INTEGRATION_DEF, AGILE_ISSUE_DEFS, AGILE_FIELD_METADATA_DEFS,
+} from './seed-data.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -29,93 +35,6 @@ function addDays(d: Date, days: number): Date {
 function pickN<T>(arr: T[], n: number): T[] {
   return [...arr].sort(() => Math.random() - 0.5).slice(0, n);
 }
-
-// ── Static data ──────────────────────────────────────────────────────────────
-
-const DEMO_PERSONAS = [
-  { display_name: 'Anna Kovács',    team: 'Frontend',    city: 'Budapest', position: 'Senior Frontend Developer',  seniority: 'senior' as const },
-  { display_name: 'Bence Tóth',     team: 'Backend',     city: 'Budapest', position: 'Backend Developer',           seniority: 'medior' as const },
-  { display_name: 'Csilla Nagy',    team: 'Operations',  city: 'Debrecen', position: 'Operations Lead',             seniority: 'lead'   as const },
-  { display_name: 'Dávid Szabó',    team: 'Frontend',    city: 'Budapest', position: 'Junior Frontend Developer',   seniority: 'junior' as const },
-  { display_name: 'Eszter Kiss',    team: 'QA',          city: 'Szeged',   position: 'QA Engineer',                 seniority: 'medior' as const },
-  { display_name: 'Ferenc Horváth', team: 'Backend',     city: 'Budapest', position: 'Senior Backend Developer',    seniority: 'senior' as const },
-  { display_name: 'Gizella Varga',  team: 'Operations',  city: 'Debrecen', position: 'Operations Specialist',      seniority: 'medior' as const },
-];
-
-const SKILL_NAMES = ['React', 'TypeScript', 'Node.js', 'PostgreSQL', 'Docker', 'AWS', 'Tailwind CSS', 'Cypress', 'Jest'];
-const SKILL_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#a855f7', '#06b6d4', '#22c55e', '#f97316', '#ec4899'];
-
-const OFFICE_DEFS = [
-  { name: 'Budapest HQ',    city: 'Budapest', address: 'Andrássy út 1, 1061 Budapest' },
-  { name: 'Debrecen Office',city: 'Debrecen', address: 'Piac u. 20, 4024 Debrecen' },
-  { name: 'Szeged Office',  city: 'Szeged',   address: 'Kárász u. 5, 6720 Szeged' },
-];
-
-const TEAM_DEFS = [
-  { name: 'Frontend',   description: 'Frontend / web app team' },
-  { name: 'Backend',    description: 'Backend / API team' },
-  { name: 'Operations', description: 'Operations and infrastructure' },
-  { name: 'QA',         description: 'Quality assurance' },
-];
-
-const LEAVE_TYPE_DEFS = [
-  { name: 'Éves szabadság',   color: '#3b82f6', is_paid: true,  requires_approval: true  },
-  { name: 'Betegszabadság',   color: '#ef4444', is_paid: true,  requires_approval: false },
-  { name: 'Fizetés nélküli',  color: '#a855f7', is_paid: false, requires_approval: true  },
-  { name: 'Otthoni munka',    color: '#10b981', is_paid: true,  requires_approval: false },
-];
-
-const HU_HOLIDAYS_TEMPLATE = [
-  { month: '01-01', name: 'Újév' },
-  { month: '03-15', name: 'Nemzeti ünnep' },
-  { month: '05-01', name: 'Munka ünnepe' },
-  { month: '08-20', name: 'Államalapítás ünnepe' },
-  { month: '10-23', name: '1956-os forradalom' },
-  { month: '11-01', name: 'Mindenszentek' },
-  { month: '12-25', name: 'Karácsony' },
-  { month: '12-26', name: 'Karácsony másnapja' },
-];
-
-const PROJECT_DEFS = [
-  {
-    name: 'Customer Portal 2.0',
-    description: 'Ügyféli önkiszolgáló portál modernizálása React + TypeScript alapokon.',
-    status: 'active', color: '#3b82f6', offsetStart: -30, offsetEnd: 90,
-    roles: ['Senior Frontend Developer', 'Backend Developer', 'QA Engineer'],
-    skillNames: ['React', 'TypeScript', 'Cypress'],
-    billRates: { 'Senior Frontend Developer': 120, 'Backend Developer': 110, 'QA Engineer': 90 },
-  },
-  {
-    name: 'Backend API Refactor',
-    description: 'Monolitikus backend mikro-szolgáltatásokra bontása Node.js és PostgreSQL.',
-    status: 'active', color: '#10b981', offsetStart: -15, offsetEnd: 120,
-    roles: ['Senior Backend Developer', 'Backend Developer'],
-    skillNames: ['Node.js', 'PostgreSQL', 'Docker'],
-    billRates: { 'Senior Backend Developer': 130, 'Backend Developer': 110 },
-  },
-  {
-    name: 'QA Automation Framework',
-    description: 'End-to-end tesztelési keretrendszer kiépítése Cypress és Jest alapokon.',
-    status: 'active', color: '#f59e0b', offsetStart: 0, offsetEnd: 60,
-    roles: ['QA Engineer', 'Senior Frontend Developer'],
-    skillNames: ['Cypress', 'Jest', 'TypeScript'],
-    billRates: { 'QA Engineer': 95, 'Senior Frontend Developer': 115 },
-  },
-  {
-    name: 'Cloud Migration',
-    description: 'On-premise infrastruktúra migrálása AWS-re (ECS, RDS, CloudFront).',
-    status: 'planning', color: '#8b5cf6', offsetStart: 30, offsetEnd: 180,
-    roles: ['Operations Lead', 'Operations Specialist', 'Senior Backend Developer'],
-    skillNames: ['AWS', 'Docker', 'PostgreSQL'],
-    billRates: { 'Operations Lead': 140, 'Operations Specialist': 100, 'Senior Backend Developer': 125 },
-  },
-];
-
-const NOTIFICATION_EVENT_TYPES = [
-  'leave_request.submitted', 'leave_request.approved', 'leave_request.rejected',
-  'substitute.requested', 'substitute.confirmed', 'approval.escalated',
-  'onboarding.assigned', 'access_request.submitted', 'access_request.approved',
-];
 
 // ── Main ─────────────────────────────────────────────────────────────────────
 
@@ -942,6 +861,150 @@ Deno.serve(async (req) => {
     }
 
     // ════════════════════════════════════════════════════════════════════════
+    // L. JOGOSULTSÁG DEFINÍCIÓK
+    // Szervezet → Jogosultság-menedzsment
+    // ════════════════════════════════════════════════════════════════════════
+
+    // ── L1. Role definitions ──────────────────────────────────────────────────
+    const { data: roleDefs, error: roleDefsErr } = await admin.from('enterprise_role_definitions').insert(
+      ROLE_DEFINITION_DEFS.map(r => ({ ...r, workspace_id: workspaceId }))
+    ).select('id,role_key');
+    if (roleDefsErr) console.warn('[seed] role_definitions insert skipped:', roleDefsErr.message);
+
+    // ── L2. Role permissions ──────────────────────────────────────────────────
+    if ((roleDefs ?? []).length > 0) {
+      const { error: rolePermsErr } = await admin.from('enterprise_role_permissions').insert(
+        ROLE_PERMISSION_DEFS.map(p => ({ ...p, workspace_id: workspaceId }))
+      );
+      if (rolePermsErr) console.warn('[seed] role_permissions insert skipped:', rolePermsErr.message);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // M. TAGOK: MEGHÍVÓ SABLONOK
+    // Tagok → Meghívás → Sablonok
+    // ════════════════════════════════════════════════════════════════════════
+    const budapestOfficeId = officeByCity.get('Budapest');
+    const { error: memberTplErr } = await admin.from('enterprise_member_templates').insert(
+      MEMBER_TEMPLATE_DEFS.map(t => ({
+        ...t,
+        workspace_id: workspaceId,
+        created_by: ownerId,
+        default_office_id: officeByCity.get(t.default_city) ?? null,
+      }))
+    );
+    if (memberTplErr) console.warn('[seed] member_templates insert skipped:', memberTplErr.message);
+
+    // ════════════════════════════════════════════════════════════════════════
+    // N. LOKALIZÁCIÓ: SZÖVEG FELÜLÍRÁSOK
+    // Beállítások → Lokalizáció
+    // ════════════════════════════════════════════════════════════════════════
+    const { error: transErr } = await admin.from('enterprise_translation_overrides').insert(
+      TRANSLATION_OVERRIDE_DEFS.map(o => ({ ...o, workspace_id: workspaceId, authored_by: ownerId }))
+    );
+    if (transErr) console.warn('[seed] translation_overrides insert skipped:', transErr.message);
+
+    // ════════════════════════════════════════════════════════════════════════
+    // O. INTEGRÁCIÓ + AGILE
+    // Beállítások → Integrációk  |  Erőforrások → Agile panel
+    // ════════════════════════════════════════════════════════════════════════
+
+    // ── O1. Workspace integration (Jira demo) ─────────────────────────────────
+    const { data: integrations, error: intErr } = await admin.from('enterprise_workspace_integrations').insert({
+      ...INTEGRATION_DEF,
+      workspace_id: workspaceId,
+      created_by: ownerId,
+    }).select('id');
+    if (intErr) console.warn('[seed] workspace_integrations insert skipped:', intErr.message);
+    const integrationId: string | null = (integrations ?? [])[0]?.id ?? null;
+
+    // ── O2. Agile issues ──────────────────────────────────────────────────────
+    if (integrationId) {
+      const { error: issuesErr } = await admin.from('enterprise_agile_issues').insert(
+        AGILE_ISSUE_DEFS.map(issue => ({ ...issue, workspace_id: workspaceId, integration_id: integrationId }))
+      );
+      if (issuesErr) console.warn('[seed] agile_issues insert skipped:', issuesErr.message);
+
+      // ── O3. Agile field metadata ──────────────────────────────────────────
+      const { error: fmErr } = await admin.from('enterprise_agile_field_metadata').insert(
+        AGILE_FIELD_METADATA_DEFS.map(f => ({ ...f, workspace_id: workspaceId, integration_id: integrationId }))
+      );
+      if (fmErr) console.warn('[seed] agile_field_metadata insert skipped:', fmErr.message);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // P. ICAL TOKENEK
+    // Beállítások → iCal előfizetés
+    // ════════════════════════════════════════════════════════════════════════
+    const icalUsers = [{ user_id: ownerId }, ...demoUserIds.slice(0, 3)];
+    const { error: icalErr } = await admin.from('enterprise_ical_tokens').insert(
+      icalUsers.map(u => ({ workspace_id: workspaceId, user_id: u.user_id, scope: 'own' }))
+    );
+    if (icalErr) console.warn('[seed] ical_tokens insert skipped:', icalErr.message);
+
+    // ════════════════════════════════════════════════════════════════════════
+    // Q. SHIFT HOZZÁRENDELÉSEK (KAPACITÁSTERVEZŐ)
+    // Naptár → Kapacitástervező
+    // ════════════════════════════════════════════════════════════════════════
+    if (budapestOfficeId && demoUserIds.length >= 2) {
+      const shiftRows: any[] = [];
+      for (let dayOffset = 1; dayOffset <= 5; dayOffset++) {
+        const shiftDate = fmtDate(addDays(today, dayOffset));
+        for (const d of demoUserIds.slice(0, 3)) {
+          const m = membershipByUser.get(d.user_id);
+          const offId = officeByCity.get(d.persona.city) ?? budapestOfficeId;
+          if (m) shiftRows.push({
+            workspace_id: workspaceId, membership_id: m.id, user_id: d.user_id,
+            office_id: offId, shift_date: shiftDate,
+            business_role: d.persona.position, created_by: ownerId, is_tentative: dayOffset > 3,
+          });
+        }
+      }
+      if (shiftRows.length) {
+        const { error: shiftErr } = await admin.from('enterprise_shift_assignments').insert(shiftRows);
+        if (shiftErr) console.warn('[seed] shift_assignments insert skipped:', shiftErr.message);
+      }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // R. TAG TELEPHELY-PRIORITÁSOK
+    // Tagok → Telephely prioritás
+    // ════════════════════════════════════════════════════════════════════════
+    const sitePriorityRows: any[] = [];
+    for (const d of demoUserIds) {
+      const m = membershipByUser.get(d.user_id);
+      const primaryId = officeByCity.get(d.persona.city);
+      if (!m || !primaryId) continue;
+      sitePriorityRows.push({ workspace_id: workspaceId, membership_id: m.id, office_id: primaryId, priority: 1, created_by: ownerId });
+      if (d.persona.city !== 'Budapest' && budapestOfficeId) {
+        sitePriorityRows.push({ workspace_id: workspaceId, membership_id: m.id, office_id: budapestOfficeId, priority: 2, created_by: ownerId });
+      }
+    }
+    if (sitePriorityRows.length) {
+      const { error: spErr } = await admin.from('enterprise_member_site_priorities').insert(sitePriorityRows);
+      if (spErr) console.warn('[seed] member_site_priorities insert skipped:', spErr.message);
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // S. HOZZÁFÉRÉS DÖNTÉSEK
+    // Folyamatok → Hozzáférés-menedzsment → Döntések
+    // ════════════════════════════════════════════════════════════════════════
+    if (newestMembership) {
+      const { data: grantedReqs } = await admin.from('enterprise_access_requests')
+        .select('id').eq('member_id', newestMembership.id).eq('status', 'granted');
+      const accessDecisionRows = (grantedReqs ?? []).map((req: any) => ({
+        request_id: req.id,
+        action: 'granted',
+        actor_id: ownerId,
+        rationale: 'Projekthez szükséges alapszintű hozzáférés jóváhagyva.',
+        expected_outcome: 'A kolléga be tud jelentkezni a szükséges rendszerekbe.',
+      }));
+      if (accessDecisionRows.length) {
+        const { error: adErr } = await admin.from('enterprise_access_decisions').insert(accessDecisionRows);
+        if (adErr) console.warn('[seed] access_decisions insert skipped:', adErr.message);
+      }
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
     // K. AUDIT EVENT (summary)
     // ════════════════════════════════════════════════════════════════════════
     await admin.from('enterprise_audit_events').insert({
@@ -962,6 +1025,8 @@ Deno.serve(async (req) => {
         reports:          (reports ?? []).length,
         onboarding_tpls:  (onboardTemplates ?? []).length,
         access_systems:   (accessSystems ?? []).length,
+        integrations:     integrationId ? 1 : 0,
+        agile_issues:     integrationId ? AGILE_ISSUE_DEFS.length : 0,
       },
     } as any);
 
@@ -970,20 +1035,28 @@ Deno.serve(async (req) => {
       ok: true,
       workspace_id: workspaceId,
       summary: {
-        members:           demoUserIds.length + 1,
-        offices:           (offices ?? []).length,
-        teams:             (teams ?? []).length,
-        leave_types:       (leaveTypes ?? []).length,
-        skills:            (skills ?? []).length,
-        projects:          (projects ?? []).length,
-        scenarios:         (scenarios ?? []).length,
-        reports:           (reports ?? []).length,
-        leave_requests:    leaveRequests.length,
-        holidays:          HU_HOLIDAYS_TEMPLATE.length,
-        access_systems:    (accessSystems ?? []).length,
-        onboarding_tpls:   (onboardTemplates ?? []).length,
-        org_units:         (topOrgUnits ?? []).length + 3,
-        notification_prefs: notifPrefRows.length,
+        members:              demoUserIds.length + 1,
+        offices:              (offices ?? []).length,
+        teams:                (teams ?? []).length,
+        leave_types:          (leaveTypes ?? []).length,
+        skills:               (skills ?? []).length,
+        projects:             (projects ?? []).length,
+        scenarios:            (scenarios ?? []).length,
+        reports:              (reports ?? []).length,
+        leave_requests:       leaveRequests.length,
+        holidays:             HU_HOLIDAYS_TEMPLATE.length,
+        access_systems:       (accessSystems ?? []).length,
+        onboarding_tpls:      (onboardTemplates ?? []).length,
+        org_units:            (topOrgUnits ?? []).length + 3,
+        notification_prefs:   notifPrefRows.length,
+        role_definitions:     (roleDefs ?? []).length,
+        member_templates:     MEMBER_TEMPLATE_DEFS.length,
+        translation_overrides: TRANSLATION_OVERRIDE_DEFS.length,
+        integrations:         integrationId ? 1 : 0,
+        agile_issues:         integrationId ? AGILE_ISSUE_DEFS.length : 0,
+        ical_tokens:          icalUsers.length,
+        shift_assignments:    budapestOfficeId && demoUserIds.length >= 2 ? demoUserIds.slice(0, 3).length * 5 : 0,
+        site_priorities:      sitePriorityRows.length,
       },
     });
   } catch (err) {

@@ -1,5 +1,17 @@
 # Entitás-létrehozási leltár (Workspace Dashboard)
 
+> **GOVERNANCE SZABÁLY**
+> Ez a fájl az egyetlen emberi-olvasható forrása az összes létrehozható entitásnak.
+> Gépileg olvasható párja: `supabase/functions/seed-demo-workspace/seed-data.ts`
+>
+> **Ha új tab / menü / dialog kerül az appba ahol entitást lehet létrehozni:**
+> 1. Frissítsd ezt a fájlt (UI belépési pont leírása)
+> 2. Add hozzá a demo adatot a `seed-data.ts`-hez (statikus adatok)
+> 3. Add hozzá az insert logikát a `seed/index.ts`-hez (megfelelő szekció: L–S)
+> 4. Deploy: `seed-demo-workspace` edge function új verzióként
+>
+> **Seed lefedettség** — minden `✅` entitás automatikusan létrejön új demo workspace-ben.
+
 Comprehensive inventory of all UI entry points where users can CREATE database entities (insert/upsert operations). Organized by Dashboard tab → Sub-tab → Section → Entity type.
 
 ---
@@ -9,12 +21,16 @@ Comprehensive inventory of all UI entry points where users can CREATE database e
 ### Új tag meghívása
 - **Component:** `InviteMemberDialog.tsx`
 - **Entities Created:**
-  - `enterprise_invitations` → invitation record
-  - `enterprise_memberships` → membership created on acceptance via `join-event` RPC
-  - `enterprise_member_role_allocations` → role allocation (from role picker or template)
-  - `enterprise_member_templates` → member template (save current member config as template)
+  - `enterprise_invitations` → invitation record — ⚠️ nem seedelve (invite flow nem kell demo-ban)
+  - `enterprise_memberships` → membership created on acceptance via `join-event` RPC — ✅ seedelve (A9)
+  - `enterprise_member_role_allocations` → role allocation — ✅ seedelve (A11)
+  - `enterprise_member_templates` ✅ → meghívó sablon (workspace_id, template_name, default_role, default_team, default_business_role, default_city, default_office_id) — seedelve (M)
 - **Dialog Fields:** Email, name, role, office, city, location, business roles/allocations, org unit, contract type, leadership level, manager reference
-- **Note:** Includes "Nyomtatott sablon mentése" to save invite template → `enterprise_member_templates`
+
+### Tag telephely-prioritás szerkesztő
+- **Component:** `MemberSitePriorityEditor.tsx`
+- **Entities Created:**
+  - `enterprise_member_site_priorities` ✅ → (workspace_id, membership_id, office_id, priority 1–n, notes) — seedelve (R)
 
 ---
 
@@ -44,8 +60,8 @@ Comprehensive inventory of all UI entry points where users can CREATE database e
 ### 2.4 Jogosultság-menedzsment (RolePermissionManager)
 - **Component:** `RolePermissionManager.tsx`
 - **Entities Created:**
-  - `enterprise_role_definitions` → custom role definition (with role key, display name, description, sort order)
-  - `enterprise_role_permissions` → role permission configuration (feature key × access level matrix)
+  - `enterprise_role_definitions` ✅ → (workspace_id, role_key, display_name, description, sort_order) — seedelve (L1)
+  - `enterprise_role_permissions` ✅ → (workspace_id, role_key, feature_key, access_level: none|readonly|edit) — seedelve (L2)
 - **Access Levels:** none, readonly, edit
 - **Default Permissions:** Applied per feature key on role creation
 
@@ -83,8 +99,7 @@ Comprehensive inventory of all UI entry points where users can CREATE database e
 ### 3.3 Kapacitástervező (CoveragePlannerView)
 - **Component:** `calendar/CoveragePlannerView.tsx`
 - **Entities Created:**
-  - `enterprise_shift_assignments` → shift/coverage assignment for a member on a date
-    - Fields: member_id, date, shift_type, assigned_by, notes
+  - `enterprise_shift_assignments` ✅ → (workspace_id, membership_id, user_id, office_id, shift_date, business_role, skill_id, notes, is_tentative, created_by) — seedelve (Q)
 - **Dialog:** Assign member to shift coverage
 - **Note:** Smart batch scheduling via `SmartBatchScheduleDialog` bulk-inserts shift assignments
 
@@ -236,7 +251,7 @@ Comprehensive inventory of all UI entry points where users can CREATE database e
 #### 6.1.1 Hozzáférési döntések (AccessInbox)
 - **Component:** `workflows/AccessInbox.tsx`
 - **Entities Created:**
-  - `enterprise_access_decisions` → access approval decision (request_id, approved, decided_by, decision_date, notes)
+  - `enterprise_access_decisions` ✅ → (request_id, action: granted|denied|revoked, actor_id, rationale, expected_outcome, observed_outcome) — seedelve (S)
 - **Action:** Admin approves/denies access requests
 
 #### 6.1.2 Hozzáférés-rendszerek (AccessSystems)
@@ -329,13 +344,13 @@ Comprehensive inventory of all UI entry points where users can CREATE database e
 ### 8.3 Integrációk (IntegrationManager)
 - **Component:** `IntegrationManager.tsx`
 - **Entities Created:**
-  - `enterprise_workspace_integrations` → integration config (workspace_id, provider: 'jira'|'slack'|'github', config JSON, is_active, api_key_encrypted)
+  - `enterprise_workspace_integrations` ✅ → (workspace_id, provider: jira|azure_devops, base_url, api_token, account_email, project_key, is_active, auto_create_on_approval, created_by) — seedelve (O1)
 - **Upsert:** Integrations are upserted (one per provider per workspace)
 
-### 8.4 iCal订阅 (ICalSubscription)
+### 8.4 iCal előfizetés (ICalSubscription)
 - **Component:** `ICalSubscription.tsx`
 - **Entities Created:**
-  - `enterprise_ical_tokens` → iCal feed token (user_id, token, workspace_id, is_active, created_at)
+  - `enterprise_ical_tokens` ✅ → (workspace_id, user_id, token auto-generated, scope: own|team|workspace) — seedelve (P)
 - **Button:** "+ Új token"
 - **Note:** Generate unique iCal URL for external calendar sync
 
@@ -357,7 +372,7 @@ Comprehensive inventory of all UI entry points where users can CREATE database e
 ### 8.6 Lokalizáció (LocalizationSettings)
 - **Component:** `settings/LocalizationSettings.tsx`
 - **Entities Created:**
-  - `enterprise_translation_overrides` → custom text override (workspace_id, locale, key, value, created_by)
+  - `enterprise_translation_overrides` ✅ → (workspace_id, locale, key, value, source: manual|import|ai, authored_by) — seedelve (N)
   - Upsert on workspace_id, locale, key
 - **CSV Upload:** Bulk import translations
 
@@ -411,91 +426,121 @@ Comprehensive inventory of all UI entry points where users can CREATE database e
 
 ---
 
-## 11. Agile Module (Standalone - not in main dashboard tabs)
+## 11. Agile Module (Erőforrások → Agile panel)
 
 - **Component:** `agile/AgilePanel.tsx`, `agile/JiraIssueEditor.tsx`
 - **Entities Created:**
-  - `enterprise_agile_issues` → issue created/synced from Jira (workspace_id, external_id, title, description, status, assignee)
-  - `enterprise_agile_field_metadata` → custom field configuration (issue_key, field_name, field_type, allowed_values)
+  - `enterprise_agile_issues` ✅ → (workspace_id, integration_id, provider, external_key, project_key, issue_type, summary, status, priority, sprint_name, story_points, assignee_name, capacity_risk, fit_score, suggested_role) — seedelve (O2)
+  - `enterprise_agile_field_metadata` ✅ → (workspace_id, integration_id, provider, project_key, field_id, field_name, field_type, is_custom, schema) — seedelve (O3)
 - **RPC:** Jira sync, field discovery
-- **Note:** May be integrated into Resources/Reports or standalone
+- **Note:** Requires `enterprise_workspace_integrations` létrehozva (O1) — az agile issues az integration_id-t referálja
 
 ---
 
 ## Summary by Entity Type
 
-### Leave & Absence (leave_requests)
-- **leave_requests** → LeaveRequestDialog, AdminLeaveOverride
-- **leave_request_substitutes** → LeaveRequestDialog (substitute assignment)
-- **enterprise_leave_types** → LeaveTypeManager
-- **enterprise_leave_quotas** → QuotaManager
-- **enterprise_holidays** → HolidayManager
-- **enterprise_blocked_dates** → BlockedDateManager
-- **enterprise_company_leave_days** → CompanyLeaveDayManager
-- **enterprise_daily_rules** → DailyRuleManager
-- **approval_decisions** → ApprovalInbox
+> ✅ = Demo workspace seedeléskor automatikusan létrejön | ⚠️ = nem seedelve (magyarázattal)
 
-### Workspace Setup & Access
-- **enterprise_workspaces** → CreateWorkspaceDialog
-- **enterprise_memberships** → InviteMemberDialog, join-event RPC
-- **enterprise_invitations** → InviteMemberDialog
-- **enterprise_offices** → OfficeManager
-- **enterprise_ical_tokens** → ICalSubscription
+### Szabadság & Hiányzás
+| Entitás | UI | Seed |
+|---|---|---|
+| `leave_requests` | LeaveRequestDialog, AdminLeaveOverride | ✅ C7 |
+| `leave_request_substitutes` | LeaveRequestDialog | ✅ C9 |
+| `enterprise_leave_types` | LeaveTypeManager | ✅ A6 |
+| `enterprise_leave_quotas` | QuotaManager | ✅ C2 |
+| `enterprise_holidays` | HolidayManager | ✅ A7 |
+| `enterprise_blocked_dates` | BlockedDateManager | ✅ C4 |
+| `enterprise_company_leave_days` | CompanyLeaveDayManager | ✅ C3 |
+| `enterprise_daily_rules` | DailyRuleManager | ✅ C5 |
+| `approval_decisions` | ApprovalInbox | ✅ C8 |
 
-### Organization & Roles
-- **enterprise_org_units** → OrgStructure
-- **enterprise_teams** → TeamManager
-- **enterprise_team_roles** → TeamManager
-- **enterprise_member_role_allocations** → BusinessRoleManager, InviteMemberDialog, MemberProfileSheet
-- **enterprise_member_templates** → InviteMemberDialog
-- **enterprise_role_definitions** → RolePermissionManager
-- **enterprise_role_permissions** → RolePermissionManager
+### Workspace & Tagság
+| Entitás | UI | Seed |
+|---|---|---|
+| `enterprise_workspaces` | CreateWorkspaceDialog | ✅ A1 (RPC) |
+| `enterprise_memberships` | InviteMemberDialog, join-event | ✅ A9 |
+| `enterprise_invitations` | InviteMemberDialog | ⚠️ nem kell demo-ban |
+| `enterprise_offices` | OfficeManager | ✅ A4 |
+| `enterprise_ical_tokens` | ICalSubscription | ✅ P |
+| `enterprise_member_site_priorities` | MemberSitePriorityEditor | ✅ R |
 
-### Workflows & Processes
-- **enterprise_approval_chains** → ApprovalChainManager
-- **enterprise_escalation_rules** → ApprovalChainManager
-- **enterprise_office_coverage_rules** → OfficeCoverageRuleManager
-- **enterprise_rule_templates** → RuleTemplateLibrary
-- **enterprise_access_systems** → AccessSystems
-- **enterprise_access_templates** → AccessTemplates
-- **enterprise_access_decisions** → AccessInbox
-- **enterprise_onboarding_templates** → OnboardingTemplates
-- **enterprise_onboarding_template_steps** → OnboardingTemplates
-- **enterprise_onboarding_instances** → OnboardingInbox (implicit)
-- **enterprise_onboarding_step_completions** → OnboardingInbox (implicit)
-- **enterprise_decision_memory** → DecisionMemoryEditor
+### Szervezet & Szerepkörök
+| Entitás | UI | Seed |
+|---|---|---|
+| `enterprise_org_units` | OrgStructure | ✅ B6 |
+| `enterprise_teams` | TeamManager | ✅ A5 |
+| `enterprise_team_roles` | TeamManager | ✅ B7 |
+| `enterprise_member_role_allocations` | BusinessRoleManager, InviteMemberDialog | ✅ A11 |
+| `enterprise_member_templates` | InviteMemberDialog sablonok | ✅ M |
+| `enterprise_role_definitions` | RolePermissionManager | ✅ L1 |
+| `enterprise_role_permissions` | RolePermissionManager | ✅ L2 |
 
-### Resources & Capacity
-- **enterprise_projects** → ProjectEditor
-- **enterprise_project_assignments** → ProjectEditor
-- **enterprise_project_resource_requirements** → ProjectEditor
-- **enterprise_scenarios** → ScenarioPlanner
-- **enterprise_scenario_assignments** → ScenarioPlanner
-- **enterprise_skills** → SkillsManager
-- **enterprise_member_skills** → SkillsManager
-- **enterprise_member_rates** → FinancialsPanel
-- **enterprise_project_rates** → FinancialsPanel
-- **enterprise_shift_assignments** → CoveragePlannerView, SmartBatchScheduleDialog
-- **enterprise_member_site_priorities** → MemberSitePriorityEditor
+### Katalógusok (Szervezet → Katalógus)
+| Entitás | UI | Seed |
+|---|---|---|
+| `enterprise_contract_types` | CatalogListEditor | ✅ B3 |
+| `enterprise_industries` | CatalogListEditor | ✅ B4 |
+| `enterprise_job_families` | CatalogListEditor | ✅ B1 |
+| `enterprise_leadership_levels` | CatalogListEditor | ✅ B2 |
+| `enterprise_work_categories` | CatalogListEditor | ✅ B5 |
 
-### Reports & Analytics
-- **enterprise_reports** → ReportBuilder, ResourceWidgetCard
-- **enterprise_report_schedules** → ReportSchedulesManager
-- **enterprise_audit_events** → ExportCenter, logAuditEvent utility
+### Folyamatok & Szabályok
+| Entitás | UI | Seed |
+|---|---|---|
+| `enterprise_approval_chains` | ApprovalChainManager | ✅ F1 |
+| `enterprise_escalation_rules` | ApprovalChainManager | ✅ F2 |
+| `enterprise_office_coverage_rules` | OfficeCoverageRuleManager | ✅ C6 |
+| `enterprise_rule_templates` | RuleTemplateLibrary | ✅ F3 |
+| `enterprise_access_systems` | AccessSystems | ✅ H1 |
+| `enterprise_access_templates` | AccessTemplates | ✅ H2 |
+| `enterprise_access_template_systems` | AccessTemplates | ✅ H2 |
+| `enterprise_access_requests` | AccessInbox (kérelmek) | ✅ H3 |
+| `enterprise_access_decisions` | AccessInbox (döntések) | ✅ S |
+| `enterprise_onboarding_templates` | OnboardingTemplates | ✅ H4 |
+| `enterprise_onboarding_template_steps` | OnboardingTemplates | ✅ H5 |
+| `enterprise_onboarding_instances` | OnboardingInbox | ✅ H6 |
+| `enterprise_onboarding_step_completions` | OnboardingInbox | ✅ H7 |
+| `enterprise_decision_memory` | DecisionMemoryEditor | ✅ I1 |
 
-### Settings & Configuration
-- **enterprise_workspace_integrations** → IntegrationManager
-- **enterprise_allowances** → AllowanceManager
-- **enterprise_translation_overrides** → LocalizationSettings
-- **enterprise_notification_preferences** → NotificationPreferences
-- **enterprise_ui_section_states** → UiSectionStateManager
+### Erőforrások & Kapacitás
+| Entitás | UI | Seed |
+|---|---|---|
+| `enterprise_projects` | ProjectEditor | ✅ D1 |
+| `enterprise_project_assignments` | ProjectEditor | ✅ D2 |
+| `enterprise_project_resource_requirements` | ProjectEditor | ✅ D3 |
+| `enterprise_project_skill_requirements` | ProjectEditor | ✅ D4 |
+| `enterprise_scenarios` | ScenarioPlanner | ✅ E |
+| `enterprise_scenario_assignments` | ScenarioPlanner | ✅ E |
+| `enterprise_skills` | SkillsManager | ✅ A8 |
+| `enterprise_member_skills` | SkillsManager | ✅ A10 |
+| `enterprise_member_rates` | FinancialsPanel | ✅ D5 |
+| `enterprise_project_rates` | FinancialsPanel | ✅ D6 |
+| `enterprise_shift_assignments` | CoveragePlannerView | ✅ Q |
+| `enterprise_capacity_snapshots` | CapacityDnaPanel | ✅ I2 |
+| `enterprise_allowances` | AllowanceManager | ✅ C1 |
 
-### Catalog & Metadata
-- **enterprise_contract_types** → CatalogListEditor
-- **enterprise_industries** → CatalogListEditor
-- **enterprise_job_families** → CatalogListEditor
-- **enterprise_leadership_levels** → CatalogListEditor
-- **enterprise_work_categories** → CatalogListEditor
+### Agile & Integráció
+| Entitás | UI | Seed |
+|---|---|---|
+| `enterprise_workspace_integrations` | IntegrationManager | ✅ O1 |
+| `enterprise_agile_issues` | AgilePanel (Jira sync) | ✅ O2 |
+| `enterprise_agile_field_metadata` | AgilePanel (field discovery) | ✅ O3 |
+
+### Riportok & Audit
+| Entitás | UI | Seed |
+|---|---|---|
+| `enterprise_reports` | ReportBuilder, ResourceWidgetCard | ✅ G1 |
+| `enterprise_report_schedules` | ReportSchedulesManager | ✅ G2 |
+| `enterprise_audit_events` | ExportCenter, logAuditEvent | ✅ K |
+
+### Beállítások & Konfiguráció
+| Entitás | UI | Seed |
+|---|---|---|
+| `enterprise_translation_overrides` | LocalizationSettings | ✅ N |
+| `enterprise_notification_preferences` | NotificationPreferences | ✅ J |
+| `enterprise_member_templates` | InviteMemberDialog sablonok | ✅ M |
+| `enterprise_ical_tokens` | ICalSubscription | ✅ P |
+| `enterprise_ui_section_states` | UiSectionStateManager | ⚠️ kliensoldali preferencia, nem kell seedelni |
 
 ---
 
