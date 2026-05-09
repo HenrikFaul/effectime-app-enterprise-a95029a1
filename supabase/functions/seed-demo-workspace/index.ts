@@ -14,6 +14,8 @@ import {
   LEAVE_TYPE_DEFS, HU_HOLIDAYS_TEMPLATE, PROJECT_DEFS, NOTIFICATION_EVENT_TYPES,
   ROLE_DEFINITION_DEFS, ROLE_PERMISSION_DEFS, MEMBER_TEMPLATE_DEFS,
   TRANSLATION_OVERRIDE_DEFS, INTEGRATION_DEF, AGILE_ISSUE_DEFS, AGILE_FIELD_METADATA_DEFS,
+  DAILY_RULE_DEFS, OFFICE_COVERAGE_RULE_DEFS, RULE_TEMPLATE_DEFS,
+  APPROVAL_CHAIN_DEFS, DEFAULT_SEED_QUANTITIES,
 } from './seed-data.ts';
 
 const corsHeaders = {
@@ -34,6 +36,48 @@ function addDays(d: Date, days: number): Date {
 }
 function pickN<T>(arr: T[], n: number): T[] {
   return [...arr].sort(() => Math.random() - 0.5).slice(0, n);
+}
+function slugify(s: string): string {
+  return s
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
+// Creates an auth user via the Supabase Admin REST API directly (bypasses
+// SDK auth-session issues). Retries up to 3 times with 1s/2s backoff.
+async function createAuthUser(
+  supabaseUrl: string,
+  serviceKey: string,
+  opts: { email: string; password: string; user_metadata?: object; app_metadata?: object },
+): Promise<{ id: string; error?: undefined } | { id?: undefined; error: string }> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise(r => setTimeout(r, 1000 * attempt));
+    try {
+      const res = await fetch(`${supabaseUrl}/auth/v1/admin/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${serviceKey}`,
+          'apikey': serviceKey,
+        },
+        body: JSON.stringify({ ...opts, email_confirm: true }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (res.ok && json?.id) return { id: json.id };
+      const errMsg = json?.msg || json?.message || json?.error_description || JSON.stringify(json);
+      console.error(`[seed] createUser attempt ${attempt + 1} failed (HTTP ${res.status}):`, errMsg);
+      if (attempt < 2) continue;
+      return { error: `HTTP ${res.status}: ${errMsg}` };
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : String(e);
+      console.error(`[seed] createUser attempt ${attempt + 1} exception:`, errMsg);
+      if (attempt < 2) continue;
+      return { error: errMsg };
+    }
+  }
+  return { error: 'max retries exceeded' };
 }
 
 // ── Main ─────────────────────────────────────────────────────────────────────
@@ -60,6 +104,21 @@ Deno.serve(async (req) => {
 
     if (!SERVICE_KEY) return jsonRes({ error: 'SUPABASE_SERVICE_ROLE_KEY not available in edge function environment' }, 500);
 
+    // ── Read seed config (quantities) for this owner ────────────────────────
+    // Loaded BEFORE workspace creation; falls back to DEFAULT_SEED_QUANTITIES.
+    const adminPre = createClient(SUPABASE_URL, SERVICE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+    });
+    const { data: seedConfigRow } = await adminPre
+      .from('enterprise_seed_config')
+      .select('config')
+      .eq('owner_id', ownerId)
+      .maybeSingle();
+    const seedQty: typeof DEFAULT_SEED_QUANTITIES = {
+      ...DEFAULT_SEED_QUANTITIES,
+      ...(seedConfigRow?.config ?? {}),
+    };
+
     const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
     });
@@ -83,20 +142,25 @@ Deno.serve(async (req) => {
 
     // ── A2. Demo auth users ─────────────────────────────────────────────────
     const demoUserIds: { user_id: string; persona: typeof DEMO_PERSONAS[number] }[] = [];
+    const createUserErrors: string[] = [];
     const seedTag = Math.random().toString(36).slice(2, 9);
-    for (const persona of DEMO_PERSONAS) {
-      const slug  = persona.display_name.toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '');
-      const email = `demo-${slug}-${seedTag}@effectime-demo.local`;
-      const { data: created, error: createErr } = await admin.auth.admin.createUser({
+    const personasToCreate = DEMO_PERSONAS.slice(0, Math.max(1, seedQty.members));
+    for (const persona of personasToCreate) {
+      const slug  = slugify(persona.display_name);
+      const email = `demo-${slug}-${seedTag}@effectime-demo.test`;
+      const result = await createAuthUser(SUPABASE_URL, SERVICE_KEY, {
         email,
         password: `Demo!${crypto.randomUUID().slice(0, 12)}`,
-        email_confirm: true,
         user_metadata: { display_name: persona.display_name },
         app_metadata: { is_demo_persona: true, demo_workspace_id: workspaceId },
       });
-      if (createErr || !created?.user) { console.error('[seed] createUser failed', createErr?.message); continue; }
-      demoUserIds.push({ user_id: created.user.id, persona });
-      await admin.from('profiles').upsert({ user_id: created.user.id, display_name: persona.display_name } as any, { onConflict: 'user_id' });
+      if (!result.id) {
+        createUserErrors.push(`${persona.display_name}: ${result.error}`);
+        console.error('[seed] createUser failed for', persona.display_name, result.error);
+        continue;
+      }
+      demoUserIds.push({ user_id: result.id, persona });
+      await admin.from('profiles').upsert({ user_id: result.id, display_name: persona.display_name } as any, { onConflict: 'user_id' });
     }
 
     // ── A3. Persist demo user ids on workspace ──────────────────────────────
@@ -110,6 +174,7 @@ Deno.serve(async (req) => {
     if (officesErr) console.error('[seed] offices insert failed:', officesErr.message);
     const officeByCity = new Map<string, string>();
     (offices ?? []).forEach((o: any) => officeByCity.set(o.city, o.id));
+    const budapestOfficeId = officeByCity.get('Budapest');
 
     // ── A5. Teams ───────────────────────────────────────────────────────────
     const { data: teams, error: teamsErr } = await admin.from('enterprise_teams')
@@ -355,43 +420,24 @@ Deno.serve(async (req) => {
       { workspace_id: workspaceId, blocked_date: fmtDate(addDays(today, 22)), reason: 'Éves csapat-összejövetel – második nap', created_by: ownerId },
     ]).then(() => {});
 
-    // ── C5. Additional daily rules ────────────────────────────────────────────
-    await admin.from('enterprise_daily_rules').insert([
-      { workspace_id: workspaceId, day_of_week: 1, max_off: 2, is_active: true } as any,
-      { workspace_id: workspaceId, day_of_week: 5, max_off: 3, is_active: true } as any,
-    ]);
+    // ── C5. Daily rules ────────────────────────────────────────────────────────
+    const dailyRulesToInsert = DAILY_RULE_DEFS.slice(0, Math.max(1, seedQty.daily_rules));
+    await admin.from('enterprise_daily_rules').insert(
+      dailyRulesToInsert.map(r => ({ ...r, workspace_id: workspaceId } as any))
+    );
 
     // ── C6. Office coverage rules ────────────────────────────────────────────
-    const budapestOfficeId = officeByCity.get('Budapest');
-    if (budapestOfficeId) {
-      const { error: ocrErr } = await admin.from('enterprise_office_coverage_rules').insert([
-        {
-          workspace_id: workspaceId, office_id: budapestOfficeId,
-          name: 'Budapest HQ – minimum jelenlét (fejlesztők)',
-          business_roles: ['Senior Frontend Developer', 'Senior Backend Developer'],
-          days_of_week: [1, 2, 3, 4, 5], min_headcount: 2,
-          status: 'active', created_by: ownerId,
-        },
-        {
-          workspace_id: workspaceId, office_id: budapestOfficeId,
-          name: 'Budapest HQ – minimum jelenlét (QA)',
-          business_roles: ['QA Engineer'],
-          days_of_week: [2, 3, 4], min_headcount: 1,
-          status: 'active', created_by: ownerId,
-        },
-      ] as any);
-      if (ocrErr) console.warn('[seed] office_coverage_rules insert skipped:', ocrErr.message);
+    const coverageRulesToInsert = OFFICE_COVERAGE_RULE_DEFS.slice(0, Math.max(1, seedQty.office_coverage_rules));
+    const coverageRows: any[] = [];
+    for (const rule of coverageRulesToInsert) {
+      const offId = officeByCity.get(rule.officeName === 'Budapest HQ' ? 'Budapest' : rule.officeName === 'Debrecen Office' ? 'Debrecen' : 'Szeged');
+      if (!offId) continue;
+      const { officeName: _o, ...rest } = rule;
+      coverageRows.push({ ...rest, workspace_id: workspaceId, office_id: offId, created_by: ownerId });
     }
-    const debrecenOfficeId = officeByCity.get('Debrecen');
-    if (debrecenOfficeId) {
-      const { error: ocrErr2 } = await admin.from('enterprise_office_coverage_rules').insert({
-        workspace_id: workspaceId, office_id: debrecenOfficeId,
-        name: 'Debrecen Office – ops jelenlét',
-        business_roles: ['Operations Lead', 'Operations Specialist'],
-        days_of_week: [1, 2, 3, 4, 5], min_headcount: 1,
-        status: 'active', created_by: ownerId,
-      } as any);
-      if (ocrErr2) console.warn('[seed] office_coverage_rules debrecen insert skipped:', ocrErr2.message);
+    if (coverageRows.length) {
+      const { error: ocrErr } = await admin.from('enterprise_office_coverage_rules').insert(coverageRows as any);
+      if (ocrErr) console.warn('[seed] office_coverage_rules insert skipped:', ocrErr.message);
     }
 
     // ── C7. Leave requests ────────────────────────────────────────────────────
@@ -621,10 +667,10 @@ Deno.serve(async (req) => {
     // ════════════════════════════════════════════════════════════════════════
 
     // ── F1. Approval chains ───────────────────────────────────────────────────
-    await admin.from('enterprise_approval_chains').insert([
-      { workspace_id: workspaceId, step_order: 1, approver_role: 'resourceAssistant', is_active: true },
-      { workspace_id: workspaceId, step_order: 2, approver_role: 'owner',             is_active: true },
-    ]).then(() => {});
+    const approvalChainsToInsert = APPROVAL_CHAIN_DEFS.slice(0, Math.max(1, seedQty.approval_chains));
+    await admin.from('enterprise_approval_chains').insert(
+      approvalChainsToInsert.map(c => ({ ...c, workspace_id: workspaceId }))
+    ).then(() => {});
 
     // ── F2. Escalation rules ──────────────────────────────────────────────────
     await admin.from('enterprise_escalation_rules').insert({
@@ -632,18 +678,12 @@ Deno.serve(async (req) => {
     } as any);
 
     // ── F3. Rule templates ────────────────────────────────────────────────────
-    await admin.from('enterprise_rule_templates').insert([
-      {
-        workspace_id: workspaceId, name: 'Max 2 absent Monday', created_by: ownerId, version: 1, is_archived: false,
-        description: 'Hétfőnként maximum 2 fő lehet szabadságon egyidejűleg.',
-        template_data: { day_of_week: 1, max_off: 2, scope: 'workspace' },
-      },
-      {
-        workspace_id: workspaceId, name: 'No leave during sprint close', created_by: ownerId, version: 1, is_archived: false,
-        description: 'Sprint lezárási napokon korlátozza a szabadságkérelmeket.',
-        template_data: { rule_type: 'sprint_close_block', notify_requestor: true },
-      },
-    ]).then(() => {});
+    const ruleTemplatesToInsert = RULE_TEMPLATE_DEFS.slice(0, Math.max(1, seedQty.rule_templates));
+    await admin.from('enterprise_rule_templates').insert(
+      ruleTemplatesToInsert.map(t => ({
+        ...t, workspace_id: workspaceId, created_by: ownerId, version: 1, is_archived: false,
+      }))
+    ).then(() => {});
 
     // ════════════════════════════════════════════════════════════════════════
     // G. REPORTING
@@ -883,7 +923,6 @@ Deno.serve(async (req) => {
     // M. TAGOK: MEGHÍVÓ SABLONOK
     // Tagok → Meghívás → Sablonok
     // ════════════════════════════════════════════════════════════════════════
-    const budapestOfficeId = officeByCity.get('Budapest');
     const { error: memberTplErr } = await admin.from('enterprise_member_templates').insert(
       MEMBER_TEMPLATE_DEFS.map(t => ({
         ...t,
@@ -1034,6 +1073,7 @@ Deno.serve(async (req) => {
     return jsonRes({
       ok: true,
       workspace_id: workspaceId,
+      create_user_errors: createUserErrors.length > 0 ? createUserErrors : undefined,
       summary: {
         members:              demoUserIds.length + 1,
         offices:              (offices ?? []).length,
