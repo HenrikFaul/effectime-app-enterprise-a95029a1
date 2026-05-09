@@ -737,3 +737,7 @@ ugyanazt a `?tab=` paramétert hajtja, így zero state-loss), TopBar az
 - A sidebar gyökérblokk **kötelezően** `<div className="min-h-screen flex w-full">` — `w-full` nélkül a Tailwind 4 + sidebar layout összeomlik (ld. tailwind4-sidebar-width-fix).
 - Ne nest-elj `<main>` elemeket: `SidebarInset` már main; a belső skip-target div legyen `id="main-content"`.
 
+
+### [LESSON-REDESIGN-SHELL-003] Rules of Hooks — useState above early returns
+A workspace-picker `useState('')` került a `if (selectedWorkspaceId) return <WorkspaceDashboard/>` early return UTÁN. Amikor a felhasználó belépett egy workspace-be (early return aktív), a hook nem futott le; visszanavigáláskor lefutott — eltérő hook-szám → React production error #300 (Too many re-renders / hook mismatch), teljes app-blank.
+**Szabály:** minden useState/useEffect/useMemo HÍVÁS a komponens TETEJÉN, BÁRMILYEN feltételes return ELŐTT, kivétel nélkül. Új state-et SOHA ne tegyél conditional return alá.

@@ -66,6 +66,8 @@ export default function Enterprise() {
   const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showSeedConfig, setShowSeedConfig] = useState(false);
+  // NOTE: must be declared above any early returns to satisfy the Rules of Hooks.
+  const [filter, setFilter] = useState('');
 
   const activeTab = searchParams.get('tab') || 'members';
   const inviteToken = searchParams.get('invite') || null;
@@ -296,7 +298,7 @@ export default function Enterprise() {
   }
 
   // ────────────────────── Workspace picker (redesigned shell) ──────────────────────
-  const [filter, setFilter] = useState('');
+  // (filter useState moved above the early-return — Rules of Hooks)
   const filteredWorkspaces = workspaces.filter((w) =>
     !filter ? true : (w.name + ' ' + (w.description ?? '')).toLowerCase().includes(filter.toLowerCase())
   );
