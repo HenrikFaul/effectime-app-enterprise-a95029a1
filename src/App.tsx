@@ -86,28 +86,29 @@ const App = () => (
         <AuthProvider>
           <I18nProvider>
             <HelpRegistryProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <HelpDrawer />
-              <HashRouter>
-                <SpaRedirectHandler />
-                <Routes>
-                  <Route path="/" element={<Landing />} />
-                  <Route path="/app" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
-                  <Route path="/enterprise" element={<ProtectedRoute><Navigate to="/app" replace /></ProtectedRoute>} />
-                  <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                  <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-                  <Route path="/unsubscribe" element={<Unsubscribe />} />
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </HashRouter>
-            </TooltipProvider>
-          </HelpRegistryProvider>
-        </I18nProvider>
-      </AuthProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <HelpDrawer />
+                <HashRouter>
+                  <SpaRedirectHandler />
+                  <Routes>
+                    <Route path="/" element={<Landing />} />
+                    <Route path="/app" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
+                    <Route path="/enterprise" element={<ProtectedRoute><Navigate to="/app" replace /></ProtectedRoute>} />
+                    <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                    <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+                    <Route path="/unsubscribe" element={<Unsubscribe />} />
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </HashRouter>
+              </TooltipProvider>
+            </HelpRegistryProvider>
+          </I18nProvider>
+        </AuthProvider>
+      </DensityProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );
