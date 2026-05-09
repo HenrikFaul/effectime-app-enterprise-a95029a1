@@ -1,3 +1,37 @@
+## 2026-05-09 — v3.2.5 Demo workspace seeder v8: data-driven catalogs + full org-structure for all 22 members
+
+### Fixed — Demo workspace seeder: org-structure assignment was missing for 15/22 members
+- **Root cause (v7)**: The B8 seeding block used hardcoded if-else persona-name checks and only covered 7 of 22 demo members. SQL verification confirmed `has_org_unit: 7/23`, `has_manager: 2/23` — 15 members had no org unit, leadership level, contract type, or manager set.
+- **Fix (v8)**: Introduced `PERSONA_ORG_ASSIGNMENTS` — a typed `Record<string, PersonaOrgAssignment>` lookup in `seed-data.ts` mapping all 22 persona `display_name`s to their `{orgUnit, llCode, contractCode, leadershipCategory, seniority, managerName?}`. B8 now iterates every `demoUserId`, resolves the name via `userIdByPersonaName`, looks up the assignment record, and performs a targeted UPDATE per member.
+- **Result**: All 22 demo members receive full org structure. Viktor Mátyás (top-level lead) has no manager; all 21 others have a correctly resolved `manager_id`.
+
+### Added — Data-driven catalog B1–B5 seeding with configurable quantities
+
+All five catalog entity types are now seeded from typed `DEFS` arrays in `seed-data.ts` and respect the `enterprise_seed_config` quantity settings:
+
+| Block | Entity            | DEFS array                    | Min enforced | Seed config key     |
+|-------|-------------------|-------------------------------|--------------|---------------------|
+| B1    | Job families      | `JOB_FAMILY_DEFS` (6 items)   | 1            | `job_families`      |
+| B2    | Leadership levels | `LEADERSHIP_LEVEL_DEFS` (5)   | 4            | `leadership_levels` |
+| B3    | Contract types    | `CONTRACT_TYPE_DEFS` (5)      | 2            | `contract_types`    |
+| B4    | Industries        | `INDUSTRY_DEFS` (5)           | 1            | `industries`        |
+| B5    | Work categories   | `WORK_CATEGORY_DEFS` (5)      | 1            | `work_categories`   |
+
+- Min values guard downstream FK dependencies in B8 (e.g., leadership levels min=4 because B8 resolves strategic/operational/technical/execution codes; contract types min=2 for employee + contractor).
+- Pattern: `DEFS.slice(0, Math.max(MIN, seedQty.key))` — honors user-configured quantity while guaranteeing required minimums.
+
+### Added — `DemoSeedConfigDialog` — 6 new configurable catalog entities
+- New **"Katalógusok"** sub-group under the Org tree: job families, leadership levels, contract types, industries, work categories — each configurable 1–6.
+- New **`org_units`** leaf added to the Org group.
+- `DEFAULT_SEED_QUANTITIES` updated with all 6 new keys and sensible defaults.
+
+### Architecture
+- All catalog `DEFS` arrays and `PERSONA_ORG_ASSIGNMENTS` are defined once in `seed-data.ts` (single source of truth) and imported by `index.ts`.
+- `.governance/entity-creation-inventory.md` updated with ✅ markers for all newly seeded entity types (sections 2.1–2.5).
+- Edge function deployed as **version 8 (ACTIVE)** to production Supabase project.
+
+---
+
 ## 2026-05-08 — v3.2.4 Auth UX, Compact Org Pulse & Demo Workspace Seeder
 
 ### Fixed
