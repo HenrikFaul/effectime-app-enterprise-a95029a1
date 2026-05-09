@@ -173,6 +173,277 @@ export type Database = {
         }
         Relationships: []
       }
+      enterprise_access_decisions: {
+        Row: {
+          action: string
+          actor_id: string | null
+          at: string
+          expected_outcome: string | null
+          id: string
+          observed_outcome: string | null
+          rationale: string | null
+          request_id: string
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          at?: string
+          expected_outcome?: string | null
+          id?: string
+          observed_outcome?: string | null
+          rationale?: string | null
+          request_id: string
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          at?: string
+          expected_outcome?: string | null
+          id?: string
+          observed_outcome?: string | null
+          rationale?: string | null
+          request_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_access_decisions_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_access_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_access_requests: {
+        Row: {
+          approver_id: string | null
+          created_at: string
+          decided_at: string | null
+          decided_by: string | null
+          id: string
+          member_id: string
+          owner_id: string | null
+          reason: string | null
+          requested_at: string
+          requested_by: string | null
+          status: string
+          system_id: string
+          template_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          approver_id?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          member_id: string
+          owner_id?: string | null
+          reason?: string | null
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+          system_id: string
+          template_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          approver_id?: string | null
+          created_at?: string
+          decided_at?: string | null
+          decided_by?: string | null
+          id?: string
+          member_id?: string
+          owner_id?: string | null
+          reason?: string | null
+          requested_at?: string
+          requested_by?: string | null
+          status?: string
+          system_id?: string
+          template_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_access_requests_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_memberships"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_access_requests_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_access_systems"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_access_requests_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_access_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_access_requests_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_access_systems: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          default_approver_role: string | null
+          default_owner_role: string | null
+          description: string | null
+          id: string
+          kind: string
+          name: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          default_approver_role?: string | null
+          default_owner_role?: string | null
+          description?: string | null
+          id?: string
+          kind?: string
+          name: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          default_approver_role?: string | null
+          default_owner_role?: string | null
+          description?: string | null
+          id?: string
+          kind?: string
+          name?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_access_systems_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_access_template_systems: {
+        Row: {
+          created_at: string
+          id: string
+          mandatory: boolean
+          optional: boolean
+          sort_order: number
+          system_id: string
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mandatory?: boolean
+          optional?: boolean
+          sort_order?: number
+          system_id: string
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mandatory?: boolean
+          optional?: boolean
+          sort_order?: number
+          system_id?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_access_template_systems_system_id_fkey"
+            columns: ["system_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_access_systems"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_access_template_systems_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_access_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_access_templates: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          id: string
+          name: string
+          scope_org_unit_id: string | null
+          scope_position_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          scope_org_unit_id?: string | null
+          scope_position_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          scope_org_unit_id?: string | null
+          scope_position_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_access_templates_scope_org_unit_id_fkey"
+            columns: ["scope_org_unit_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_org_units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_access_templates_scope_position_id_fkey"
+            columns: ["scope_position_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspace_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_access_templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enterprise_agile_capacity_events: {
         Row: {
           auto_action_taken: string | null
@@ -712,6 +983,56 @@ export type Database = {
           },
         ]
       }
+      enterprise_capacity_snapshots: {
+        Row: {
+          available_fte: number | null
+          baseline_fte: number | null
+          committed_fte: number | null
+          effective_fte: number | null
+          generated_at: string
+          id: string
+          overload_score: number | null
+          payload: Json | null
+          shortage_score: number | null
+          snapshot_date: string
+          workspace_id: string
+        }
+        Insert: {
+          available_fte?: number | null
+          baseline_fte?: number | null
+          committed_fte?: number | null
+          effective_fte?: number | null
+          generated_at?: string
+          id?: string
+          overload_score?: number | null
+          payload?: Json | null
+          shortage_score?: number | null
+          snapshot_date: string
+          workspace_id: string
+        }
+        Update: {
+          available_fte?: number | null
+          baseline_fte?: number | null
+          committed_fte?: number | null
+          effective_fte?: number | null
+          generated_at?: string
+          id?: string
+          overload_score?: number | null
+          payload?: Json | null
+          shortage_score?: number | null
+          snapshot_date?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_capacity_snapshots_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enterprise_catalog_categories: {
         Row: {
           created_at: string
@@ -893,6 +1214,47 @@ export type Database = {
           },
         ]
       }
+      enterprise_contract_types: {
+        Row: {
+          archived_at: string | null
+          code: string
+          created_at: string
+          id: string
+          is_default: boolean
+          label: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          code: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          code?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_contract_types_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enterprise_daily_rules: {
         Row: {
           created_at: string
@@ -948,6 +1310,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "enterprise_daily_rules_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_decision_memory: {
+        Row: {
+          authored_at: string
+          authored_by: string | null
+          expected_outcome: string | null
+          id: string
+          observed_at: string | null
+          observed_outcome: string | null
+          rationale: string | null
+          subject_id: string
+          subject_type: string
+          workspace_id: string
+        }
+        Insert: {
+          authored_at?: string
+          authored_by?: string | null
+          expected_outcome?: string | null
+          id?: string
+          observed_at?: string | null
+          observed_outcome?: string | null
+          rationale?: string | null
+          subject_id: string
+          subject_type: string
+          workspace_id: string
+        }
+        Update: {
+          authored_at?: string
+          authored_by?: string | null
+          expected_outcome?: string | null
+          id?: string
+          observed_at?: string | null
+          observed_outcome?: string | null
+          rationale?: string | null
+          subject_id?: string
+          subject_type?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_decision_memory_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "enterprise_workspaces"
@@ -1151,6 +1560,47 @@ export type Database = {
           },
         ]
       }
+      enterprise_industries: {
+        Row: {
+          archived_at: string | null
+          code: string
+          created_at: string
+          id: string
+          is_default: boolean
+          label: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          code: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          code?: string
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_industries_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enterprise_integration_sync_log: {
         Row: {
           created_at: string
@@ -1249,6 +1699,85 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "enterprise_invitations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_job_families: {
+        Row: {
+          archived_at: string | null
+          code: string
+          created_at: string
+          id: string
+          label: string
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          code: string
+          created_at?: string
+          id?: string
+          label: string
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          code?: string
+          created_at?: string
+          id?: string
+          label?: string
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_job_families_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_leadership_levels: {
+        Row: {
+          archived_at: string | null
+          code: string
+          created_at: string
+          id: string
+          label: string
+          sort_order: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          code: string
+          created_at?: string
+          id?: string
+          label: string
+          sort_order?: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          code?: string
+          created_at?: string
+          id?: string
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_leadership_levels_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "enterprise_workspaces"
@@ -1648,12 +2177,22 @@ export type Database = {
           business_role: string | null
           business_role_id: string | null
           city: string | null
+          contract_type_id: string | null
           created_at: string
+          employer_rights: boolean
           id: string
           joined_at: string | null
+          leadership_category: string | null
+          leadership_level_id: string | null
           location: string | null
+          manager_id: string | null
           office_id: string | null
+          org_unit_id: string | null
+          position_catalog_id: string | null
           role: Database["public"]["Enums"]["enterprise_role"]
+          seniority:
+            | Database["public"]["Enums"]["enterprise_experience_level"]
+            | null
           status: Database["public"]["Enums"]["enterprise_membership_status"]
           team: string | null
           updated_at: string
@@ -1667,12 +2206,22 @@ export type Database = {
           business_role?: string | null
           business_role_id?: string | null
           city?: string | null
+          contract_type_id?: string | null
           created_at?: string
+          employer_rights?: boolean
           id?: string
           joined_at?: string | null
+          leadership_category?: string | null
+          leadership_level_id?: string | null
           location?: string | null
+          manager_id?: string | null
           office_id?: string | null
+          org_unit_id?: string | null
+          position_catalog_id?: string | null
           role?: Database["public"]["Enums"]["enterprise_role"]
+          seniority?:
+            | Database["public"]["Enums"]["enterprise_experience_level"]
+            | null
           status?: Database["public"]["Enums"]["enterprise_membership_status"]
           team?: string | null
           updated_at?: string
@@ -1686,12 +2235,22 @@ export type Database = {
           business_role?: string | null
           business_role_id?: string | null
           city?: string | null
+          contract_type_id?: string | null
           created_at?: string
+          employer_rights?: boolean
           id?: string
           joined_at?: string | null
+          leadership_category?: string | null
+          leadership_level_id?: string | null
           location?: string | null
+          manager_id?: string | null
           office_id?: string | null
+          org_unit_id?: string | null
+          position_catalog_id?: string | null
           role?: Database["public"]["Enums"]["enterprise_role"]
+          seniority?:
+            | Database["public"]["Enums"]["enterprise_experience_level"]
+            | null
           status?: Database["public"]["Enums"]["enterprise_membership_status"]
           team?: string | null
           updated_at?: string
@@ -1709,10 +2268,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "enterprise_memberships_contract_type_id_fkey"
+            columns: ["contract_type_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_contract_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_memberships_leadership_level_id_fkey"
+            columns: ["leadership_level_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_leadership_levels"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_memberships_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_memberships"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "enterprise_memberships_office_id_fkey"
             columns: ["office_id"]
             isOneToOne: false
             referencedRelation: "enterprise_offices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_memberships_org_unit_id_fkey"
+            columns: ["org_unit_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_org_units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_memberships_position_catalog_id_fkey"
+            columns: ["position_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspace_roles"
             referencedColumns: ["id"]
           },
           {
@@ -1927,6 +2521,337 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "enterprise_offices_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_onboarding_instances: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          due_at: string | null
+          id: string
+          member_id: string
+          started_at: string
+          status: string
+          template_id: string | null
+          template_version: number | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          member_id: string
+          started_at?: string
+          status?: string
+          template_id?: string | null
+          template_version?: number | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          due_at?: string | null
+          id?: string
+          member_id?: string
+          started_at?: string
+          status?: string
+          template_id?: string | null
+          template_version?: number | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_onboarding_instances_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_memberships"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_onboarding_instances_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_onboarding_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_onboarding_instances_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_onboarding_step_completions: {
+        Row: {
+          completed_at: string | null
+          completed_by: string | null
+          created_at: string
+          evidence_ref: string | null
+          id: string
+          instance_id: string
+          notes: string | null
+          status: string
+          step_id: string
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          evidence_ref?: string | null
+          id?: string
+          instance_id: string
+          notes?: string | null
+          status?: string
+          step_id: string
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          completed_by?: string | null
+          created_at?: string
+          evidence_ref?: string | null
+          id?: string
+          instance_id?: string
+          notes?: string | null
+          status?: string
+          step_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_onboarding_step_completions_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_onboarding_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_onboarding_step_completions_step_id_fkey"
+            columns: ["step_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_onboarding_template_steps"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_onboarding_template_steps: {
+        Row: {
+          access_system_id: string | null
+          content_ref: string | null
+          created_at: string
+          description: string | null
+          due_offset_days: number
+          escalate_after_days: number | null
+          id: string
+          mandatory: boolean
+          owner_role: string | null
+          sort_order: number
+          step_type: string
+          template_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          access_system_id?: string | null
+          content_ref?: string | null
+          created_at?: string
+          description?: string | null
+          due_offset_days?: number
+          escalate_after_days?: number | null
+          id?: string
+          mandatory?: boolean
+          owner_role?: string | null
+          sort_order?: number
+          step_type?: string
+          template_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          access_system_id?: string | null
+          content_ref?: string | null
+          created_at?: string
+          description?: string | null
+          due_offset_days?: number
+          escalate_after_days?: number | null
+          id?: string
+          mandatory?: boolean
+          owner_role?: string | null
+          sort_order?: number
+          step_type?: string
+          template_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_onboarding_template_steps_access_system_fk"
+            columns: ["access_system_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_access_systems"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_onboarding_template_steps_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_onboarding_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_onboarding_templates: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          scope_org_unit_id: string | null
+          scope_position_id: string | null
+          status: string
+          updated_at: string
+          version: number
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          scope_org_unit_id?: string | null
+          scope_position_id?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          scope_org_unit_id?: string | null
+          scope_position_id?: string | null
+          status?: string
+          updated_at?: string
+          version?: number
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_onboarding_templates_scope_org_unit_id_fkey"
+            columns: ["scope_org_unit_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_org_units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_onboarding_templates_scope_position_id_fkey"
+            columns: ["scope_position_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspace_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_onboarding_templates_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_org_chart_snapshots: {
+        Row: {
+          created_at: string
+          generated_at: string
+          id: string
+          payload: Json
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          generated_at?: string
+          id?: string
+          payload: Json
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          generated_at?: string
+          id?: string
+          payload?: Json
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_org_chart_snapshots_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_org_units: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          id: string
+          name: string
+          parent_id: string | null
+          sort_order: number
+          unit_type: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          parent_id?: string | null
+          sort_order?: number
+          unit_type?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          parent_id?: string | null
+          sort_order?: number
+          unit_type?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_org_units_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_org_units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_org_units_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "enterprise_workspaces"
@@ -2818,6 +3743,50 @@ export type Database = {
           },
         ]
       }
+      enterprise_translation_overrides: {
+        Row: {
+          authored_by: string | null
+          created_at: string
+          id: string
+          key: string
+          locale: string
+          source: string
+          updated_at: string
+          value: string
+          workspace_id: string
+        }
+        Insert: {
+          authored_by?: string | null
+          created_at?: string
+          id?: string
+          key: string
+          locale: string
+          source?: string
+          updated_at?: string
+          value: string
+          workspace_id: string
+        }
+        Update: {
+          authored_by?: string | null
+          created_at?: string
+          id?: string
+          key?: string
+          locale?: string
+          source?: string
+          updated_at?: string
+          value?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_translation_overrides_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enterprise_ui_section_states: {
         Row: {
           created_at: string
@@ -2849,6 +3818,54 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "enterprise_ui_section_states_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_work_categories: {
+        Row: {
+          archived_at: string | null
+          code: string
+          created_at: string
+          id: string
+          label: string
+          parent_id: string | null
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          code: string
+          created_at?: string
+          id?: string
+          label: string
+          parent_id?: string | null
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          code?: string
+          created_at?: string
+          id?: string
+          label?: string
+          parent_id?: string | null
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_work_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_work_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_work_categories_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "enterprise_workspaces"
@@ -3141,6 +4158,7 @@ export type Database = {
           created_at: string
           created_by: string
           date_format: string
+          default_locale: string | null
           description: string | null
           favicon_url: string | null
           fiscal_year_start_month: number
@@ -3153,6 +4171,10 @@ export type Database = {
           locale: string
           name: string
           name_format: string
+          recovery_mode: boolean
+          recovery_mode_activated_at: string | null
+          recovery_mode_activated_by: string | null
+          recovery_mode_reason: string | null
           settings: Json
           show_past_absences: boolean
           timezone: string
@@ -3169,6 +4191,7 @@ export type Database = {
           created_at?: string
           created_by: string
           date_format?: string
+          default_locale?: string | null
           description?: string | null
           favicon_url?: string | null
           fiscal_year_start_month?: number
@@ -3181,6 +4204,10 @@ export type Database = {
           locale?: string
           name: string
           name_format?: string
+          recovery_mode?: boolean
+          recovery_mode_activated_at?: string | null
+          recovery_mode_activated_by?: string | null
+          recovery_mode_reason?: string | null
           settings?: Json
           show_past_absences?: boolean
           timezone?: string
@@ -3197,6 +4224,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           date_format?: string
+          default_locale?: string | null
           description?: string | null
           favicon_url?: string | null
           fiscal_year_start_month?: number
@@ -3209,6 +4237,10 @@ export type Database = {
           locale?: string
           name?: string
           name_format?: string
+          recovery_mode?: boolean
+          recovery_mode_activated_at?: string | null
+          recovery_mode_activated_by?: string | null
+          recovery_mode_reason?: string | null
           settings?: Json
           show_past_absences?: boolean
           timezone?: string
@@ -3746,6 +4778,7 @@ export type Database = {
           is_temporary: boolean
           linked_event_id: string | null
           preferences: Json | null
+          preferred_locale: string | null
           temp_access_token: string | null
           temp_verification_code: string | null
           updated_at: string
@@ -3759,6 +4792,7 @@ export type Database = {
           is_temporary?: boolean
           linked_event_id?: string | null
           preferences?: Json | null
+          preferred_locale?: string | null
           temp_access_token?: string | null
           temp_verification_code?: string | null
           updated_at?: string
@@ -3772,6 +4806,7 @@ export type Database = {
           is_temporary?: boolean
           linked_event_id?: string | null
           preferences?: Json | null
+          preferred_locale?: string | null
           temp_access_token?: string | null
           temp_verification_code?: string | null
           updated_at?: string
@@ -3928,6 +4963,26 @@ export type Database = {
           },
         ]
       }
+      enterprise_org_pulse_membership: {
+        Row: {
+          active_count: number | null
+          employer_rights_count: number | null
+          missing_contract: number | null
+          missing_leadership: number | null
+          missing_manager: number | null
+          missing_org_unit: number | null
+          workspace_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_memberships_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       auto_archive_expired_coverage_rules: { Args: never; Returns: number }
@@ -3995,6 +5050,18 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      seed_default_access_systems: {
+        Args: { p_workspace_id: string }
+        Returns: undefined
+      }
+      seed_default_contract_types: {
+        Args: { p_workspace_id: string }
+        Returns: undefined
+      }
+      seed_default_leadership_levels: {
+        Args: { p_workspace_id: string }
+        Returns: undefined
       }
     }
     Enums: {

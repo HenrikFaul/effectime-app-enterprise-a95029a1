@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -6,7 +6,36 @@ import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, PlusCircle, Pencil, Database, RefreshCw } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import { Badge } from '@/components/ui/badge';
+import {
+  Loader2,
+  PlusCircle,
+  Pencil,
+  Database,
+  RefreshCw,
+  ChevronsUpDown,
+  Search,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 interface IntegrationMini {
@@ -15,32 +44,45 @@ interface IntegrationMini {
   project_key: string | null;
 }
 
+interface CachedIssue {
+  external_key: string;
+  summary: string | null;
+  status: string | null;
+  issue_type: string | null;
+  assignee_name: string | null;
+}
+
 export function IssueWriteback({ integration, userId }: { integration: IntegrationMini; userId: string }) {
+  void userId;
   const [busy, setBusy] = useState(false);
-  
+
   const [createForm, setCreateForm] = useState({
-    summary: '', 
-    description: '', 
-    issue_type: 'Task', 
-    assignee_email: '', 
+    summary: '',
+    description: '',
+    issue_type: '',
+    assignee_email: '',
     labels: '',
-    iteration_path: '', 
+    iteration_path: '',
     original_estimate_hours: '',
   });
 
   const [configLoading, setConfigLoading] = useState(false);
   const [issueTypeOptions, setIssueTypeOptions] = useState<string[]>([]);
   const [labelOptions, setLabelOptions] = useState<string[]>([]);
+  const [autoSyncTried, setAutoSyncTried] = useState(false);
 
   const [updateForm, setUpdateForm] = useState({
-    key: '', 
-    summary: '', 
-    assignee_email: '', 
-    status: '', 
+    key: '',
+    summary: '',
+    assignee_email: '',
+    status: '',
     iteration_path: '',
   });
 
-
+  // Issue picker for "Frissítés"
+  const [issues, setIssues] = useState<CachedIssue[]>([]);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [issuesLoading, setIssuesLoading] = useState(false);
 
   const loadProjectConfigFromDb = async () => {
     const { data } = await supabase
@@ -48,16 +90,28 @@ export function IssueWriteback({ integration, userId }: { integration: Integrati
       .select('field_id,field_name,field_type,schema')
       .eq('integration_id', integration.id);
     const rows = (data ?? []) as any[];
-    const issueTypes = rows.filter((r) => r.field_type === 'issuetype').map((r) => r.field_name).filter(Boolean);
+    // Only use project-specific issue type rows (field_id starts with 'jira.issuetype.')
+    // The generic field-discovery row has field_id='issuetype', field_name='Issue Type' and must be excluded.
+    const issueTypes = Array.from(
+      new Set(
+        rows
+          .filter((r) => r.field_type === 'issuetype' && r.field_id.startsWith('jira.issuetype.'))
+          .map((r) => r.field_name)
+          .filter(Boolean),
+      ),
+    );
     const labels = rows.find((r) => r.field_id === 'jira.labels')?.schema?.options ?? [];
     setIssueTypeOptions(issueTypes);
     setLabelOptions(Array.isArray(labels) ? labels : []);
-    if (issueTypes.length && !issueTypes.includes(createForm.issue_type)) {
-      setCreateForm((prev) => ({ ...prev, issue_type: issueTypes[0] }));
-    }
+    setCreateForm((prev) => {
+      if (!issueTypes.length) return prev;
+      if (prev.issue_type && issueTypes.includes(prev.issue_type)) return prev;
+      return { ...prev, issue_type: issueTypes[0] };
+    });
+    return issueTypes;
   };
 
-  const syncProjectConfig = async () => {
+  const syncProjectConfig = async (silent = false) => {
     setConfigLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('jira-devops-proxy', {
@@ -66,16 +120,31 @@ export function IssueWriteback({ integration, userId }: { integration: Integrati
       if (error) throw error;
       if (!(data as any)?.ok) throw new Error((data as any)?.error ?? 'Hibás válasz');
       await loadProjectConfigFromDb();
-      toast.success(`Projekt konfiguráció mentve (${(data as any).count} elem)`);
+      if (!silent) toast.success(`Projekt konfiguráció mentve (${(data as any).count} elem)`);
     } catch (e: any) {
-      toast.error('Konfiguráció szinkron hiba: ' + (e?.message ?? String(e)));
+      if (!silent) toast.error('Konfiguráció szinkron hiba: ' + (e?.message ?? String(e)));
     } finally {
       setConfigLoading(false);
     }
   };
 
+  const loadIssuesCache = async () => {
+    setIssuesLoading(true);
+    const { data } = await (supabase as any)
+      .from('enterprise_agile_issues')
+      .select('external_key,summary,status,issue_type,assignee_name')
+      .eq('integration_id', integration.id)
+      .order('last_synced_at', { ascending: false })
+      .limit(500);
+    setIssues((data ?? []) as CachedIssue[]);
+    setIssuesLoading(false);
+  };
+
   const create = async () => {
     if (!createForm.summary) { toast.error('Cím (summary) kötelező'); return; }
+    if (integration.provider === 'jira' && !createForm.issue_type) {
+      toast.error('Válassz issue type-ot a Jira projektből'); return;
+    }
     setBusy(true);
     try {
       const params: any = {
@@ -95,7 +164,7 @@ export function IssueWriteback({ integration, userId }: { integration: Integrati
       if (error) throw error;
       if (!(data as any)?.ok) throw new Error((data as any)?.error ?? 'Hibás válasz');
       toast.success('Ticket létrehozva ✓');
-      setCreateForm({ summary: '', description: '', issue_type: 'Task', assignee_email: '', labels: '', iteration_path: '', original_estimate_hours: '' });
+      setCreateForm((p) => ({ ...p, summary: '', description: '', labels: '', iteration_path: '', original_estimate_hours: '' }));
     } catch (e: any) {
       toast.error('Hiba: ' + (e?.message ?? String(e)));
     } finally {
@@ -104,7 +173,7 @@ export function IssueWriteback({ integration, userId }: { integration: Integrati
   };
 
   const update = async () => {
-    if (!updateForm.key) { toast.error('Issue key/id kötelező'); return; }
+    if (!updateForm.key) { toast.error('Válassz ticketet a listából'); return; }
     setBusy(true);
     try {
       const params: any = { key: updateForm.key };
@@ -126,8 +195,22 @@ export function IssueWriteback({ integration, userId }: { integration: Integrati
   };
 
   useEffect(() => {
-    void loadProjectConfigFromDb();
+    setAutoSyncTried(false);
+    void loadProjectConfigFromDb().then((opts) => {
+      // Auto-sync once if Jira and no issue types cached yet
+      if (integration.provider === 'jira' && opts.length === 0) {
+        setAutoSyncTried(true);
+        void syncProjectConfig(true);
+      }
+    });
+    void loadIssuesCache();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [integration.id]);
+
+  const selectedIssue = useMemo(
+    () => issues.find((i) => i.external_key === updateForm.key) || null,
+    [issues, updateForm.key],
+  );
 
   return (
     <Card>
@@ -136,14 +219,23 @@ export function IssueWriteback({ integration, userId }: { integration: Integrati
       </CardHeader>
       <CardContent className="space-y-3">
         {integration.provider === 'jira' && (
-          <div className="flex items-center gap-2">
-            <Button size="sm" variant="outline" onClick={syncProjectConfig} disabled={configLoading || busy} className="gap-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="outline" onClick={() => syncProjectConfig(false)} disabled={configLoading || busy} className="gap-1">
               {configLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Database className="h-3 w-3" />}
               Jira projekt konfiguráció szinkron
             </Button>
             <Button size="sm" variant="ghost" onClick={loadProjectConfigFromDb} disabled={configLoading || busy} className="gap-1">
               <RefreshCw className="h-3 w-3" /> Betöltés DB-ből
             </Button>
+            {issueTypeOptions.length > 0 ? (
+              <Badge variant="secondary" className="text-[10px]">
+                {issueTypeOptions.length} issue type elérhető
+              </Badge>
+            ) : autoSyncTried && !configLoading ? (
+              <Badge variant="outline" className="text-[10px] text-muted-foreground">
+                Nincs cache-elt issue type — futtass szinkront
+              </Badge>
+            ) : null}
           </div>
         )}
         <Tabs defaultValue="create">
@@ -151,6 +243,8 @@ export function IssueWriteback({ integration, userId }: { integration: Integrati
             <TabsTrigger value="create" className="gap-1"><PlusCircle className="h-3 w-3" /> Új ticket</TabsTrigger>
             <TabsTrigger value="update" className="gap-1"><Pencil className="h-3 w-3" /> Frissítés</TabsTrigger>
           </TabsList>
+
+          {/* ---------------- CREATE ---------------- */}
           <TabsContent value="create" className="space-y-3 pt-3">
             <div>
               <Label className="text-xs">Cím (summary) *</Label>
@@ -162,13 +256,29 @@ export function IssueWriteback({ integration, userId }: { integration: Integrati
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
-                <Label className="text-xs">Típus</Label>
-                {integration.provider === 'jira' && issueTypeOptions.length > 0 ? (
-                  <select className="h-8 w-full rounded-md border bg-background px-2 text-xs" value={createForm.issue_type} onChange={(e) => setCreateForm({ ...createForm, issue_type: e.target.value })}>
-                    {issueTypeOptions.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
-                  </select>
+                <Label className="text-xs">Típus *</Label>
+                {integration.provider === 'jira' ? (
+                  issueTypeOptions.length > 0 ? (
+                    <Select
+                      value={createForm.issue_type}
+                      onValueChange={(v) => setCreateForm({ ...createForm, issue_type: v })}
+                    >
+                      <SelectTrigger className="h-8 text-xs">
+                        <SelectValue placeholder="Válassz típust" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {issueTypeOptions.map((opt) => (
+                          <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="text-[10px] text-muted-foreground border rounded-md h-8 px-2 flex items-center">
+                      {configLoading ? 'Issue type-ok betöltése…' : 'Futtasd a "Jira projekt konfiguráció szinkron"-t'}
+                    </div>
+                  )
                 ) : (
-                  <Input className="h-8 text-xs" value={createForm.issue_type} onChange={(e) => setCreateForm({ ...createForm, issue_type: e.target.value })} />
+                  <Input className="h-8 text-xs" value={createForm.issue_type} onChange={(e) => setCreateForm({ ...createForm, issue_type: e.target.value })} placeholder="Task" />
                 )}
               </div>
               <div>
@@ -203,11 +313,91 @@ export function IssueWriteback({ integration, userId }: { integration: Integrati
             </Button>
           </TabsContent>
 
+          {/* ---------------- UPDATE ---------------- */}
           <TabsContent value="update" className="space-y-3 pt-3">
             <div>
-              <Label className="text-xs">Issue kulcs / Work item ID *</Label>
-              <Input className="h-8 text-xs font-mono" value={updateForm.key} onChange={(e) => setUpdateForm({ ...updateForm, key: e.target.value })} />
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Ticket *</Label>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-[10px] gap-1"
+                  onClick={loadIssuesCache}
+                  disabled={issuesLoading}
+                >
+                  {issuesLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                  Frissítés cache-ből
+                </Button>
+              </div>
+              <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    className="w-full h-9 justify-between text-xs font-normal"
+                  >
+                    {selectedIssue ? (
+                      <span className="flex items-center gap-2 min-w-0">
+                        <span className="font-mono text-primary">{selectedIssue.external_key}</span>
+                        <span className="truncate text-muted-foreground">{selectedIssue.summary}</span>
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-2 text-muted-foreground">
+                        <Search className="h-3.5 w-3.5" />
+                        {issues.length > 0 ? `Válassz ${issues.length} ticket közül…` : 'Nincs cache-elt ticket — nyisd meg a Backlog fület'}
+                      </span>
+                    )}
+                    <ChevronsUpDown className="h-3.5 w-3.5 opacity-60" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[480px] p-0" align="start">
+                  <Command
+                    filter={(value, search) => {
+                      const s = search.toLowerCase();
+                      return value.toLowerCase().includes(s) ? 1 : 0;
+                    }}
+                  >
+                    <CommandInput placeholder="Keresés: kulcs, cím, felelős…" />
+                    <CommandList>
+                      <CommandEmpty>Nincs találat.</CommandEmpty>
+                      <CommandGroup>
+                        {issues.map((i) => {
+                          const haystack = `${i.external_key} ${i.summary ?? ''} ${i.assignee_name ?? ''} ${i.issue_type ?? ''}`;
+                          return (
+                            <CommandItem
+                              key={i.external_key}
+                              value={haystack}
+                              onSelect={() => {
+                                setUpdateForm((f) => ({ ...f, key: i.external_key }));
+                                setPickerOpen(false);
+                              }}
+                              className="flex items-center gap-2"
+                            >
+                              <span className="font-mono text-xs text-primary w-20 shrink-0">{i.external_key}</span>
+                              <span className="flex-1 min-w-0 truncate">{i.summary || '—'}</span>
+                              {i.issue_type && (
+                                <Badge variant="outline" className="text-[10px] shrink-0">{i.issue_type}</Badge>
+                              )}
+                              {i.status && (
+                                <Badge variant="secondary" className="text-[10px] shrink-0">{i.status}</Badge>
+                              )}
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {issues.length === 0 && !issuesLoading && (
+                <p className="text-[10px] text-muted-foreground mt-1">
+                  Tipp: nyisd meg a Backlog fület és futtass egy keresést, hogy a cache feltöltődjön.
+                </p>
+              )}
             </div>
+
             <div>
               <Label className="text-xs">Új cím (üres = változatlan)</Label>
               <Input className="h-8 text-xs" value={updateForm.summary} onChange={(e) => setUpdateForm({ ...updateForm, summary: e.target.value })} />
@@ -230,7 +420,7 @@ export function IssueWriteback({ integration, userId }: { integration: Integrati
                 </>
               )}
             </div>
-            <Button size="sm" onClick={update} disabled={busy} className="gap-1">
+            <Button size="sm" onClick={update} disabled={busy || !updateForm.key} className="gap-1">
               {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Pencil className="h-3 w-3" />}
               Frissítés
             </Button>

@@ -63,10 +63,10 @@ import { OrganizationModule } from './organization/OrganizationModule';
 import { LocalizationSettings } from './settings/LocalizationSettings';
 import { NotificationBell } from './NotificationBell';
 import { WorkflowsModule } from './workflows/WorkflowsModule';
-import { CommandCenter } from './CommandCenter';
 import { RecoveryModeSettings } from './settings/RecoveryModeSettings';
 import { CapacityDnaPanel } from './CapacityDnaPanel';
 import { OrgPulseButton } from './OrgPulseButton';
+import { CommandCenterButton } from './CommandCenterButton';
 import { IntegrationHealthCenter } from './settings/IntegrationHealthCenter';
 import { HelpSystemSettings } from './settings/HelpSystemSettings';
 import { DecisionMemoryStaleInbox } from './DecisionMemoryStaleInbox';
@@ -200,6 +200,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {isAdmin && <CommandCenterButton workspaceId={workspace.id} onOpenTab={setActiveTab} recoveryMode={recoveryMode} />}
             {isAdmin && <OrgPulseButton workspaceId={workspace.id} />}
             <NotificationBell workspaceId={workspace.id} userId={userId} />
             <Button size="sm" variant="outline" onClick={() => setShowMyProfile(true)}>
@@ -266,11 +267,6 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
 
         <main className="max-w-5xl mx-auto p-4">
           <div className="space-y-4">
-            <CommandCenter
-              workspaceId={workspace.id}
-              onOpenTab={setActiveTab}
-              recoveryMode={recoveryMode}
-            />
             {null}
             {canView('members') && (
               <TabsContent value="members" className="space-y-3">
