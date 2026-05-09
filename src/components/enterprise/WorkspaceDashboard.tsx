@@ -370,7 +370,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               </TabsContent>
             )}
               </div>
-            </main>
+            </div>
           </Tabs>
         </SidebarInset>
       </div>
