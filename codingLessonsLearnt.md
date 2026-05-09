@@ -417,3 +417,91 @@
 - **Gyökérok**: A fejlesztés a governance dokumentum frissítése nélkül haladt.
 - **Javítás**: Az `entity-creation-inventory.md` 2.1–2.5 szekciói frissítve ✅ markerekkel és seed config kulcsokkal.
 - **Megelőzés**: Minden új seeded entity type bevezetésekor ELŐSZÖR frissítsd az `entity-creation-inventory.md`-t, MAJD implementáld a seeder kódot. A governance dokumentum a source of truth — a kód azt kövesse, ne fordítva.
+
+---
+
+## ➕ APPEND — 2026-05-09 Auth, routing, branding, katalógus és UI tanulságok (PRs #1–28)
+
+### [LESSON-AUTH-OAUTH-001] Google OAuth URL fragment session restoration
+- **Dátum**: 2026-05-04 (PR #1, #2)
+- **Fájl**: `src/pages/Auth.tsx`, `src/hooks/useAuth.tsx`, `src/pages/Landing.tsx`
+- **Probléma**: Google OAuth visszatérés után a `access_token` és `refresh_token` a `window.location.hash`-ben (`#access_token=...`) érkezett, de az app nem parseolta a hash-t — session nem lett visszaállítva, a UI az `/auth` oldalon fagy.
+- **Gyökérok 1**: `Auth.tsx` nem olvasta a `window.location.hash` fragmentet `?oauth=google` esetén.
+- **Gyökérok 2**: A `redirectTo: '/auth'` az OAuth provider-nél a Cloudflare Pages-en hard-404-ot okoz, mert az SPA shell nem töltődik be közvetlen navigációnál.
+- **Javítás**: (a) Explicit hash-token feldolgozás `Auth.tsx`-ben: `?oauth=google` + nem hydratált user esetén `window.location.hash`-ből kiolvasni az access/refresh token-t, `setSessionFromTokens()` hívás, majd `history.replaceState` a hash törlésére. (b) `redirectTo` átírva `/`-re (mindig kiszolgált). (c) `AuthProvider`-ben centralizált fragment-feloldás app bootstrap-kor. (d) Landing page navigál a `redirect` targetbe miután session + `?oauth=google` detektálva.
+- **Megelőzés**: OAuth `redirectTo` SOHA ne mutasson `/auth`-ra SPA-ban — mindig a root `/` az, ami biztosan kiszolgált. Az `#access_token=...` URL fragmentet a kliens oldalon kell kézzel kezelni; `history.replaceState`-tel töröld a feldolgozás után.
+
+### [LESSON-ROUTING-SPA-001] Cloudflare Pages SPA fallback — `_redirects` formátum kritikus
+- **Dátum**: 2026-05-04 (PR #6, #7, #8)
+- **Fájl**: `public/_redirects`, `public/404.html`, `src/App.tsx`
+- **Probléma**: Direkt URL navigáció (`/auth`, `/app?tab=resources` stb.) 404-et adott Cloudflare Pages-en.
+- **Gyökérok**: A `_redirects` fájlnak PONTOSAN egyszeri szóközzel kell elválasztani a mezőket: `/*  /index.html  200`. Kettős szóköz vagy tab elvétheti a Cloudflare / Netlify parsert.
+- **Háromrétegű megoldás**:
+  1. `public/_redirects`: `/*  /index.html  200` (szimpla szóköz formátum)
+  2. `public/404.html`: eltárolja a teljes path+query+hash-t `sessionStorage`-ban, átirányít `/?r=...`-re
+  3. `src/App.tsx` `SpaRedirectHandler`: `sessionStorage`/`?r=` alapján kliens oldali navigáció
+- **Megelőzés**: Új Cloudflare Pages / Netlify SPA deploymentnél MINDIG ellenőrizd a `_redirects` szóköz-formátumát. A `404.html` fallback + `SpaRedirectHandler` páros a legellenállóbb megoldás mert statikus hostoknál is működik.
+
+### [LESSON-ROUTING-SPA-002] URL UUID-mentesítés: workspace ID localStorage-ban, ne URL-ben
+- **Dátum**: 2026-05-04 (PR #3)
+- **Fájl**: `src/pages/Enterprise.tsx`, `src/App.tsx`, `src/hooks/useAuth.tsx`
+- **Probléma**: A `?ws=<uuid>` URL param lehetővé tette a workspace UUID kiszivárgását a böngésző history-ban, megosztott linkekben, analytics toolokban.
+- **Gyökérok**: Az aktív workspace azonosítását az URL-re bízta a kód, ahelyett hogy kliens-oldali state-ben tárolná.
+- **Javítás**: Workspace feloldási sorrend: (1) `?ws=` egyszer, backward compat → (2) `localStorage.active_workspace_id` → (3) első elérhető workspace. A `?ws=` paraméter `history.replaceState`-tel el lesz távolítva a feloldás után. `/enterprise` backward-compat redirect alias → `/app`.
+- **Megelőzés**: Munkamenethez kötött belsős azonosítók (UUID-k, session ID-k) NE kerüljenek az URL-be. Használj `localStorage` vagy `sessionStorage` persistent state-et. Deep-link-ek csak olvasható, nem szenzitív paramétereket tartalmazzanak (pl. `?tab=`).
+
+### [LESSON-SUPABASE-SDK-VERSION-001] Supabase JS verzió kompatibilitás Deno edge function-ökben
+- **Dátum**: 2026-05-09 (PR #23)
+- **Fájl**: `supabase/functions/seed-demo-workspace/index.ts`
+- **Probléma**: Supabase JS `v2.45.0`-val a service role admin client minden insert operációt némán eldobott Deno edge function runtime-ban — sem hiba, sem log, sem beillesztett sor.
+- **Gyökérok**: A `v2.45.0` SDK auth layer a Deno runtime-ban nem kezelte megfelelően a service role token-t a schema-szintű insert hívásokban.
+- **Javítás**: Upgrade `v2.98.0`-ra (amely a többi működő edge functionben, pl. `create-instant-enterprise-member`, már jelen volt). Explicit auth options: `autoRefreshToken: false, persistSession: false, detectSessionInUrl: false`. Smoke test a startup-ban.
+- **Megelőzés**: Edge function SDK verziót MINDIG az összes többi működő edge functionnel egységesítsd. Ha egy edge function néma hibával meghiúsul (no error, no rows), ELŐSZÖR az SDK verziót ellenőrizd — ez a leggyakoribb rejlő ok Deno futtatásnál.
+
+### [LESSON-SELECTITEM-EMPTY-001] Radix UI `SelectItem` üres string `value` crash
+- **Dátum**: 2026-05-09 (PR #21)
+- **Fájl**: `src/components/enterprise/*` — minden Radix `Select` komponens
+- **Probléma**: `<SelectItem value="">` futásidejű hibát dob Radix UI-ban — az üres string mint "nincs kiválasztva" sentinel érték nem támogatott.
+- **Gyökérok**: A Radix UI Select component belső logikája az üres stringet érvénytelen értékként kezeli és kivételt dob.
+- **Javítás**: Minden `value=""` helyettesítve nem-üres sentinel értékkel (pl. `value="__none__"`, `value="unselected"`).
+- **Megelőzés**: Radix UI `Select` és `SelectItem` komponenseknél SOHA ne használj üres string `value`-t. Az "üres / nincs kiválasztva" állapothoz mindig használj nem-üres placeholder értéket, pl. `"__none__"` vagy a domain-specifikus sentinel.
+
+### [LESSON-EMAIL-DIACRITIC-001] Magyar ékezetes karakterek slugify-álása email-generálásban
+- **Dátum**: 2026-05-09 (PR #25)
+- **Fájl**: `supabase/functions/seed-demo-workspace/index.ts`
+- **Probléma**: Magyar nevekből generált email-ek (pl. `"Viktor Mátyás"` → `"viktor.matyas@demo.test"`) ékezetes karaktereket tartalmaztak, amelyek email-validáción elbuknak.
+- **Gyökérok**: Közvetlen lowercase + `.replace(' ', '.')` transzformáció az ékezetes betűket megtartja.
+- **Javítás**: `slugify()` helper: unicode normalizer (`NFD`) + `/[̀-ͯ]/g` regex strip + alphanum-only szűrő. `"Mátyás"` → `"matyas"`, `"Ádám"` → `"adam"`.
+- **Megelőzés**: Névből generált email-eknél, username-eknél, slug-oknál MINDIG alkalmazz diacritic normalizálást. A magyar ábécé problémás karakterek: á→a, é→e, í→i, ó/ö/ő→o, ú/ü/ű→u. Email domain: `.local` helyett `.test` (RFC 2606 szerint a `.test` az ajánlott tesztkörnyezeti TLD).
+
+### [LESSON-CATALOG-RLS-001] Globális katalógus táblák: RLS engedélyezve, de policy nélkül = 0 sor
+- **Dátum**: 2026-05-09 (PR #22)
+- **Fájl**: `supabase/migrations/` — `enterprise_catalog_categories`, `enterprise_catalog_roles`, `enterprise_catalog_skills`, `enterprise_catalog_role_skills`
+- **Probléma**: A globális katalógus táblák RLS-sel lettek létrehozva, de egyetlen SELECT policy sem volt definiálva. Eredmény: minden `authenticated` user lekérdezése 0 sort adott vissza — `PositionPickerDialog` mindig üres volt.
+- **Gyökérok**: A migráció hozzáadta az `ENABLE ROW LEVEL SECURITY`-t, de elfelejtette hozzáadni az olvasási policy-t a megosztott (nem workspace-scoped) globális táblákhoz.
+- **Javítás**: `CREATE POLICY ... FOR SELECT USING (auth.uid() IS NOT NULL)` minden globális katalógus táblán.
+- **Megelőzés**: Ha egy táblán `ENABLE ROW LEVEL SECURITY` szerepel, MINDIG adj hozzá legalább egy olvasási policy-t. Globális, workspace-független adatoknál (`enterprise_catalog_*`) a `authenticated` role számára egyszerű `auth.uid() IS NOT NULL` policy elegendő. Checklist: minden `ENABLE ROW LEVEL SECURITY` mellé kell legalább egy USING feltétel.
+
+### [LESSON-POSITION-SOURCE-001] Pozíció dropdown: mindkét forrás szükséges (legacy + junction tábla)
+- **Dátum**: 2026-05-04 (PR #6)
+- **Fájl**: `src/components/enterprise/TeamManager.tsx`, `src/components/enterprise/InviteMemberDialog.tsx`
+- **Probléma**: A pozíció dropdownok kizárólag az `enterprise_memberships.business_role` (legacy text oszlop) alapján épültek. Az `enterprise_member_role_allocations` junction táblában létrehozott pozíciók láthatatlanok maradtak minden dropdownban.
+- **Gyökérok**: A junction tábla volt a kanonikus forrás, de a UI csak a régi denormalizált oszlopot nézte.
+- **Javítás**: Mindkét forrás párhuzamos lekérdezése + halmazegyesítés: `[...new Set([...legacyRoles, ...allocationRoles])]`.
+- **Megelőzés**: Ha létezik junction tábla bármely N:M kapcsolatra, a UI MINDIG innen olvassa az opciókat — nem a denormalizált legacy oszlopból. Ha backward compat miatt mindkettő létezik, MINDIG mergeld a kettőt.
+
+### [LESSON-ORGCHART-FLATTEN-001] Org fa pre-flattening premium rendererhez
+- **Dátum**: 2026-05-09 (PR #28)
+- **Fájl**: `src/components/enterprise/organization/OrgChartPremiumView.tsx`
+- **Probléma**: Rekurzív fa-renderelés során minden kártya megnyitásakor újra kellett bejárni a fát a manager/gyerek relációk feloldásához — O(n²) komplexitás nagy csapatoknál.
+- **Gyökérok**: A fa-struktúra nem volt indexelve, mindig traversal kellett.
+- **Javítás**: A render előtt egyszer `flatNodes: Map<string, OrgNode>` map buildek a teljes fából — ezután minden lookup O(1). A drawer adatai (manager neve, közvetlen beosztottak listája) egy `Map.get(id)` hívással elérhetők.
+- **Megelőzés**: Bármely fa-alapú UI rendernél (org chart, comment thread, category tree) MINDIG prepare-elj egy `Map<id, node>` flat lookup structure-t a render előtt. A rekurzív traversal csak az initial tree build-hez szükséges, utána minden lookup O(1) legyen.
+
+### [LESSON-THEME-CSS-001] CSS változó token alapú téma rendszer — 6 sablon
+- **Dátum**: 2026-05-04 (PR #5)
+- **Fájl**: `src/hooks/useTheme.tsx`, `src/styles/themes.css`
+- **Probléma**: Komponensekbe kódolt szín- és stílusértékek témaváltást lehetetlenné tesznek, vagy minden egyes komponenst módosítani kell.
+- **Gyökérok**: Közvetlenül Tailwind szín-class-ok komponens szinten, nincs CSS változó réteg.
+- **Javítás**: `themes.css`-ben CSS változók definiálva minden témához (`enterprise`, `nebula`, `aurora`, `graphite`, `sunrise`, `mono`). `<html>` root osztályváltás (`document.documentElement.classList`) + `localStorage` perzisztencia. Komponensek ugyanazon token neveket használják — csak a gyökerükön definiált értékek változnak.
+- **Megelőzés**: Témát igénylő alkalmazásoknál MINDIG CSS változó token réteget vezess be. A komponensek ne hard-coded Tailwind színeket (`bg-purple-600`) használjanak, hanem semantic token osztályokat (`bg-primary`). A témaváltás egyetlen osztálycsere legyen a `<html>` elemen.
