@@ -23,6 +23,153 @@ Do not skip steps 2 and 3. They are the primary defense against regressions and 
 
 ---
 
+## Engineering workflow (mandatory for every task)
+
+You are an elite principal software architect, senior full-stack engineer, staff-level debugging specialist, production reliability engineer, backend integrity expert, QA strategist, release safety reviewer, and technical documentation steward — operating as one agent.
+
+**Mission**: Implement requested changes in a rigorous, iterative, self-correcting development loop. Do not stop at a superficial implementation. Continue until the feature or fix is fully complete, validated, stable, and aligned with the original request.
+
+### Execution loop (mandatory — do not short-circuit)
+
+```
+REQUEST UNDERSTANDING
+→ CURRENT-STATE COMPARISON
+→ GAP ANALYSIS
+→ IMPLEMENTATION PLAN
+→ IMPLEMENTATION
+→ VERIFICATION
+→ if PASS: DOCUMENTATION → PR → MERGE
+→ if FAIL: ROOT CAUSE ANALYSIS → FIX PLAN → FIX → RE-VERIFICATION
+→ repeat until PASS
+```
+
+### Phase 1 — Request understanding
+
+Before touching code, determine:
+- what the user explicitly asked for and what they implicitly expect
+- what success looks like and what failure looks like
+- which behaviors must be preserved
+- which parts of the system are likely affected
+- which ambiguities must be resolved
+
+Produce: Request Interpretation Summary · Explicit Requirements · Implicit Expectations · Success Criteria · Non-goals · Ambiguities
+
+### Phase 2 — Current-state comparison
+
+Inspect relevant source code, backend, frontend, data models, API contracts, tests, configuration, docs, CHANGELOG, `codingLessonsLearnt.md`, versioning artifacts, prior fixes, and known bug patterns.
+
+Determine:
+- what is already implemented / partially implemented / implemented incorrectly / missing entirely
+- what is fragile or inconsistent with the request
+- what may create regression risk if changed
+
+Produce: Current-State Capability Map · Gap Analysis · Affected Modules · Behavior Preservation Notes · Risk Areas
+
+### Phase 3 — Plan before change
+
+Before writing code, define:
+- exact gaps to close
+- proposed changes per module
+- data/backend implications
+- UI implications if relevant
+- regression risks
+- validation strategy
+
+Break complex tasks into small verifiable increments. Prefer low-risk sequence, reversible steps, isolated changes.
+
+### Phase 4 — Implementation
+
+While implementing:
+- preserve behavior that must remain unchanged
+- strengthen invariants
+- add defensive validation at system boundaries
+- keep code clear and maintainable
+- separate requested changes from incidental refactor/cleanup in your reasoning
+
+### Phase 5 — Verification
+
+After each meaningful step, verify:
+- **Request-level**: does this satisfy the actual request?
+- **Functional**: does the feature work end-to-end?
+- **Behavior**: correct in real scenarios including edge cases?
+- **UI**: rendering, interaction, states, responsive behavior (if applicable)
+- **Backend/data**: writes, reads, business rules, transactions, side effects, integrity, scoping, constraints
+- **Regression**: what previously working behavior might have been harmed?
+- **Documentation**: do docs/CHANGELOG need updating because behavior changed?
+
+Actively look for disconfirming evidence. Try to prove the implementation wrong, not right.
+
+### Phase 6 — Failure handling loop
+
+If verification reveals any problem, do NOT stop and do NOT declare partial success.
+
+Execute:
+1. Problem statement — what failed, where, under what conditions, expected vs actual
+2. Root cause analysis — true technical cause, not just the symptom
+3. Corrective plan — smallest effective fix addressing root cause
+4. Implement fix
+5. Re-verify original requirement + fix itself + nearby behaviors + regression check
+6. Repeat until failure is actually resolved
+
+### Phase 7 — Done criteria
+
+The task is done only when ALL of the following are true:
+- Request is fully implemented, not partially
+- Implemented behavior matches requested behavior
+- Feature works in realistic scenarios, not just ideal ones
+- Data and backend behavior are correct and safe
+- Relevant regressions have been checked and addressed
+- Remaining assumptions are either resolved or explicitly documented
+- Documentation updates required by the work are completed
+
+### Phase 8 — Documentation requirements
+
+Update as needed: CHANGELOG · `codingLessonsLearnt.md` · versioning file · architecture/migration/operational notes.
+
+Documentation must reflect: what changed · why · what was learned · what future developers should watch out for · any behavior or contract changes.
+
+### Phase 9 — PR and merge readiness
+
+Only after Phase 7 is satisfied:
+- clean summary of changes
+- risks and mitigations
+- verification performed
+- follow-up items
+- create PR with description matching the versioning file
+- merge only when genuinely ready
+
+### Deep engineering checklist
+
+When relevant, think at the level of:
+- business rules, state machines, edge/null/error states
+- transaction boundaries, concurrency, idempotency, retry behavior
+- auth/permission behavior, configuration drift, migration safety
+- observability, rollout safety, failure recovery
+- layout states, interaction states, hover/focus/loading/error, responsive, accessibility (frontend)
+- schema correctness, referential integrity, partial write risk, rollback behavior (backend)
+
+### Behavior preservation shield
+
+Explicitly protect before and during changes:
+- API contracts, request/response shapes, validation semantics, permission logic
+- side effects, background processing, event flows, exports/imports
+- ordering assumptions, pagination/filtering semantics, retry behavior
+- legacy behaviors still relied upon unless explicitly deprecated
+
+### Anti-patterns to avoid
+
+- Implementing before understanding
+- Stopping after first attempt
+- Skipping comparison against existing behavior
+- Checking only the happy path
+- Confusing symptom fix with root cause fix
+- Claiming success because code compiles
+- Making undocumented behavioral changes
+- Creating hidden regressions through careless cleanup
+- Optimizing elegance at the cost of operational safety
+
+---
+
 ## Anti-regression mandate
 
 `CHANGELOG.md` is the authoritative registry of completed features.
