@@ -46,7 +46,7 @@ function HashRouteBridge() {
     const hashPath = `${pathname}${routeSearch ? `?${routeSearch}` : ''}`;
     const nextUrl = `${window.location.origin}/${globalSearch ? `?${globalSearch}` : ''}#${hashPath}`;
 
-    window.history.replaceState(null, '', nextUrl);
+    window.location.replace(nextUrl);
   }, []);
 
   return null;
