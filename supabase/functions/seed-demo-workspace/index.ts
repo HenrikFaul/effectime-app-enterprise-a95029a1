@@ -280,8 +280,8 @@ Deno.serve(async (req) => {
     if (jfErr) console.warn('[seed] job_families insert skipped:', jfErr.message);
 
     // ── B2. Leadership levels ────────────────────────────────────────────────
-    // Minimum 4 required: strategic/operational/technical/execution are used in B8.
-    const llToInsert = LEADERSHIP_LEVEL_DEFS.slice(0, Math.max(4, seedQty.leadership_levels));
+    // Minimum 5 required: strategic/operational/technical/execution/specialist are used in B8.
+    const llToInsert = LEADERSHIP_LEVEL_DEFS.slice(0, Math.max(5, seedQty.leadership_levels));
     const { data: leadershipLevels, error: llErr } = await admin.from('enterprise_leadership_levels')
       .insert(llToInsert.map(d => ({ ...d, workspace_id: workspaceId }))).select('id,code');
     if (llErr) console.warn('[seed] leadership_levels insert skipped:', llErr.message);
@@ -955,9 +955,15 @@ Deno.serve(async (req) => {
 
     // ── O2. Agile issues ──────────────────────────────────────────────────────
     if (integrationId) {
-      const { error: issuesErr } = await admin.from('enterprise_agile_issues').insert(
-        AGILE_ISSUE_DEFS.map(issue => ({ ...issue, workspace_id: workspaceId, integration_id: integrationId }))
-      );
+      // Compute start_date / due_date from offset fields; strip the helper fields before insert.
+      const issueRows = AGILE_ISSUE_DEFS.map(({ startOff, dueOff, ...rest }) => ({
+        ...rest,
+        workspace_id: workspaceId,
+        integration_id: integrationId,
+        start_date: fmtDate(addDays(today, startOff)),
+        due_date:   fmtDate(addDays(today, dueOff)),
+      }));
+      const { error: issuesErr } = await admin.from('enterprise_agile_issues').insert(issueRows);
       if (issuesErr) console.warn('[seed] agile_issues insert skipped:', issuesErr.message);
 
       // ── O3. Agile field metadata ──────────────────────────────────────────

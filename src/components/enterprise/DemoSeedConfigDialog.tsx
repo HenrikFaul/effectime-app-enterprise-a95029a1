@@ -9,40 +9,14 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { ChevronRight, ChevronDown, Loader2, Save, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
+import { DEMO_SEED_MAX_LIMITS } from '@/config/demo-seed-limits';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 type Qty = Record<string, number>;
 
-// Default quantities — mirror DEFAULT_SEED_QUANTITIES in seed-data.ts
-const DEFAULTS: Qty = {
-  members:               22,
-  offices:                3,
-  teams:                  4,
-  leave_types:            4,
-  holidays:               8,
-  skills:                12,
-  job_families:           6,
-  leadership_levels:      4,
-  contract_types:         4,
-  industries:             3,
-  work_categories:        5,
-  org_units:              5,
-  projects:               5,
-  daily_rules:            7,
-  office_coverage_rules: 10,
-  approval_chains:        2,
-  rule_templates:         5,
-  reports:                4,
-  scenarios:              2,
-  access_systems:         4,
-  onboarding_templates:   2,
-  role_definitions:       3,
-  member_templates:       5,
-  translation_overrides:  4,
-  agile_issues:           4,
-  ical_tokens:            4,
-};
+// Default quantities — all keys match DEMO_SEED_MAX_LIMITS; defaults = max (full dataset)
+const DEFAULTS: Qty = { ...DEMO_SEED_MAX_LIMITS };
 
 // ── Tree definition ───────────────────────────────────────────────────────────
 // Each leaf maps to a key in Qty. Path shows where in the app the entity lives.
@@ -62,15 +36,18 @@ type Group = {
 
 const isGroup = (n: Leaf | Group): n is Group => 'children' in n;
 
+// Helper: get max from the central config file (src/config/demo-seed-limits.ts)
+const lim = (key: string) => DEMO_SEED_MAX_LIMITS[key] ?? 99;
+
 const TREE: Group[] = [
   {
     id: 'members',
     label: 'Tagok',
     badge: 'Members',
     children: [
-      { key: 'members', label: 'Demo tagok',         path: 'Tagok → Tagok listája',                    max: 22 },
-      { key: 'member_templates', label: 'Meghívó sablonok', path: 'Tagok → Meghívás → Sablonok',      max: 5  },
-      { key: 'ical_tokens',      label: 'iCal tokenek',     path: 'Beállítások → iCal előfizetés',     max: 4  },
+      { key: 'members',          label: 'Demo tagok',        path: 'Tagok → Tagok listája',             max: lim('members')          },
+      { key: 'member_templates', label: 'Meghívó sablonok', path: 'Tagok → Meghívás → Sablonok',       max: lim('member_templates') },
+      { key: 'ical_tokens',      label: 'iCal tokenek',      path: 'Beállítások → iCal előfizetés',     max: lim('ical_tokens')      },
     ],
   },
   {
@@ -78,20 +55,20 @@ const TREE: Group[] = [
     label: 'Szervezet',
     badge: 'Organization',
     children: [
-      { key: 'offices',           label: 'Irodák',                path: 'Szervezet → Irodák',                          max: 3  },
-      { key: 'teams',             label: 'Csapatok',              path: 'Szervezet → Csapatok',                        max: 4  },
-      { key: 'skills',            label: 'Készségek',             path: 'Szervezet → Készségek',                       max: 12 },
-      { key: 'org_units',         label: 'Szervezeti egységek',   path: 'Szervezet → Felépítés',                       max: 5  },
-      { key: 'role_definitions',  label: 'Szerepkör definíciók',  path: 'Szervezet → Jogosultság-menedzsment',         max: 3  },
+      { key: 'offices',           label: 'Irodák',               path: 'Szervezet → Irodák',                         max: lim('offices')           },
+      { key: 'teams',             label: 'Csapatok',             path: 'Szervezet → Csapatok',                       max: lim('teams')             },
+      { key: 'skills',            label: 'Készségek',            path: 'Szervezet → Készségek',                      max: lim('skills')            },
+      { key: 'org_units',         label: 'Szervezeti egységek',  path: 'Szervezet → Felépítés',                      max: lim('org_units')         },
+      { key: 'role_definitions',  label: 'Szerepkör definíciók', path: 'Szervezet → Jogosultság-menedzsment',        max: lim('role_definitions')  },
       {
         id: 'catalogs',
         label: 'Katalógusok',
         children: [
-          { key: 'job_families',      label: 'Munkacsaládok',      path: 'Szervezet → Munkacsaládok',                 max: 6  },
-          { key: 'leadership_levels', label: 'Vezetői szintek',    path: 'Szervezet → Katalógus → Vezetői szintek',  max: 5  },
-          { key: 'contract_types',    label: 'Szerződéstípusok',   path: 'Szervezet → Katalógus → Szerződéstípusok', max: 5  },
-          { key: 'industries',        label: 'Iparágak',           path: 'Szervezet → Katalógus → Iparágak',         max: 5  },
-          { key: 'work_categories',   label: 'Munkakategóriák',    path: 'Szervezet → Katalógus → Munkakategóriák',  max: 5  },
+          { key: 'job_families',      label: 'Munkacsaládok',    path: 'Szervezet → Munkacsaládok',                max: lim('job_families')      },
+          { key: 'leadership_levels', label: 'Vezetői szintek',  path: 'Szervezet → Katalógus → Vezetői szintek', max: lim('leadership_levels') },
+          { key: 'contract_types',    label: 'Szerződéstípusok', path: 'Szervezet → Katalógus → Szerződéstípusok',max: lim('contract_types')    },
+          { key: 'industries',        label: 'Iparágak',         path: 'Szervezet → Katalógus → Iparágak',        max: lim('industries')        },
+          { key: 'work_categories',   label: 'Munkakategóriák',  path: 'Szervezet → Katalógus → Munkakategóriák', max: lim('work_categories')   },
         ],
       },
     ],
@@ -101,16 +78,16 @@ const TREE: Group[] = [
     label: 'Szabadság',
     badge: 'Leave',
     children: [
-      { key: 'leave_types',           label: 'Szabadság típusok', path: 'Szabadság → Szabadság típusok',    max: 4  },
-      { key: 'holidays',              label: 'Ünnepnapok',         path: 'Szabadság → Ünnepnapok',           max: 8  },
-      { key: 'daily_rules',           label: 'Napi szabályok',     path: 'Szabadság → Napi szabályok',       max: 7  },
-      { key: 'office_coverage_rules', label: 'Jelenlét szabályok', path: 'Szabadság → Jelenlét szabályok',   max: 10 },
+      { key: 'leave_types',           label: 'Szabadság típusok', path: 'Szabadság → Szabadság típusok',  max: lim('leave_types')           },
+      { key: 'holidays',              label: 'Ünnepnapok',         path: 'Szabadság → Ünnepnapok',         max: lim('holidays')              },
+      { key: 'daily_rules',           label: 'Napi szabályok',     path: 'Szabadság → Napi szabályok',     max: lim('daily_rules')           },
+      { key: 'office_coverage_rules', label: 'Jelenlét szabályok', path: 'Szabadság → Jelenlét szabályok', max: lim('office_coverage_rules') },
       {
         id: 'workflow',
         label: 'Munkafolyamatok',
         children: [
-          { key: 'approval_chains',  label: 'Jóváhagyási lánc lépések', path: 'Szabadság → Jóváhagyás → Lánc', max: 2 },
-          { key: 'rule_templates',   label: 'Szabály sablonok',          path: 'Szabadság → Szabály sablonok',  max: 5 },
+          { key: 'approval_chains', label: 'Jóváhagyási lánc lépések', path: 'Szabadság → Jóváhagyás → Lánc', max: lim('approval_chains') },
+          { key: 'rule_templates',  label: 'Szabály sablonok',          path: 'Szabadság → Szabály sablonok',  max: lim('rule_templates')  },
         ],
       },
     ],
@@ -120,9 +97,9 @@ const TREE: Group[] = [
     label: 'Erőforrások',
     badge: 'Resources',
     children: [
-      { key: 'projects',   label: 'Projektek',           path: 'Erőforrások → Projektek',              max: 5 },
-      { key: 'scenarios',  label: 'Kapacitástervek',     path: 'Erőforrások → Kapacitástervező',       max: 2 },
-      { key: 'agile_issues', label: 'Agile issue-ok',   path: 'Erőforrások → Agile panel',            max: 4 },
+      { key: 'projects',     label: 'Projektek',      path: 'Erőforrások → Projektek',        max: lim('projects')     },
+      { key: 'scenarios',    label: 'Kapacitástervek', path: 'Erőforrások → Kapacitástervező', max: lim('scenarios')    },
+      { key: 'agile_issues', label: 'Agile issue-ok', path: 'Erőforrások → Agile panel (Kanban / Scrum / Gantt)', max: lim('agile_issues') },
     ],
   },
   {
@@ -130,7 +107,7 @@ const TREE: Group[] = [
     label: 'Riportok',
     badge: 'Reporting',
     children: [
-      { key: 'reports', label: 'Riport definíciók', path: 'Riportok → Riport lista', max: 4 },
+      { key: 'reports', label: 'Riport definíciók', path: 'Riportok → Riport lista', max: lim('reports') },
     ],
   },
   {
@@ -138,8 +115,8 @@ const TREE: Group[] = [
     label: 'Folyamatok',
     badge: 'Processes',
     children: [
-      { key: 'access_systems',       label: 'Hozzáférési rendszerek', path: 'Folyamatok → Hozzáférés-menedzsment → Rendszerek', max: 4 },
-      { key: 'onboarding_templates', label: 'Onboarding sablonok',    path: 'Folyamatok → Onboarding sablonok',                 max: 3 },
+      { key: 'access_systems',       label: 'Hozzáférési rendszerek', path: 'Folyamatok → Hozzáférés-menedzsment → Rendszerek', max: lim('access_systems')       },
+      { key: 'onboarding_templates', label: 'Onboarding sablonok',    path: 'Folyamatok → Onboarding sablonok',                 max: lim('onboarding_templates') },
     ],
   },
   {
@@ -147,7 +124,7 @@ const TREE: Group[] = [
     label: 'Beállítások',
     badge: 'Settings',
     children: [
-      { key: 'translation_overrides', label: 'Lokalizáció felülírások', path: 'Beállítások → Lokalizáció', max: 4 },
+      { key: 'translation_overrides', label: 'Lokalizáció felülírások', path: 'Beállítások → Lokalizáció', max: lim('translation_overrides') },
     ],
   },
 ];
