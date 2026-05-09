@@ -219,10 +219,20 @@ export function TimelineView({ workspaceId, onFilteredUsersChange }: Props) {
     });
   }, [members, filters]);
 
-  // Notify parent
+  // Keep a stable ref to the callback so the notify-parent effect never needs to
+  // list it as a dependency — listing an unstable inline function would create an
+  // infinite re-render loop (parent re-renders → new fn ref → effect re-fires → …).
+  const onFilteredUsersChangeRef = useRef(onFilteredUsersChange);
+  useEffect(() => { onFilteredUsersChangeRef.current = onFilteredUsersChange; });
+
+  // Notify parent whenever the visible set or month changes, but only after data loaded.
   useEffect(() => {
-    onFilteredUsersChange?.(visibleMembers.map(m => m.user_id), { from: startOfMonth(month), to: endOfMonth(month) });
-  }, [visibleMembers, month, onFilteredUsersChange]);
+    if (loading || members.length === 0) return;
+    onFilteredUsersChangeRef.current?.(
+      visibleMembers.map(m => m.user_id),
+      { from: startOfMonth(month), to: endOfMonth(month) },
+    );
+  }, [visibleMembers, month, loading, members.length]);
 
   // Build per-user day status map
   const leavesByUser = useMemo(() => {
