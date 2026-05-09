@@ -4,9 +4,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Settings, LogOut, Building2 } from 'lucide-react';
+import { Plus, Settings, LogOut, Building2, Trash2, Loader2 } from 'lucide-react';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { CreateWorkspaceDialog } from '@/components/enterprise/CreateWorkspaceDialog';
 import { WorkspaceDashboard } from '@/components/enterprise/WorkspaceDashboard';
 import { EffectimeLogo } from '@/components/EffectimeLogo';
@@ -48,9 +58,25 @@ export default function Enterprise() {
   const [acceptingInvite, setAcceptingInvite] = useState(false);
   const [selectedWorkspaceId, setSelectedWorkspaceIdState] = useState<string | null>(null);
   const [userClearedWorkspace, setUserClearedWorkspace] = useState(false);
+  const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const activeTab = searchParams.get('tab') || 'members';
   const inviteToken = searchParams.get('invite') || null;
+  const forceSelector = searchParams.get('select') === '1';
+
+  // When navigated with ?select=1 (e.g. from Landing's "Munkaterület" button),
+  // suppress the auto-select-last-workspace behavior so the user always sees
+  // the picker.
+  useEffect(() => {
+    if (!forceSelector) return;
+    setUserClearedWorkspace(true);
+    setSelectedWorkspaceIdState(null);
+    localStorage.removeItem(ACTIVE_WORKSPACE_KEY);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('select');
+    setSearchParams(nextParams, { replace: true });
+  }, [forceSelector, searchParams, setSearchParams]);
 
   const setSelectedWorkspaceId = (id: string | null) => {
     setSelectedWorkspaceIdState(id);
@@ -207,6 +233,28 @@ export default function Enterprise() {
     return m?.role || 'member';
   };
 
+  const handleDeleteWorkspace = async () => {
+    if (!workspaceToDelete) return;
+    setDeleting(true);
+    const { error } = await supabase
+      .from('enterprise_workspaces')
+      .delete()
+      .eq('id', workspaceToDelete.id);
+    if (error) {
+      toast.error('A munkaterület törlése nem sikerült: ' + error.message);
+      setDeleting(false);
+      return;
+    }
+    // If the deleted workspace was the cached active one, drop the cache.
+    if (localStorage.getItem(ACTIVE_WORKSPACE_KEY) === workspaceToDelete.id) {
+      localStorage.removeItem(ACTIVE_WORKSPACE_KEY);
+    }
+    toast.success(`„${workspaceToDelete.name}" munkaterület és minden hozzá tartozó adat törölve.`);
+    setWorkspaceToDelete(null);
+    setDeleting(false);
+    await fetchWorkspaces();
+  };
+
   const getRoleBadgeVariant = (role: string) => {
     switch (role) {
       case 'owner': return 'default';
@@ -286,16 +334,33 @@ export default function Enterprise() {
           <div className="grid gap-4 sm:grid-cols-2">
             {workspaces.map((ws) => {
               const role = getRoleForWorkspace(ws.id);
+              const canDelete = role === 'owner';
               return (
                 <Card
                   key={ws.id}
-                  className="cursor-pointer hover:border-primary/50 transition-colors"
+                  className="cursor-pointer hover:border-primary/50 transition-colors group relative"
                   onClick={() => setSelectedWorkspaceId(ws.id)}
                 >
                   <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <CardTitle className="text-base">{ws.name}</CardTitle>
-                      <Badge variant={getRoleBadgeVariant(role)}>{getRoleLabel(role)}</Badge>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Badge variant={getRoleBadgeVariant(role)}>{getRoleLabel(role)}</Badge>
+                        {canDelete && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            aria-label={`„${ws.name}" törlése`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setWorkspaceToDelete(ws);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     {ws.description && (
                       <CardDescription className="line-clamp-2">{ws.description}</CardDescription>
@@ -326,6 +391,51 @@ export default function Enterprise() {
           setShowCreate(false);
         }}
       />
+
+      <AlertDialog
+        open={!!workspaceToDelete}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setWorkspaceToDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Munkaterület végleges törlése</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-2">
+              <span className="block">
+                Biztosan törölni szeretnéd a(z) <strong>„{workspaceToDelete?.name}"</strong>{' '}
+                munkaterületet?
+              </span>
+              <span className="block text-destructive">
+                Ez a művelet visszavonhatatlan. A munkaterülethez tartozó <strong>összes adat</strong>{' '}
+                — tagok, meghívások, szabályok, projektek, szabadságkérelmek, integrációk,
+                jelentések, audit napló — véglegesen törlődik.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Mégse</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleDeleteWorkspace();
+              }}
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 gap-1"
+            >
+              {deleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Törlés…
+                </>
+              ) : (
+                <>
+                  <Trash2 className="h-4 w-4" /> Igen, töröljük
+                </>
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
