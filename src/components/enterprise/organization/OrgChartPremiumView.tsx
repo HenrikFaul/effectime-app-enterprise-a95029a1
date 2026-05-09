@@ -8,6 +8,12 @@
  *    (calculated as left: CARD_HALF, right: CARD_HALF for fixed-width 192px cards)
  *  - Each child gets a 1px vertical stub from the bar → its own card
  *  - Clicking a card opens the right-side EmployeeDrawer
+ *
+ * Pan / Zoom:
+ *  - Mouse drag to pan (click-vs-drag distinguished by 6px threshold)
+ *  - Mouse wheel to zoom
+ *  - Zoom +/- buttons at bottom center (Google Maps style)
+ *  - Reset button returns to 100% / (0,0)
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -26,6 +32,9 @@ import {
   Star,
   CalendarDays,
   UserCircle,
+  Plus,
+  Minus,
+  RotateCcw,
 } from 'lucide-react';
 
 // ─── constants ────────────────────────────────────────────────────────────────
@@ -37,6 +46,13 @@ const CARD_HALF = CARD_W / 2; // 96
 /** Gap between sibling columns in px — must match gap-6 (24px) */
 const SIBLING_GAP = 24;
 void SIBLING_GAP;
+
+/** Pan / Zoom limits */
+const MIN_SCALE = 0.2;
+const MAX_SCALE = 2.5;
+const ZOOM_STEP = 0.15;
+/** Pixel threshold: mouse must move more than this to count as a drag vs click */
+const DRAG_THRESHOLD = 6;
 
 // ─── colour palette ───────────────────────────────────────────────────────────
 
@@ -101,6 +117,8 @@ interface ViewProps {
   isAnyVisible: (n: PremiumNode) => boolean;
   workspaceId: string;
   allNodes: PremiumNode[];
+  /** CSS height of the chart canvas (default: '520px'). Pass taller value for popup mode. */
+  containerHeight?: string;
 }
 
 // ─── root component ───────────────────────────────────────────────────────────
@@ -111,10 +129,23 @@ export function OrgChartPremiumView({
   isAnyVisible,
   workspaceId,
   allNodes,
+  containerHeight = '520px',
 }: ViewProps) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [drawer, setDrawer] = useState<DrawerPayload | null>(null);
   const [orgUnits, setOrgUnits] = useState<OrgUnitMap>({});
+
+  // ── Pan / Zoom state ──────────────────────────────────────────────────────
+  const [scale, setScale] = useState(1);
+  const [offsetX, setOffsetX] = useState(0);
+  const [offsetY, setOffsetY] = useState(0);
+
+  // Drag tracking (mutable refs to avoid stale closure issues)
+  const isDragging = useRef(false);
+  const hasDragged = useRef(false);   // true once mouse moved > threshold
+  const lastPos = useRef({ x: 0, y: 0 });
+  const dragStart = useRef({ x: 0, y: 0 });
+
   const drawerOpen = drawer !== null;
 
   useEffect(() => {
@@ -135,44 +166,113 @@ export function OrgChartPremiumView({
 
   const openDrawer = useCallback(
     async (node: PremiumNode) => {
-      // same node → close
       if (drawer?.node.id === node.id) { setDrawer(null); return; }
-
       const managerNode = node.manager_id ? allNodes.find((n) => n.id === node.manager_id) : null;
       const managerName = managerNode?.display_name ?? null;
       const orgUnitName = node.org_unit_id ? (orgUnits[node.org_unit_id] ?? null) : null;
-
       const { count } = await (supabase as any)
         .from('enterprise_member_skills')
         .select('*', { count: 'exact', head: true })
         .eq('workspace_id', workspaceId)
         .eq('membership_id', node.id);
-
       setDrawer({ node, managerName, orgUnitName, skillCount: count ?? 0 });
     },
     [allNodes, orgUnits, workspaceId, drawer],
   );
 
+  // ── Pan handlers ──────────────────────────────────────────────────────────
+  const onMouseDown = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    isDragging.current = true;
+    hasDragged.current = false;
+    lastPos.current = { x: e.clientX, y: e.clientY };
+    dragStart.current = { x: e.clientX, y: e.clientY };
+    e.currentTarget.style.cursor = 'grabbing';
+  }, []);
+
+  const onMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging.current) return;
+    const dx = e.clientX - lastPos.current.x;
+    const dy = e.clientY - lastPos.current.y;
+    lastPos.current = { x: e.clientX, y: e.clientY };
+    const totalDx = Math.abs(e.clientX - dragStart.current.x);
+    const totalDy = Math.abs(e.clientY - dragStart.current.y);
+    if (totalDx > DRAG_THRESHOLD || totalDy > DRAG_THRESHOLD) {
+      hasDragged.current = true;
+    }
+    setOffsetX((x) => x + dx);
+    setOffsetY((y) => y + dy);
+  }, []);
+
+  const stopDrag = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    isDragging.current = false;
+    e.currentTarget.style.cursor = 'grab';
+  }, []);
+
+  // Capture-phase click: swallow the event when the user dragged (prevents card open)
+  const onClickCapture = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (hasDragged.current) {
+      e.stopPropagation();
+      hasDragged.current = false;
+    }
+  }, []);
+
+  // ── Wheel zoom ────────────────────────────────────────────────────────────
+  const onWheel = useCallback((e: React.WheelEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? ZOOM_STEP : -ZOOM_STEP;
+    setScale((s) => Math.max(MIN_SCALE, Math.min(MAX_SCALE, parseFloat((s + delta).toFixed(2)))));
+  }, []);
+
+  // ── Zoom buttons ──────────────────────────────────────────────────────────
+  const zoomIn  = () => setScale((s) => Math.min(MAX_SCALE, parseFloat((s + ZOOM_STEP).toFixed(2))));
+  const zoomOut = () => setScale((s) => Math.max(MIN_SCALE, parseFloat((s - ZOOM_STEP).toFixed(2))));
+  const resetView = () => { setScale(1); setOffsetX(0); setOffsetY(0); };
+
   const visibleRoots = tree.filter(isAnyVisible);
 
   return (
     <div className="relative flex overflow-hidden rounded-xl border border-border/40">
-      {/* ── chart surface ── */}
+      {/* ── chart canvas ── */}
       <div
-        className="flex-1 overflow-auto"
-        style={{ background: 'hsl(var(--background))' }}
+        className="flex-1 relative overflow-hidden select-none"
+        style={{
+          background: 'hsl(var(--background))',
+          height: containerHeight,
+          cursor: 'grab',
+        }}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={stopDrag}
+        onMouseLeave={stopDrag}
+        onClickCapture={onClickCapture}
+        onWheel={onWheel}
       >
-        {/* subtle grid background */}
+        {/* dot-grid background (fixed to container, not scrolled) */}
         <div
-          className="min-w-max min-h-full px-10 py-10"
+          className="absolute inset-0 pointer-events-none"
           style={{
             backgroundImage:
               'radial-gradient(circle, hsl(var(--border) / 0.3) 1px, transparent 1px)',
             backgroundSize: '32px 32px',
           }}
+        />
+
+        {/* Transformable content layer */}
+        <div
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            width: '100%',
+            transformOrigin: '50% 0',
+            transform: `translate(${offsetX}px, ${offsetY}px) scale(${scale})`,
+            // Disable transition while dragging for instant response; smooth for zoom buttons
+            transition: isDragging.current ? 'none' : 'transform 0.18s ease',
+            padding: '40px',
+          }}
         >
-          {/* roots row */}
-          <div className="flex flex-row items-start gap-6 justify-center">
+          <div className="flex flex-row items-start gap-6 justify-center min-w-max">
             {visibleRoots.map((root) => (
               <PremiumBranch
                 key={root.id}
@@ -187,6 +287,69 @@ export function OrgChartPremiumView({
               />
             ))}
           </div>
+        </div>
+
+        {/* ── Zoom controls (bottom-center, Google Maps style) ── */}
+        <div
+          className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-1
+                     rounded-xl border border-border/50 bg-card/90 backdrop-blur-sm shadow-lg px-1 py-1"
+          onMouseDown={(e) => e.stopPropagation()}  // don't start drag from controls
+          onClick={(e) => e.stopPropagation()}
+        >
+          <button
+            type="button"
+            onClick={zoomOut}
+            disabled={scale <= MIN_SCALE}
+            className="h-7 w-7 rounded-lg flex items-center justify-center
+                       text-muted-foreground hover:text-foreground hover:bg-accent
+                       disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            title="Kicsinyítés (−)"
+          >
+            <Minus className="h-3.5 w-3.5" />
+          </button>
+
+          <button
+            type="button"
+            onClick={resetView}
+            className="h-7 min-w-[52px] rounded-lg px-2 text-[11px] font-semibold
+                       text-muted-foreground hover:text-foreground hover:bg-accent
+                       transition-colors tabular-nums"
+            title="Visszaállítás 100%-ra"
+          >
+            {Math.round(scale * 100)}%
+          </button>
+
+          <button
+            type="button"
+            onClick={zoomIn}
+            disabled={scale >= MAX_SCALE}
+            className="h-7 w-7 rounded-lg flex items-center justify-center
+                       text-muted-foreground hover:text-foreground hover:bg-accent
+                       disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            title="Nagyítás (+)"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+
+          <div className="w-px h-4 bg-border/50 mx-0.5" />
+
+          <button
+            type="button"
+            onClick={resetView}
+            className="h-7 w-7 rounded-lg flex items-center justify-center
+                       text-muted-foreground hover:text-foreground hover:bg-accent
+                       transition-colors"
+            title="Nézet visszaállítása"
+          >
+            <RotateCcw className="h-3 w-3" />
+          </button>
+        </div>
+
+        {/* ── Hint label (fades after first interaction) ── */}
+        <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
+          <span className="text-[10px] text-muted-foreground/40 select-none">
+            Húzd a diagramot • görgővel nagyíts
+          </span>
         </div>
       </div>
 

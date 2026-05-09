@@ -1,3 +1,27 @@
+## 2026-05-09 — v3.3.1 Org Chart — Pan, Zoom & Popup Modal
+
+### Enhanced — `OrgChartPremiumView` + `OrgChart`
+
+**Pan & Zoom (Google Maps style):**
+- Mouse drag to pan the diagram (click vs drag distinguished by a 6 px threshold — cards still open on genuine clicks).
+- Mouse wheel to zoom in/out while panning.
+- Bottom-center zoom control bar: **−** / **%** / **+** buttons + a reset `RotateCcw` button, styled like Google Maps controls.
+- Zoom clamped between 20 % and 250 %; percentage readout updates live.
+- `transform-origin: 50% 0` ensures zoom anchors to the top-centre of the diagram.
+- CSS transition `0.18 s ease` active on zoom button clicks; disabled during active drag for instant response.
+
+**Fullscreen Popup Modal:**
+- "Teljes nézet" (`Maximize2`) button appears in the Org Chart toolbar only when the Premium view is active.
+- Opens a `95 vw × 90 vh` Radix UI Dialog containing `OrgChartPremiumView` with `containerHeight="calc(90vh - 80px)"`.
+- Pan/zoom and drawer work identically inside the popup.
+- Closing the dialog (× or backdrop click) resets to the inline view.
+
+**Files changed:**
+- `src/components/enterprise/organization/OrgChartPremiumView.tsx` — pan/zoom state + handlers + zoom controls
+- `src/components/enterprise/organization/OrgChart.tsx` — Dialog import, `fullscreenOpen` state, Maximize button, Dialog render
+
+---
+
 ## 2026-05-09 — v3.3.0 GiGanttIc — Flagship Branded Planning Board
 
 ### Added — `GiGanttIcBoard` (`src/components/enterprise/agile/GiGanttIcBoard.tsx`)
