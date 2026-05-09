@@ -66,9 +66,12 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      {/* Nav */}
+      {/* Nav — full-bleed, adaptive padding */}
       <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div
+          className="h-16 flex items-center justify-between gap-3"
+          style={{ paddingInline: 'var(--density-page-pad-x)' }}
+        >
           <EffectimeLogo size={32} variant="full" />
           <div className="flex items-center gap-2">
             {user ? (
@@ -78,7 +81,7 @@ export default function Landing() {
                 </Button>
                 <Button variant="destructive" size="sm" onClick={signOut} className="rounded-xl gap-1.5">
                   <LogOut className="h-4 w-4" />
-                  Kilépés
+                  <span className="hidden sm:inline">Kilépés</span>
                 </Button>
               </>
             ) : (
@@ -91,44 +94,57 @@ export default function Landing() {
       </header>
 
       <main className="flex-1">
-        {/* Hero */}
-        <section className="mx-auto max-w-6xl px-4 sm:px-6 pt-20 pb-16 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm text-primary-foreground font-semibold mb-6 shadow-lg shadow-primary/25">
-            <Shield className="h-3.5 w-3.5" />
-            Enterprise kapacitáskezelő platform
+        {/* Hero — uses full viewport, content stays readable via inner clamp */}
+        <section
+          className="relative overflow-hidden"
+          style={{ paddingInline: 'var(--density-page-pad-x)', paddingBlock: 'clamp(3rem, 8vw, 7rem)' }}
+        >
+          {/* decorative gradient blobs — kept inside section bounds */}
+          <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+            <div className="absolute -top-40 left-1/4 h-[36rem] w-[36rem] rounded-full bg-primary/10 blur-3xl" />
+            <div className="absolute -bottom-40 right-1/4 h-[32rem] w-[32rem] rounded-full bg-accent/10 blur-3xl" />
           </div>
-          <h1 className="font-display font-bold text-4xl sm:text-5xl md:text-6xl leading-tight mb-6 text-foreground">
-            Navigáld vállalkozásod erőforrásait{' '}
-            <span className="text-primary">stratégiával</span>
-          </h1>
-          <p className="text-muted-foreground text-lg sm:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-            Az Effectime platformmal valós időben láthatod és optimalizálhatod csapatod kapacitását.
-            Egységesítjük a tervezést, projektek ütemezését és az erőforrás-gazdálkodást, hogy szervezeted minden pillanatban a stratégiára koncentrálhasson.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button
-              size="lg"
-              className="rounded-xl gradient-primary text-primary-foreground px-8 gap-2 shadow-glow"
-              onClick={() => (user ? goToWorkspaceSelector() : navigate('/auth'))}
-            >
-              {user ? 'Munkaterületre' : 'Kezdje el ingyen'}
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-            {!user && (
+
+          <div className="mx-auto w-full max-w-[min(1280px,92vw)] text-center">
+            <div className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm text-primary-foreground font-semibold mb-6 shadow-lg shadow-primary/25">
+              <Shield className="h-3.5 w-3.5" />
+              Enterprise kapacitáskezelő platform
+            </div>
+            <h1 className="font-display font-bold leading-tight mb-6 text-foreground"
+                style={{ fontSize: 'clamp(2.25rem, 5.5vw, 4.75rem)' }}>
+              Navigáld vállalkozásod erőforrásait{' '}
+              <span className="text-primary">stratégiával</span>
+            </h1>
+            <p className="text-muted-foreground leading-relaxed mx-auto mb-10"
+               style={{ fontSize: 'clamp(1rem, 1.4vw, 1.25rem)', maxWidth: '52rem' }}>
+              Az Effectime platformmal valós időben láthatod és optimalizálhatod csapatod kapacitását.
+              Egységesítjük a tervezést, projektek ütemezését és az erőforrás-gazdálkodást, hogy szervezeted minden pillanatban a stratégiára koncentrálhasson.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button
                 size="lg"
-                variant="outline"
-                className="rounded-xl px-8"
-                onClick={() => navigate('/auth')}
+                className="rounded-xl gradient-primary text-primary-foreground px-8 gap-2 shadow-glow"
+                onClick={() => (user ? goToWorkspaceSelector() : navigate('/auth'))}
               >
-                Bejelentkezés
+                {user ? 'Munkaterületre' : 'Kezdje el ingyen'}
+                <ArrowRight className="h-4 w-4" />
               </Button>
-            )}
+              {!user && (
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="rounded-xl px-8"
+                  onClick={() => navigate('/auth')}
+                >
+                  Bejelentkezés
+                </Button>
+              )}
+            </div>
           </div>
         </section>
 
-        {/* Features */}
-        <section className="mx-auto max-w-6xl px-4 sm:px-6 py-16">
+        {/* Features — adaptive grid scales 1→2→3→4 cols, full-bleed */}
+        <section className="shell-page" style={{ paddingBlock: 'clamp(3rem, 6vw, 5rem)' }}>
           <div className="mx-auto max-w-2xl text-center mb-12">
             <h2 className="font-display font-bold text-3xl sm:text-4xl">
               Mindent egy helyen
@@ -137,10 +153,10 @@ export default function Landing() {
               Az Effectime modulokra épül, melyek együtt egy teljes vállalati erőforrás-rendszert alkotnak.
             </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
             {FEATURES.map(({ icon: Icon, title, description }) => (
-              <div key={title} className="rounded-2xl border border-border bg-card p-6 flex flex-col gap-3 hover:shadow-md transition-shadow">
-                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+              <div key={title} className="group rounded-2xl border border-border bg-card p-6 flex flex-col gap-3 hover:border-primary/50 hover:shadow-elevated transition-all">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
                   <Icon className="h-5 w-5 text-primary" />
                 </div>
                 <h3 className="font-display font-semibold text-base">{title}</h3>
@@ -150,10 +166,10 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* Benefits */}
-        <section className="bg-muted/40 border-y border-border py-16">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        {/* Benefits — full-bleed band with inner two-column layout that expands on ultrawide */}
+        <section className="bg-muted/40 border-y border-border" style={{ paddingBlock: 'clamp(3rem, 6vw, 5rem)' }}>
+          <div className="shell-page mx-auto w-full max-w-[1400px]">
+            <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-12 items-center">
               <div>
                 <h2 className="font-display font-bold text-2xl sm:text-3xl mb-4">
                   Mindent tartalmaz, ami kell
@@ -189,9 +205,11 @@ export default function Landing() {
         </section>
       </main>
 
-      {/* Footer */}
       <footer className="border-t border-border py-8">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
+        <div
+          className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-muted-foreground"
+          style={{ paddingInline: 'var(--density-page-pad-x)' }}
+        >
           <EffectimeLogo size={24} variant="full" />
           <span>© {new Date().getFullYear()} Effectime. Minden jog fenntartva.</span>
         </div>
