@@ -4,7 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Settings, LogOut, Building2, Trash2, Loader2, SlidersHorizontal } from 'lucide-react';
+import { Plus, Settings, LogOut, Building2, Trash2, Loader2, SlidersHorizontal, ArrowRight, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
@@ -25,6 +26,9 @@ import { HelpButton } from '@/components/help/HelpButton';
 import { LanguageSelector } from '@/components/i18n/LanguageSelector';
 import { useHelpAnchor } from '@/lib/help/registry';
 import { useT } from '@/i18n/I18nProvider';
+import { AppShell, SkipToContent } from '@/components/shell/AppShell';
+import { PageHeader } from '@/components/shell/PageHeader';
+import { DensityToggle } from '@/components/shell/DensityToggle';
 
 interface Workspace {
   id: string;
