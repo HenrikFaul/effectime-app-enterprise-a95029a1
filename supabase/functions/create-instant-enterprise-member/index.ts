@@ -1,6 +1,36 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.98.0";
 import { corsHeaders } from "../_shared/cors.ts";
 
+// Pool of realistic Hungarian names for instant users.
+// Different from DEMO_PERSONAS so no collision with demo workspace members.
+const INSTANT_PERSONA_POOL = [
+  { displayName: 'Balázs Fekete',      position: 'Software Engineer'          },
+  { displayName: 'Katalin Vörös',      position: 'Business Analyst'           },
+  { displayName: 'Márton Szabó',       position: 'Product Manager'            },
+  { displayName: 'Réka Horváth',       position: 'UX Designer'                },
+  { displayName: 'Ádám Németh',        position: 'DevOps Engineer'            },
+  { displayName: 'Vivien Pál',         position: 'QA Engineer'                },
+  { displayName: 'Gábor Pintér',       position: 'Backend Developer'          },
+  { displayName: 'Nóra Takács',        position: 'Frontend Developer'         },
+  { displayName: 'Tamás Kovács',       position: 'Full Stack Developer'       },
+  { displayName: 'Erika Balogh',       position: 'Scrum Master'               },
+  { displayName: 'Zoltán Simon',       position: 'Technical Lead'             },
+  { displayName: 'Ágnes Mészáros',     position: 'Data Analyst'               },
+  { displayName: 'Péter Lukács',       position: 'Cloud Engineer'             },
+  { displayName: 'Hajnalka Orbán',     position: 'Operations Specialist'      },
+  { displayName: 'Norbert Molnár',     position: 'Senior Frontend Developer'  },
+  { displayName: 'Szilvia Farkas',     position: 'HR Business Partner'        },
+  { displayName: 'Csaba Tóth',         position: 'Project Manager'            },
+  { displayName: 'Dorottya Gál',       position: 'Junior Developer'           },
+  { displayName: 'Levente Halász',     position: 'Senior Backend Developer'   },
+  { displayName: 'Kinga Barna',        position: 'Security Engineer'          },
+  { displayName: 'Attila Vásárhelyi',  position: 'Data Engineer'              },
+  { displayName: 'Monika Fehér',       position: 'Product Designer'           },
+  { displayName: 'Roland Kiss',        position: 'Platform Engineer'          },
+  { displayName: 'Tünde Hajdu',        position: 'Test Automation Engineer'   },
+  { displayName: 'Benedek Orosz',      position: 'Site Reliability Engineer'  },
+];
+
 function jsonRes(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -110,7 +140,16 @@ Deno.serve(async (req) => {
       ...offices.map((o: any) => o.city).filter(Boolean),
     ]));
 
-    const displayName = `Instant User ${Math.floor(1000 + Math.random() * 9000)}`;
+    // Pick a realistic name from the pool, preferring one not already used in this workspace.
+    const existingNames = new Set(members.map((m: any) => m.display_name).filter(Boolean));
+    const available = INSTANT_PERSONA_POOL.filter(p => !existingNames.has(p.displayName));
+    const persona = pickOne(available.length ? available : INSTANT_PERSONA_POOL) as typeof INSTANT_PERSONA_POOL[number];
+
+    // Prefer a position from the workspace catalog; fall back to the pool persona's own position.
+    const poolPosition = persona.position;
+    const workspacePosition = (pickOne(businessRoles) as string | null) ?? sourceMember?.business_role ?? null;
+
+    const displayName = persona.displayName;
     const email = `instant-${workspaceId.slice(0, 8)}-${Date.now()}-${randomToken(3)}@instant.syncfolk.local`;
     const password = `${randomToken(18)}Aa1!`;
 
@@ -139,7 +178,7 @@ Deno.serve(async (req) => {
       role: "member",
       status: "active",
       joined_at: nowIso,
-      business_role: (pickOne(businessRoles) as string | null) ?? sourceMember?.business_role ?? null,
+      business_role: workspacePosition ?? poolPosition,
       team: (pickOne(teams) as string | null) ?? sourceMember?.team ?? null,
       location: (pickOne(locations) as string | null) ?? sourceMember?.location ?? null,
       city: (sourceOffice?.city as string | null) ?? (pickOne(cities) as string | null) ?? sourceMember?.city ?? null,
