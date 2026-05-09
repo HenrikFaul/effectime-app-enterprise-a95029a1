@@ -90,10 +90,12 @@ export function IssueWriteback({ integration, userId }: { integration: Integrati
       .select('field_id,field_name,field_type,schema')
       .eq('integration_id', integration.id);
     const rows = (data ?? []) as any[];
+    // Only use project-specific issue type rows (field_id starts with 'jira.issuetype.')
+    // The generic field-discovery row has field_id='issuetype', field_name='Issue Type' and must be excluded.
     const issueTypes = Array.from(
       new Set(
         rows
-          .filter((r) => r.field_type === 'issuetype')
+          .filter((r) => r.field_type === 'issuetype' && r.field_id.startsWith('jira.issuetype.'))
           .map((r) => r.field_name)
           .filter(Boolean),
       ),
