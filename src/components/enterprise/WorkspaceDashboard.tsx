@@ -254,7 +254,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               <TabsTrigger value="settings">Beállítások</TabsTrigger>
             </TabsList>
 
-            <main id="main-content" className="w-full px-[var(--shell-pad-x,1rem)] py-[var(--shell-pad-y,1rem)]">
+            <div id="main-content" className="w-full px-[var(--shell-pad-x,1rem)] py-[var(--shell-pad-y,1rem)]">
               <div className="space-y-4 w-full">
             {null}
             {canView('members') && (
