@@ -4,10 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw, KanbanSquare, Trello, GanttChart, ExternalLink } from 'lucide-react';
+import { Loader2, RefreshCw, KanbanSquare, Trello, Sparkles, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { JiraIssueEditor } from './JiraIssueEditor';
+import { GiGanttIcBoard, type GiGanttIssueRow } from './GiGanttIcBoard';
 
 interface IntegrationMini {
   id: string;
@@ -96,11 +97,23 @@ export function AgileBoards({ integration }: { integration: IntegrationMini }) {
           <TabsList>
             <TabsTrigger value="kanban" className="gap-1"><KanbanSquare className="h-4 w-4" /> Kanban</TabsTrigger>
             <TabsTrigger value="scrum" className="gap-1"><Trello className="h-4 w-4" /> Scrum</TabsTrigger>
-            <TabsTrigger value="gantt" className="gap-1"><GanttChart className="h-4 w-4" /> Gantt</TabsTrigger>
+            <TabsTrigger
+              value="gantt"
+              className="gap-1.5 data-[state=active]:bg-teal-500/15 data-[state=active]:text-teal-300 data-[state=active]:border-teal-500/30"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-teal-400" />
+              <span className="font-semibold tracking-tight text-[11px]">
+                <span className="text-teal-400">Gi</span>
+                <span>Gantt</span>
+                <span className="text-teal-400 italic">Ic</span>
+              </span>
+            </TabsTrigger>
           </TabsList>
           <TabsContent value="kanban"><KanbanView issues={issues} onOpen={onCardClick ?? undefined} /></TabsContent>
           <TabsContent value="scrum"><ScrumView issues={issues} onOpen={onCardClick ?? undefined} /></TabsContent>
-          <TabsContent value="gantt"><GanttView issues={issues} onOpen={onCardClick ?? undefined} /></TabsContent>
+          <TabsContent value="gantt">
+            <GiGanttIcBoard issues={issues as GiGanttIssueRow[]} onOpen={onCardClick ?? undefined} />
+          </TabsContent>
         </Tabs>
 
         {integration.provider === 'jira' && (
@@ -256,73 +269,6 @@ function ScrumView({ issues, onOpen }: { issues: IssueRow[]; onOpen?: (key: stri
   );
 }
 
-// ───── Gantt: simple horizontal timeline ─────
-function GanttView({ issues, onOpen }: { issues: IssueRow[]; onOpen?: (key: string) => void }) {
-  const dated = issues.filter((i) => (i.start_date || i.due_date));
-  if (dated.length === 0) return <Empty hint="Nincs start/due date a ticketeken" />;
-
-  const parsed = dated.map((i) => {
-    const s = i.start_date ? new Date(i.start_date) : (i.due_date ? new Date(i.due_date) : new Date());
-    const e = i.due_date ? new Date(i.due_date) : (i.start_date ? new Date(i.start_date) : new Date());
-    return { i, s, e };
-  });
-  const min = new Date(Math.min(...parsed.map((p) => p.s.getTime())));
-  const max = new Date(Math.max(...parsed.map((p) => p.e.getTime())));
-  const totalMs = Math.max(1, max.getTime() - min.getTime());
-
-  // Build month tick marks
-  const months: Date[] = [];
-  const cur = new Date(min.getFullYear(), min.getMonth(), 1);
-  while (cur <= max) { months.push(new Date(cur)); cur.setMonth(cur.getMonth() + 1); }
-
-  return (
-    <div className="overflow-x-auto">
-      <div className="min-w-[720px]">
-        <div className="flex border-b text-[10px] uppercase text-muted-foreground sticky top-0 bg-background">
-          <div className="w-56 shrink-0 p-2 border-r">Ticket</div>
-          <div className="flex-1 flex">
-            {months.map((m, idx) => (
-              <div key={idx} className="flex-1 p-2 border-r text-center">
-                {m.toLocaleString('hu-HU', { month: 'short', year: '2-digit' })}
-              </div>
-            ))}
-          </div>
-        </div>
-        {parsed.map(({ i, s, e }) => {
-          const left = ((s.getTime() - min.getTime()) / totalMs) * 100;
-          const width = Math.max(2, ((e.getTime() - s.getTime()) / totalMs) * 100);
-          const color =
-            i.issue_type === 'Bug' ? 'bg-red-500'
-              : i.issue_type === 'Epic' ? 'bg-purple-500'
-              : i.issue_type === 'Story' ? 'bg-emerald-500'
-              : 'bg-sky-500';
-          return (
-            <div
-              key={i.external_key}
-              className={cn('flex border-b items-center hover:bg-accent/30', onOpen && 'cursor-pointer')}
-              onClick={onOpen ? () => onOpen(i.external_key) : undefined}
-              onKeyDown={onOpen ? (e) => { if (e.key === 'Enter') onOpen(i.external_key); } : undefined}
-              role={onOpen ? 'button' : undefined}
-              tabIndex={onOpen ? 0 : undefined}
-            >
-              <div className="w-56 shrink-0 p-2 border-r">
-                <div className="text-[11px] font-medium truncate">{i.summary}</div>
-                <div className="text-[9px] text-muted-foreground font-mono">{i.external_key} • {i.assignee_name ?? '—'}</div>
-              </div>
-              <div className="flex-1 relative h-9">
-                <div
-                  className={cn('absolute top-2 h-5 rounded-sm', color, 'opacity-90')}
-                  style={{ left: `${left}%`, width: `${width}%` }}
-                  title={`${i.start_date ?? ''} → ${i.due_date ?? ''}`}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 function Empty({ hint }: { hint?: string } = {}) {
   return (
