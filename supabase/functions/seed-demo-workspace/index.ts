@@ -8,7 +8,7 @@
 // data cascades via FK) and then removes the demo auth.users stored in
 // enterprise_workspaces.settings.demo_user_ids.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.98.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -139,7 +139,11 @@ Deno.serve(async (req) => {
     const name: string = (body?.name ?? '').toString().trim() ||
       `Demo munkaterület ${new Date().toLocaleDateString('hu-HU')}`;
 
-    const admin = createClient(SUPABASE_URL, SERVICE_KEY);
+    if (!SERVICE_KEY) return jsonRes({ error: 'SUPABASE_SERVICE_ROLE_KEY not available in edge function environment' }, 500);
+
+    const admin = createClient(SUPABASE_URL, SERVICE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+    });
 
     // ── A1. Create workspace ────────────────────────────────────────────────
     const { data: wsId, error: rpcErr } = await userClient.rpc('create_workspace_with_owner', {
@@ -150,6 +154,10 @@ Deno.serve(async (req) => {
     if (rpcErr) return jsonRes({ error: 'Workspace létrehozás sikertelen: ' + rpcErr.message }, 500);
     const workspaceId = wsId as string;
     if (!workspaceId) return jsonRes({ error: 'Workspace ID nem elérhető' }, 500);
+
+    // Quick admin client sanity check — if this fails we know the service role key is not working
+    const { error: adminTestErr } = await admin.from('enterprise_workspaces').select('id').eq('id', workspaceId).limit(1);
+    if (adminTestErr) return jsonRes({ error: 'Admin client not working: ' + adminTestErr.message + ' (SERVICE_KEY length: ' + SERVICE_KEY.length + ')' }, 500);
 
     const today = new Date();
     const year  = today.getUTCFullYear();
@@ -178,25 +186,28 @@ Deno.serve(async (req) => {
     } as any).eq('id', workspaceId);
 
     // ── A4. Offices ─────────────────────────────────────────────────────────
-    const { data: offices } = await admin.from('enterprise_offices')
+    const { data: offices, error: officesErr } = await admin.from('enterprise_offices')
       .insert(OFFICE_DEFS.map(o => ({ ...o, workspace_id: workspaceId }))).select('id,name,city');
+    if (officesErr) console.error('[seed] offices insert failed:', officesErr.message);
     const officeByCity = new Map<string, string>();
     (offices ?? []).forEach((o: any) => officeByCity.set(o.city, o.id));
 
     // ── A5. Teams ───────────────────────────────────────────────────────────
-    const { data: teams } = await admin.from('enterprise_teams')
+    const { data: teams, error: teamsErr } = await admin.from('enterprise_teams')
       .insert(TEAM_DEFS.map(t => ({ ...t, workspace_id: workspaceId, created_by: ownerId }))).select('id,name');
+    if (teamsErr) console.error('[seed] teams insert failed:', teamsErr.message);
     const teamByName = new Map<string, string>();
     (teams ?? []).forEach((t: any) => teamByName.set(t.name, t.id));
 
     // ── A6. Leave types ─────────────────────────────────────────────────────
-    const { data: leaveTypes } = await admin.from('enterprise_leave_types')
+    const { data: leaveTypes, error: leaveTypesErr } = await admin.from('enterprise_leave_types')
       .insert(LEAVE_TYPE_DEFS.map((lt, idx) => ({ ...lt, workspace_id: workspaceId, sort_order: idx, is_active: true })))
       .select('id,name');
+    if (leaveTypesErr) console.error('[seed] leave_types insert failed:', leaveTypesErr.message);
     const annualLeaveTypeId = (leaveTypes ?? []).find((l: any) => l.name === 'Éves szabadság')?.id ?? null;
 
     // ── A7. Public holidays ─────────────────────────────────────────────────
-    await admin.from('enterprise_holidays').insert(
+    const { error: holidaysErr } = await admin.from('enterprise_holidays').insert(
       HU_HOLIDAYS_TEMPLATE.map(h => ({
         workspace_id: workspaceId,
         holiday_date: `${year}-${h.month}`,
@@ -204,14 +215,16 @@ Deno.serve(async (req) => {
         is_recurring: true,
       }))
     );
+    if (holidaysErr) console.error('[seed] holidays insert failed:', holidaysErr.message);
 
     // ── A8. Skills ──────────────────────────────────────────────────────────
-    const { data: skills } = await admin.from('enterprise_skills')
+    const { data: skills, error: skillsErr } = await admin.from('enterprise_skills')
       .insert(SKILL_NAMES.map((s, idx) => ({
         workspace_id: workspaceId, name: s,
         category: idx < 4 ? 'Engineering' : idx < 7 ? 'Infrastructure' : 'QA',
         color: SKILL_COLORS[idx % SKILL_COLORS.length],
       }))).select('id,name');
+    if (skillsErr) console.error('[seed] skills insert failed:', skillsErr.message);
     const skillByName = new Map<string, string>();
     (skills ?? []).forEach((s: any) => skillByName.set(s.name, s.id));
 
