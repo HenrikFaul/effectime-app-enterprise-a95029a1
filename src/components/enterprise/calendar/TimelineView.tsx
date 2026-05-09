@@ -70,6 +70,8 @@ export function TimelineView({ workspaceId, onFilteredUsersChange }: Props) {
   const [loadError, setLoadError] = useState<string | null>(null);
   // Race condition prevention: each load call gets an ID; stale responses are dropped
   const loadIdRef = useRef(0);
+  // Debounce timer: prevents overlapping requests when navigating months rapidly
+  const loadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { config } = useCalendarFilterConfig(workspaceId);
 
@@ -83,7 +85,12 @@ export function TimelineView({ workspaceId, onFilteredUsersChange }: Props) {
     const to = format(endOfMonth(month), 'yyyy-MM-dd');
 
     try {
-      const [memRes, leaveRes, holRes, officeRes, ltRes, skillRes, memberSkillRes] = await Promise.all([
+      // Promise.allSettled keeps going even if one query throws (e.g. transient network hiccup).
+      // Only the membership query is critical; the rest degrade gracefully to empty arrays.
+      const toRes = (r: PromiseSettledResult<any>) =>
+        r.status === 'fulfilled' ? r.value : { data: null, error: { message: String((r as PromiseRejectedResult).reason) } };
+
+      const settled = await Promise.allSettled([
         (supabase as any).from('enterprise_memberships')
           .select('id,user_id,team,business_role,office_id,city')
           .eq('workspace_id', workspaceId)
@@ -103,6 +110,7 @@ export function TimelineView({ workspaceId, onFilteredUsersChange }: Props) {
         (supabase as any).from('enterprise_skills').select('id,name').eq('workspace_id', workspaceId).order('name'),
         (supabase as any).from('enterprise_member_skills').select('membership_id,skill_id').eq('workspace_id', workspaceId),
       ]);
+      const [memRes, leaveRes, holRes, officeRes, ltRes, skillRes, memberSkillRes] = settled.map(toRes);
 
       // Drop stale response if a newer load has been initiated
       if (loadId !== loadIdRef.current) return;
@@ -150,7 +158,13 @@ export function TimelineView({ workspaceId, onFilteredUsersChange }: Props) {
     }
   }, [workspaceId, month]);
 
-  useEffect(() => { load(); }, [load]);
+  // Debounce the load: rapid month-navigation clicks only trigger one fetch
+  // after the user stops clicking (prevents parallel Promise.allSettled storms).
+  useEffect(() => {
+    if (loadTimerRef.current) clearTimeout(loadTimerRef.current);
+    loadTimerRef.current = setTimeout(load, 250);
+    return () => { if (loadTimerRef.current) clearTimeout(loadTimerRef.current); };
+  }, [load]);
 
   // Filter options
   const filterOptions = useMemo<Record<CalendarFilterId, FilterOption[]>>(() => {

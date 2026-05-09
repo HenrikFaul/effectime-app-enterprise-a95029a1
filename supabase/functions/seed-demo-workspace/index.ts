@@ -478,6 +478,198 @@ Deno.serve(async (req) => {
         reviewer_id: ownerId, reviewed_at: addDays(today, -1).toISOString(), comment: 'Otthoni munkanap',
         is_half_day: false,
       });
+
+      // ── Bővített seed: 3 hónap múlt + jelen + 3 hónap jövő, minden típus + státusz ──
+
+      // --- 3 hónappal ezelőtt (-90 … -61) ---
+      if (personas[0]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[0].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, -90)), end_date: fmtDate(addDays(today, -84)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -95).toISOString(), comment: 'Téli szabadság',
+      });
+      if (personas[1]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[1].user_id, leave_type: 'sick_leave',
+        start_date: fmtDate(addDays(today, -86)), end_date: fmtDate(addDays(today, -84)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -87).toISOString(), comment: 'Influenza',
+      });
+      if (personas[2]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[2].user_id, leave_type: 'unpaid_leave',
+        start_date: fmtDate(addDays(today, -80)), end_date: fmtDate(addDays(today, -76)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -85).toISOString(), comment: 'Személyes ügyek',
+      });
+      if (personas[7]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[7].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, -75)), end_date: fmtDate(addDays(today, -71)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -80).toISOString(), comment: 'Karácsonyi pihenő',
+      });
+      if (personas[8]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[8].user_id, leave_type: 'other',
+        start_date: fmtDate(addDays(today, -70)), end_date: fmtDate(addDays(today, -70)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -72).toISOString(), comment: 'Home office',
+      });
+      if (personas[9]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[9].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, -68)), end_date: fmtDate(addDays(today, -64)),
+        status: 'cancelled', comment: 'Lemondva betegség miatt',
+      });
+
+      // --- 2 hónappal ezelőtt (-60 … -31) ---
+      if (personas[3]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[3].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, -58)), end_date: fmtDate(addDays(today, -54)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -62).toISOString(), comment: 'Őszi kirándulás',
+      });
+      if (personas[10]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[10].user_id, leave_type: 'sick_leave',
+        start_date: fmtDate(addDays(today, -52)), end_date: fmtDate(addDays(today, -50)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -53).toISOString(), comment: 'Betegség',
+      });
+      if (personas[11]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[11].user_id, leave_type: 'unpaid_leave',
+        start_date: fmtDate(addDays(today, -47)), end_date: fmtDate(addDays(today, -43)),
+        status: 'rejected', reviewer_id: ownerId, reviewed_at: addDays(today, -50).toISOString(), review_comment: 'Projekt kritikus fázis',
+      });
+      if (personas[12]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[12].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, -42)), end_date: fmtDate(addDays(today, -38)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -45).toISOString(), comment: 'Tervezett szabadság',
+      });
+      if (personas[13]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[13].user_id, leave_type: 'other',
+        start_date: fmtDate(addDays(today, -36)), end_date: fmtDate(addDays(today, -35)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -38).toISOString(), comment: 'Gyerek beteg',
+      });
+      if (personas[14]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[14].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, -33)), end_date: fmtDate(addDays(today, -31)),
+        status: 'cancelled', comment: 'Projekt sürgős',
+      });
+
+      // --- Előző hónap (-30 … -2) — az első 7 mellé ---
+      if (personas[15]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[15].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, -28)), end_date: fmtDate(addDays(today, -24)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -30).toISOString(), comment: 'Tavaszi pihenés',
+      });
+      if (personas[16]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[16].user_id, leave_type: 'sick_leave',
+        start_date: fmtDate(addDays(today, -22)), end_date: fmtDate(addDays(today, -20)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -23).toISOString(), comment: 'Betegség',
+      });
+      if (personas[17]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[17].user_id, leave_type: 'unpaid_leave',
+        start_date: fmtDate(addDays(today, -18)), end_date: fmtDate(addDays(today, -15)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -22).toISOString(), comment: 'Személyes távolmaradás',
+      });
+      if (personas[18]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[18].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, -12)), end_date: fmtDate(addDays(today, -8)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -15).toISOString(), comment: 'Nyaralás',
+      });
+      if (personas[19]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[19].user_id, leave_type: 'other',
+        start_date: fmtDate(addDays(today, -7)), end_date: fmtDate(addDays(today, -6)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -9).toISOString(), comment: 'Home office napok',
+      });
+
+      // --- Aktuális hónap (0 … +30) — az első 7 mellé ---
+      if (personas[20]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[20].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, 3)), end_date: fmtDate(addDays(today, 7)),
+        status: 'pending', comment: 'Nyári szabadság kérelem',
+      });
+      if (personas[21]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[21].user_id, leave_type: 'unpaid_leave',
+        start_date: fmtDate(addDays(today, 5)), end_date: fmtDate(addDays(today, 7)),
+        status: 'pending', comment: 'Fizetés nélküli távolmaradás',
+      });
+      // Néhány persona aktuális hónapban is szerepel más típussal
+      if (personas[8]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[8].user_id, leave_type: 'sick_leave',
+        start_date: fmtDate(addDays(today, 10)), end_date: fmtDate(addDays(today, 11)),
+        status: 'pending', comment: 'Betegszabadság kérelem',
+      });
+      if (personas[9]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[9].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, 15)), end_date: fmtDate(addDays(today, 19)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -3).toISOString(), comment: 'Jóváhagyott nyaralás',
+      });
+
+      // --- 1 hónappal előre (+31 … +60) ---
+      if (personas[0]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[0].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, 35)), end_date: fmtDate(addDays(today, 39)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -1).toISOString(), comment: 'Nyári szabadság',
+      });
+      if (personas[1]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[1].user_id, leave_type: 'unpaid_leave',
+        start_date: fmtDate(addDays(today, 38)), end_date: fmtDate(addDays(today, 40)),
+        status: 'pending', comment: 'Személyes ügy',
+      });
+      if (personas[10]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[10].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, 42)), end_date: fmtDate(addDays(today, 46)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -2).toISOString(), comment: 'Nyári pihenő',
+      });
+      if (personas[11]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[11].user_id, leave_type: 'sick_leave',
+        start_date: fmtDate(addDays(today, 48)), end_date: fmtDate(addDays(today, 49)),
+        status: 'pending', comment: 'Tervezett műtét utókezelés',
+      });
+      if (personas[12]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[12].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, 52)), end_date: fmtDate(addDays(today, 56)),
+        status: 'rejected', reviewer_id: ownerId, reviewed_at: addDays(today, -4).toISOString(), review_comment: 'Nem megfelelő kapacitás',
+      });
+      if (personas[13]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[13].user_id, leave_type: 'other',
+        start_date: fmtDate(addDays(today, 58)), end_date: fmtDate(addDays(today, 59)),
+        status: 'pending', comment: 'Home office kérelem',
+      });
+
+      // --- 2 hónappal előre (+61 … +90) ---
+      if (personas[14]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[14].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, 63)), end_date: fmtDate(addDays(today, 69)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -3).toISOString(), comment: 'Nyári nyaralás',
+      });
+      if (personas[15]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[15].user_id, leave_type: 'unpaid_leave',
+        start_date: fmtDate(addDays(today, 72)), end_date: fmtDate(addDays(today, 74)),
+        status: 'pending', comment: 'Konferencia – fizetés nélkül',
+      });
+      if (personas[16]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[16].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, 77)), end_date: fmtDate(addDays(today, 81)),
+        status: 'pending', comment: 'Tervezett nyaralás',
+      });
+      if (personas[17]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[17].user_id, leave_type: 'sick_leave',
+        start_date: fmtDate(addDays(today, 83)), end_date: fmtDate(addDays(today, 84)),
+        status: 'pending', comment: 'Tervezett beavatkozás',
+      });
+
+      // --- 3 hónappal előre (+91 … +120) ---
+      if (personas[18]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[18].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, 93)), end_date: fmtDate(addDays(today, 99)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -2).toISOString(), comment: 'Őszi nyaralás',
+      });
+      if (personas[19]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[19].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, 105)), end_date: fmtDate(addDays(today, 109)),
+        status: 'pending', comment: 'Tervezett szabadság',
+      });
+      if (personas[20]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[20].user_id, leave_type: 'unpaid_leave',
+        start_date: fmtDate(addDays(today, 112)), end_date: fmtDate(addDays(today, 114)),
+        status: 'pending', comment: 'Fizetés nélküli távolmaradás',
+      });
+      if (personas[21]) leaveRequests.push({
+        workspace_id: workspaceId, user_id: personas[21].user_id, leave_type: 'vacation',
+        start_date: fmtDate(addDays(today, 116)), end_date: fmtDate(addDays(today, 120)),
+        status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -1).toISOString(), comment: 'Hosszú hétvége',
+      });
     }
     const { data: insertedLeaves } = leaveRequests.length
       ? await admin.from('leave_requests').insert(leaveRequests).select('id,status,user_id')
