@@ -39,21 +39,22 @@ Comprehensive inventory of all UI entry points where users can CREATE database e
 ### 2.1 Szerkezet (OrgStructure)
 - **Component:** `OrgStructure.tsx`
 - **Entities Created:**
-  - `enterprise_org_units` → organizational unit (division, department, section, etc.)
+  - `enterprise_org_units` ✅ → szervezeti egység (division, department, team, etc.), hierarchikus fa — seedelve (B6): 2 top-level division + 3 sub-team
 - **Parent Support:** Hierarchical tree structure
 - **Button:** "Új egység"
+- **Seed config key:** `org_units` (max 5, az összes seedelve ha > 0)
 
 ### 2.2 Csapatok (TeamManager)
 - **Component:** `TeamManager.tsx`
 - **Entities Created:**
-  - `enterprise_teams` → team (with name, description, approval mode, max absent)
-  - `enterprise_team_roles` → team role assignment (link team to position/business role)
+  - `enterprise_teams` ✅ → team (name, description, approval mode, max absent) — seedelve (A5)
+  - `enterprise_team_roles` ✅ → team role assignment (team_id, business_role) — seedelve (B7)
 - **Sub-sections:** Team list with role management
 
 ### 2.3 Pozíciók / Munkakörök (BusinessRoleManager)
 - **Component:** `BusinessRoleManager.tsx`
 - **Entities Created:**
-  - `enterprise_member_role_allocations` → role allocation to member (create or update)
+  - `enterprise_member_role_allocations` ✅ → role allocation to member (membership_id, business_role, percentage, is_priority) — seedelve (A11)
 - **Sub-dialog:** `PositionPickerDialog.tsx` → predefined position catalog selection (no insert, read-only reference)
 - **Note:** Positions themselves managed via catalogs (CatalogListEditor)
 
@@ -68,13 +69,13 @@ Comprehensive inventory of all UI entry points where users can CREATE database e
 ### 2.5 Katalógus Szerkesztő (CatalogListEditor)
 - **Component:** `organization/CatalogListEditor.tsx`
 - **Entities Created:**
-  - `enterprise_contract_types` → contract type (e.g., full-time, part-time, contractor)
-  - `enterprise_industries` → industry classification
-  - `enterprise_job_families` → job family grouping
-  - `enterprise_leadership_levels` → leadership level hierarchy
-  - `enterprise_work_categories` → work category/classification
-  - RPC: `seed_*_catalog()` → bulk seed default values
-- **Note:** Each catalog has its own editor with add/edit/delete/archive UI
+  - `enterprise_contract_types` ✅ → szerződéstípus (code, label, is_default) — seedelve (B3): 4 típus alapból, max 5; `CONTRACT_TYPE_DEFS` vezérli
+  - `enterprise_industries` ✅ → iparág (code, label, is_default) — seedelve (B4): 3 alapból, max 5; `INDUSTRY_DEFS` vezérli
+  - `enterprise_job_families` ✅ → munkacsalád (code, label, sort_order) — seedelve (B1): 6 alapból, max 6; `JOB_FAMILY_DEFS` vezérli
+  - `enterprise_leadership_levels` ✅ → vezetői szint (code, label, sort_order) — seedelve (B2): 4 alapból (strategic/operational/technical/execution kötelező, 5. specialist opcionális); `LEADERSHIP_LEVEL_DEFS` vezérli
+  - `enterprise_work_categories` ✅ → munkakategória (code, label, parent_id) — seedelve (B5): 5 fő-kategória + 2 al-kategória (frontend_dev/backend_dev); `WORK_CATEGORY_DEFS` vezérli
+- **Note:** Minden katalógus saját szerkesztővel, add/edit/delete/archive UI-val rendelkezik
+- **Seed config keys:** `job_families`, `leadership_levels`, `contract_types`, `industries`, `work_categories`
 
 ---
 
