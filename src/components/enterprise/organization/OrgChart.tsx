@@ -9,11 +9,17 @@ import {
   Search,
   ChevronDown,
   ChevronRight,
-  LayoutGrid,
   Network,
   Users,
+  List,
+  Sparkles,
 } from 'lucide-react';
 import { useT } from '@/i18n/I18nProvider';
+import { OrgChartPremiumView, PremiumNode } from './OrgChartPremiumView';
+
+type ViewStyle = 'tree' | 'premium' | 'list';
+
+const VIEW_STYLE_KEY = 'org_chart_view_style';
 
 interface Props {
   workspaceId: string;
@@ -28,6 +34,10 @@ interface Membership {
   role: string | null;
   status: string;
   business_role: string | null;
+  location: string | null;
+  city: string | null;
+  team: string | null;
+  joined_at: string | null;
 }
 
 interface ProfileMap {
@@ -39,7 +49,7 @@ interface Node extends Membership {
   avatar_url?: string | null;
   children: Node[];
   depth: number;
-  reportsCount: number; // total descendants
+  reportsCount: number;
 }
 
 const AVATAR_PALETTE = [
@@ -60,12 +70,14 @@ function paletteFor(seed: string): string {
 }
 
 function initials(name: string): string {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase())
-    .join('') || '?';
+  return (
+    name
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase())
+      .join('') || '?'
+  );
 }
 
 export function OrgChart({ workspaceId, isAdmin }: Props) {
@@ -76,15 +88,28 @@ export function OrgChart({ workspaceId, isAdmin }: Props) {
   const [search, setSearch] = useState('');
   const [snapshotAt, setSnapshotAt] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [view, setView] = useState<'tree' | 'list'>('tree');
+  const [view, setView] = useState<ViewStyle>(() => {
+    try {
+      const saved = localStorage.getItem(VIEW_STYLE_KEY);
+      if (saved === 'tree' || saved === 'premium' || saved === 'list') return saved;
+    } catch {
+      // localStorage unavailable
+    }
+    return 'premium';
+  });
   void isAdmin;
+
+  const setViewAndPersist = (v: ViewStyle) => {
+    setView(v);
+    try { localStorage.setItem(VIEW_STYLE_KEY, v); } catch { /* ignore */ }
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
 
     const { data: memberships, error } = await (supabase as any)
       .from('enterprise_memberships')
-      .select('id, user_id, manager_id, org_unit_id, role, status, business_role')
+      .select('id, user_id, manager_id, org_unit_id, role, status, business_role, location, city, team, joined_at')
       .eq('workspace_id', workspaceId)
       .eq('status', 'active');
 
@@ -155,7 +180,6 @@ export function OrgChart({ workspaceId, isAdmin }: Props) {
       return sum;
     };
     roots.forEach((r) => setDepthsAndCounts(r, 0));
-    // Sort: nodes with most reports first
     const sortRec = (arr: Node[]) => {
       arr.sort((a, b) => b.reportsCount - a.reportsCount || a.display_name.localeCompare(b.display_name));
       arr.forEach((n) => sortRec(n.children));
@@ -164,12 +188,22 @@ export function OrgChart({ workspaceId, isAdmin }: Props) {
     return roots;
   }, [members, profiles]);
 
+  // flatten all nodes for premium view lookups
+  const allNodes = useMemo<Node[]>(() => {
+    const flat: Node[] = [];
+    const visit = (n: Node) => { flat.push(n); n.children.forEach(visit); };
+    tree.forEach(visit);
+    return flat;
+  }, [tree]);
+
   const filterTerm = search.trim().toLowerCase();
   const matches = (n: Node): boolean => {
     if (!filterTerm) return true;
     return (
       n.display_name.toLowerCase().includes(filterTerm) ||
-      (n.business_role || '').toLowerCase().includes(filterTerm)
+      (n.business_role || '').toLowerCase().includes(filterTerm) ||
+      (n.role || '').toLowerCase().includes(filterTerm) ||
+      (n.team || '').toLowerCase().includes(filterTerm)
     );
   };
   const isAnyVisible = (n: Node): boolean => matches(n) || n.children.some(isAnyVisible);
@@ -192,8 +226,10 @@ export function OrgChart({ workspaceId, isAdmin }: Props) {
     <div className="space-y-4" data-help-region="workspace.organization">
       <p className="text-sm text-muted-foreground">{t('organization.chart.description')}</p>
 
+      {/* ── toolbar ── */}
       <Card className="border-primary/10 bg-gradient-to-br from-card to-card/60">
         <CardContent className="p-3 flex flex-wrap items-center gap-2">
+          {/* search */}
           <div className="flex items-center gap-2 flex-1 min-w-[200px]">
             <Search className="h-4 w-4 text-muted-foreground" />
             <Input
@@ -203,29 +239,48 @@ export function OrgChart({ workspaceId, isAdmin }: Props) {
               className="h-9"
             />
           </div>
+
+          {/* view style switcher */}
           <div className="flex items-center gap-1 rounded-md border bg-background p-0.5">
+            <Button
+              variant={view === 'premium' ? 'default' : 'ghost'}
+              size="sm"
+              className="h-7 gap-1 px-2 text-xs"
+              onClick={() => setViewAndPersist('premium')}
+              title={t('organization.chart.view_premium')}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{t('organization.chart.view_premium')}</span>
+            </Button>
             <Button
               variant={view === 'tree' ? 'default' : 'ghost'}
               size="sm"
               className="h-7 gap-1 px-2 text-xs"
-              onClick={() => setView('tree')}
+              onClick={() => setViewAndPersist('tree')}
+              title={t('organization.chart.view_tree')}
             >
-              <Network className="h-3.5 w-3.5" /> Diagram
+              <Network className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{t('organization.chart.view_tree')}</span>
             </Button>
             <Button
               variant={view === 'list' ? 'default' : 'ghost'}
               size="sm"
               className="h-7 gap-1 px-2 text-xs"
-              onClick={() => setView('list')}
+              onClick={() => setViewAndPersist('list')}
+              title={t('organization.chart.view_list')}
             >
-              <LayoutGrid className="h-3.5 w-3.5" /> Lista
+              <List className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{t('organization.chart.view_list')}</span>
             </Button>
           </div>
+
+          {/* member count + snapshot */}
           <div className="text-xs text-muted-foreground flex items-center gap-1.5">
             <Users className="h-3.5 w-3.5" />
             {members.length} {t('organization.chart.members')}
             {snapshotAt ? ` · ${new Date(snapshotAt).toLocaleString()}` : ''}
           </div>
+
           <Button onClick={handleRegenerate} size="sm" variant="outline" className="gap-1">
             <RefreshCw className="h-3.5 w-3.5" />
             {t('organization.chart.regenerate')}
@@ -233,10 +288,19 @@ export function OrgChart({ workspaceId, isAdmin }: Props) {
         </CardContent>
       </Card>
 
+      {/* ── content ── */}
       {loading ? (
-        <div className="text-sm text-muted-foreground">{t('common.loading')}</div>
+        <OrgChartSkeleton />
       ) : members.length === 0 ? (
         <div className="text-sm text-muted-foreground italic">{t('organization.chart.no_data')}</div>
+      ) : view === 'premium' ? (
+        <OrgChartPremiumView
+          tree={tree as PremiumNode[]}
+          matches={matches as (n: PremiumNode) => boolean}
+          isAnyVisible={isAnyVisible as (n: PremiumNode) => boolean}
+          workspaceId={workspaceId}
+          allNodes={allNodes as PremiumNode[]}
+        />
       ) : view === 'tree' ? (
         <div className="org-chart-scroll relative overflow-x-auto rounded-xl border bg-gradient-to-b from-muted/20 via-background to-background p-6">
           <div className="flex flex-row items-start gap-8 min-w-max justify-center">
@@ -271,7 +335,28 @@ export function OrgChart({ workspaceId, isAdmin }: Props) {
   );
 }
 
-/* ----------------------------- Tree (visual) ----------------------------- */
+/* ─── skeleton loading state ─────────────────────────────────────────────── */
+
+function OrgChartSkeleton() {
+  return (
+    <div className="rounded-xl border bg-gradient-to-b from-muted/10 via-background to-background p-8 overflow-hidden">
+      <div className="flex flex-col items-center gap-5 animate-pulse">
+        <div className="w-48 h-20 rounded-xl bg-muted/60" />
+        <div className="w-px h-5 bg-muted/40" />
+        <div className="flex gap-8">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="flex flex-col items-center gap-5">
+              <div className="w-px h-5 bg-muted/40" />
+              <div className="w-48 h-20 rounded-xl bg-muted/50" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─── classic tree view (unchanged) ─────────────────────────────────────── */
 
 interface BranchProps {
   node: Node;
@@ -299,11 +384,8 @@ function TreeBranch({ node, collapsed, onToggle, matches, isAnyVisible }: Branch
 
       {hasChildren && !isCollapsed && (
         <>
-          {/* vertical drop from parent */}
           <div className="w-px h-6 bg-border" />
-          {/* horizontal connector + children */}
           <div className="relative flex items-start gap-6 pt-0">
-            {/* horizontal line spanning between first and last child */}
             {visibleChildren.length > 1 && (
               <div
                 className="absolute top-0 left-6 right-6 h-px bg-border"
@@ -312,7 +394,6 @@ function TreeBranch({ node, collapsed, onToggle, matches, isAnyVisible }: Branch
             )}
             {visibleChildren.map((child) => (
               <div key={child.id} className="flex flex-col items-center pt-0">
-                {/* vertical stub up into the horizontal line */}
                 <div className="w-px h-6 bg-border" />
                 <TreeBranch
                   node={child}
@@ -351,7 +432,6 @@ function PersonCard({ node, dim, canToggle, collapsed, onToggle }: CardProps) {
         dim ? 'opacity-50' : '',
       ].join(' ')}
     >
-      {/* gradient top accent */}
       <div className={`h-1 w-full rounded-t-xl bg-gradient-to-r ${grad}`} />
 
       <div className="p-3 flex items-center gap-3">
@@ -413,7 +493,7 @@ function PersonCard({ node, dim, canToggle, collapsed, onToggle }: CardProps) {
   );
 }
 
-/* ----------------------------- List view (compact) ----------------------------- */
+/* ─── list view (unchanged) ──────────────────────────────────────────────── */
 
 interface ListProps {
   node: Node;
