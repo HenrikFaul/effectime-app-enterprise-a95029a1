@@ -75,6 +75,7 @@ import { SidebarProvider, SidebarInset, SidebarTrigger } from '@/components/ui/s
 import { WorkspaceSidebar } from '@/components/shell/WorkspaceSidebar';
 import { DensityToggle } from '@/components/shell/DensityToggle';
 import { SkipToContent } from '@/components/shell/AppShell';
+import { useWorkspaceNavLayout } from '@/hooks/useWorkspaceNavLayout';
 
 interface Workspace {
   id: string;
@@ -118,6 +119,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   };
   const isAdmin = userRole === 'owner' || userRole === 'resourceAssistant';
   const { canView, canEdit } = useEnterprisePermissions(workspace.id, userRole);
+  const { layout } = useWorkspaceNavLayout(workspace.id);
 
   // Map active tab → help anchor
   const helpAnchorId =
@@ -193,17 +195,19 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
     <SidebarProvider>
       <SkipToContent />
       <div className="min-h-screen flex w-full bg-background">
-        <WorkspaceSidebar
-          workspaceName={workspace.name}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          onBack={onBack}
-          canViewMembers={canView('members')}
-          hasCalendarAccess={hasCalendarAccess}
-          hasRequestsAccess={hasRequestsAccess}
-          canViewReports={canView('reports') || canView('audit') || canView('export')}
-          canViewSettings={canView('settings')}
-        />
+        {layout === 'sidebar' && (
+          <WorkspaceSidebar
+            workspaceName={workspace.name}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            onBack={onBack}
+            canViewMembers={canView('members')}
+            hasCalendarAccess={hasCalendarAccess}
+            hasRequestsAccess={hasRequestsAccess}
+            canViewReports={canView('reports') || canView('audit') || canView('export')}
+            canViewSettings={canView('settings')}
+          />
+        )}
         <SidebarInset className="min-w-0 flex-1">
           <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur px-[var(--shell-pad-x,1rem)] py-2">
             <div
@@ -211,7 +215,13 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               data-help-region={helpAnchorId}
             >
               <div className="flex items-center gap-2 min-w-0">
-                <SidebarTrigger />
+                {layout === 'sidebar' ? (
+                  <SidebarTrigger />
+                ) : (
+                  <Button variant="ghost" size="icon" onClick={onBack} aria-label="Vissza a munkaterületekhez">
+                    <ArrowLeft className="h-4 w-4" />
+                  </Button>
+                )}
                 <HelpButton />
                 <div className="min-w-0">
                   <h1 className="text-base font-semibold truncate">{workspace.name}</h1>
@@ -242,8 +252,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
           </header>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            {/* Legacy TabsList kept (visually hidden) — primary nav is the sidebar. */}
-            <TabsList className="sr-only">
+            <TabsList className={layout === 'sidebar' ? 'sr-only' : 'flex h-auto w-full justify-start overflow-x-auto rounded-none border-b bg-transparent px-[var(--shell-pad-x,1rem)] py-2'}>
               <TabsTrigger value="members">Tagok</TabsTrigger>
               <TabsTrigger value="organization">Szervezet</TabsTrigger>
               <TabsTrigger value="calendar">Naptár</TabsTrigger>
