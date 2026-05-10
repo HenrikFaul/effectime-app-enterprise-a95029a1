@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft, LogOut, Building2, GitMerge, CircleHelp } from 'lucide-react';
+import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft, LogOut, Building2, GitMerge, CircleHelp, Clock } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
@@ -43,6 +43,7 @@ import { AllowanceManager } from './AllowanceManager';
 import { WorkspaceGeneralSettings } from './WorkspaceGeneralSettings';
 import { BrandingManager } from './BrandingManager';
 import { ImportExportCenter } from './import-export/ImportExportCenter';
+import { TimeAttendancePage } from './time-attendance/TimeAttendancePage';
 import { AnnualLeaveGrid } from './AnnualLeaveGrid';
 import { BirthdayAnniversaryWidget } from './BirthdayAnniversaryWidget';
 import { AnnualTrendChart } from './AnnualTrendChart';
@@ -101,6 +102,7 @@ const WORKSPACE_TOP_NAV_ITEMS = [
   { value: 'members', label: 'Tagok', icon: Users },
   { value: 'organization', label: 'Szervezet', icon: Building2 },
   { value: 'calendar', label: 'Naptár', icon: CalendarDays },
+  { value: 'time-attendance', label: 'Időnyilvántartás', icon: Clock },
   { value: 'requests', label: 'Kérelmek', icon: FileText },
   { value: 'workflows', label: 'Folyamatok', icon: GitMerge },
   { value: 'resources', label: 'Erőforrások', icon: Briefcase },
@@ -276,6 +278,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                   item.value === 'members' ? canView('members') :
                   item.value === 'organization' ? canView('members') :
                   item.value === 'calendar' ? hasCalendarAccess :
+                  item.value === 'time-attendance' ? true :
                   item.value === 'requests' ? hasRequestsAccess :
                   item.value === 'workflows' ? canView('members') :
                   item.value === 'resources' ? true :
@@ -384,6 +387,10 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                 </Tabs>
               </TabsContent>
             )}
+
+            <TabsContent value="time-attendance" className="space-y-3" data-help-region="workspace.time_attendance">
+              <TimeAttendancePage workspaceId={workspace.id} isAdmin={isAdmin} />
+            </TabsContent>
 
             {hasRequestsAccess && (
               <TabsContent value="requests" data-help-region="workspace.approvals">
