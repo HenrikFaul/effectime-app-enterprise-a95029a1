@@ -1,3 +1,69 @@
+## 2026-05-10 — v3.6.0 Time Attendance & Payroll Preparation module
+
+### Added — Complete employee time logging + admin overview + payroll export
+
+A new top-level workspace tab **Időnyilvántartás** (Clock icon) ships an end-to-end time-attendance and payroll-preparation module.
+
+**Domain entities (6 new tables):**
+- `enterprise_attendance_periods` — one timesheet per (member, year, month) with a state machine: `draft → submitted → returned/approved → locked → exported`. Cached `totals` jsonb column carries the server-computed payroll-ready figures.
+- `enterprise_attendance_segments` — atomic worked-time blocks. Multiple per day (split shifts), with `segment_type` ∈ `{regular, overtime, break, oncall_intervention}`, `is_weekend`, `is_night`. `source` column = `'manual' | 'device'` (future hardware ingestion).
+- `enterprise_attendance_oncall_windows` — standby blocks separate from intervention work. Default multiplier 0.20.
+- `enterprise_attendance_schedule_templates` — workspace-default + per-member recurring schedules (weekday_mask, start/end, break, expected daily hours).
+- `enterprise_attendance_audit` — append-only audit trail (segment.created/updated/deleted, period.submitted/approved/returned/locked/reopened, oncall.*).
+- `enterprise_attendance_payroll_exports` — one row per export run with full JSON payload for replay.
+
+**Server-side calculation engine (`attendance_recompute_totals` RPC):**
+- Categorizes hours into regular, overtime, weekend overtime, night, on-call intervention.
+- Standby = window time minus intervention; standby compensated = standby × 0.20.
+- Expected hours = workdays × `expected_daily_hours` from resolved template (explicit → member-default → workspace-default → 8h × Mon-Fri fallback).
+- Leave-aware expected (subtracts approved leave_hours from expected).
+- Recomputed automatically after every mutation. Cached on the period row.
+
+**State-machine RPCs (all SECURITY DEFINER):**
+- `attendance_get_or_create_period`, `attendance_upsert_segment`, `attendance_delete_segment`, `attendance_upsert_oncall_window`, `attendance_delete_oncall_window`, `attendance_transition_period`, `attendance_list_workspace_periods`, `attendance_payroll_export`, `attendance_record_export`.
+- All writes audited with before/after JSON snapshots.
+
+**Frontend module (`src/components/enterprise/time-attendance/`):**
+- `TimeAttendancePage.tsx` — entry point; admin gets tab switcher (Saját idő / Csapat áttekintés).
+- `EmployeeMonthView.tsx` — month picker, 7-column day grid (Mon-first), totals summary, submit button.
+- `DayEditorDialog.tsx` — multi-segment day editor with type picker, weekend/night flags, validation (overlap detection, end > start, 24h cap).
+- `OnCallDialog.tsx` — standby window entry with weekend/night flags.
+- `AdminOverview.tsx` — workspace-wide table with filters, action column (approve/return/lock/reopen), summary stats, **payroll export buttons** (XLSX of locked-only or CSV of all).
+- `TotalsSummary.tsx` — 8-card breakdown widget.
+- `calculations.ts` — client-side preview mirroring the server logic (1:1).
+- `api.ts` — RPC client wrappers.
+- `types.ts` — shared TS types.
+
+**Payroll export:**
+- 23 stable columns (Email, Név, Csapat, Munkakör, Telephely, Időszak, Státusz, Normál óra, Túlóra, Hétvégi túlóra, Éjszakai óra, Készenléti behívás, Készenlét nyers + bér-óra ×0.20, Elvárt, Szabadság, Ledolgozott, Bér-össz, Benyújtva/Jóváhagyva/Zárolva).
+- XLSX (Excel XML 2003) + CSV (UTF-8 BOM) — same library-free generators used by the Import/Export Center.
+- Locked-only export auto-advances all locked periods to `exported`, with audit batch row.
+
+**Tests (`src/test/timeAttendanceCalculations.test.ts`):**
+- 18 unit tests covering: duration math, weekend detection, night-window detection, overlap detection, standby×0.20 with intervention subtraction, leave-adjusted expected, edge case where intervention exceeds standby (clamped to 0).
+- All passing.
+
+**Documentation (`docs/time-attendance/`):**
+- `README.md` (index), `business-overview.md`, `employee-guide.md`, `admin-guide.md`, `calculation-rules.md` (with worked example), `payroll-export.md` (column reference), `data-model.md` (tables + RLS), `api-contracts.md`, `audit-trail.md`, `future-hardware-support.md` (badge/clock device extension plan).
+
+**Architecture for future hardware ingestion:**
+- `segments.source` and `segments.device_event_id` columns reserved.
+- Pairing model documented: clock_in + clock_out → one segment.
+- No UI rework needed when device path goes live; admin reconciliation panel is the only addition.
+
+**Integration:**
+- New top nav item `Időnyilvántartás` between Naptár and Kérelmek.
+- Visible to all active enterprise members (employees see only their own period; admin tab requires owner / resourceAssistant).
+- Reuses existing `enterprise_memberships`, `leave_requests`, `enterprise_workspaces`, profiles. No regression on existing leave / member / org-chart logic.
+
+---
+
+## 2026-05-10 — v3.5.4 Member Profile section header overflow fix
+
+Section card headers now wrap (`flex-wrap` + `ml-auto`) so action buttons don't get clipped on narrow sheet widths. Sheet widened to `sm:max-w-xl`, `overflow-x-hidden` added to belt-and-suspenders. Performance section title shortened.
+
+---
+
 ## 2026-05-10 — v3.5.3 Member Profile "Bővebb adatok": Jira-row + Performance chart toggle
 
 ### Fixed — Jira jegyek sor: külső link gomb nem látható

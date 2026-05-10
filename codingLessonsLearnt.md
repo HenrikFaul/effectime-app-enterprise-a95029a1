@@ -961,3 +961,22 @@ A workspace-picker `useState('')` került a `if (selectedWorkspaceId) return <Wo
 - **Gyökérok**: A flex container alapértelmezett `min-width: auto`-val nem zsugorítja le az tartalmát a `max-content` alá. A `truncate` szülőjének is kell `min-w-0` — különben a `flex-1` span megtartja a teljes szöveg szélességét, és a `shrink-0` testvér elemek a szülő bounding box-án kívül renderelődnek.
 - **Javítás**: `min-w-0` hozzáadva a sor `<div>`-re ÉS a `<span>`-re (mindkettő szükséges többszintű flex esetén).
 - **Megelőzés**: Bármikor amikor `truncate flex-1`-t teszel egy flex item-re, a szülő flex container-nek MINDIG kell `min-w-0` — így a shrink-0 testvérek nem fognak túlfolyni.
+
+### [LESSON-RPC-090] Komplex calc engine: server SECURITY DEFINER + client mirror
+- **Dátum**: 2026-05-10
+- **Fájl**: `supabase/migrations/.._create_time_attendance_rpcs.sql`, `src/components/enterprise/time-attendance/calculations.ts`
+- **Probléma**: Egy bonyolult bér-számítómotor (regular/overtime/weekend OT/night/standby×0.20/intervention/leave-adjusted) dolgozhat-e csak kliens-oldalon? Nem — az export bizonyítható-helyesnek kell lennie és nem szabad UI állapotból következtetni.
+- **Megoldás**: Hiteles számítás SQL függvényben (`attendance_recompute_totals`) ami a periódus minden mutációja után fut és cache-eli az eredményt jsonb-ben. A kliens (`previewTotals`) 1:1 tükrözi ezt a logikát az UX preview-hoz, és 18 unit teszt szigorúan pin-eli a két oldal egyenlőségét.
+- **Megelőzés**: Bármilyen pénzügyi vagy bér-releváns számítás server-side hiteles legyen, a kliens-oldali változat csak preview. Mindkét oldalt fedjük le egyszerű unit tesztekkel.
+
+### [LESSON-AUDIT-091] Append-only audit: csak SELECT policy + SECURITY DEFINER írás
+- **Dátum**: 2026-05-10
+- **Fájl**: `supabase/migrations/.._create_time_attendance_module.sql`
+- **Megoldás**: `enterprise_attendance_audit` táblának CSAK egy SELECT policy van. Nincs INSERT/UPDATE/DELETE policy, így anon és authenticated szerepkör nem tud közvetlenül írni. Az írás minden mutáció során a `SECURITY DEFINER` RPC-kből történik (pl. `attendance_upsert_segment` `INSERT INTO enterprise_attendance_audit`-tal zár).
+- **Megelőzés**: Audit / immutable history tábláknál mindig vegyük figyelembe — RLS nincs INSERT policy = nincs direkt írás, kontrollált audit-emit a hivatalos RPC-kből.
+
+### [LESSON-DUAL-SOURCE-092] Forward-compatible field-ek a jövőbeli integrációkhoz
+- **Dátum**: 2026-05-10
+- **Fájl**: `enterprise_attendance_segments` séma
+- **Logika**: A v1 csak manuális idő-rögzítést szállít, de a `source text DEFAULT 'manual'` és `device_event_id uuid` oszlopok már a sémában vannak. Amikor a jövőben hardver-alapú attendance esemény ingestion bekerül, csak egy új `enterprise_attendance_device_events` tábla és egy új edge function kell — sem séma-migrációra, sem UI átalakításra nincs szükség.
+- **Megelőzés**: Ha tudjuk hogy a v2 új írási forrást fog hozzáadni, már a v1 sémájában legyen ott a `source` flag és FK-helyek. Az alábbi belső költség ezt később már nehéz hozzáadni törés nélkül.
