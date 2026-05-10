@@ -193,6 +193,7 @@ Deno.serve(async (req) => {
       .select('id,name');
     if (leaveTypesErr) console.error('[seed] leave_types insert failed:', leaveTypesErr.message);
     const hasSupportedLeaveTypes = (leaveTypes ?? []).length > 0;
+    const activeLeaveTypeKeys = new Set(['vacation', 'sick_leave', 'unpaid_leave', 'other']);
 
     // ── A7. Public holidays ─────────────────────────────────────────────────
     const { error: holidaysErr } = await admin.from('enterprise_holidays').insert(
@@ -419,9 +420,12 @@ Deno.serve(async (req) => {
 
     // ── C5. Daily rules ────────────────────────────────────────────────────────
     const dailyRulesToInsert = DAILY_RULE_DEFS.slice(0, Math.max(1, seedQty.daily_rules));
-    await admin.from('enterprise_daily_rules').insert(
-      dailyRulesToInsert.map(r => ({ ...r, workspace_id: workspaceId } as any))
-    );
+    if (dailyRulesToInsert.length) {
+      const { error: dailyRulesErr } = await admin.from('enterprise_daily_rules').insert(
+        dailyRulesToInsert.map(r => ({ ...r, workspace_id: workspaceId, created_by: ownerId } as any))
+      );
+      if (dailyRulesErr) console.warn('[seed] daily_rules insert skipped:', dailyRulesErr.message);
+    }
 
     // ── C6. Office coverage rules ────────────────────────────────────────────
     const coverageRulesToInsert = OFFICE_COVERAGE_RULE_DEFS.slice(0, Math.max(1, seedQty.office_coverage_rules));
@@ -671,12 +675,76 @@ Deno.serve(async (req) => {
         status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -1).toISOString(), comment: 'Hosszú hétvége',
       });
     }
-    const { data: insertedLeaves, error: insertedLeavesErr } = leaveRequests.length
-      ? await admin.from('leave_requests').insert(leaveRequests).select('id,status,user_id')
+    const normalizedLeaveRequests = leaveRequests
+      .filter((request) => activeLeaveTypeKeys.has(request.leave_type));
+
+    const { data: insertedLeaves, error: insertedLeavesErr } = normalizedLeaveRequests.length
+      ? await admin.from('leave_requests').insert(normalizedLeaveRequests).select('id,status,user_id,leave_type')
       : { data: [], error: null };
     if (insertedLeavesErr) {
       console.error('[seed] leave_requests insert FAILED:', insertedLeavesErr.message, JSON.stringify(insertedLeavesErr));
       throw new Error(`Demo szabadságadatok seedelése sikertelen: ${insertedLeavesErr.message}`);
+    }
+
+    const quotaIdByMembershipAndType = new Map<string, string>();
+    if (quotaRows.length) {
+      const { data: insertedQuotas, error: insertedQuotasErr } = await admin
+        .from('enterprise_leave_quotas')
+        .select('id,membership_id,leave_type')
+        .eq('workspace_id', workspaceId)
+        .eq('year', year);
+      if (insertedQuotasErr) {
+        console.warn('[seed] leave_quotas readback skipped:', insertedQuotasErr.message);
+      } else {
+        (insertedQuotas ?? []).forEach((quota: any) => {
+          quotaIdByMembershipAndType.set(`${quota.membership_id}:${quota.leave_type}`, quota.id);
+        });
+      }
+    }
+
+    const leaveByUserAndRange = new Map<string, any>();
+    (insertedLeaves ?? []).forEach((leave: any, index: number) => {
+      const original = normalizedLeaveRequests[index];
+      if (!original) return;
+      leaveByUserAndRange.set(`${leave.user_id}:${original.start_date}:${original.end_date}:${leave.leave_type}`, leave);
+    });
+
+    const quotaTransactionRows: any[] = [];
+    for (const request of normalizedLeaveRequests) {
+      if (request.status !== 'approved') continue;
+      if (request.leave_type !== 'vacation') continue;
+      const membership = membershipByUser.get(request.user_id);
+      if (!membership) continue;
+      const quotaId = quotaIdByMembershipAndType.get(`${membership.id}:${request.leave_type}`);
+      if (!quotaId) continue;
+      const insertedLeave = leaveByUserAndRange.get(`${request.user_id}:${request.start_date}:${request.end_date}:${request.leave_type}`);
+      if (!insertedLeave?.id) continue;
+      const start = new Date(`${request.start_date}T00:00:00Z`);
+      const end = new Date(`${request.end_date}T00:00:00Z`);
+      let approvedDays = 0;
+      for (let cursor = new Date(start); cursor <= end; cursor = addDays(cursor, 1)) {
+        const weekday = cursor.getUTCDay();
+        if (weekday === 0 || weekday === 6) continue;
+        const iso = fmtDate(cursor);
+        const isHoliday = HU_HOLIDAYS_TEMPLATE.some((holiday) => `${year}-${holiday.month}` === iso);
+        if (isHoliday) continue;
+        approvedDays += 1;
+      }
+      if (approvedDays <= 0) continue;
+      quotaTransactionRows.push({
+        workspace_id: workspaceId,
+        quota_id: quotaId,
+        membership_id: membership.id,
+        leave_request_id: insertedLeave.id,
+        transaction_type: 'usage',
+        amount_days: -approvedDays,
+        reason: `Demo seed: ${request.comment ?? 'jóváhagyott szabadság'}`,
+        created_by: ownerId,
+      });
+    }
+    if (quotaTransactionRows.length) {
+      const { error: quotaTxnErr } = await admin.from('enterprise_quota_transactions').insert(quotaTransactionRows);
+      if (quotaTxnErr) console.warn('[seed] quota_transactions insert skipped:', quotaTxnErr.message);
     }
 
     // ── C8. Approval decisions (for decided requests) ─────────────────────────
