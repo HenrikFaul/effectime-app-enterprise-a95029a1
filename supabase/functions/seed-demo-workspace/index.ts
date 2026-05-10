@@ -277,7 +277,7 @@ Deno.serve(async (req) => {
     // ── B1. Job families ────────────────────────────────────────────────────
     const jfToInsert = JOB_FAMILY_DEFS.slice(0, Math.max(1, seedQty.job_families));
     const { error: jfErr } = await admin.from('enterprise_job_families')
-      .insert(jfToInsert.map(d => ({ ...d, workspace_id: workspaceId })));
+      .insert(jfToInsert.map(({ code, label }) => ({ code, label, workspace_id: workspaceId })));
     if (jfErr) console.warn('[seed] job_families insert skipped:', jfErr.message);
 
     // ── B2. Leadership levels ────────────────────────────────────────────────
@@ -422,7 +422,11 @@ Deno.serve(async (req) => {
     const dailyRulesToInsert = DAILY_RULE_DEFS.slice(0, Math.max(1, seedQty.daily_rules));
     if (dailyRulesToInsert.length) {
       const { error: dailyRulesErr } = await admin.from('enterprise_daily_rules').insert(
-        dailyRulesToInsert.map(r => ({ ...r, workspace_id: workspaceId, created_by: ownerId } as any))
+        dailyRulesToInsert.map(({ is_active: _isActive, ...rule }) => ({
+          ...rule,
+          workspace_id: workspaceId,
+          created_by: ownerId,
+        } as any))
       );
       if (dailyRulesErr) console.warn('[seed] daily_rules insert skipped:', dailyRulesErr.message);
     }
@@ -676,7 +680,16 @@ Deno.serve(async (req) => {
       });
     }
     const normalizedLeaveRequests = leaveRequests
-      .filter((request) => activeLeaveTypeKeys.has(request.leave_type));
+      .filter((request) => activeLeaveTypeKeys.has(request.leave_type))
+      .map((request) => ({
+        ...request,
+        is_half_day: typeof request.is_half_day === 'boolean' ? request.is_half_day : false,
+        half_day_period: request.is_half_day ? (request.half_day_period ?? 'morning') : null,
+        is_private: typeof request.is_private === 'boolean' ? request.is_private : false,
+        cancellation_reason: request.status === 'cancelled'
+          ? (request.cancellation_reason ?? request.comment ?? 'Demo seed: visszavont kérelem')
+          : null,
+      }));
 
     const { data: insertedLeaves, error: insertedLeavesErr } = normalizedLeaveRequests.length
       ? await admin.from('leave_requests').insert(normalizedLeaveRequests).select('id,status,user_id,leave_type')
