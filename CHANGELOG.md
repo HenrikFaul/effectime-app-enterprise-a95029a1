@@ -1,3 +1,24 @@
+## 2026-05-10 — v3.5.3 Member Profile "Bővebb adatok": Jira-row + Performance chart toggle
+
+### Fixed — Jira jegyek sor: külső link gomb nem látható
+
+A "Hozzá rendelt Jira jegyek" sorokban az `ExternalLink` ikon túlfutott a kártya szélén és láthatatlan volt. Root cause: a flex sor szülője nem kapott `min-w-0` értéket, így a `flex-1 truncate` span nem zsugorodott le 0-ig, és a `shrink-0` ikon kicsúszott a szülő doboz jobb széléből.
+
+**Fix**: `min-w-0` hozzáadva a sor wrapperre és a span-re; `gap-2` → `gap-1.5`; badge-ek `px-1.5`; az `<a>` tag h-5 w-5 box-ban van rendezve hover háttérrel a jobb tap-célnak.
+
+### Added — Teljesítmény diagram típus-váltó (BarChart ↔ AreaChart)
+
+Új `ChartTypeToggle` mini-segmented control a "Teljesítmény (utolsó 12 hónap)" kártya jobb felső sarkában. Két opció:
+
+- **Oszlopdiagram** (alapértelmezett, `BarChart3` ikon): a meglévő story-point oszlopdiagram változatlan
+- **Vonal-/területdiagram** (`LineChart` ikon): új `AreaChart` két soros — story points (kék gradient) + lezárt jegyek (zöld gradient), `linearGradient` fill, `monotone` görbék, dot-ok
+
+A választott típus localStorage-ben (`effectime.member.performanceChart`) mentődik, megmarad új session-ön át is.
+
+**Fájl**: `src/components/enterprise/MemberExtendedDetails.tsx`
+
+---
+
 ## 2026-05-10 — v3.5.2 Export/Import Center: email + extended member fields fix
 
 ### Fixed — Tag export: email, felettes/beosztott, összes szervezeti mező

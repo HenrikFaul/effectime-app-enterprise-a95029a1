@@ -953,3 +953,11 @@ A workspace-picker `useState('')` került a `if (selectedWorkspaceId) return <Wo
 - **Gyökérok**: A `has_enterprise_role` függvény paraméterei: `_workspace_id`, `_user_id`, `_roles` (underscore prefix). A v3.5.1 Edge Function tévesen `p_workspace_id`, `p_user_id`, `p_roles` névvel hívta.
 - **Javítás**: `_workspace_id`, `_user_id`, `_roles` névvel hívva.
 - **Megelőzés**: Ismeretlen RPC hívás előtt mindig ellenőrizd a függvény szignaturát: `SELECT pg_get_function_arguments(oid) FROM pg_proc WHERE proname = 'function_name'`.
+
+### [LESSON-FLEX-089] Tailwind truncate + flex-1 testvér: min-w-0 a szülőre kötelező
+- **Dátum**: 2026-05-10
+- **Fájl**: `src/components/enterprise/MemberExtendedDetails.tsx`
+- **Tünet**: Egy Jira-jegy sor utolsó eleme (külső link ikon) levágva a kártya jobb szélén — pedig a sor `flex items-center` és a középső span `flex-1 truncate`, a többi `shrink-0`.
+- **Gyökérok**: A flex container alapértelmezett `min-width: auto`-val nem zsugorítja le az tartalmát a `max-content` alá. A `truncate` szülőjének is kell `min-w-0` — különben a `flex-1` span megtartja a teljes szöveg szélességét, és a `shrink-0` testvér elemek a szülő bounding box-án kívül renderelődnek.
+- **Javítás**: `min-w-0` hozzáadva a sor `<div>`-re ÉS a `<span>`-re (mindkettő szükséges többszintű flex esetén).
+- **Megelőzés**: Bármikor amikor `truncate flex-1`-t teszel egy flex item-re, a szülő flex container-nek MINDIG kell `min-w-0` — így a shrink-0 testvérek nem fognak túlfolyni.

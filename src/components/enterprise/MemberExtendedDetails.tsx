@@ -38,8 +38,10 @@ import {
   TrendingUp,
   XCircle,
   Briefcase,
+  BarChart3,
+  LineChart as LineChartIcon,
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from 'recharts';
 import { format, startOfMonth, subMonths } from 'date-fns';
 import { toast } from 'sonner';
 
@@ -129,6 +131,11 @@ export function MemberExtendedDetails({ workspaceId, member, isAdmin, onNavigate
   const [goalsTableMissing, setGoalsTableMissing] = useState(false);
   const [issues, setIssues] = useState<JiraIssue[]>([]);
   const [loading, setLoading] = useState(true);
+  const [chartType, setChartType] = useState<'bar' | 'area'>(() => {
+    if (typeof window === 'undefined') return 'bar';
+    const saved = window.localStorage.getItem('effectime.member.performanceChart');
+    return saved === 'area' ? 'area' : 'bar';
+  });
 
   const memberName = member.display_name || '';
 
@@ -475,19 +482,19 @@ export function MemberExtendedDetails({ workspaceId, member, isAdmin, onNavigate
         ) : (
           <div className="space-y-1.5">
             {issues.slice(0, 15).map((i) => (
-              <div key={i.id} className="flex items-center gap-2 text-sm">
-                <Badge variant="outline" className="text-[10px] font-mono shrink-0">
+              <div key={i.id} className="flex items-center gap-1.5 text-sm min-w-0">
+                <Badge variant="outline" className="text-[10px] font-mono shrink-0 px-1.5">
                   {i.external_key}
                 </Badge>
-                <span className="truncate flex-1" title={i.summary || ''}>{i.summary || '—'}</span>
+                <span className="truncate flex-1 min-w-0" title={i.summary || ''}>{i.summary || '—'}</span>
                 {typeof i.story_points === 'number' && (
-                  <Badge variant="secondary" className="text-[10px] gap-1 shrink-0">
+                  <Badge variant="secondary" className="text-[10px] gap-1 shrink-0 px-1.5">
                     <Briefcase className="h-2.5 w-2.5" /> {i.story_points} SP
                   </Badge>
                 )}
                 <Badge
                   variant={i.status?.toLowerCase() === 'done' ? 'default' : 'outline'}
-                  className="text-[10px] shrink-0"
+                  className="text-[10px] shrink-0 px-1.5"
                 >
                   {i.status || '—'}
                 </Badge>
@@ -496,10 +503,11 @@ export function MemberExtendedDetails({ workspaceId, member, isAdmin, onNavigate
                     href={i.url}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-muted-foreground hover:text-primary shrink-0"
+                    className="text-muted-foreground hover:text-primary shrink-0 inline-flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
                     title="Megnyitás külső rendszerben"
+                    aria-label="Megnyitás külső rendszerben"
                   >
-                    <ExternalLink className="h-3 w-3" />
+                    <ExternalLink className="h-3.5 w-3.5" />
                   </a>
                 )}
               </div>
@@ -516,9 +524,18 @@ export function MemberExtendedDetails({ workspaceId, member, isAdmin, onNavigate
         icon={<TrendingUp className="h-4 w-4 text-primary" />}
         title="Teljesítmény (utolsó 12 hónap)"
         action={
-          <Badge variant="outline" className="text-[10px] tabular-nums">
-            {totalCompletedPoints} SP · {totalCompletedIssues} jegy
-          </Badge>
+          <div className="flex items-center gap-2">
+            <ChartTypeToggle
+              value={chartType}
+              onChange={(v) => {
+                setChartType(v);
+                try { window.localStorage.setItem('effectime.member.performanceChart', v); } catch {}
+              }}
+            />
+            <Badge variant="outline" className="text-[10px] tabular-nums">
+              {totalCompletedPoints} SP · {totalCompletedIssues} jegy
+            </Badge>
+          </div>
         }
       >
         {totalCompletedIssues === 0 ? (
@@ -526,24 +543,72 @@ export function MemberExtendedDetails({ workspaceId, member, isAdmin, onNavigate
         ) : (
           <div className="h-44 w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={performanceData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.4)" />
-                <XAxis dataKey="month" tick={{ fontSize: 10 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
-                <Tooltip
-                  contentStyle={{
-                    background: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: 8,
-                    fontSize: 11,
-                  }}
-                  formatter={(v: any, name: string) => [
-                    String(v),
-                    name === 'points' ? 'Story points' : 'Lezárt jegyek',
-                  ]}
-                />
-                <Bar dataKey="points" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-              </BarChart>
+              {chartType === 'bar' ? (
+                <BarChart data={performanceData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.4)" />
+                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: 8,
+                      fontSize: 11,
+                    }}
+                    formatter={(v: any, name: string) => [
+                      String(v),
+                      name === 'points' ? 'Story points' : 'Lezárt jegyek',
+                    ]}
+                  />
+                  <Bar dataKey="points" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              ) : (
+                <AreaChart data={performanceData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="perfPoints" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.55} />
+                      <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0.02} />
+                    </linearGradient>
+                    <linearGradient id="perfCount" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="hsl(160 84% 45%)" stopOpacity={0.5} />
+                      <stop offset="100%" stopColor="hsl(160 84% 45%)" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border) / 0.4)" />
+                  <XAxis dataKey="month" tick={{ fontSize: 10 }} />
+                  <YAxis allowDecimals={false} tick={{ fontSize: 10 }} />
+                  <Tooltip
+                    contentStyle={{
+                      background: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: 8,
+                      fontSize: 11,
+                    }}
+                    formatter={(v: any, name: string) => [
+                      String(v),
+                      name === 'points' ? 'Story points' : 'Lezárt jegyek',
+                    ]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="points"
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    fill="url(#perfPoints)"
+                    dot={{ r: 3, strokeWidth: 1.5, fill: 'hsl(var(--background))', stroke: 'hsl(var(--primary))' }}
+                    activeDot={{ r: 4 }}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="count"
+                    stroke="hsl(160 84% 45%)"
+                    strokeWidth={2}
+                    fill="url(#perfCount)"
+                    dot={{ r: 3, strokeWidth: 1.5, fill: 'hsl(var(--background))', stroke: 'hsl(160 84% 45%)' }}
+                    activeDot={{ r: 4 }}
+                  />
+                </AreaChart>
+              )}
             </ResponsiveContainer>
           </div>
         )}
@@ -553,6 +618,37 @@ export function MemberExtendedDetails({ workspaceId, member, isAdmin, onNavigate
 }
 
 // ───── helpers ───────────────────────────────────────────────────────────────
+
+function ChartTypeToggle({ value, onChange }: { value: 'bar' | 'area'; onChange: (v: 'bar' | 'area') => void }) {
+  return (
+    <div className="inline-flex items-center rounded-md border bg-muted/40 p-0.5" role="group" aria-label="Diagram típusa">
+      <button
+        type="button"
+        onClick={() => onChange('bar')}
+        className={`inline-flex h-6 w-6 items-center justify-center rounded-sm transition-colors ${
+          value === 'bar' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
+        }`}
+        title="Oszlopdiagram"
+        aria-label="Oszlopdiagram"
+        aria-pressed={value === 'bar'}
+      >
+        <BarChart3 className="h-3.5 w-3.5" />
+      </button>
+      <button
+        type="button"
+        onClick={() => onChange('area')}
+        className={`inline-flex h-6 w-6 items-center justify-center rounded-sm transition-colors ${
+          value === 'area' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
+        }`}
+        title="Vonal-/területdiagram"
+        aria-label="Vonal-/területdiagram"
+        aria-pressed={value === 'area'}
+      >
+        <LineChartIcon className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
 
 function SectionCard({
   icon,
