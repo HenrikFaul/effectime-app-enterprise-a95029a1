@@ -1,3 +1,30 @@
+## 2026-05-10 — v3.5.2 Export/Import Center: email + extended member fields fix
+
+### Fixed — Tag export: email, felettes/beosztott, összes szervezeti mező
+
+**Probléma**: A `profiles` táblának nincs `email` oszlopa — az email kizárólag az `auth.users` táblában tárolódik, amit a frontend client nem érhet el közvetlenül.
+
+**Megoldás — 3 új DB függvény (SECURITY DEFINER):**
+
+- `get_workspace_members_for_export(p_workspace_id)` — teljes tag-lista emailekkel, org-chart adatokkal, szenioritással, szerződéssel, készségekkel (semicolon-separated), felettes/beosztott emailekkel. Jogosultság-ellenőrzés `has_enterprise_role` RPC-vel, ezért frontend-ről biztonságosan hívható.
+- `get_workspace_leave_for_export(p_workspace_id, ...)` — szabadságok emailekkel és tagnevekkel.
+- `get_user_ids_by_emails(p_emails)` — Edge Function segédfüggvény: email tömb → user_id párok az `auth.users`-ből.
+
+**Bővített MEMBER_FIELDS (22 mező, 5 csoport):**
+
+| Csoport | Új mezők |
+|---------|----------|
+| Hierarchia | `manager_email` (felettes), `subordinate_emails` (beosztottak — export only) |
+| Karrier | `seniority`, `leadership_level`, `leadership_category`, `contract_type`, `employer_rights`, `skills` |
+| Szervezeti adatok | `org_unit_name`, `weekly_capacity_hours` |
+
+**Edge Function `import-entity-data` javítva:**
+- `importMembers` és `importLeave`: `profiles.email` lekérdezés (nem létező mező) → `get_user_ids_by_emails` RPC hívás
+- `importMembers` upsert: `weekly_capacity_hours`, `seniority`, `leadership_category`, `employer_rights` mezők mostantól frissülnek
+- `has_enterprise_role` paraméternevei javítva: `_workspace_id`, `_user_id`, `_roles` (függvény-szignaturával egyezően)
+
+---
+
 ## 2026-05-10 — v3.5.1 Import/Export Center: teljes implementáció
 
 ### Implemented — Skálázható, entity-alapú Import/Export Center

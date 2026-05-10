@@ -930,3 +930,26 @@ A workspace-picker `useState('')` került a `if (selectedWorkspaceId) return <Wo
 - **Gyökérok**: A demo seed részben régi DB-sémát követett. A szabadságkérelmek egy részénél a jelenlegi kötelező mezők nem lettek explicit kitöltve, miközben egyes seed definíciók még olyan oszlopokat is tartalmaztak, amelyek már nem léteznek az aktuális táblákban.
 - **Javítás**: A `leave_requests` seed minden rekordja normalizálva lett (`is_half_day`, `half_day_period`, `is_private`, `cancellation_reason`), a daily rule és job family seed-definíciókból pedig kikerültek a megszűnt mezők.
 - **Megelőzés**: Demo / edge seed módosítás előtt **mindig** a jelenlegi `src/integrations/supabase/types.ts` Insert-sémát vagy az aktuális migrációkat kell forrásigazságnak tekinteni; a seed-manifestben tilos legacy mezőt bent hagyni.
+
+---
+
+### [LESSON-EXPORT-086] Supabase profiles táblában nincs email oszlop — SECURITY DEFINER RPC a megoldás
+- **Dátum**: 2026-05-10
+- **Fájl**: `src/components/enterprise/import-export/utils/data-fetcher.ts`
+- **Gyökérok**: A Supabase `profiles` (public schema) táblának nincs `email` oszlopa. Az auth email kizárólag `auth.users.email`-ben él, amit az anon key frontend kliens nem érhet el direktben.
+- **Javítás**: `SECURITY DEFINER` PostgreSQL függvények: `get_workspace_members_for_export` és `get_workspace_leave_for_export` — ezek `auth.users`-hez csatlakoznak, de csak `has_enterprise_role` ellenőrzés után futnak le. A frontend `supabase.rpc()` hívással éri el őket.
+- **Megelőzés**: Ha bármilyen exporthoz/listázáshoz user email kell, SOHA ne próbáld `profiles.email`-ből olvasni — mindig SECURITY DEFINER függvényt írj, amely `auth.users`-t joinol.
+
+### [LESSON-EXPORT-087] Edge Function: profiles.email import-hoz szintén nem létezik — get_user_ids_by_emails RPC
+- **Dátum**: 2026-05-10
+- **Fájl**: `supabase/functions/import-entity-data/index.ts`
+- **Gyökérok**: Az Edge Function service role klienssel is hiába queryczi `profiles.select('user_id, email')` — az oszlop egyszerűen nem létezik, üres eredményt ad.
+- **Javítás**: Új `get_user_ids_by_emails(p_emails text[])` SECURITY DEFINER függvény, amelyet az Edge Function `serviceClient.rpc()`-vel hív. Ez `auth.users`-ből `ANY(p_emails)` szűréssel adja vissza a user_id↔email párokat.
+- **Megelőzés**: Import flow-ban email → user_id feloldásnál mindig a `get_user_ids_by_emails` RPC-t használd.
+
+### [LESSON-EXPORT-088] has_enterprise_role paraméternevei: _ prefix (nem p_ prefix)
+- **Dátum**: 2026-05-10
+- **Fájl**: `supabase/functions/import-entity-data/index.ts`
+- **Gyökérok**: A `has_enterprise_role` függvény paraméterei: `_workspace_id`, `_user_id`, `_roles` (underscore prefix). A v3.5.1 Edge Function tévesen `p_workspace_id`, `p_user_id`, `p_roles` névvel hívta.
+- **Javítás**: `_workspace_id`, `_user_id`, `_roles` névvel hívva.
+- **Megelőzés**: Ismeretlen RPC hívás előtt mindig ellenőrizd a függvény szignaturát: `SELECT pg_get_function_arguments(oid) FROM pg_proc WHERE proname = 'function_name'`.
