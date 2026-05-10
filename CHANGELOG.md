@@ -1,3 +1,25 @@
+## 2026-05-10 — v3.4.2 Sticky nav opacity javítás (átszűrődés megszüntetése)
+
+### Fixed — Sticky menüsávok teljes átlátszatlansága
+- A v3.4.1 sticky pozícionálás után a felhasználó észrevette, hogy görgetéskor a tartalom átszűrődik a sticky menüsávok mögött (a kapacitás kártyák `2200% / 355% / 42% / 1803%` és „Backend Developer" sor szövege látszott a menüsorok mögött).
+- **Gyökérok**: A főmenü TabsList `bg-background/98` osztálya (98% opacity) nem volt elég átlátszatlan, így a görgetett tartalom látszott rajta keresztül. Az almenü sávoknál `bg-background` volt, de a shadcn `TabsList` default `bg-muted` osztálya `cn()` merge után potenciálisan ütközhetett.
+- **Javítás** (`WorkspaceDashboard.tsx`, `ResourcesTab.tsx`):
+  - Főmenü TabsList: `bg-background/98` → `!bg-background` (`!` important modifier garantálja a default `bg-muted` felülírását)
+  - Almenü TabsListok (Calendar + Resources): `bg-background` → `!bg-background`
+  - Mindhárom sticky sávra `shadow-sm` hozzáadva — vizuális elválasztás a görgő tartalomtól
+- A görgetett tartalom ezután NEM látszik a sticky menüsávok mögött; a menüsávok teljesen átlátszatlanok.
+
+### Files changed
+- `src/components/enterprise/WorkspaceDashboard.tsx`
+- `src/components/enterprise/resources/ResourcesTab.tsx`
+
+### Acceptance criteria
+- ✅ Görgetéskor a felfelé csúszó tartalom NEM látszik a sticky főmenü-sáv mögött.
+- ✅ Görgetéskor a felfelé csúszó tartalom NEM látszik a sticky almenü-sávok mögött.
+- ✅ A sticky menüsávok bal alsó oldalán shadow-sm jelzi az átmenetet a tartalom felé.
+
+---
+
 ## 2026-05-10 — v3.4.1 Sticky navigációs sávok (főmenü + almenü regresszió-javítás)
 
 ### Fixed — Görgetéskor eltűnő navigációs sávok

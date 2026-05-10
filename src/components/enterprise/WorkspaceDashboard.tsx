@@ -269,7 +269,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
           </header>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className={layout === 'sidebar' ? 'sr-only' : 'sticky top-[var(--ws-header-h)] z-20 flex h-auto w-full justify-start gap-2 overflow-x-auto rounded-none border-b bg-background/98 px-[var(--shell-pad-x,1rem)] py-2.5'}>
+            <TabsList className={layout === 'sidebar' ? 'sr-only' : 'sticky top-[var(--ws-header-h)] z-20 flex h-auto w-full justify-start gap-2 overflow-x-auto rounded-none border-b !bg-background shadow-sm px-[var(--shell-pad-x,1rem)] py-2.5'}>
               {WORKSPACE_TOP_NAV_ITEMS.map((item) => {
                 const Icon = item.icon;
                 const visible =
@@ -330,7 +330,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
             {hasCalendarAccess && (
               <TabsContent value="calendar" className="space-y-3">
                 <Tabs defaultValue="calendar-main" className="space-y-3">
-                  <TabsList className="sticky top-[calc(var(--ws-header-h)_+_var(--ws-main-tabs-h))] z-10 grid grid-cols-4 w-full h-auto bg-background border-b rounded-none">
+                  <TabsList className="sticky top-[calc(var(--ws-header-h)_+_var(--ws-main-tabs-h))] z-10 grid grid-cols-4 w-full h-auto !bg-background border-b rounded-none shadow-sm">
                     <TabsTrigger value="calendar-main">Naptár</TabsTrigger>
                     <TabsTrigger value="calendar-timeline">Idővonal</TabsTrigger>
                     <TabsTrigger value="calendar-coverage">Kapacitástervező</TabsTrigger>
