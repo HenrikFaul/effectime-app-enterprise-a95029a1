@@ -1,3 +1,15 @@
+## 2026-05-10 — v3.3.6 Demo workspace seed schema-drift hotfix
+
+### Fixed — Demo workspace létrehozás 500 hibával megállt
+- **Gyökérok 1**: a `seed-demo-workspace` funkció több `leave_requests` rekordot még a régi séma szerint írt, ezért az új, kötelező `is_half_day` mező hiányában a backend 500-zal elhasalt.
+- **Gyökérok 2**: a demo seed egyes részei (`enterprise_daily_rules`, `enterprise_job_families`) már nem létező oszlopokra (`is_active`, `sort_order`) támaszkodtak, ami további schema-drift kockázatot okozott.
+- **Fix 1 — leave normalization**: a `supabase/functions/seed-demo-workspace/index.ts` mostantól minden seedelt szabadságkérelemre explicit kitölti a jelenlegi séma szerinti mezőket (`is_half_day`, `half_day_period`, `is_private`, `cancellation_reason`).
+- **Fix 2 — seed drift cleanup**: a daily rule és job family seed immár csak olyan mezőket küld a backendnek, amelyek ténylegesen léteznek az aktuális adatbázissémában.
+- **Fix 3 — build stabilizálás**: ismét eltávolítva a tévesen visszakerült `src/integrations/supabase/auth-middleware.ts`, amely nem létező TanStack importokkal törte a buildet.
+- **Validáció**: a javított edge function újra deployolva lett, és a `deno check supabase/functions/seed-demo-workspace/index.ts` sikeresen lefut.
+
+---
+
 ## 2026-05-10 — v3.3.5 Demo workspace leave-entities completion fix
 
 ### Fixed — Demo workspace szabadság-entitások részben hiányoztak

@@ -759,3 +759,13 @@ ugyanazt a `?tab=` paramétert hajtja, így zero state-loss), TopBar az
 ### [LESSON-REDESIGN-SHELL-003] Rules of Hooks — useState above early returns
 A workspace-picker `useState('')` került a `if (selectedWorkspaceId) return <WorkspaceDashboard/>` early return UTÁN. Amikor a felhasználó belépett egy workspace-be (early return aktív), a hook nem futott le; visszanavigáláskor lefutott — eltérő hook-szám → React production error #300 (Too many re-renders / hook mismatch), teljes app-blank.
 **Szabály:** minden useState/useEffect/useMemo HÍVÁS a komponens TETEJÉN, BÁRMILYEN feltételes return ELŐTT, kivétel nélkül. Új state-et SOHA ne tegyél conditional return alá.
+
+---
+
+### [HIBA-076] Demo seed schema drift — kötelező leave mezők + megszűnt seed oszlopok 500-as hibát okoztak
+- **Dátum**: 2026-05-10
+- **Fájl**: `supabase/functions/seed-demo-workspace/index.ts`, `supabase/functions/seed-demo-workspace/seed-data.ts`
+- **Hibaüzenet**: `null value in column "is_half_day" of relation "leave_requests" violates not-null constraint`, plus schema-cache figyelmeztetések a nem létező `enterprise_daily_rules.is_active` és `enterprise_job_families.sort_order` mezőkre.
+- **Gyökérok**: A demo seed részben régi DB-sémát követett. A szabadságkérelmek egy részénél a jelenlegi kötelező mezők nem lettek explicit kitöltve, miközben egyes seed definíciók még olyan oszlopokat is tartalmaztak, amelyek már nem léteznek az aktuális táblákban.
+- **Javítás**: A `leave_requests` seed minden rekordja normalizálva lett (`is_half_day`, `half_day_period`, `is_private`, `cancellation_reason`), a daily rule és job family seed-definíciókból pedig kikerültek a megszűnt mezők.
+- **Megelőzés**: Demo / edge seed módosítás előtt **mindig** a jelenlegi `src/integrations/supabase/types.ts` Insert-sémát vagy az aktuális migrációkat kell forrásigazságnak tekinteni; a seed-manifestben tilos legacy mezőt bent hagyni.
