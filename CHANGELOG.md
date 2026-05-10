@@ -1,3 +1,40 @@
+## 2026-05-10 — v3.5.0 Import/Export Center specifikáció (implementációs blueprint)
+
+### Spec — Bulk Data Management Center tervezési specifikáció
+
+A Settings → "CSV import (tagok + szabadságok)" és "Export" szekciók helyett egy teljes, entity-alapú, wizard-vezérelt **Import/Export Center** tervezési specifikációja. A spec implementációs blueprint — a kód következő sprintben készül.
+
+**Jelenlegi állapot (pre-spec):**
+- `ExportCenter`: csak leave/vacation export, fix mezők, nem re-importálható
+- `CsvImportPanel`: 2 hardcoded tab (tagok meghívása, szabadságok), nincs preview, nincs template, gyenge hibakezelés
+
+**Specifikált rendszer (`docs/IMPORT_EXPORT_CENTER_SPEC.md`):**
+- **Entity-selector**: kártya-alapú, skálázható entitás-választó (Tagok, Szabadságok, Telephelyek, Munkakategóriák, Munkakörök, Pozíciók, Készségek)
+- **Export wizard**: mezőkijelölés (kötelező mezők zárolva), import-kompatibilis sablon letöltés, XLSX/CSV
+- **Import wizard** (7 lépés): Instrukciók → Feltöltés → Oszlopleképezés → Validáció + Preview → Opciók → Megerősítés → Eredmény
+- **Config-driven entity registry**: új entitás hozzáadása = 1 config sor, UI módosítás nélkül
+- **Round-trip kompatibilitás**: export → szerkesztés → import működik újraformázás nélkül
+- **Partial success**: érvényes sorok bekerülnek, hibások kihagyva + letölthető hibalista
+- **Audit logging**: minden import/export rögzítve `enterprise_audit_events`-ben
+
+**Főbb döntések:**
+- XLSX elsődleges (styled header, dropdown validáció, oszlopvédelem), CSV másodlagos
+- Machine key fejlécek + `__schema_version` + importAlias a template stabilitásért
+- Részleges siker (nem teljes rollback) — enterprise bulk usecase igénye
+- Upsert opt-in; alapértelmezés: csak új sorok
+- Kötelező mezők: zár ikon + csillag minden kontextusban
+
+**Phase roadmap:**
+- Phase 1: Tagok + Szabadságok entitások, 7-lépéses wizard, Edge Function alapok
+- Phase 2: Összes entitás, inline javítás, upsert, hibalista letöltés
+- Phase 3: Multi-entity export, background job >500 sornál, import előzmény
+
+### Files added
+- `docs/IMPORT_EXPORT_CENTER_SPEC.md` *(new — 20 fejezetes implementációs spec)*
+- `versioning/100526003_v3.5.0_import-export-center-spec.md` *(new)*
+
+---
+
 ## 2026-05-10 — v3.4.2 Sticky nav opacity javítás (átszűrődés megszüntetése)
 
 ### Fixed — Sticky menüsávok teljes átlátszatlansága
