@@ -208,6 +208,71 @@
 *Utoljára frissítve: 2026-04-11 — v2.0.0*
 *Ez egy FOLYAMATOSAN BŐVÜLŐ fájl. Új hibákat MINDIG appendelj, SOHA ne törölj!*
 
+## ➕ APPEND — 2026-05-10 Org chart navigation + Bővebb adatok view
+
+### [LESSON-UI-076]: Drawer / pan-zoom canvas belsejében a kattintható elemekre `onMouseDown stopPropagation` is kell
+- **Context**: `OrgChartPremiumView` jobb oldali drawerében új interaktív gombok (`Vezető` + `Közvetlen beosztott` badge-ek, `Adatlap megnyitása` gomb) — egy pán-/zoom-os canvas mellett.
+- **Problem**: Az ős `<div>` `onMouseDown` indít drag-et; a drag a `DRAG_THRESHOLD` (6 px) átlépésekor elnyeli a click-et a `onClickCapture`-ben. Ha a belső gomb csak `onClick`-et kap, a felhasználó kattintása drag-re változhat finommotorikus mozgásnál → a click sosem tüzel.
+- **Fix**: Minden interaktív elem KAP `onMouseDown` handlert, ami `stopPropagation()`-t hív. Ezzel a drag NEM indul, és a `onClick` garantáltan tüzel. A `MiniPersonRow`, `DrawerLinkRow`, és az „Adatlap megnyitása" gomb mind ezt a mintát követi.
+- **Pattern**:
+  ```tsx
+  <button
+    onClick={onSwitchTo}
+    onMouseDown={(e) => e.stopPropagation()}  // pan-zoom canvasban kötelező
+  >
+    …
+  </button>
+  ```
+
+### [LESSON-SUPABASE-SDK-077]: Új opcionális tábla lekérdezésénél kezeljük explicit a "relation does not exist" (42P01) hibát
+- **Context**: A `MemberExtendedDetails` „Meghatározott célok" szekciója az új `enterprise_member_goals` táblát olvassa, de a tábla még nem feltétlenül létezik (a migráció lehet külön deployolva).
+- **Problem**: Ha az SDK egy nem-létező táblára hív `select`-et, az error.code === '42P01' (Postgres "relation does not exist"). A normál hibakezelés `toast.error(error.message)` mintával dobálná a piros toaszt minden render-nél.
+- **Fix**: A goals query külön try-catch + error.code ellenőrzés. Ha 42P01 vagy a `message` "does not exist" stringet tartalmaz → `goalsTableMissing = true` flag-et állítunk. A UI inline figyelmeztetést mutat ("A célok modul még nincs telepítve. Futtasd le a legújabb migrációt"), nem dobja össze a többi szekciót, és nem ugrál a toast.
+- **Pattern**:
+  ```ts
+  const res = await (supabase as any).from('enterprise_member_goals').select('id').limit(1);
+  if (res.error) {
+    if (String(res.error.code) === '42P01' || /does not exist/i.test(res.error.message ?? '')) {
+      setTableMissing(true);
+    } else {
+      console.warn('[X] load error:', res.error.message);
+    }
+  }
+  ```
+
+### [LESSON-SEED-078]: Done jegyek `external_updated_at` mezőjét a seedben backdate-elni kell, hogy időbeli vizualizációk működjenek
+- **Context**: A demo seed `enterprise_agile_issues` rekordokat hoz létre, részük `Done` státusszal. A MemberProfileSheet teljesítmény-diagramja az utolsó 12 hónap havi `story_points` összegét mutatja Done jegyekre az `external_updated_at` (vagy fallback `due_date`) alapján.
+- **Problem**: A seed eredetileg nem állította az `external_updated_at` mezőt, és a Done jegyek `due_date`-je is csak az utolsó 1-2 hét volt — emiatt a 12 hónapos diagram szinte mindig üres, a demo nem mutatja értelmesen a feature-t.
+- **Fix**: A seed insert előtt minden Done jegyhez számolunk egy backdated `external_updated_at` timestampet az utolsó 180 napra szétterítve, deterministic hash-szel (`(doneCounter * 37) % 175`). Így újra-seedelésnél is azonos eloszlást kapunk, és a chart a teljes 12 hónapos időablakot lefedi.
+- **Pattern**:
+  ```ts
+  let doneCounter = 0;
+  const issueRows = AGILE_ISSUE_DEFS.map(({ startOff, dueOff, ...rest }) => {
+    const isDone = (rest.status ?? '').toLowerCase() === 'done';
+    let externalUpdatedAt: string | null = null;
+    if (isDone) {
+      const offset = -180 + Math.round(((doneCounter * 37) % 175));
+      doneCounter += 1;
+      externalUpdatedAt = addDays(today, offset).toISOString();
+    }
+    return { ...rest, ...(externalUpdatedAt ? { external_updated_at: externalUpdatedAt } : {}) };
+  });
+  ```
+
+### [LESSON-ROUTING-SPA-079]: Deep-link tabváltáshoz külső callback prop, NEM közvetlen URL manipuláció
+- **Context**: A MemberProfileSheet „Bővebb adatok" szekcióiból deep-link gombokkal lehet a Resources / Workflows tabokra ugrani.
+- **Problem**: A `MemberProfileSheet` mélyen a komponensfa belsejében ül (Sheet portal-ban renderelődik), így nincs natív hozzáférése sem a `useSearchParams`-hoz, sem a `WorkspaceDashboard.setActiveTab`-hez. Korábbi `LeaveCalendar` patternünk már `onNavigateTab?: (tab: string) => void` propot használ.
+- **Fix**: Ugyanezt a prop pattern-t alkalmaztuk az új modulokra is. Az `onNavigateTab`-ot WorkspaceDashboard → MemberList / OrganizationModule → OrgChart → MemberProfileSheet láncon adjuk át. Minden köztes komponens csak forward-olja, és a végpontnál (MemberProfileSheet) a deep-link kattintáskor a helyi sheet bezárul, majd hívja `onNavigateTab(tab)` — így a setActiveTab dispatch + URL-szinkron a szülőben történik.
+- **Pattern**:
+  ```tsx
+  // Top: WorkspaceDashboard
+  <OrganizationModule onNavigateTab={setActiveTab} userId={userId} />
+  // Mid: OrganizationModule → OrgChart, MemberList → MemberProfileSheet
+  onNavigateTab={(tab) => { setSelectedMember(null); onNavigateTab?.(tab); }}
+  ```
+
+---
+
 ## ➕ APPEND — 2026-05-10 demo seed regresszió
 
 ### [HIBA-074] Edge seedben csendben elnyelt részleges insert-hiba → „kész” demo workspace, üres naptár

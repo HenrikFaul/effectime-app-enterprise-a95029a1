@@ -35,6 +35,7 @@ import {
   Plus,
   Minus,
   RotateCcw,
+  IdCard,
 } from 'lucide-react';
 
 // ─── constants ────────────────────────────────────────────────────────────────
@@ -119,6 +120,8 @@ interface ViewProps {
   allNodes: PremiumNode[];
   /** CSS height of the chart canvas (default: '520px'). Pass taller value for popup mode. */
   containerHeight?: string;
+  /** Opens the full MemberProfileSheet ("Adatlap") for the given node. */
+  onOpenMemberProfile?: (node: PremiumNode) => void;
 }
 
 // ─── root component ───────────────────────────────────────────────────────────
@@ -130,6 +133,7 @@ export function OrgChartPremiumView({
   workspaceId,
   allNodes,
   containerHeight = '520px',
+  onOpenMemberProfile,
 }: ViewProps) {
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [drawer, setDrawer] = useState<DrawerPayload | null>(null);
@@ -164,9 +168,9 @@ export function OrgChartPremiumView({
     setCollapsed((c) => ({ ...c, [id]: !c[id] }));
   }, []);
 
-  const openDrawer = useCallback(
+  /** Internal: load drawer payload for a given node and show it. Always opens (never toggles). */
+  const showDrawerFor = useCallback(
     async (node: PremiumNode) => {
-      if (drawer?.node.id === node.id) { setDrawer(null); return; }
       const managerNode = node.manager_id ? allNodes.find((n) => n.id === node.manager_id) : null;
       const managerName = managerNode?.display_name ?? null;
       const orgUnitName = node.org_unit_id ? (orgUnits[node.org_unit_id] ?? null) : null;
@@ -177,7 +181,24 @@ export function OrgChartPremiumView({
         .eq('membership_id', node.id);
       setDrawer({ node, managerName, orgUnitName, skillCount: count ?? 0 });
     },
-    [allNodes, orgUnits, workspaceId, drawer],
+    [allNodes, orgUnits, workspaceId],
+  );
+
+  /** Card click: toggles the drawer for that node. */
+  const openDrawer = useCallback(
+    async (node: PremiumNode) => {
+      if (drawer?.node.id === node.id) { setDrawer(null); return; }
+      await showDrawerFor(node);
+    },
+    [drawer, showDrawerFor],
+  );
+
+  /** Manager / direct-report badge click: switches the drawer to that person (always opens). */
+  const switchTo = useCallback(
+    (node: PremiumNode) => {
+      void showDrawerFor(node);
+    },
+    [showDrawerFor],
   );
 
   // ── Pan handlers ──────────────────────────────────────────────────────────
@@ -354,7 +375,14 @@ export function OrgChartPremiumView({
       </div>
 
       {/* ── side drawer ── */}
-      <EmployeeDrawer data={drawer} onClose={() => setDrawer(null)} isOpen={drawerOpen} />
+      <EmployeeDrawer
+        data={drawer}
+        onClose={() => setDrawer(null)}
+        isOpen={drawerOpen}
+        allNodes={allNodes}
+        onSwitchTo={switchTo}
+        onOpenMemberProfile={onOpenMemberProfile}
+      />
     </div>
   );
 }
@@ -603,9 +631,12 @@ interface DrawerProps {
   data: DrawerPayload | null;
   onClose: () => void;
   isOpen: boolean;
+  allNodes: PremiumNode[];
+  onSwitchTo: (node: PremiumNode) => void;
+  onOpenMemberProfile?: (node: PremiumNode) => void;
 }
 
-function EmployeeDrawer({ data, onClose, isOpen }: DrawerProps) {
+function EmployeeDrawer({ data, onClose, isOpen, allNodes, onSwitchTo, onOpenMemberProfile }: DrawerProps) {
   return (
     <div
       className="flex-shrink-0 overflow-hidden transition-[width,opacity] duration-300 ease-in-out border-l border-border/40"
@@ -613,9 +644,13 @@ function EmployeeDrawer({ data, onClose, isOpen }: DrawerProps) {
     >
       {data && (
         <div className="w-[296px] h-full flex flex-col" style={{ background: 'hsl(var(--card))' }}>
-          <DrawerHeader node={data.node} onClose={onClose} />
+          <DrawerHeader
+            node={data.node}
+            onClose={onClose}
+            onOpenMemberProfile={onOpenMemberProfile ? () => onOpenMemberProfile(data.node) : undefined}
+          />
           <ScrollArea className="flex-1">
-            <DrawerBody data={data} />
+            <DrawerBody data={data} allNodes={allNodes} onSwitchTo={onSwitchTo} />
           </ScrollArea>
         </div>
       )}
@@ -623,7 +658,15 @@ function EmployeeDrawer({ data, onClose, isOpen }: DrawerProps) {
   );
 }
 
-function DrawerHeader({ node, onClose }: { node: PremiumNode; onClose: () => void }) {
+function DrawerHeader({
+  node,
+  onClose,
+  onOpenMemberProfile,
+}: {
+  node: PremiumNode;
+  onClose: () => void;
+  onOpenMemberProfile?: () => void;
+}) {
   const [c1, c2] = paletteFor(node.user_id);
   const init = initials(node.display_name);
 
@@ -665,12 +708,37 @@ function DrawerHeader({ node, onClose }: { node: PremiumNode; onClose: () => voi
           <X className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* "Adatlap megnyitása" — opens the full MemberProfileSheet */}
+      {onOpenMemberProfile && (
+        <div className="px-4 pb-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="w-full h-8 gap-2 text-xs"
+            onClick={onOpenMemberProfile}
+          >
+            <IdCard className="h-3.5 w-3.5" />
+            Adatlap megnyitása
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
 
-function DrawerBody({ data }: { data: DrawerPayload }) {
+function DrawerBody({
+  data,
+  allNodes,
+  onSwitchTo,
+}: {
+  data: DrawerPayload;
+  allNodes: PremiumNode[];
+  onSwitchTo: (node: PremiumNode) => void;
+}) {
   const { node, managerName, orgUnitName, skillCount } = data;
+  const managerNode = node.manager_id ? allNodes.find((n) => n.id === node.manager_id) ?? null : null;
 
   return (
     <div className="px-4 py-4 space-y-4">
@@ -685,11 +753,20 @@ function DrawerBody({ data }: { data: DrawerPayload }) {
         {node.role && (
           <DrawerField icon={<Briefcase className="h-3.5 w-3.5" />} label="Szerepkör" value={node.role} />
         )}
-        <DrawerField
-          icon={<Star className="h-3.5 w-3.5" />}
-          label="Vezető"
-          value={managerName ?? '—'}
-        />
+        {managerNode ? (
+          <DrawerLinkRow
+            icon={<Star className="h-3.5 w-3.5" />}
+            label="Vezető"
+            node={managerNode}
+            onClick={() => onSwitchTo(managerNode)}
+          />
+        ) : (
+          <DrawerField
+            icon={<Star className="h-3.5 w-3.5" />}
+            label="Vezető"
+            value={managerName ?? '—'}
+          />
+        )}
       </section>
 
       <Divider />
@@ -711,7 +788,11 @@ function DrawerBody({ data }: { data: DrawerPayload }) {
       {node.children.length > 0 && (
         <div className="space-y-1.5">
           {node.children.slice(0, 6).map((child) => (
-            <MiniPersonRow key={child.id} node={child} />
+            <MiniPersonRow
+              key={child.id}
+              node={child}
+              onClick={() => onSwitchTo(child)}
+            />
           ))}
           {node.children.length > 6 && (
             <p className="text-[10px] text-center py-1" style={{ color: 'hsl(var(--muted-foreground))' }}>
@@ -779,13 +860,24 @@ function DrawerField({
   );
 }
 
-function MiniPersonRow({ node }: { node: PremiumNode }) {
+function MiniPersonRow({ node, onClick }: { node: PremiumNode; onClick?: () => void }) {
   const [c1, c2] = paletteFor(node.user_id);
   const init = initials(node.display_name);
+  const interactive = typeof onClick === 'function';
+  const Comp: any = interactive ? 'button' : 'div';
   return (
-    <div
-      className="flex items-center gap-2 rounded-lg px-2 py-1.5"
+    <Comp
+      type={interactive ? 'button' : undefined}
+      onClick={onClick}
+      onMouseDown={(e: React.MouseEvent) => { if (interactive) e.stopPropagation(); }}
+      className={[
+        'flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left',
+        interactive
+          ? 'cursor-pointer transition-colors hover:bg-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40'
+          : '',
+      ].join(' ')}
       style={{ background: 'hsl(var(--muted) / 0.4)' }}
+      aria-label={interactive ? `${node.display_name} kiválasztása` : undefined}
     >
       {node.avatar_url ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -802,7 +894,7 @@ function MiniPersonRow({ node }: { node: PremiumNode }) {
           {init}
         </div>
       )}
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="text-[11px] font-medium truncate">{node.display_name}</p>
         <p className="text-[10px] truncate" style={{ color: 'hsl(var(--muted-foreground))' }}>
           {node.business_role || node.role || '—'}
@@ -814,7 +906,58 @@ function MiniPersonRow({ node }: { node: PremiumNode }) {
           {node.reportsCount}
         </Badge>
       )}
-    </div>
+    </Comp>
+  );
+}
+
+function DrawerLinkRow({
+  icon,
+  label,
+  node,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  node: PremiumNode;
+  onClick: () => void;
+}) {
+  const [c1, c2] = paletteFor(node.user_id);
+  const init = initials(node.display_name);
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseDown={(e) => e.stopPropagation()}
+      className="flex w-full items-start gap-2.5 rounded-md text-left transition-colors hover:bg-accent/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 px-1 py-1 -mx-1"
+      aria-label={`${node.display_name} kiválasztása`}
+    >
+      <span className="flex-shrink-0 mt-0.5" style={{ color: 'hsl(var(--muted-foreground))' }}>
+        {icon}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[10px] uppercase tracking-wider font-medium" style={{ color: 'hsl(var(--muted-foreground))' }}>
+          {label}
+        </p>
+        <div className="mt-0.5 flex items-center gap-1.5">
+          {node.avatar_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={node.avatar_url}
+              alt={node.display_name}
+              className="h-5 w-5 rounded-full object-cover flex-shrink-0"
+            />
+          ) : (
+            <div
+              className="h-5 w-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0"
+              style={{ background: `linear-gradient(135deg, ${c1}, ${c2})` }}
+            >
+              {init}
+            </div>
+          )}
+          <p className="text-[12px] font-medium truncate hover:underline">{node.display_name}</p>
+        </div>
+      </div>
+    </button>
   );
 }
 

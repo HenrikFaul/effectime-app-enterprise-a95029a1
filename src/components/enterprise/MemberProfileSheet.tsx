@@ -9,11 +9,12 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
-import { User, Briefcase, Calendar, AlertTriangle, CheckCircle2, Clock, XCircle, Users, Edit2, Save, MapPin, Building2, Star } from 'lucide-react';
+import { User, Briefcase, Calendar, AlertTriangle, CheckCircle2, Clock, XCircle, Users, Edit2, Save, MapPin, Building2, Star, FileText, LayoutGrid } from 'lucide-react';
 import { toast } from 'sonner';
 import { NotificationPreferences } from './NotificationPreferences';
 import { RoleAllocationEditor, Allocation } from './RoleAllocationEditor';
 import { MemberSitePriorityEditor } from './MemberSitePriorityEditor';
+import { MemberExtendedDetails } from './MemberExtendedDetails';
 import { cn } from '@/lib/utils';
 import { useT } from '@/i18n/I18nProvider';
 import { AlertCircle } from 'lucide-react';
@@ -47,7 +48,11 @@ interface Props {
   isAdmin?: boolean;
   onMemberUpdated?: () => void;
   showEmail?: boolean;
+  /** Optional callback to switch the workspace top-level tab from the "Bővebb adatok" deep links. */
+  onNavigateTab?: (tab: string) => void;
 }
+
+type ProfileView = 'basic' | 'extended';
 
 // Workspace-wide allocation row used to compute peers per role
 interface PeerAllocation {
@@ -57,10 +62,11 @@ interface PeerAllocation {
   is_priority: boolean;
 }
 
-export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, allMembers, isAdmin = false, onMemberUpdated, showEmail = false }: Props) {
+export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, allMembers, isAdmin = false, onMemberUpdated, showEmail = false, onNavigateTab }: Props) {
   const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [view, setView] = useState<ProfileView>('basic');
   const [offices, setOffices] = useState<Office[]>([]);
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [businessRoles, setBusinessRoles] = useState<string[]>([]);
@@ -141,6 +147,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
   useEffect(() => {
     if (!member || !open) return;
     setEditing(false);
+    setView('basic');
     setLoading(true);
 
     Promise.all([
@@ -318,8 +325,46 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
           </SheetTitle>
         </SheetHeader>
 
-        <ScrollArea className="h-[calc(100vh-120px)]">
-          <div className="p-4 space-y-4">
+        {/* View toggle: Alapadatok | Bővebb adatok */}
+        <div className="px-6 pt-3 pb-2 border-b">
+          <div
+            role="tablist"
+            aria-label="Adatlap nézet"
+            className="inline-flex items-center gap-1 rounded-lg border bg-muted/40 p-0.5"
+          >
+            <button
+              role="tab"
+              aria-selected={view === 'basic'}
+              type="button"
+              onClick={() => setView('basic')}
+              className={cn(
+                "flex items-center gap-1.5 h-7 px-3 rounded-md text-xs font-medium transition-colors",
+                view === 'basic'
+                  ? "bg-background shadow-sm text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <FileText className="h-3.5 w-3.5" /> Alapadatok
+            </button>
+            <button
+              role="tab"
+              aria-selected={view === 'extended'}
+              type="button"
+              onClick={() => setView('extended')}
+              className={cn(
+                "flex items-center gap-1.5 h-7 px-3 rounded-md text-xs font-medium transition-colors",
+                view === 'extended'
+                  ? "bg-background shadow-sm text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              <LayoutGrid className="h-3.5 w-3.5" /> Bővebb adatok
+            </button>
+          </div>
+        </div>
+
+        <ScrollArea className="h-[calc(100vh-170px)]">
+          <div className="p-4 space-y-4" hidden={view !== 'basic'}>
             <OrganizationCompletionBanner member={member as any} />
             {/* Basic Info / Edit */}
             <Card>
@@ -601,6 +646,15 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
             {showEmail && (
               <NotificationPreferences workspaceId={workspaceId} userId={member.user_id} />
             )}
+          </div>
+
+          <div className="p-4" hidden={view !== 'extended'}>
+            <MemberExtendedDetails
+              workspaceId={workspaceId}
+              member={{ id: member.id, user_id: member.user_id, display_name: member.display_name }}
+              isAdmin={isAdmin}
+              onNavigateTab={onNavigateTab}
+            />
           </div>
         </ScrollArea>
       </SheetContent>

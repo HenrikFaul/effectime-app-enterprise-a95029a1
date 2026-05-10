@@ -1,3 +1,59 @@
+## 2026-05-10 — v3.4.0 Org chart navigable drawer + Member Bővebb adatok view
+
+### Added — Org chart adatlap kattintható manager + beosztott badge-ekkel
+- **OrgChartPremiumView** (`src/components/enterprise/organization/OrgChartPremiumView.tsx`): a jobb oldali drawerben a `Vezető` mező és a `Közvetlen beosztottak` mini-listája mostantól interaktív gombok. Egy kattintás a vezetőre / beosztottra azonnal átváltja az aktív kiválasztott személyt és újratölti a drawer adatait — a drawer nem zár be, így folyamatos hierarchia-böngészés lehetséges. A click swallow logika (`onMouseDown stopPropagation`) megakadályozza, hogy a pán-zoom drag elnyelje a kattintást.
+- **„Adatlap megnyitása" gomb**: a drawer fejléce alatt egy `IdCard` ikonos gomb megnyitja a teljes `MemberProfileSheet`-et — ugyanazt, ami a Tagok menüben kattintáskor jelenik meg, így a szervezeti diagramról közvetlenül elérhető a részletes profil.
+
+### Added — MemberProfileSheet „Alapadatok" / „Bővebb adatok" toggle
+- **MemberProfileSheet** (`src/components/enterprise/MemberProfileSheet.tsx`): a fejléc alatti új toggle-vel két nézet között váltható az adatlap.
+  - `Alapadatok` (alapértelmezett): változatlan tartalom — munkakör, csapat, iroda, KPI kártyák, közelgő/függő/korábbi szabadságok, értesítési beállítások.
+  - `Bővebb adatok` (új): hat szekció — készségek, onboarding, hozzáférések, célok/eredmények, hozzá rendelt Jira jegyek, és teljesítmény-diagram.
+- **MemberExtendedDetails** (`src/components/enterprise/MemberExtendedDetails.tsx` — új): minden szekció dedikált „menübe ugrás" gombbal jeleníti meg a tartalmat.
+  - **Készségek**: `enterprise_member_skills` + `enterprise_skills` join, csillag-szintezéssel; deeplink a Resources tabra.
+  - **Onboarding**: `enterprise_onboarding_instances` + `enterprise_onboarding_step_completions` (lépés progress bar + státusz badge); deeplink a Workflows tabra.
+  - **Hozzáférések**: `enterprise_access_requests` + `enterprise_access_systems` (státusz ikon, dátum); deeplink a Workflows tabra.
+  - **Meghatározott célok**: új `enterprise_member_goals` tábla, admin admin-only inline form (cím + leírás + határidő); státusz életciklus: open → in_progress → achieved/dropped. **Null-safe**: ha a migráció még nincs lefuttatva (Postgres 42P01), inline figyelmeztetést mutat „A célok modul még nincs telepítve" üzenettel — nem dobja össze az UI-t.
+  - **Jira jegyek**: `enterprise_agile_issues` az `assignee_name = display_name` alapján szűrve, story-points + státusz + külső hivatkozás; deeplink a Resources/Agile tabra.
+  - **Teljesítmény diagram**: utolsó 12 hónap havi bontásban — lezárt jegyek `story_points` összege oszlop-diagramon (recharts), Done jegyek `external_updated_at` (vagy fallback `due_date`) alapján.
+
+### Added — `enterprise_member_goals` tábla
+- **Migráció** (`supabase/migrations/20260510120000_member_goals.sql`): új tábla `workspace_id`, `member_id`, `title`, `description`, `status` (open/in_progress/achieved/dropped), `target_date`, `achieved_at`, `created_by`, `created_at`, `updated_at` mezőkkel. CASCADE törlés workspace és membership esetén.
+- **RLS**: a workspace tagjai olvashatják, csak owner + resourceAssistant írhat / módosíthat / törölhet (`is_enterprise_member` + `has_enterprise_role`). `update_updated_at_column` triggerrel.
+- **Indexek**: `(workspace_id)` és `(member_id)`.
+
+### Enhanced — Demo seed
+- **Member goals seed** (`MEMBER_GOAL_DEFS` in `supabase/functions/seed-demo-workspace/seed-data.ts`): 12 demo cél 12 különböző personához rendelve, vegyes státuszú (open / in_progress / achieved) — pl. „React 19 migráció vezetése", „Senior Backend előléptetés", „Cypress E2E coverage 60% felett". A seed `try`-mentes, csendes `console.warn`-ra esik vissza, ha a migráció nincs alkalmazva.
+- **Done agile jegyek backdating** (`supabase/functions/seed-demo-workspace/index.ts`): a `Done` státuszú jegyekre `external_updated_at` mezőt számolunk, az utolsó ~180 napra szétterítve (deterministic offset = `(doneCounter * 37) % 175`). Ennek köszönhetően a Bővebb adatok → Teljesítmény diagram realisztikus havi story-point eloszlást mutat újra-seedeléskor is.
+
+### Wiring
+- **OrgChart** (`src/components/enterprise/organization/OrgChart.tsx`): `MemberProfileSheet` integrálva, `office_id` mostantól része a member fetch-nek (a profile sheetnek kell). `onNavigateTab` és `userId` propot fogad.
+- **OrganizationModule** (`src/components/enterprise/organization/OrganizationModule.tsx`): továbbítja `onNavigateTab` / `userId` propokat az OrgChart-nak.
+- **WorkspaceDashboard** (`src/components/enterprise/WorkspaceDashboard.tsx`): `onNavigateTab={setActiveTab}` mostantól mind a `MemberList`-nek, mind az `OrganizationModule`-nak átadva.
+- **MemberList** (`src/components/enterprise/MemberList.tsx`): `onNavigateTab` prop fogadása + továbbadás a `MemberProfileSheet`-nek (deeplink-zárja a sheetet, majd vált tabot).
+
+### Files changed
+- `src/components/enterprise/organization/OrgChartPremiumView.tsx`
+- `src/components/enterprise/organization/OrgChart.tsx`
+- `src/components/enterprise/organization/OrganizationModule.tsx`
+- `src/components/enterprise/MemberProfileSheet.tsx`
+- `src/components/enterprise/MemberExtendedDetails.tsx` *(new)*
+- `src/components/enterprise/MemberList.tsx`
+- `src/components/enterprise/WorkspaceDashboard.tsx`
+- `supabase/migrations/20260510120000_member_goals.sql` *(new)*
+- `supabase/functions/seed-demo-workspace/seed-data.ts`
+- `supabase/functions/seed-demo-workspace/index.ts`
+- `versioning/100526001_v3.4.0_org-chart-navigation-and-member-extended-view.md` *(new)*
+
+### Acceptance criteria
+- ✅ Org chart drawer manager + minden beosztott badge kattintható; egy kattintás váltja a drawer kontextusát (a drawer nem zár be).
+- ✅ Drawer fejlécén „Adatlap megnyitása" gomb megnyitja a teljes MemberProfileSheet-et.
+- ✅ MemberProfileSheet tetején Alapadatok / Bővebb adatok toggle; az Alapadatok tartalom változatlan.
+- ✅ Bővebb adatokon mind a 6 szekció létezik (skills, onboarding, access, goals, jira, performance), mindegyik deeplink-gombbal a megfelelő menübe.
+- ✅ Demo seed létrehozza a célokat 12 personához, és visszadátumozza a Done jegyek `external_updated_at` mezőjét, így a teljesítmény diagram nem üres.
+- ✅ Migráció lefuttatva → célok írhatók/szerkeszthetők; ha még nincs lefuttatva, inline figyelmeztetés (nem dobja össze az UI-t).
+
+---
+
 ## 2026-05-10 — v3.3.6 Demo workspace seed schema-drift hotfix
 
 ### Fixed — Demo workspace létrehozás 500 hibával megállt

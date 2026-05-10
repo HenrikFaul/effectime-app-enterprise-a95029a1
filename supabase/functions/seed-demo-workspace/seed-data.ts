@@ -892,3 +892,28 @@ export const DEFAULT_SEED_QUANTITIES = {
   agile_issues:          33,  // full Kanban/Scrum/Gantt dataset
   ical_tokens:            4,
 };
+
+// ── Q. CÉLOK / EREDMÉNYEK (one-to-one beszélgetésekből) ─────────────────────
+// `assignee_name` segítségével rendelődnek hozzá a megfelelő demo personához.
+// Az index.ts a memberById map alapján keres rá.
+export const MEMBER_GOAL_DEFS: Array<{
+  assignee_name: string;
+  title: string;
+  description: string;
+  status: 'open' | 'in_progress' | 'achieved' | 'dropped';
+  target_offset_days: number | null;
+  achieved_offset_days?: number | null;
+}> = [
+  { assignee_name: 'Anna Kovács',     title: 'React 19 migráció vezetése',                    description: 'Q3-ban átállítjuk a Customer Portal-t React 19-re. Anna a tech lead.', status: 'in_progress', target_offset_days: 60 },
+  { assignee_name: 'Anna Kovács',     title: 'Mentor szerep – junior frontendesek',           description: 'Heti 1 óra code review és pair programming Dáviddal és Henriettával.',   status: 'achieved',    target_offset_days: -30, achieved_offset_days: -10 },
+  { assignee_name: 'Bence Tóth',      title: 'Senior Backend előléptetés',                    description: 'Architektúra design dokumentum + on-call rotáció megtanulása.',         status: 'in_progress', target_offset_days: 90 },
+  { assignee_name: 'Dávid Szabó',     title: 'TypeScript szakmai vizsga',                     description: 'Microsoft / Meta TS certification — Q4 vége.',                          status: 'open',        target_offset_days: 120 },
+  { assignee_name: 'Eszter Kiss',     title: 'Cypress E2E coverage 60% felett',               description: 'Customer Portal teljes login + dashboard útvonal lefedése.',            status: 'in_progress', target_offset_days: 45 },
+  { assignee_name: 'Ferenc Horváth',  title: 'Mikroszolgáltatás osztály belső előadás',       description: 'Knowledge sharing session a backend csapatnak — Sprint 13.',           status: 'open',        target_offset_days: 30 },
+  { assignee_name: 'Henrietta Fekete',title: 'Profil oldal redesign — UI rework',             description: 'Tímeával közösen, design system alapján.',                              status: 'achieved',    target_offset_days: -45, achieved_offset_days: -20 },
+  { assignee_name: 'Judit Molnár',    title: 'QA strategy dokumentum',                        description: 'Teljes test piramis (unit / integration / E2E / VRT) leírása.',         status: 'in_progress', target_offset_days: 21 },
+  { assignee_name: 'Petra Szász',     title: 'Konferencia előadás — React Summit',            description: 'Workshop a TanStack Query patternekről, október.',                      status: 'open',        target_offset_days: 150 },
+  { assignee_name: 'Sándor Veres',    title: 'PostgreSQL teljesítmény-finomhangolás',         description: 'Lassú reportok query plan elemzése + indexelés.',                       status: 'achieved',    target_offset_days: -60, achieved_offset_days: -35 },
+  { assignee_name: 'Viktor Mátyás',   title: 'Roadmap workshop facilitálás',                  description: 'Q4 roadmap kalibráció minden csapatvezetővel.',                         status: 'in_progress', target_offset_days: 14 },
+  { assignee_name: 'Zsuzsanna Hegedűs', title: 'Sprint review formátum újragondolása',        description: 'Demo + retro külön session-ben — visszajelzés alapján.',                status: 'achieved',    target_offset_days: -20, achieved_offset_days: -5 },
+];

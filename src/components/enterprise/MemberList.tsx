@@ -32,6 +32,8 @@ interface Props {
   workspaceId: string;
   userId: string;
   userRole: string;
+  /** Forwarded to MemberProfileSheet so its "Bővebb adatok" deep-links can switch top-level workspace tabs. */
+  onNavigateTab?: (tab: string) => void;
 }
 
 interface Member {
@@ -60,7 +62,7 @@ const STATUS_OPTIONS = [
   { value: 'suspended', label: 'Felfüggesztett' },
 ];
 
-export function MemberList({ workspaceId, userId, userRole }: Props) {
+export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Props) {
   const [members, setMembers] = useState<Member[]>([]);
   const [offices, setOffices] = useState<OfficeRef[]>([]);
   const [loading, setLoading] = useState(true);
@@ -500,6 +502,12 @@ export function MemberList({ workspaceId, userId, userRole }: Props) {
         allMembers={members}
         isAdmin={isAdmin}
         onMemberUpdated={fetchMembers}
+        onNavigateTab={(tab) => {
+          if (onNavigateTab) {
+            setSelectedMember(null);
+            onNavigateTab(tab);
+          }
+        }}
       />
 
       <InviteMemberDialog

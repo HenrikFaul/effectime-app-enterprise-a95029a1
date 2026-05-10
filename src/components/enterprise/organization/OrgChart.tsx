@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useT } from '@/i18n/I18nProvider';
 import { OrgChartPremiumView, PremiumNode } from './OrgChartPremiumView';
+import { MemberProfileSheet } from '../MemberProfileSheet';
 
 type ViewStyle = 'tree' | 'premium' | 'list';
 
@@ -31,6 +32,10 @@ const VIEW_STYLE_KEY = 'org_chart_view_style';
 interface Props {
   workspaceId: string;
   isAdmin: boolean;
+  /** When provided, the MemberProfileSheet's "Bővebb adatok" deep-links can switch top-level workspace tabs. */
+  onNavigateTab?: (tab: string) => void;
+  /** Current authenticated user id (used by MemberProfileSheet for self-only sections such as notification prefs). */
+  userId?: string;
 }
 
 interface Membership {
@@ -45,6 +50,7 @@ interface Membership {
   city: string | null;
   team: string | null;
   joined_at: string | null;
+  office_id?: string | null;
 }
 
 interface ProfileMap {
@@ -87,7 +93,7 @@ function initials(name: string): string {
   );
 }
 
-export function OrgChart({ workspaceId, isAdmin }: Props) {
+export function OrgChart({ workspaceId, isAdmin, onNavigateTab, userId }: Props) {
   const t = useT();
   const [members, setMembers] = useState<Membership[]>([]);
   const [profiles, setProfiles] = useState<ProfileMap>({});
@@ -96,6 +102,7 @@ export function OrgChart({ workspaceId, isAdmin }: Props) {
   const [snapshotAt, setSnapshotAt] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
+  const [profileMember, setProfileMember] = useState<any | null>(null);
   const [view, setView] = useState<ViewStyle>(() => {
     try {
       const saved = localStorage.getItem(VIEW_STYLE_KEY);
@@ -117,7 +124,7 @@ export function OrgChart({ workspaceId, isAdmin }: Props) {
 
     const { data: memberships, error } = await (supabase as any)
       .from('enterprise_memberships')
-      .select('id, user_id, manager_id, org_unit_id, role, status, business_role, location, city, team, joined_at')
+      .select('id, user_id, manager_id, org_unit_id, role, status, business_role, location, city, team, joined_at, office_id')
       .eq('workspace_id', workspaceId)
       .eq('status', 'active');
 
@@ -203,6 +210,30 @@ export function OrgChart({ workspaceId, isAdmin }: Props) {
     tree.forEach(visit);
     return flat;
   }, [tree]);
+
+  // Membership rows in the shape MemberProfileSheet expects.
+  // PremiumNode → Member: same primary fields plus optional office_id pulled from the raw membership row.
+  const allMembersForProfile = useMemo(() => {
+    const officeById = new Map(members.map((m) => [m.id, m.office_id ?? null] as const));
+    return allNodes.map((n) => ({
+      id: n.id,
+      user_id: n.user_id,
+      role: n.role || 'member',
+      status: n.status,
+      team: n.team,
+      location: n.location,
+      business_role: n.business_role,
+      joined_at: n.joined_at,
+      display_name: n.display_name,
+      city: n.city,
+      office_id: officeById.get(n.id) ?? null,
+    }));
+  }, [allNodes, members]);
+
+  const openProfileFor = (node: PremiumNode) => {
+    const found = allMembersForProfile.find((m) => m.id === node.id);
+    if (found) setProfileMember(found);
+  };
 
   const filterTerm = search.trim().toLowerCase();
   const matches = (n: Node): boolean => {
@@ -326,6 +357,7 @@ export function OrgChart({ workspaceId, isAdmin }: Props) {
               workspaceId={workspaceId}
               allNodes={allNodes as PremiumNode[]}
               containerHeight="calc(90vh - 80px)"
+              onOpenMemberProfile={openProfileFor}
             />
           </div>
         </DialogContent>
@@ -343,6 +375,7 @@ export function OrgChart({ workspaceId, isAdmin }: Props) {
           isAnyVisible={isAnyVisible as (n: PremiumNode) => boolean}
           workspaceId={workspaceId}
           allNodes={allNodes as PremiumNode[]}
+          onOpenMemberProfile={openProfileFor}
         />
       ) : view === 'tree' ? (
         <div className="org-chart-scroll relative overflow-x-auto rounded-xl border bg-gradient-to-b from-muted/20 via-background to-background p-6">
@@ -374,6 +407,23 @@ export function OrgChart({ workspaceId, isAdmin }: Props) {
           ))}
         </div>
       )}
+
+      <MemberProfileSheet
+        open={!!profileMember}
+        onOpenChange={(o) => !o && setProfileMember(null)}
+        member={profileMember}
+        workspaceId={workspaceId}
+        allMembers={allMembersForProfile as any}
+        isAdmin={isAdmin}
+        showEmail={!!userId && profileMember?.user_id === userId}
+        onNavigateTab={(tab) => {
+          if (onNavigateTab) {
+            setProfileMember(null);
+            setFullscreenOpen(false);
+            onNavigateTab(tab);
+          }
+        }}
+      />
     </div>
   );
 }
