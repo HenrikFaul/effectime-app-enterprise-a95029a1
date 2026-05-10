@@ -522,7 +522,7 @@ export function MemberExtendedDetails({ workspaceId, member, isAdmin, onNavigate
       {/* ─── Performance chart ──────────────────────────────────────────── */}
       <SectionCard
         icon={<TrendingUp className="h-4 w-4 text-primary" />}
-        title="Teljesítmény (utolsó 12 hónap)"
+        title="Teljesítmény (12 hónap)"
         action={
           <div className="flex items-center gap-2">
             <ChartTypeToggle
@@ -662,11 +662,16 @@ function SectionCard({
   children: React.ReactNode;
 }) {
   return (
-    <Card>
+    <Card className="overflow-hidden">
       <CardHeader className="py-3 px-4">
-        <CardTitle className="text-sm flex items-center justify-between gap-2">
-          <span className="flex items-center gap-2">{icon}{title}</span>
-          {action}
+        <CardTitle className="text-sm">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 min-w-0">
+            <span className="flex items-center gap-1.5 min-w-0 shrink-1">
+              <span className="shrink-0">{icon}</span>
+              <span className="truncate">{title}</span>
+            </span>
+            {action && <span className="ml-auto shrink-0">{action}</span>}
+          </div>
         </CardTitle>
       </CardHeader>
       <CardContent className="px-4 pb-3">{children}</CardContent>

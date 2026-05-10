@@ -300,7 +300,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full sm:max-w-lg p-0">
+      <SheetContent className="w-full sm:max-w-xl p-0 overflow-x-hidden">
         <SheetHeader className="p-6 pb-4 border-b">
           <SheetTitle className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -363,7 +363,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
           </div>
         </div>
 
-        <ScrollArea className="h-[calc(100vh-170px)]">
+        <ScrollArea className="h-[calc(100vh-170px)] overflow-x-hidden">
           <div className="p-4 space-y-4" hidden={view !== 'basic'}>
             <OrganizationCompletionBanner member={member as any} />
             {/* Basic Info / Edit */}
