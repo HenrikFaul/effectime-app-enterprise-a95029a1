@@ -736,7 +736,7 @@ Deno.serve(async (req) => {
         quota_id: quotaId,
         membership_id: membership.id,
         leave_request_id: insertedLeave.id,
-        transaction_type: 'usage',
+        transaction_type: 'consume',
         amount_days: -approvedDays,
         reason: `Demo seed: ${request.comment ?? 'jóváhagyott szabadság'}`,
         created_by: ownerId,
