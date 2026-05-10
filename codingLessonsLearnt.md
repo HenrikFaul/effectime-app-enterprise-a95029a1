@@ -208,6 +208,16 @@
 *Utoljára frissítve: 2026-04-11 — v2.0.0*
 *Ez egy FOLYAMATOSAN BŐVÜLŐ fájl. Új hibákat MINDIG appendelj, SOHA ne törölj!*
 
+## ➕ APPEND — 2026-05-10 demo seed regresszió
+
+### [HIBA-074] Edge seedben csendben elnyelt részleges insert-hiba → „kész” demo workspace, üres naptár
+- **Dátum**: 2026-05-10
+- **Fájl**: `supabase/functions/seed-demo-workspace/index.ts`
+- **Hibaüzenet**: Frontenden tünetként jelentkezett: a demo workspace létrejött, de a `leave_requests` rekordok nem jelentek meg a Naptár / Idővonal / Kérelmek nézetekben.
+- **Gyökérok**: A seed függvény a `leave_requests` insert eredményéből csak a `data` mezőt vette ki, az `error` mezőt nem kezelte. Ha a beszúrás bármely új séma-/policy-/trigger-változás miatt elbukott, a seed ettől még továbbfutott és „sikeres” workspace-et adott vissza, csak éppen szabadságadatok nélkül.
+- **Javítás**: A `leave_requests` insert most már explicit `error` ellenőrzést kapott; hiba esetén a függvény logol és `throw`-val megszakítja a demo seedet. Emellett a seed-elágazás feltétele az lett, hogy valóban létezzenek seedelt szabadságtípusok, ne egy félrevezető, nem használt ID-változó.
+- **Megelőzés**: Edge function seedekben **SOHA** ne hagyj részleges, üzletileg kritikus insertet fail-soft módban. Minden core demóadat-blokk (`memberships`, `leave_requests`, `projects`, stb.) esetén kötelező az `error` explicit kezelése; ha a blokk a felület működéséhez szükséges, fail-fast kell, nem csendes fallback.
+
 ## ➕ APPEND — 2026-03-31 build hiba kiegészítés
 
 ### [HIBA-023] Supabase Edge Function `Deno` globál — Next.js build alatti típushiba

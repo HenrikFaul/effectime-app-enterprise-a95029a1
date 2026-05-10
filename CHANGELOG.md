@@ -1,3 +1,13 @@
+## 2026-05-10 — v3.3.4 Demo workspace leave seed fail-fast fix
+
+### Fixed — Demo workspace szabadságok nem jelentek meg a naptárban
+- **Gyökérok**: a `seed-demo-workspace` edge function létrehozta a demo workspace többi részét, de a `leave_requests` beszúrás hibáját nem kezelte. Emiatt a demo workspace elkészülhetett 0 szabadságkérelemmel is, miközben a frontend helyesen a `leave_requests` táblából olvas — így a Naptár, Idővonal és Kérelmek üres maradt.
+- **Fix 1 — fail-fast seed**: a `supabase/functions/seed-demo-workspace/index.ts` mostantól explicit kezeli a `leave_requests` insert hibáját, naplózza, majd megszakítja a seedelést érthető hibával ahelyett, hogy csendben hibás demo workspace-et hozna létre.
+- **Fix 2 — seed guard**: a szabadságkérelmek seedelése már nem egyetlen, félrevezető `annualLeaveTypeId` feltételhez kötött, hanem ahhoz, hogy a workspace szabadságtípus-katalógusa valóban létrejött-e.
+- **Eredmény**: új demo workspace létrehozásakor a seed vagy teljesen, szabadságadatokkal együtt készül el, vagy azonnal hibaüzenettel megáll; többé nem jön létre „látszólag kész”, de naptáradat nélküli demo workspace.
+
+---
+
 ## 2026-05-09 — v3.3.3 Timeline infinite re-render loop fix
 
 ### Fixed — Végtelen újrarenderelés → skeleton freeze (`WorkspaceDashboard` + `TimelineView`)
