@@ -273,6 +273,79 @@
 
 ---
 
+## ➕ APPEND — 2026-05-10 Import/Export Center implementáció
+
+### [LESSON-IMPORT-081]: Config-driven entity registry > entity-specific UI komponensek
+**Context**: Bulk import/export rendszer 7 entitásra (Members, Leave, Offices, Work Categories, Job Roles, Positions, Skills). Naiv megközelítés: minden entitásra külön panel komponens.
+**Problem**: Külön komponens / entitás megduplikálja az UI logikát (mezőkijelölő, validátor, oszlopleképezés, error preview), és minden új entitás kódfejlesztést igényelne.
+**Fix**: Egyetlen config tömb `ENTITY_REGISTRY[]` definiálja az összes entitást field-szinten (`FieldDefinition`: key, label, type, required, importable, exportable, computed, group, importAlias, templateExample, protected). A wizard, field picker, mapper, validátor mind ebből olvas. Új entitás = 1 sor a configban + Edge Function handler — UI komponens érintetlen.
+**Pattern**:
+```ts
+export const ENTITY_REGISTRY: EntityConfig[] = [
+  { key: 'members', label: 'Tagok', icon: Users, fields: MEMBER_FIELDS, ... },
+  // ...további entitások
+];
+
+// UI:
+const entity = getEntityConfig(entityKey);
+entity.fields.filter(f => f.exportable).forEach(...)
+```
+**Megelőzés**: Mielőtt entitás-specifikus komponenst írsz: kérdezd meg, hogy egy config-driven approach megoldaná-e. Ha 3+ hasonló entitás van, KÖTELEZŐ a config-pattern.
+
+### [LESSON-CSV-082]: RFC 4180-kompatibilis CSV parser saját kézzel — embedded comma + quote support
+**Context**: A korábbi `CsvImportPanel.parseCSV` csak `line.split(',')`-ot használt. Ez töri a `"Kovács, Béla"` típusú quoted mezőket, és nem kezeli a `""` escape-et.
+**Problem**: Felhasználói exportok gyakran tartalmaznak vesszőt (címek, megjegyzések) vagy idézőjelet (cégnevek). Naiv splitter `,`-nél töri, validációs hiba helyett rossz adat kerül a DB-be.
+**Fix**: State-machine alapú parser `inQuotes` flag-el, kezeli a `""` escape-et, CRLF / LF line endings, BOM strip. Lásd `import-export/utils/file-parser.ts → parseCSV()`.
+**Pattern**:
+```ts
+let inQuotes = false;
+while (i < text.length) {
+  const ch = text[i];
+  if (inQuotes) {
+    if (ch === '"' && text[i + 1] === '"') { cell += '"'; i += 2; continue; }
+    if (ch === '"') { inQuotes = false; i++; continue; }
+    cell += ch; i++; continue;
+  }
+  if (ch === '"') { inQuotes = true; i++; continue; }
+  // ... comma, newline, default
+}
+```
+**Megelőzés**: Soha ne használj `string.split(',')` CSV parsoláshoz. Ha nem akarsz library-t hozni (papaparse), írj state-machine parsert vagy regex-mentes karakter-szintű loopot.
+
+### [LESSON-IMPORT-083]: Excel XML (.xls) format > .xlsx ZIP format browser környezetben library nélkül
+**Context**: A felhasználók Excel-ben szerkesztett fájlokat töltenek fel. .xlsx valódi formátum: ZIP archívum XML fájlokkal — JSZip vagy SheetJS kell hozzá.
+**Problem**: Külső library hozzáadása növeli a bundle-t (~300KB SheetJS). Sandbox környezetben nem mindig telepíthető.
+**Fix**: Excel XML Spreadsheet 2003 formátum (`.xls`-ként mentve) — egy single XML fájl, semmilyen ZIP, könnyen olvasható/írható kézzel. Excel és LibreOffice natívan megnyitja. Generálás: `<Workbook><Worksheet><Table><Row><Cell><Data>...</Data></Cell></Row>...`. Olvasás: regex `/<Row[^>]*>([\s\S]*?)<\/Row>/g`.
+**Megelőzés**: Ha XLSX-fertőző alkalmazást fejlesztesz library nélkül: használd az Excel XML Spreadsheet 2003 formátumot. Ha valódi .xlsx kell, hozz be SheetJS-t.
+
+### [LESSON-IMPORT-084]: Auto-detect + skip guidance row template-ekben
+**Context**: Az import-kompatibilis sablon második sora egy útmutató sor (`kovacs.bela@ceg.hu`, `Kovács Béla`, `Backend`...). Ha a felhasználó nem törli ki, az importba kerül mint adat.
+**Problem**: Ha a wizard automatikusan elsőnek ezt importálja, hibát dob ("kovacs.bela@ceg.hu" nem létezik a profiles táblában). Vagy létrehoz egy hamis "Kovács Béla" tagot.
+**Fix**: Auto-detect heurisztika a feltöltés után: ha a 2. sor email mezője nem érvényes email VAGY tartalmazza a `@ceg.hu` placeholder domaint → automatikusan kihagyjuk. Toast: "Útmutató sor automatikusan kihagyva".
+**Pattern**:
+```ts
+function detectGuidanceRow(entity, mapping, firstRow) {
+  const emailField = entity.fields.find(f => f.type === 'email' && f.required);
+  if (!emailField) return false;
+  const v = firstRow[mappedHeader].trim();
+  if (v.includes('@ceg.hu')) return true;
+  if (v && !EMAIL_RE.test(v)) return true;
+  return false;
+}
+```
+**Megelőzés**: Bármilyen template formátumnál, ahol vannak nem-adat sorok (header, guidance, totals): auto-detect logikát építs az importerbe. Soha ne hagyd a felhasználóra a manuális tisztogatást.
+
+### [LESSON-IMPORT-085]: Members import = invitation flow új email-ekhez, közvetlen update meglévőkhöz
+**Context**: Tagok bulk importálásánál két eset van: (a) új email cím nincs a `profiles` táblában (új user), (b) meglévő email a profiles-ban (létező user, esetleg másik workspace-ben).
+**Problem**: Ha új user-t közvetlenül `enterprise_memberships`-be írunk be `user_id` nélkül, FK constraint sérül. Ha megpróbálunk auth admin API-val accountot létrehozni, az kötelez jelszó-stratégia + jelszó visszaállítás emailre küldést.
+**Fix**:
+- Új email (nincs profile): `enterprise_invitations`-be insert (létező pattern!) — a workspace owner később jóváhagyja, a felhasználó tudja regisztrálni az emailen kapott linkkel.
+- Meglévő user, nincs membership: közvetlen `enterprise_memberships` insert.
+- Meglévő user, van membership: create módban skip, upsert módban update.
+**Megelőzés**: Bulk import felhasználó-kapcsolatos entitásoknál SOHA ne kerüld meg az auth flow-t. Új user-eket invitációval hozz be — ez biztonságos, audit-elhető, és a meglévő UX-szel konzisztens.
+
+---
+
 ## ➕ APPEND — 2026-05-10 Sticky navigáció regresszió-javítás
 
 ### [LESSON-UI-080]: Sticky tab-sáv / almenü-sáv — CSS custom property alapú top-offset

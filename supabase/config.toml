@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.seed-demo-workspace]
 verify_jwt = true
+
+[functions.import-entity-data]
+verify_jwt = true

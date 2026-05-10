@@ -42,7 +42,7 @@ import { ICalSubscription } from './ICalSubscription';
 import { AllowanceManager } from './AllowanceManager';
 import { WorkspaceGeneralSettings } from './WorkspaceGeneralSettings';
 import { BrandingManager } from './BrandingManager';
-import { CsvImportPanel } from './CsvImportPanel';
+import { ImportExportCenter } from './import-export/ImportExportCenter';
 import { AnnualLeaveGrid } from './AnnualLeaveGrid';
 import { BirthdayAnniversaryWidget } from './BirthdayAnniversaryWidget';
 import { AnnualTrendChart } from './AnnualTrendChart';
@@ -920,8 +920,8 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
       )}
 
       {isAdmin && (
-        <SettingsSection workspaceId={workspace.id} sectionKey="settings.csv_import" icon={<Inbox className="h-4 w-4" />} title="CSV import (tagok + szabadságok)">
-          <CsvImportPanel workspaceId={workspace.id} userId={userId} />
+        <SettingsSection workspaceId={workspace.id} sectionKey="settings.import_export" icon={<Inbox className="h-4 w-4" />} title="Adatkezelés — Import / Export">
+          <ImportExportCenter workspaceId={workspace.id} userId={userId} isAdmin={isAdmin} />
         </SettingsSection>
       )}
 
