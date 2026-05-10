@@ -192,7 +192,7 @@ Deno.serve(async (req) => {
       .insert(LEAVE_TYPE_DEFS.map((lt, idx) => ({ ...lt, workspace_id: workspaceId, sort_order: idx, is_active: true })))
       .select('id,name');
     if (leaveTypesErr) console.error('[seed] leave_types insert failed:', leaveTypesErr.message);
-    const annualLeaveTypeId = (leaveTypes ?? []).find((l: any) => l.name === 'Éves szabadság')?.id ?? null;
+    const hasSupportedLeaveTypes = (leaveTypes ?? []).length > 0;
 
     // ── A7. Public holidays ─────────────────────────────────────────────────
     const { error: holidaysErr } = await admin.from('enterprise_holidays').insert(
@@ -440,7 +440,7 @@ Deno.serve(async (req) => {
     // ── C7. Leave requests ────────────────────────────────────────────────────
     const personas = demoUserIds.slice();
     const leaveRequests: any[] = [];
-    if (annualLeaveTypeId && personas.length >= 3) {
+    if (hasSupportedLeaveTypes && personas.length >= 3) {
       leaveRequests.push({
         workspace_id: workspaceId, user_id: personas[0].user_id, leave_type: 'vacation',
         start_date: fmtDate(addDays(today, -20)), end_date: fmtDate(addDays(today, -16)),
@@ -671,9 +671,13 @@ Deno.serve(async (req) => {
         status: 'approved', reviewer_id: ownerId, reviewed_at: addDays(today, -1).toISOString(), comment: 'Hosszú hétvége',
       });
     }
-    const { data: insertedLeaves } = leaveRequests.length
+    const { data: insertedLeaves, error: insertedLeavesErr } = leaveRequests.length
       ? await admin.from('leave_requests').insert(leaveRequests).select('id,status,user_id')
-      : { data: [] };
+      : { data: [], error: null };
+    if (insertedLeavesErr) {
+      console.error('[seed] leave_requests insert FAILED:', insertedLeavesErr.message, JSON.stringify(insertedLeavesErr));
+      throw new Error(`Demo szabadságadatok seedelése sikertelen: ${insertedLeavesErr.message}`);
+    }
 
     // ── C8. Approval decisions (for decided requests) ─────────────────────────
     const approvalDecisionRows: any[] = [];
