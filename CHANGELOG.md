@@ -1,3 +1,16 @@
+## 2026-05-10 — v3.3.5 Demo workspace leave-entities completion fix
+
+### Fixed — Demo workspace szabadság-entitások részben hiányoztak
+- **Gyökérok 1**: a `seed-demo-workspace` függvény a `leave_requests` seedet ugyan építette, de a friss demo workspace-ekben továbbra is előállhatott 0 rekordos állapot, miközben más leave táblák (kvóták, ünnepnapok, céges szabadnapok) létrejöttek.
+- **Gyökérok 2**: az `enterprise_daily_rules` seed nem adta át a kötelező `created_by` mezőt, ezért ez a rész üres maradt.
+- **Gyökérok 3**: az éves nézethez szükséges `enterprise_quota_transactions` seed egyáltalán nem jött létre, ezért a „Vacation used” / maradék napok demó adatoknál hiányosak maradtak.
+- **Fix 1 — seed hardening**: a `supabase/functions/seed-demo-workspace/index.ts` mostantól normalizálja és szűri a seedelt szabadságkérelmeket, majd csak ezeket írja a `leave_requests` táblába.
+- **Fix 2 — daily rules**: a demo seed már `created_by` mezővel írja az `enterprise_daily_rules` rekordokat is.
+- **Fix 3 — quota tx seed**: a jóváhagyott demo szabadságokhoz automatikusan létrejönnek a kapcsolódó `enterprise_quota_transactions` rekordok, így az éves nézet és kvótaegyenlegek valós demo felhasználást mutatnak.
+- **Build**: újra eltávolítva a véletlenül visszakerült `src/integrations/supabase/auth-middleware.ts`, amely ismét `@tanstack/react-start` import hibával törte a buildet.
+
+---
+
 ## 2026-05-10 — v3.3.4 Demo workspace leave seed fail-fast fix
 
 ### Fixed — Demo workspace szabadságok nem jelentek meg a naptárban
