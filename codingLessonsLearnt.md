@@ -218,6 +218,14 @@
 - **Javítás**: A `leave_requests` insert most már explicit `error` ellenőrzést kapott; hiba esetén a függvény logol és `throw`-val megszakítja a demo seedet. Emellett a seed-elágazás feltétele az lett, hogy valóban létezzenek seedelt szabadságtípusok, ne egy félrevezető, nem használt ID-változó.
 - **Megelőzés**: Edge function seedekben **SOHA** ne hagyj részleges, üzletileg kritikus insertet fail-soft módban. Minden core demóadat-blokk (`memberships`, `leave_requests`, `projects`, stb.) esetén kötelező az `error` explicit kezelése; ha a blokk a felület működéséhez szükséges, fail-fast kell, nem csendes fallback.
 
+### [HIBA-075] Demo leave seed csak részben kész, ha a kapcsolódó táblák nem követik a tényleges olvasási láncot
+- **Dátum**: 2026-05-10
+- **Fájl**: `supabase/functions/seed-demo-workspace/index.ts`
+- **Hibaüzenet**: Frontenden tünetként jelentkezett: a demo workspace-ben voltak kvóták és egyéb leave entitások, de a napi szabályok üresek maradtak, az éves nézetben pedig a felhasznált napok / maradék nem tükrözte a demo szabadságokat.
+- **Gyökérok**: A seed nem a modul teljes adatolvasási láncára készült. Az `enterprise_daily_rules` insertből hiányzott a kötelező `created_by`, az `enterprise_quota_transactions` pedig egyáltalán nem seedelődött, pedig az éves nézet ezt olvassa a quota felhasználás kiszámításához.
+- **Javítás**: A daily rules seed már `created_by` mezővel fut, és a jóváhagyott demo `leave_requests` rekordokhoz automatikusan létrejönnek a kapcsolódó `enterprise_quota_transactions` sorok is.
+- **Megelőzés**: Seed fejlesztésnél **MINDIG** a teljes UI adatforrás-láncot ellenőrizd, ne csak a „fő” táblát. Ha egy nézet több táblából áll össze (`leave_requests` + `enterprise_leave_quotas` + `enterprise_quota_transactions` + szabálytáblák), akkor a demo seed csak akkor tekinthető késznek, ha mindegyik workspace-scope forrás kap használható rekordokat.
+
 ## ➕ APPEND — 2026-03-31 build hiba kiegészítés
 
 ### [HIBA-023] Supabase Edge Function `Deno` globál — Next.js build alatti típushiba
