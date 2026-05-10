@@ -1,0 +1,433 @@
+{
+  "_meta": {
+    "documentId": "HELP_MENU_MASTERFILE",
+    "version": "3.3.6",
+    "generatedAt": "2026-05-10T12:00:00Z",
+    "repository": "HenrikFaul/effectime-app-enterprise-a95029a1",
+    "branch": "claude/create-software-documentation-O7kj1",
+    "revision": "8919c402e74e41bbe83ccf1e6385c92d0fddeada",
+    "confidence": "high",
+    "locale": "HU",
+    "relatedDocs": [
+      "docs/DOC_INDEX.md",
+      "docs/BUSINESS_SYSTEM_REFERENCE.md",
+      "docs/USER_MANUAL.md",
+      "docs/PROCESS_FLOWS.md",
+      "docs/NAVIGATION_TREE.md",
+      "docs/TECHNICAL_ARCHITECTURE.md",
+      "docs/FEATURE_CATALOG.md",
+      "docs/ROLE_PERMISSION_MATRIX.md",
+      "docs/DATA_FLOW_AND_ENTITY_REFERENCE.md",
+      "docs/CHANGE_INTELLIGENCE_APPENDIX.md",
+      "docs/DOC_GENERATION_REPORT.md"
+    ]
+  },
+  "documents": [
+    {
+      "id": "doc-001",
+      "filename": "DOC_INDEX.md",
+      "path": "docs/DOC_INDEX.md",
+      "title": "Dokumentáció-index",
+      "description": "Navigációs index az összes dokumentumhoz, gyors linkekkel",
+      "audience": ["all"],
+      "tags": ["index", "navigation", "overview"]
+    },
+    {
+      "id": "doc-002",
+      "filename": "BUSINESS_SYSTEM_REFERENCE.md",
+      "path": "docs/BUSINESS_SYSTEM_REFERENCE.md",
+      "title": "Üzleti rendszer-referencia",
+      "description": "Részletes üzleti képességek modulonként: workspace, tagok, szabadságok, jóváhagyások, naptár, org struktúra, erőforrások, agile, workflows, riportok, beállítások",
+      "audience": ["product-owner", "business-analyst", "support"],
+      "tags": ["business", "modules", "reference"]
+    },
+    {
+      "id": "doc-003",
+      "filename": "USER_MANUAL.md",
+      "path": "docs/USER_MANUAL.md",
+      "title": "Felhasználói kézikönyv",
+      "description": "Lépésről-lépésre útmutatók a főbb munkafolyamatokhoz: bejelentkezés, munkaterület, kérelmek, jóváhagyás, naptár, riportok, agile, szervezet, beállítások",
+      "audience": ["member", "admin", "end-user"],
+      "tags": ["user-manual", "how-to", "step-by-step"]
+    },
+    {
+      "id": "doc-004",
+      "filename": "PROCESS_FLOWS.md",
+      "path": "docs/PROCESS_FLOWS.md",
+      "title": "Folyamatábrák",
+      "description": "Mermaid diagramok: szabadságkérelem életciklus, jóváhagyási lánc, tag meghívás, agile szinkronizáció, kapacitásszámítás, e-mail értesítések",
+      "audience": ["developer", "business-analyst", "qa"],
+      "tags": ["process", "flowchart", "mermaid", "lifecycle"]
+    },
+    {
+      "id": "doc-005",
+      "filename": "NAVIGATION_TREE.md",
+      "path": "docs/NAVIGATION_TREE.md",
+      "title": "Navigációs fa",
+      "description": "Teljes navigációs fa: top-level route-ok, workspace tabok (szerepkör-láthatósággal), sub-tabok, beállítás szekciók, URL paraméterek",
+      "audience": ["developer", "ux-designer"],
+      "tags": ["navigation", "routes", "tabs", "url-parameters"]
+    },
+    {
+      "id": "doc-006",
+      "filename": "TECHNICAL_ARCHITECTURE.md",
+      "path": "docs/TECHNICAL_ARCHITECTURE.md",
+      "title": "Technikai architektúra",
+      "description": "Frontend (React, HashRouter, TanStack Query), backend (Supabase, RLS, edge functions), DB séma, auth, API-k, integrációk, deployment",
+      "audience": ["developer", "devops"],
+      "tags": ["architecture", "technical", "backend", "frontend", "deployment"]
+    },
+    {
+      "id": "doc-007",
+      "filename": "FEATURE_CATALOG.md",
+      "path": "docs/FEATURE_CATALOG.md",
+      "title": "Funkció katalógus",
+      "description": "Strukturált funkció-leltár modulonként feature ID-vel, névvel, route/anchor-ral, szerepkörökkel és státusszal",
+      "audience": ["product-manager", "qa", "developer"],
+      "tags": ["features", "catalog", "inventory", "modules"]
+    },
+    {
+      "id": "doc-008",
+      "filename": "ROLE_PERMISSION_MATRIX.md",
+      "path": "docs/ROLE_PERMISSION_MATRIX.md",
+      "title": "Szerepkör–jogosultság mátrix",
+      "description": "Teljes mátrix: owner/resourceAssistant/member szerepkörök vs. funkciók és canView/canEdit permission kulcsok",
+      "audience": ["business-analyst", "support", "developer"],
+      "tags": ["roles", "permissions", "matrix", "access-control"]
+    },
+    {
+      "id": "doc-009",
+      "filename": "DATA_FLOW_AND_ENTITY_REFERENCE.md",
+      "path": "docs/DATA_FLOW_AND_ENTITY_REFERENCE.md",
+      "title": "Adat-folyam és entitás-referencia",
+      "description": "Entitások, mezők, kapcsolatok, állapotgépek, ER diagram; adatfolyam diagramok",
+      "audience": ["backend-developer", "dba"],
+      "tags": ["database", "entities", "er-diagram", "data-flow"]
+    },
+    {
+      "id": "doc-010",
+      "filename": "CHANGE_INTELLIGENCE_APPENDIX.md",
+      "path": "docs/CHANGE_INTELLIGENCE_APPENDIX.md",
+      "title": "Változásnapló-intelligencia",
+      "description": "Verziótörténet v3.3.1-től, törékeny területek, hibaminták, do-not-break lista, migráció-érzékeny táblák, kategorizált leckék",
+      "audience": ["developer", "qa"],
+      "tags": ["changelog", "fragile-areas", "lessons-learned", "migration"]
+    },
+    {
+      "id": "doc-011",
+      "filename": "HELP_MENU_MASTERFILE.json",
+      "path": "docs/HELP_MENU_MASTERFILE.json",
+      "title": "Help menu masterfile",
+      "description": "Help-system metadata JSON: navigáció, funkció-index, folyamat-index, szerepkör-index, entitás-index, anchor ID-k, UI hints",
+      "audience": ["developer", "content-editor"],
+      "tags": ["help-system", "metadata", "json", "anchor-ids"]
+    },
+    {
+      "id": "doc-012",
+      "filename": "DOC_GENERATION_REPORT.md",
+      "path": "docs/DOC_GENERATION_REPORT.md",
+      "title": "Dokumentáció-generálási jelentés",
+      "description": "Generálási scope, megbízhatóság, Mermaid lefedettség, hiányok és ajánlások",
+      "audience": ["tech-lead", "product-manager"],
+      "tags": ["report", "generation", "confidence", "gaps"]
+    }
+  ],
+  "navigationIndex": {
+    "topLevelRoutes": [
+      { "path": "/#/", "component": "Landing", "auth": "public", "label": "Nyitólap" },
+      { "path": "/#/app", "component": "WorkspaceDashboard", "auth": "protected", "label": "Munkaterület" },
+      { "path": "/#/auth", "component": "Auth", "auth": "public-redirect", "label": "Bejelentkezés" },
+      { "path": "/#/profile", "component": "Profile", "auth": "protected", "label": "Profil" },
+      { "path": "/#/reset-password", "component": "ResetPassword", "auth": "public", "label": "Jelszó visszaállítás" },
+      { "path": "/#/admin", "component": "Admin", "auth": "protected", "label": "Admin" },
+      { "path": "/#/unsubscribe", "component": "Unsubscribe", "auth": "public", "label": "Leiratkozás" }
+    ],
+    "workspaceTabs": [
+      { "value": "members", "label": "Tagok", "icon": "Users", "permission": "canView('members')" },
+      { "value": "organization", "label": "Szervezet", "icon": "Building2", "permission": "canView('members')" },
+      { "value": "calendar", "label": "Naptár", "icon": "CalendarDays", "permission": "canView('calendar')" },
+      { "value": "requests", "label": "Kérelmek", "icon": "FileText", "permission": "canView('requests_own') OR canView('requests_team') OR canEdit('leave_requests_submit')" },
+      { "value": "workflows", "label": "Folyamatok", "icon": "GitMerge", "permission": "canView('members')" },
+      { "value": "resources", "label": "Erőforrások", "icon": "Briefcase", "permission": "always" },
+      { "value": "reports-audit", "label": "Riportok", "icon": "BarChart3", "permission": "canView('reports') OR canView('audit') OR canView('export')" },
+      { "value": "settings", "label": "Beállítások", "icon": "Settings", "permission": "canView('settings')" }
+    ],
+    "urlParameters": [
+      { "param": "ws", "route": "/#/app", "description": "Workspace azonosítója" },
+      { "param": "tab", "route": "/#/app", "description": "Aktív top-level tab" },
+      { "param": "sub", "route": "/#/app", "description": "Aktív sub-tab" },
+      { "param": "invite", "route": "/#/app", "description": "Meghívó token" },
+      { "param": "token", "route": "/#/reset-password", "description": "Jelszó-visszaállítási token" }
+    ]
+  },
+  "featureIndex": {
+    "auth": ["AUTH-001", "AUTH-002", "AUTH-003", "AUTH-004", "AUTH-005", "AUTH-006", "AUTH-007", "AUTH-008", "AUTH-009"],
+    "workspace": ["WS-001", "WS-002", "WS-003", "WS-004", "WS-005", "WS-006", "WS-007"],
+    "members": ["MEM-001", "MEM-002", "MEM-003", "MEM-004", "MEM-005", "MEM-006", "MEM-007", "MEM-008", "MEM-009"],
+    "leaveRequests": ["LR-001", "LR-002", "LR-003", "LR-004", "LR-005", "LR-006", "LR-007", "LR-008", "LR-009", "LR-010", "LR-011"],
+    "approvals": ["APR-001", "APR-002", "APR-003", "APR-004", "APR-005", "APR-006", "APR-007"],
+    "calendar": ["CAL-001", "CAL-002", "CAL-003", "CAL-004", "CAL-005", "CAL-006", "CAL-007", "CAL-008", "CAL-009"],
+    "rules": ["RULE-001", "RULE-002", "RULE-003", "RULE-004", "RULE-005", "RULE-006", "RULE-007", "RULE-008"],
+    "organization": ["ORG-001", "ORG-002", "ORG-003", "ORG-004", "ORG-005", "ORG-006", "ORG-007", "ORG-008", "ORG-009", "ORG-010"],
+    "resources": ["RES-001", "RES-002", "RES-003", "RES-004", "RES-005", "RES-006", "RES-007", "RES-008", "RES-009", "RES-010", "RES-011", "RES-012"],
+    "agile": ["AGL-001", "AGL-002", "AGL-003", "AGL-004", "AGL-005", "AGL-006", "AGL-007", "AGL-008", "AGL-009", "AGL-010"],
+    "workflows": ["WFL-001", "WFL-002", "WFL-003", "WFL-004", "WFL-005"],
+    "reports": ["RPT-001", "RPT-002", "RPT-003", "RPT-004"],
+    "settings": ["SET-001", "SET-002", "SET-003", "SET-004", "SET-005", "SET-006", "SET-007", "SET-008", "SET-009", "SET-010"],
+    "help": ["HLP-001", "HLP-002", "HLP-003"],
+    "platformAdmin": ["ADM-001", "ADM-002", "ADM-003"]
+  },
+  "processIndex": {
+    "leaveRequestLifecycle": {
+      "diagram": "docs/PROCESS_FLOWS.md#1-szabadságkérelem-beküldése-és-jóváhagyási-életciklus",
+      "states": ["pending", "approved", "rejected", "cancelled"],
+      "entities": ["leave_requests", "approval_decisions", "enterprise_quota_transactions"]
+    },
+    "approvalChain": {
+      "diagram": "docs/PROCESS_FLOWS.md#2-többlépéses-jóváhagyási-lánc",
+      "steps": "multi-step ordered",
+      "escalation": "configurable hours threshold",
+      "entities": ["enterprise_approval_chains", "approval_decisions"]
+    },
+    "memberInvite": {
+      "diagram": "docs/PROCESS_FLOWS.md#3-tag-meghívása-és-onboarding-folyamat",
+      "edgeFunctions": ["join-event", "send-transactional-email"],
+      "entities": ["enterprise_memberships"]
+    },
+    "agileSync": {
+      "diagram": "docs/PROCESS_FLOWS.md#4-agile-szinkronizáció-jiraado",
+      "providers": ["jira", "ado"],
+      "edgeFunctions": ["jira-devops-proxy"],
+      "entities": ["enterprise_agile_issues"]
+    },
+    "capacityCalculation": {
+      "diagram": "docs/PROCESS_FLOWS.md#5-kapacitásszámítás-folyamata",
+      "formula": "hours = base_working_hours * (allocation_pct / 100)",
+      "shortage": "shortage_score = FTE_required - FTE_available"
+    },
+    "emailNotification": {
+      "diagram": "docs/PROCESS_FLOWS.md#6-e-mail-értesítési-folyamat",
+      "edgeFunctions": ["send-transactional-email", "process-email-queue", "auth-email-hook", "send-scheduled-reports", "handle-email-suppression", "handle-email-unsubscribe"]
+    }
+  },
+  "roleIndex": {
+    "roles": [
+      {
+        "value": "owner",
+        "label": "Tulajdonos",
+        "isAdmin": true,
+        "canDeleteWorkspace": true,
+        "description": "Teljes hozzáférés"
+      },
+      {
+        "value": "resourceAssistant",
+        "label": "Erőforrás asszisztens",
+        "isAdmin": true,
+        "canDeleteWorkspace": false,
+        "description": "Admin szintű hozzáférés, workspace törlés nélkül"
+      },
+      {
+        "value": "member",
+        "label": "Tag",
+        "isAdmin": false,
+        "canDeleteWorkspace": false,
+        "description": "Korlátozott, olvasási + saját kérelmek kezelése"
+      }
+    ],
+    "permissionKeys": {
+      "canView": [
+        "members", "calendar", "calendar_leave_days", "calendar_coverage",
+        "calendar_requests", "calendar_conflicts", "requests_own", "requests_team",
+        "approvals", "rules", "reports", "audit", "export", "settings"
+      ],
+      "canEdit": [
+        "invitations", "leave_requests_submit", "admin_override",
+        "permission_config", "layout_setting"
+      ]
+    }
+  },
+  "entityIndex": {
+    "tables": [
+      {
+        "name": "enterprise_workspaces",
+        "schema": "public",
+        "description": "Munkaterületek (szervezetek)",
+        "primaryKey": "id",
+        "keyFields": ["name", "timezone", "locale", "created_by", "is_archived", "recovery_mode"]
+      },
+      {
+        "name": "enterprise_memberships",
+        "schema": "public",
+        "description": "Felhasználó-munkaterület tagságok",
+        "primaryKey": "id",
+        "foreignKeys": ["workspace_id -> enterprise_workspaces", "user_id -> auth.users", "office_id -> enterprise_offices"],
+        "keyFields": ["role", "status", "team", "location", "business_role", "base_working_hours"]
+      },
+      {
+        "name": "leave_requests",
+        "schema": "public",
+        "description": "Szabadságkérelmek",
+        "primaryKey": "id",
+        "foreignKeys": ["workspace_id -> enterprise_workspaces", "user_id -> auth.users", "type_id -> enterprise_leave_types"],
+        "states": ["pending", "approved", "rejected", "cancelled"],
+        "keyFields": ["start_date", "end_date", "status", "is_half_day", "half_day_period", "is_private"]
+      },
+      {
+        "name": "approval_decisions",
+        "schema": "public",
+        "description": "Jóváhagyási döntések (lánc-lépésenkénti)",
+        "primaryKey": "id",
+        "foreignKeys": ["leave_request_id -> leave_requests", "approver_id -> auth.users"],
+        "keyFields": ["step", "decision", "decided_at", "comment"]
+      },
+      {
+        "name": "enterprise_leave_types",
+        "schema": "public",
+        "description": "Szabadságtípusok katalógusa",
+        "primaryKey": "id",
+        "foreignKeys": ["workspace_id -> enterprise_workspaces"],
+        "keyFields": ["name", "color", "max_days", "requires_approval"]
+      },
+      {
+        "name": "enterprise_quota_transactions",
+        "schema": "public",
+        "description": "Szabadság-egyenleg főkönyv",
+        "primaryKey": "id",
+        "foreignKeys": ["workspace_id -> enterprise_workspaces", "user_id -> auth.users", "leave_request_id -> leave_requests"],
+        "keyFields": ["amount", "balance_after", "transaction_type"]
+      },
+      {
+        "name": "enterprise_holidays",
+        "schema": "public",
+        "description": "Ünnepnapok",
+        "primaryKey": "id",
+        "foreignKeys": ["workspace_id -> enterprise_workspaces"],
+        "keyFields": ["date", "name", "is_recurring"]
+      },
+      {
+        "name": "enterprise_blocked_dates",
+        "schema": "public",
+        "description": "Tiltott napok",
+        "primaryKey": "id",
+        "foreignKeys": ["workspace_id -> enterprise_workspaces"],
+        "keyFields": ["date", "reason"]
+      },
+      {
+        "name": "enterprise_approval_chains",
+        "schema": "public",
+        "description": "Jóváhagyási lánc konfigurációk",
+        "primaryKey": "id",
+        "foreignKeys": ["workspace_id -> enterprise_workspaces"],
+        "keyFields": ["name", "steps", "escalation_hours"]
+      },
+      {
+        "name": "enterprise_agile_issues",
+        "schema": "public",
+        "description": "Jira/ADO issue cache",
+        "primaryKey": "id",
+        "foreignKeys": ["workspace_id -> enterprise_workspaces"],
+        "keyFields": ["external_id", "provider", "title", "status", "assignee", "sprint", "story_points", "synced_at"]
+      },
+      {
+        "name": "enterprise_projects",
+        "schema": "public",
+        "description": "Projektek (Gantt támogatással)",
+        "primaryKey": "id",
+        "foreignKeys": ["workspace_id -> enterprise_workspaces"],
+        "keyFields": ["name", "start_date", "end_date", "status", "gantt_config"]
+      },
+      {
+        "name": "enterprise_org_chart_snapshots",
+        "schema": "public",
+        "description": "Szervezeti ábra pillanatfelvételek",
+        "primaryKey": "id",
+        "foreignKeys": ["workspace_id -> enterprise_workspaces"],
+        "keyFields": ["created_at", "snapshot_data"]
+      },
+      {
+        "name": "enterprise_translation_overrides",
+        "schema": "public",
+        "description": "Workspace-szintű fordítási override-ok",
+        "primaryKey": "id",
+        "foreignKeys": ["workspace_id -> enterprise_workspaces"],
+        "keyFields": ["locale", "key", "value"]
+      },
+      {
+        "name": "help_articles",
+        "schema": "public",
+        "description": "In-app help cikkek",
+        "primaryKey": "id",
+        "access": "public read, service_role write",
+        "keyFields": ["anchor_id", "title", "content", "updated_at"]
+      },
+      {
+        "name": "profiles",
+        "schema": "public",
+        "description": "Felhasználói profilok",
+        "primaryKey": "id",
+        "foreignKeys": ["id -> auth.users"],
+        "keyFields": ["display_name", "avatar_url"]
+      }
+    ],
+    "dbSchemas": [
+      {
+        "name": "public",
+        "description": "Fő séma (minden enterprise_ tábla, profiles, auth objektumok)"
+      },
+      {
+        "name": "plannermaster",
+        "description": "Enterprise séma klón (additív, jövőbeli multi-product szétválasztáshoz)"
+      },
+      {
+        "name": "syncfolk",
+        "description": "Consumer app séma klón"
+      }
+    ]
+  },
+  "helpAnchorIds": [
+    { "anchorId": "home.overview", "label": "Kezdőlap áttekintés", "route": "/#/app" },
+    { "anchorId": "workspace.members", "label": "Tagok", "tab": "members" },
+    { "anchorId": "workspace.organization", "label": "Szervezet", "tab": "organization" },
+    { "anchorId": "workspace.calendar", "label": "Naptár", "tab": "calendar" },
+    { "anchorId": "workspace.requests", "label": "Kérelmek", "tab": "requests" },
+    { "anchorId": "workspace.approvals", "label": "Jóváhagyások", "tab": "requests", "section": "approvals" },
+    { "anchorId": "workspace.workflows", "label": "Folyamatok", "tab": "workflows" },
+    { "anchorId": "workspace.resources", "label": "Erőforrások", "tab": "resources" },
+    { "anchorId": "workspace.agile", "label": "Agile", "tab": "resources", "sub": "agile" },
+    { "anchorId": "workspace.reports", "label": "Riportok", "tab": "reports-audit" },
+    { "anchorId": "workspace.settings", "label": "Beállítások", "tab": "settings" },
+    { "anchorId": "leave-request", "label": "Szabadságkérelem", "feature": "LR-001" },
+    { "anchorId": "approval-flow", "label": "Jóváhagyási folyamat", "feature": "APR-002" },
+    { "anchorId": "onboarding-template", "label": "Onboarding sablon", "feature": "WFL-001" },
+    { "anchorId": "access-request", "label": "Hozzáférési kérelem", "feature": "WFL-004" },
+    { "anchorId": "capacity-dna", "label": "Kapacitás DNA", "feature": "RES-010" },
+    { "anchorId": "org-chart", "label": "Org chart", "feature": "ORG-007" },
+    { "anchorId": "coverage-planner", "label": "Kapacitástervező", "feature": "CAL-006" },
+    { "anchorId": "localization-settings", "label": "Lokalizáció", "feature": "SET-003" },
+    { "anchorId": "audit-log", "label": "Audit napló", "feature": "RPT-004" },
+    { "anchorId": "integration-health", "label": "Integráció egészség", "feature": "SET-008" },
+    { "anchorId": "command-center", "label": "Parancsközpont", "feature": null },
+    { "anchorId": "quota-manager", "label": "Kvóta kezelő", "feature": "LR-009" },
+    { "anchorId": "holiday-manager", "label": "Ünnepnapok", "feature": "RULE-002" },
+    { "anchorId": "role-permissions", "label": "Szerepkör jogosultságok", "feature": "SET-002" },
+    { "anchorId": "decision-memory", "label": "Döntésmemória", "feature": "APR-005" },
+    { "anchorId": "agile-kanban", "label": "Agile Kanban", "feature": "AGL-002" },
+    { "anchorId": "agile-scrum", "label": "Agile Scrum", "feature": "AGL-003" },
+    { "anchorId": "agile-gantt", "label": "Agile Gantt", "feature": "AGL-004" },
+    { "anchorId": "jira-integration", "label": "Jira integráció", "feature": "AGL-009" },
+    { "anchorId": "export-center", "label": "Export center", "feature": "RPT-002" }
+  ],
+  "uiHints": {
+    "tabNavigation": "Munkaterületen belül a felső navigáció tartalmazza a főbb tabokat. Az aktív tab kiemelt.",
+    "subTabs": "Egyes tabokon belül sub-tab gombok jelennek meg a nézetek közötti váltáshoz.",
+    "collapsibleSections": "A Kérelmek tabon belül az egyes szekciók összecsukhatók/kinyithatók.",
+    "helpDrawer": "A kérdőjel ikonra kattintva megnyílik a kontextuális súgó fiók (HelpDrawer). Az anchor ID az aktuális nézethez kapcsolódik.",
+    "workspaceSwitcher": "A fejlécben lévő workspace-névben kattintva munkaterületet lehet váltani.",
+    "roleIndicator": "A profil menüben látható az aktuális szerepkör (Tulajdonos / Erőforrás asszisztens / Tag)."
+  },
+  "usageInstructions": {
+    "forDevelopers": "Az anchor ID-kat a HelpRegistryProvider-ben kell regisztrálni. A help tartalmak regenerálásához futtasd a help-regenerator edge function-t. A HELP_MENU_MASTERFILE.json-t frissítsd, ha új anchor ID-k kerülnek a rendszerbe.",
+    "forContentEditors": "A help cikkek tartalmát a help_articles Supabase táblában tárolt rekordok tartalmazzák. Az anchor_id mező köti össze a UI komponensekkel. A help-reference.md-ben definiált tartalmak generálják az adatbázis bejegyzéseket.",
+    "forProductManagers": "A featureIndex, processIndex és entityIndex segítségével gyorsan megtalálhatóak az egyes funkciókhoz kapcsolódó folyamatok és adatentitások. A helpAnchorIds listában az összes kontextuális súgó belépési pont megtalálható."
+  }
+}
