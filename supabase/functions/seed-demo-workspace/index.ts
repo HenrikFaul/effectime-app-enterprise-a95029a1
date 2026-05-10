@@ -18,6 +18,7 @@ import {
   APPROVAL_CHAIN_DEFS, DEFAULT_SEED_QUANTITIES,
   JOB_FAMILY_DEFS, LEADERSHIP_LEVEL_DEFS, CONTRACT_TYPE_DEFS,
   INDUSTRY_DEFS, WORK_CATEGORY_DEFS, PERSONA_ORG_ASSIGNMENTS,
+  MEMBER_GOAL_DEFS,
 } from './seed-data.ts';
 
 const corsHeaders = {
@@ -1233,13 +1234,29 @@ Deno.serve(async (req) => {
     // ── O2. Agile issues ──────────────────────────────────────────────────────
     if (integrationId) {
       // Compute start_date / due_date from offset fields; strip the helper fields before insert.
-      const issueRows = AGILE_ISSUE_DEFS.map(({ startOff, dueOff, ...rest }) => ({
-        ...rest,
-        workspace_id: workspaceId,
-        integration_id: integrationId,
-        start_date: fmtDate(addDays(today, startOff)),
-        due_date:   fmtDate(addDays(today, dueOff)),
-      }));
+      // For Done issues we backdate `external_updated_at` across the past ~6 months so
+      // the per-member Performance chart in MemberProfileSheet → Bővebb adatok shows
+      // a realistic story-points history. The spread is deterministic (based on the
+      // external_key) so reseeding the same workspace yields identical demo data.
+      let doneCounter = 0;
+      const issueRows = AGILE_ISSUE_DEFS.map(({ startOff, dueOff, ...rest }) => {
+        const isDone = (rest.status ?? '').toLowerCase() === 'done';
+        let externalUpdatedAt: string | null = null;
+        if (isDone) {
+          // Spread ~6 Done issues across last 180 days; clamp to >= 5 days ago.
+          const offset = -180 + Math.round(((doneCounter * 37) % 175));
+          doneCounter += 1;
+          externalUpdatedAt = addDays(today, offset).toISOString();
+        }
+        return {
+          ...rest,
+          workspace_id: workspaceId,
+          integration_id: integrationId,
+          start_date: fmtDate(addDays(today, startOff)),
+          due_date:   fmtDate(addDays(today, dueOff)),
+          ...(externalUpdatedAt ? { external_updated_at: externalUpdatedAt } : {}),
+        };
+      });
       const { error: issuesErr } = await admin.from('enterprise_agile_issues').insert(issueRows);
       if (issuesErr) console.warn('[seed] agile_issues insert skipped:', issuesErr.message);
 
@@ -1259,6 +1276,38 @@ Deno.serve(async (req) => {
       icalUsers.map(u => ({ workspace_id: workspaceId, user_id: u.user_id, scope: 'own' }))
     );
     if (icalErr) console.warn('[seed] ical_tokens insert skipped:', icalErr.message);
+
+    // ════════════════════════════════════════════════════════════════════════
+    // P2. CÉLOK / EREDMÉNYEK (one-to-one beszélgetésekből)
+    // Tagok → Adatlap → Bővebb adatok → Meghatározott célok
+    // Null-safe: ha az enterprise_member_goals tábla még nem létezik
+    // (migráció még nincs lefuttatva), a hibát csendben átugorjuk.
+    // ════════════════════════════════════════════════════════════════════════
+    {
+      const goalRows: any[] = [];
+      for (const g of MEMBER_GOAL_DEFS) {
+        const userId = userIdByPersonaName.get(g.assignee_name);
+        if (!userId) continue;
+        const m = membershipByUser.get(userId);
+        if (!m) continue;
+        goalRows.push({
+          workspace_id: workspaceId,
+          member_id: m.id,
+          title: g.title,
+          description: g.description,
+          status: g.status,
+          target_date: g.target_offset_days != null ? fmtDate(addDays(today, g.target_offset_days)) : null,
+          achieved_at: g.status === 'achieved' && g.achieved_offset_days != null
+            ? addDays(today, g.achieved_offset_days).toISOString()
+            : null,
+          created_by: ownerId,
+        });
+      }
+      if (goalRows.length > 0) {
+        const { error: goalsErr } = await admin.from('enterprise_member_goals').insert(goalRows);
+        if (goalsErr) console.warn('[seed] member_goals insert skipped:', goalsErr.message);
+      }
+    }
 
     // ════════════════════════════════════════════════════════════════════════
     // Q. SHIFT HOZZÁRENDELÉSEK (KAPACITÁSTERVEZŐ)
@@ -1346,6 +1395,7 @@ Deno.serve(async (req) => {
         access_systems:   (accessSystems ?? []).length,
         integrations:     integrationId ? 1 : 0,
         agile_issues:     integrationId ? AGILE_ISSUE_DEFS.length : 0,
+        member_goals:     MEMBER_GOAL_DEFS.length,
       },
     } as any);
 

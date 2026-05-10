@@ -300,13 +300,18 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                 {canView('invitations') && (
                   <InvitationsPanel workspaceId={workspace.id} isAdmin={canEdit('invitations')} />
                 )}
-                <MemberList workspaceId={workspace.id} userId={userId} userRole={userRole} />
+                <MemberList workspaceId={workspace.id} userId={userId} userRole={userRole} onNavigateTab={setActiveTab} />
               </TabsContent>
             )}
 
             {canView('members') && (
               <TabsContent value="organization" className="space-y-3">
-                <OrganizationModule workspaceId={workspace.id} isAdmin={isAdmin} />
+                <OrganizationModule
+                  workspaceId={workspace.id}
+                  isAdmin={isAdmin}
+                  onNavigateTab={setActiveTab}
+                  userId={userId}
+                />
               </TabsContent>
             )}
 

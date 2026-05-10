@@ -13,9 +13,13 @@ import { OrgChart } from './OrgChart';
 interface Props {
   workspaceId: string;
   isAdmin: boolean;
+  /** Forwarded to OrgChart so the MemberProfileSheet can deep-link into other workspace tabs. */
+  onNavigateTab?: (tab: string) => void;
+  /** Current authenticated user id (forwarded for self-only profile sections). */
+  userId?: string;
 }
 
-export function OrganizationModule({ workspaceId, isAdmin }: Props) {
+export function OrganizationModule({ workspaceId, isAdmin, onNavigateTab, userId }: Props) {
   const t = useT();
   return (
     <div className="space-y-3">
@@ -74,7 +78,12 @@ export function OrganizationModule({ workspaceId, isAdmin }: Props) {
               <JobFamilies workspaceId={workspaceId} isAdmin={isAdmin} />
             </TabsContent>
             <TabsContent value="chart" className="mt-4">
-              <OrgChart workspaceId={workspaceId} isAdmin={isAdmin} />
+              <OrgChart
+                workspaceId={workspaceId}
+                isAdmin={isAdmin}
+                onNavigateTab={onNavigateTab}
+                userId={userId}
+              />
             </TabsContent>
           </Tabs>
         </CardContent>
