@@ -1,3 +1,91 @@
+## 2026-05-10 — v3.5.1 Import/Export Center: teljes implementáció
+
+### Implemented — Skálázható, entity-alapú Import/Export Center
+
+A v3.5.0 spec teljes körű implementációja egy lépésben. A korábbi `CsvImportPanel` (Inbox ikon, "CSV import (tagok + szabadságok)" szekció) helyett egy új `ImportExportCenter` jelenik meg "Adatkezelés — Import / Export" címmel.
+
+**Új komponensek (`src/components/enterprise/import-export/`):**
+
+- **`ImportExportCenter.tsx`** — fő belépési pont; action selector (Export / Import) + entity grid + Dialog wizard
+- **`EntitySelector.tsx`** — kártya-alapú entity választó (Tagok, Szabadságok, Telephelyek, Munkakategóriák, Munkakörök, Pozíciók, Készségek)
+- **`ExportWizard.tsx`** — mezőkijelölő + formátum + import-kompatibilis sablon opció + audit
+- **`ImportWizard.tsx`** — 7-lépéses wizard: Útmutató → Feltöltés → Oszlopleképezés → Validáció Preview → Mód → Megerősítés → Eredmény
+- **`config/entity-registry.ts`** — config-driven entity definíciók (61 mező 7 entitásra)
+- **`utils/file-parser.ts`** — RFC 4180 CSV parser, Excel XML parser, generátorok
+- **`utils/data-fetcher.ts`** — entity-specific Supabase fetchers
+- **`utils/validator.ts`** — type-aware row validátor + auto column mapping + guidance row detection
+
+**Új Edge Function (`supabase/functions/import-entity-data/index.ts`):**
+
+- 7 entity importere egy függvényben
+- Owner / resourceAssistant role check `has_enterprise_role` RPC-vel
+- Members import: meglévő invitation flow-t használ új felhasználóknak; közvetlen membership update meglévőknek (upsert)
+- Reference resolution: office_name → office_id, manager_email → user_id, category_name → category_id
+- Audit logging: `import.started` + `import.completed` (vagy `import.completed_with_errors`)
+- Workspace scoping: minden insert/update kötelezően `workspace_id`-vel
+- Row-level error reporting: `{ row_index, field, value, code, message }`
+- `verify_jwt = true` regisztrálva `supabase/config.toml`-ban
+
+**Spec ↔ Implementáció megfeleltetés:**
+
+| Spec szakasz | Implementáció |
+|--------------|--------------|
+| Entity Registry | `config/entity-registry.ts` — 7 entitás, 61 mező, importAlias, computed/protected flagek |
+| Round-trip kompatibilis sablonok | XLSX styled header (yellow=required) + guidance row + auto-detect skip |
+| 7-lépéses wizard | `ImportWizard.tsx` — step indicator + back/next nav |
+| Auto column mapping | `validator.autoMapColumns` — exact key → alias → label fallback |
+| Validation preview | Row-level red/yellow/green status + tooltip + first 100 sor megjelenítés |
+| Hibalista letöltés | `downloadErrorReport` — failed rows mint CSV |
+| Partial success | Validáció után csak a `valid` sorok mennek a Edge Function-be |
+| Upsert mód | Opt-in toggle; `enterprise_offices`, `members`, `work_categories`, `job_roles`, `skills` támogatja |
+
+**Integrációs változások:**
+
+- `WorkspaceDashboard.tsx`: `CsvImportPanel` import törölve, `ImportExportCenter` import + render hozzáadva
+- A jelenlegi `ExportCenter` (Reports tab — naptár-rács szabadság-export) érintetlen marad: az új ImportExportCenter Settings-ben él, az ExportCenter Reports-ban — két különböző UX flow
+
+**Megőrzött funkcionalitás (ZERO REGRESSION):**
+
+- Tagok meghívása CSV-ből — a Members entity import az új wizardon keresztül továbbra is létrehoz invitation-t új email címekhez
+- Szabadságok bulk import — a Leave entity importon keresztül továbbra is működik
+- Reports tab → ExportCenter (naptár-grid, dátumtartomány) — érintetlen
+
+### Files added
+- `src/components/enterprise/import-export/ImportExportCenter.tsx` *(new)*
+- `src/components/enterprise/import-export/EntitySelector.tsx` *(new)*
+- `src/components/enterprise/import-export/ExportWizard.tsx` *(new)*
+- `src/components/enterprise/import-export/ImportWizard.tsx` *(new)*
+- `src/components/enterprise/import-export/config/entity-registry.ts` *(new)*
+- `src/components/enterprise/import-export/utils/file-parser.ts` *(new)*
+- `src/components/enterprise/import-export/utils/data-fetcher.ts` *(new)*
+- `src/components/enterprise/import-export/utils/validator.ts` *(new)*
+- `supabase/functions/import-entity-data/index.ts` *(new — Edge Function)*
+- `versioning/100526004_v3.5.1_import-export-center-impl.md` *(new)*
+
+### Files changed
+- `src/components/enterprise/WorkspaceDashboard.tsx` — CsvImportPanel kicserélve ImportExportCenter-re
+- `supabase/config.toml` — import-entity-data edge function regisztrálva (verify_jwt = true)
+
+### Acceptance criteria
+- ✅ Settings → "Adatkezelés — Import / Export" szekció admin-only láthatósággal
+- ✅ Action toggle (Export / Import) + entity selector kártyarács
+- ✅ Export: mezőkijelölő grouped checklist, kötelező mezők zárolva, XLSX + CSV
+- ✅ Import-kompatibilis sablon (asterisk + guidance row + auto-skip)
+- ✅ 7-lépéses import wizard step indicator-ral
+- ✅ Auto column mapping + manuális override Select dropdown-nal
+- ✅ Validation preview: row-level status, hibás cellák tooltip, hibalista letöltés
+- ✅ Create-only / upsert mód kapcsoló (entity függő)
+- ✅ Edge function: 7 entity import, role check, audit log, workspace scoping
+- ✅ Reference resolution (office_name, manager_email, category_name)
+- ✅ Zero regression a v3.4.x sticky nav fix-ekre + v3.4.0 OrgChart deeplink-ekre
+
+### Deploy steps
+1. Apply database changes — N/A (nincs új migráció)
+2. Deploy edge function: `supabase functions deploy import-entity-data`
+3. Frontend deploy: standard Vite build
+
+---
+
 ## 2026-05-10 — v3.5.0 Import/Export Center specifikáció (implementációs blueprint)
 
 ### Spec — Bulk Data Management Center tervezési specifikáció
