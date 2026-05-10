@@ -28,7 +28,7 @@ export function ResourcesTab({ workspaceId, userId, isAdmin }: Props) {
   return (
     <div className="space-y-3">
       <Tabs value={tab} onValueChange={setTab} className="space-y-3">
-        <TabsList className="flex-wrap h-auto">
+        <TabsList className="sticky top-[calc(var(--ws-header-h)_+_var(--ws-main-tabs-h))] z-10 flex-wrap h-auto w-full bg-background border-b rounded-none">
           <TabsTrigger value="dashboard" className="gap-1"><BarChart3 className="h-4 w-4" /> Áttekintés</TabsTrigger>
           <TabsTrigger value="heatmap" className="gap-1"><Activity className="h-4 w-4" /> Hőtérkép</TabsTrigger>
           <TabsTrigger value="projects" className="gap-1"><FolderKanban className="h-4 w-4" /> Projektek</TabsTrigger>

@@ -273,6 +273,29 @@
 
 ---
 
+## ➕ APPEND — 2026-05-10 Sticky navigáció regresszió-javítás
+
+### [LESSON-UI-080]: Sticky tab-sáv / almenü-sáv — CSS custom property alapú top-offset
+**Context**: Többszintű navigáció (főmenü + almenü sávok) sticky pozicionálásánál a `top` értéket az összes sticky ancestor magasságának összegéből kell számítani. Az alkalmazásban két layout mode van: `sidebar` (a főmenü TabsList `sr-only`) és `tabs` (látható főmenü sáv).
+**Problem**: A `TabsList` (főmenü sáv) és az almenü sávok (Naptár, Erőforrások) nem kaptak `sticky` pozicionálást. Görgetéskor eltűntek — felhasználó elvesztette a navigációs kontextust.
+**Fix**: CSS custom property-k a közös ancestor container `style` prop-ján:
+```tsx
+style={{
+  '--ws-header-h': '53px',                               // header magassága
+  '--ws-main-tabs-h': layout === 'sidebar' ? '0px' : '65px',  // 0 ha sidebar mode
+} as any}
+```
+- **Főmenü TabsList** (tabs mode): `sticky top-[var(--ws-header-h)] z-20`
+- **Almenü TabsList** (Calendar, Resources): `sticky top-[calc(var(--ws-header-h)_+_var(--ws-main-tabs-h))] z-10 bg-background border-b rounded-none`
+- Az almenük maguk öröklik a CSS változókat a DOM-on keresztül — nincs szükség új propra `ResourcesTab`-ban.
+- A `_` Tailwind arbitrary értékben szóköznek felel meg: `calc(... + ...)` lesz a generált CSS-ben.
+**Megelőzés**: Minden új sticky navigációs sávhoz:
+1. Mérd fel a stacking sorrendet (hány sticky réteg van felette?)
+2. Adj `bg-background` + megfelelő `z-index`-et (ne legyen 0)
+3. Sidebar mode + tabs mode top-offset különbség KÖTELEZŐ (CSS var-ral kezeld)
+
+---
+
 ## ➕ APPEND — 2026-05-10 demo seed regresszió
 
 ### [HIBA-074] Edge seedben csendben elnyelt részleges insert-hiba → „kész” demo workspace, üres naptár

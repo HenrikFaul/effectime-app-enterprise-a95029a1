@@ -1,3 +1,25 @@
+## 2026-05-10 — v3.4.1 Sticky navigációs sávok (főmenü + almenü regresszió-javítás)
+
+### Fixed — Görgetéskor eltűnő navigációs sávok
+- **Főmenü TabsList** (`WorkspaceDashboard.tsx`): tabs layout mode-ban a vízszintes főmenü sáv mostantól `sticky top-[var(--ws-header-h)] z-20` — görgetéskor a workspace header alatt rögzítve marad.
+- **Naptár almenü TabsList** (`WorkspaceDashboard.tsx`): a Naptár szekció belső tab sávja (Naptár / Idővonal / Kapacitástervező / Éves nézet) mostantól `sticky top-[calc(var(--ws-header-h)_+_var(--ws-main-tabs-h))]` — mindkét layout mode-ban rögzítve marad.
+- **Erőforrások almenü TabsList** (`ResourcesTab.tsx`): az Erőforrások szekció belső tab sávja (Áttekintés / Hőtérkép / Projektek / Agile / Készségek / …) mostantól sticky — görgetéskor látható marad.
+- **CSS custom property megközelítés**: az offset értékeket `--ws-header-h` (53px) és `--ws-main-tabs-h` (65px tabs módban, 0px sidebar módban) CSS változók tárolják a közös ancestor div `style` propján. Az almenük öröklik a DOM-on át, nincs szükség új propra.
+- **Sidebar mode helyes kezelése**: sidebar layout-ban a főmenü TabsList `sr-only` marad (nem görget el, fizikai tere nincs), az almenük ezért csak a header magasságát veszik figyelembe.
+- **Vizuális konzisztencia**: sticky almenü sávok `bg-background border-b rounded-none` osztályokat kapnak — a tartalom aluluk gurul, fedési problémák nélkül.
+
+### Files changed
+- `src/components/enterprise/WorkspaceDashboard.tsx`
+- `src/components/enterprise/resources/ResourcesTab.tsx`
+
+### Acceptance criteria
+- ✅ Tabs layout: görgetéskor a főmenü sáv a header alatt rögzített, nem tűnik el.
+- ✅ Tabs + sidebar layout: a Naptár és Erőforrások almenü sávok görgetéskor rögzítve maradnak.
+- ✅ Sidebar layout: főmenü TabsList sr-only marad, az almenük csak a header offsetet használják.
+- ✅ Nincs regresszió a v3.4.0 funkciókon (OrgChart, MemberProfileSheet, stb.).
+
+---
+
 ## 2026-05-10 — v3.4.0 Org chart navigable drawer + Member Bővebb adatok view
 
 ### Added — Org chart adatlap kattintható manager + beosztott badge-ekkel
