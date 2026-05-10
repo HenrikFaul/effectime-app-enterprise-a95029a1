@@ -32,18 +32,32 @@ export interface EntityConfig {
 }
 
 const MEMBER_FIELDS: FieldDefinition[] = [
+  // Alapadatok
   { key: 'email', label: 'Email', type: 'email', required: true, importable: true, exportable: true, group: 'Alapadatok', templateExample: 'kovacs.bela@ceg.hu', description: 'A felhasználó email címe — egyedi azonosító.', importAlias: ['Email', 'e-mail', 'mail'] },
   { key: 'display_name', label: 'Teljes név', type: 'string', required: true, importable: true, exportable: true, group: 'Alapadatok', templateExample: 'Kovács Béla', importAlias: ['Név', 'name', 'full_name'] },
   { key: 'role', label: 'Jogosultság', type: 'enum', enumValues: ['owner', 'resourceAssistant', 'member'], enumLabels: { owner: 'Tulajdonos', resourceAssistant: 'Erőforrás-asszisztens', member: 'Tag' }, required: true, importable: true, exportable: true, group: 'Alapadatok', templateExample: 'member', description: 'owner / resourceAssistant / member' },
+  { key: 'status', label: 'Tagság státusza', type: 'enum', enumValues: ['active', 'inactive'], enumLabels: { active: 'Aktív', inactive: 'Inaktív' }, required: false, importable: true, exportable: true, group: 'Alapadatok', templateExample: 'active' },
+  // Szervezeti adatok
   { key: 'team', label: 'Csapat', type: 'string', required: false, importable: true, exportable: true, group: 'Szervezeti adatok', templateExample: 'Backend' },
   { key: 'business_role', label: 'Munkakör (pozíció)', type: 'string', required: false, importable: true, exportable: true, group: 'Szervezeti adatok', templateExample: 'Senior Backend Developer' },
   { key: 'office_name', label: 'Telephely', type: 'string', required: false, importable: true, exportable: true, group: 'Szervezeti adatok', templateExample: 'Budapest Iroda', description: 'A telephely neve — automatikusan feloldjuk az ID-ra.' },
+  { key: 'org_unit_name', label: 'Szervezeti egység', type: 'string', required: false, importable: false, exportable: true, computed: true, group: 'Szervezeti adatok', description: 'Az org-chart szervezeti egység neve.' },
   { key: 'city', label: 'Város', type: 'string', required: false, importable: true, exportable: true, group: 'Szervezeti adatok', templateExample: 'Budapest' },
   { key: 'location', label: 'Helyszín (szabad)', type: 'string', required: false, importable: true, exportable: true, group: 'Szervezeti adatok', templateExample: 'Budapest, Váci út 1.' },
   { key: 'base_working_hours', label: 'Napi munkaidő (óra)', type: 'number', required: false, importable: true, exportable: true, group: 'Szervezeti adatok', templateExample: '8' },
+  { key: 'weekly_capacity_hours', label: 'Heti kapacitás (óra)', type: 'number', required: false, importable: true, exportable: true, group: 'Szervezeti adatok', templateExample: '40', importAlias: ['weekly_hours', 'heti_ora'] },
   { key: 'joined_at', label: 'Csatlakozás dátuma', type: 'date', required: false, importable: true, exportable: true, group: 'Szervezeti adatok', templateExample: '2024-01-15' },
-  { key: 'status', label: 'Tagság státusza', type: 'enum', enumValues: ['active', 'inactive'], enumLabels: { active: 'Aktív', inactive: 'Inaktív' }, required: false, importable: true, exportable: true, group: 'Alapadatok', templateExample: 'active' },
-  { key: 'manager_email', label: 'Vezető (email)', type: 'email', required: false, importable: true, exportable: true, group: 'Szervezeti adatok', templateExample: 'vezeto@ceg.hu', description: 'A vezető email címe — automatikus org-chart felépítéshez.' },
+  // Org-chart / hierarchia
+  { key: 'manager_email', label: 'Felettes (email)', type: 'email', required: false, importable: true, exportable: true, group: 'Hierarchia', templateExample: 'vezeto@ceg.hu', description: 'A közvetlen vezető email címe — org-chart felépítéshez.', importAlias: ['manager', 'felettes', 'boss_email'] },
+  { key: 'subordinate_emails', label: 'Beosztottak (email)', type: 'string', required: false, importable: false, exportable: true, computed: true, group: 'Hierarchia', description: 'Pontosvesszővel elválasztott beosztott email-ek (csak export).' },
+  // Karrier / kompetencia
+  { key: 'seniority', label: 'Szenioritás', type: 'enum', enumValues: ['junior', 'medior', 'senior', 'lead', 'principal'], enumLabels: { junior: 'Junior', medior: 'Medior', senior: 'Senior', lead: 'Lead', principal: 'Principal' }, required: false, importable: true, exportable: true, group: 'Karrier', templateExample: 'senior', importAlias: ['level', 'experience_level', 'tapasztalat'] },
+  { key: 'leadership_level', label: 'Vezető szint', type: 'string', required: false, importable: false, exportable: true, computed: true, group: 'Karrier', description: 'A vezető szint megnevezése.' },
+  { key: 'leadership_category', label: 'Vezetői kategória', type: 'string', required: false, importable: true, exportable: true, group: 'Karrier', templateExample: 'middle_management', importAlias: ['lead_category'] },
+  { key: 'contract_type', label: 'Szerződés típusa', type: 'string', required: false, importable: false, exportable: true, computed: true, group: 'Karrier', description: 'A szerződés típusának megnevezése.' },
+  { key: 'employer_rights', label: 'Munkáltatói jogkör', type: 'boolean', required: false, importable: true, exportable: true, group: 'Karrier', templateExample: 'false', importAlias: ['employer_right'] },
+  { key: 'skills', label: 'Készségek', type: 'string', required: false, importable: false, exportable: true, computed: true, group: 'Karrier', description: 'Pontosvesszővel elválasztott készségek (csak export).' },
+  // Rendszer
   { key: 'membership_id', label: 'Tagság ID (rendszer)', type: 'uuid', required: false, importable: false, exportable: true, computed: true, group: 'Rendszer', protected: true, description: 'Csak exportra. Soha nem importálható.' },
   { key: 'user_id', label: 'Felhasználó ID (rendszer)', type: 'uuid', required: false, importable: false, exportable: true, computed: true, group: 'Rendszer', protected: true },
 ];

@@ -151,10 +151,10 @@ async function importMembers(client: any, workspaceId: string, mode: string, row
   const existingUserIds = new Set((existingMemberships || []).map((m: any) => m.user_id));
   const membershipByUser = new Map((existingMemberships || []).map((m: any) => [m.user_id, m.id]));
 
-  // Map emails → user_ids
+  // Map emails → user_ids via auth.users (profiles has no email column)
   const emails = rows.map(r => r.email).filter(Boolean);
-  const { data: profiles } = await client.from('profiles').select('user_id, email').in('email', emails);
-  const userIdByEmail = new Map((profiles || []).map((p: any) => [p.email.toLowerCase(), p.user_id]));
+  const { data: authUsers } = await client.rpc('get_user_ids_by_emails', { p_emails: emails });
+  const userIdByEmail = new Map((authUsers || []).map((u: any) => [u.email.toLowerCase(), u.user_id]));
 
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
@@ -166,15 +166,10 @@ async function importMembers(client: any, workspaceId: string, mode: string, row
     }
 
     const userId = userIdByEmail.get(email);
-    const officeId = r.office_name ? officeByName.get(String(r.office_name).toLowerCase()) : null;
-
-    // Resolve office_name
-    if (r.office_name && !officeId) {
-      // Warning, set to null but proceed
-    }
+    const officeId = r.office_name ? officeByName.get(String(r.office_name).toLowerCase()) : undefined;
 
     if (!userId) {
-      // Create invitation (existing pattern)
+      // Unknown user — create invitation
       if (dryRun) { summary.created++; continue; }
       const { error } = await client.from('enterprise_invitations').insert({
         workspace_id: workspaceId,
@@ -192,47 +187,41 @@ async function importMembers(client: any, workspaceId: string, mode: string, row
       continue;
     }
 
+    // Build membership fields shared by insert and update
+    const membershipFields = (base: any) => {
+      if (r.role) base.role = r.role;
+      if (r.status) base.status = r.status;
+      if (r.team !== undefined) base.team = r.team || null;
+      if (r.business_role !== undefined) base.business_role = r.business_role || null;
+      if (r.location !== undefined) base.location = r.location || null;
+      if (officeId !== undefined) base.office_id = officeId || null;
+      if (r.city !== undefined) base.city = r.city || null;
+      if (r.joined_at) base.joined_at = r.joined_at;
+      if (r.base_working_hours != null && r.base_working_hours !== '') base.base_working_hours = Number(r.base_working_hours);
+      if (r.weekly_capacity_hours != null && r.weekly_capacity_hours !== '') base.weekly_capacity_hours = Number(r.weekly_capacity_hours);
+      if (r.seniority) base.seniority = r.seniority;
+      if (r.leadership_category !== undefined) base.leadership_category = r.leadership_category || null;
+      if (r.employer_rights !== undefined) base.employer_rights = r.employer_rights === true || r.employer_rights === 'true';
+      return base;
+    };
+
     // User exists. Check if they have a membership in this workspace.
     if (existingUserIds.has(userId)) {
-      // Member exists. In create mode, skip. In upsert, update.
-      if (mode === 'create') {
-        summary.skipped++;
-        continue;
-      }
+      if (mode === 'create') { summary.skipped++; continue; }
       if (dryRun) { summary.updated++; continue; }
-      const updateFields: any = {};
-      if (r.role) updateFields.role = r.role;
-      if (r.team !== undefined) updateFields.team = r.team || null;
-      if (r.business_role !== undefined) updateFields.business_role = r.business_role || null;
-      if (r.location !== undefined) updateFields.location = r.location || null;
-      if (officeId !== undefined) updateFields.office_id = officeId || null;
-      if (r.city !== undefined) updateFields.city = r.city || null;
-      if (r.base_working_hours != null && r.base_working_hours !== '') updateFields.base_working_hours = Number(r.base_working_hours);
-      if (r.joined_at) updateFields.joined_at = r.joined_at;
-      if (r.status) updateFields.status = r.status;
-
-      const { error } = await client.from('enterprise_memberships').update(updateFields).eq('id', membershipByUser.get(userId));
+      const { error } = await client
+        .from('enterprise_memberships')
+        .update(membershipFields({}))
+        .eq('id', membershipByUser.get(userId));
       if (error) {
         errors.push({ row_index: i, field: 'general', value: email, code: 'DB_ERROR', message: error.message });
         summary.failed++;
       } else summary.updated++;
     } else {
-      // User exists in profiles but no membership in this workspace — create membership directly
+      // Known user but no membership — create membership directly
       if (dryRun) { summary.created++; continue; }
-      const insertFields: any = {
-        workspace_id: workspaceId,
-        user_id: userId,
-        role: r.role || 'member',
-        status: r.status || 'active',
-        team: r.team || null,
-        business_role: r.business_role || null,
-        location: r.location || null,
-        office_id: officeId || null,
-        city: r.city || null,
-        joined_at: r.joined_at || null,
-      };
-      if (r.base_working_hours != null && r.base_working_hours !== '') insertFields.base_working_hours = Number(r.base_working_hours);
-      const { error } = await client.from('enterprise_memberships').insert(insertFields);
+      const insertBase: any = { workspace_id: workspaceId, user_id: userId };
+      const { error } = await client.from('enterprise_memberships').insert(membershipFields(insertBase));
       if (error) {
         errors.push({ row_index: i, field: 'general', value: email, code: 'DB_ERROR', message: error.message });
         summary.failed++;
@@ -250,8 +239,8 @@ async function importLeave(client: any, workspaceId: string, mode: string, rows:
   const errors: RowError[] = [];
 
   const emails = rows.map(r => r.email).filter(Boolean);
-  const { data: profiles } = await client.from('profiles').select('user_id, email').in('email', emails);
-  const userIdByEmail = new Map((profiles || []).map((p: any) => [p.email.toLowerCase(), p.user_id]));
+  const { data: authUsers } = await client.rpc('get_user_ids_by_emails', { p_emails: emails });
+  const userIdByEmail = new Map((authUsers || []).map((u: any) => [u.email.toLowerCase(), u.user_id]));
 
   // Pre-fetch existing for duplicate detection
   const { data: existing } = await client.from('leave_requests').select('user_id, start_date, end_date, leave_type').eq('workspace_id', workspaceId);
