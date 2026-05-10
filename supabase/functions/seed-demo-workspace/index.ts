@@ -422,7 +422,7 @@ Deno.serve(async (req) => {
     const dailyRulesToInsert = DAILY_RULE_DEFS.slice(0, Math.max(1, seedQty.daily_rules));
     if (dailyRulesToInsert.length) {
       const { error: dailyRulesErr } = await admin.from('enterprise_daily_rules').insert(
-        dailyRulesToInsert.map(({ is_active: _isActive, ...rule }) => ({
+        dailyRulesToInsert.map((rule) => ({
           ...rule,
           workspace_id: workspaceId,
           created_by: ownerId,
