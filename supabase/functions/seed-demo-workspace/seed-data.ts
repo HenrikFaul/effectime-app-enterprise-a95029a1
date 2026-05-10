@@ -638,13 +638,13 @@ export const AGILE_FIELD_METADATA_DEFS = [
 // Szabadság → Napi szabályok
 
 export const DAILY_RULE_DEFS = [
-  { day_of_week: 1, max_off: 3, is_active: true },   // Hétfő
-  { day_of_week: 2, max_off: 4, is_active: true },   // Kedd
-  { day_of_week: 3, max_off: 4, is_active: true },   // Szerda
-  { day_of_week: 4, max_off: 4, is_active: true },   // Csütörtök
-  { day_of_week: 5, max_off: 5, is_active: true },   // Péntek
-  { day_of_week: 6, max_off: 2, is_active: false },  // Szombat (inaktív)
-  { day_of_week: 0, max_off: 2, is_active: false },  // Vasárnap (inaktív)
+  { day_of_week: 1, max_off: 3 }, // Hétfő
+  { day_of_week: 2, max_off: 4 }, // Kedd
+  { day_of_week: 3, max_off: 4 }, // Szerda
+  { day_of_week: 4, max_off: 4 }, // Csütörtök
+  { day_of_week: 5, max_off: 5 }, // Péntek
+  { day_of_week: 6, max_off: 2 }, // Szombat
+  { day_of_week: 0, max_off: 2 }, // Vasárnap
 ];
 
 // ── M. JELENLÉT SZABÁLYOK (enterprise_office_coverage_rules) ─────────────────
@@ -751,16 +751,15 @@ export const APPROVAL_CHAIN_DEFS = [
 ];
 
 // ── P. SZERVEZET: KATALÓGUS DEFINÍCIÓK ──────────────────────────────────────
-// Szervezet → Katalógus szerkesztő (CatalogListEditor) — minden tábla az
-// (id, workspace_id, code, label, archived_at, sort_order) sémát követi.
+// Szervezet → Katalógus szerkesztő (CatalogListEditor).
 
 export const JOB_FAMILY_DEFS = [
-  { code: 'engineering', label: 'Engineering',       sort_order: 10 },
-  { code: 'operations',  label: 'Operations',        sort_order: 20 },
-  { code: 'qa',          label: 'Quality Assurance', sort_order: 30 },
-  { code: 'management',  label: 'Management',        sort_order: 40 },
-  { code: 'design',      label: 'Design',            sort_order: 50 },
-  { code: 'product',     label: 'Product',           sort_order: 60 },
+  { code: 'engineering', label: 'Engineering' },
+  { code: 'operations',  label: 'Operations' },
+  { code: 'qa',          label: 'Quality Assurance' },
+  { code: 'management',  label: 'Management' },
+  { code: 'design',      label: 'Design' },
+  { code: 'product',     label: 'Product' },
 ];
 
 export const LEADERSHIP_LEVEL_DEFS = [
