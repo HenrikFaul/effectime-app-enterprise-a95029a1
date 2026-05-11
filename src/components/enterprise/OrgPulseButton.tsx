@@ -98,10 +98,10 @@ export function OrgPulseButton({ workspaceId }: Props) {
           variant="outline"
           size="sm"
           className="relative gap-1.5"
-          aria-label="Org Pulse"
+          aria-label={t('ws_nav.org_pulse')}
         >
           <Activity className="h-4 w-4 text-primary" />
-          <span className="hidden sm:inline">Org Pulse</span>
+          <span className="hidden sm:inline">{t('ws_nav.org_pulse')}</span>
           {alertCount > 0 && (
             <Badge
               variant="destructive"
@@ -160,7 +160,7 @@ export function OrgPulseButton({ workspaceId }: Props) {
               onClick={load}
               className="text-[11px] text-muted-foreground hover:text-foreground"
             >
-              {t('common.refresh') || 'Frissítés'}
+              {t('ws_nav.refresh')}
             </button>
           </div>
         </div>

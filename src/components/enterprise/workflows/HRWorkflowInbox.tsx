@@ -14,6 +14,7 @@ import { CheckCircle2, Circle, ChevronDown, Plus, XCircle, AlertTriangle, Calend
 import { toast } from 'sonner';
 import { format, isPast, isWithinInterval, addDays } from 'date-fns';
 import { hu } from 'date-fns/locale';
+import { useT } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -59,28 +60,28 @@ interface Membership {
   display_name?: string;
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  medical_exam: 'Orvosi vizsgálat',
-  salary_advance: 'Előleg-igény',
-  contract_amendment: 'Szerződésmódosítás',
-  probation_review: 'Próbaidő-értékelés',
-  fixed_term_expiry: 'Határozott szerz.',
-  offboarding: 'Kiléptetés',
-  custom: 'Egyedi',
+const CATEGORY_I18N_KEY: Record<string, string> = {
+  medical_exam: 'hr_workflow.cat_medical_exam',
+  salary_advance: 'hr_workflow.cat_salary_advance',
+  contract_amendment: 'hr_workflow.cat_contract_amendment',
+  probation_review: 'hr_workflow.cat_probation_review',
+  fixed_term_expiry: 'hr_workflow.cat_fixed_term_expiry',
+  offboarding: 'hr_workflow.cat_offboarding',
+  custom: 'hr_workflow.cat_custom',
 };
 
-const STATUS_META: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-  open:        { label: 'Nyitott',    variant: 'secondary' },
-  in_progress: { label: 'Folyamatban', variant: 'default' },
-  completed:   { label: 'Lezárva',    variant: 'outline' },
-  cancelled:   { label: 'Törölve',    variant: 'destructive' },
+const STATUS_META: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+  open:        { variant: 'secondary' },
+  in_progress: { variant: 'default' },
+  completed:   { variant: 'outline' },
+  cancelled:   { variant: 'destructive' },
 };
 
-const PRIORITY_META: Record<string, { label: string; color: string }> = {
-  low:    { label: 'Alacsony', color: 'text-muted-foreground' },
-  normal: { label: 'Normál',   color: 'text-foreground' },
-  high:   { label: 'Magas',    color: 'text-amber-600' },
-  urgent: { label: 'Sürgős',   color: 'text-red-600 font-semibold' },
+const PRIORITY_META: Record<string, { color: string }> = {
+  low:    { color: 'text-muted-foreground' },
+  normal: { color: 'text-foreground' },
+  high:   { color: 'text-amber-600' },
+  urgent: { color: 'text-red-600 font-semibold' },
 };
 
 function dueDateClass(dateStr: string | null): string {
@@ -92,6 +93,7 @@ function dueDateClass(dateStr: string | null): string {
 }
 
 export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
+  const t = useT();
   const [instances, setInstances] = useState<InstanceRow[]>([]);
   const [tasksByInstance, setTasksByInstance] = useState<Record<string, Task[]>>({});
   const [openId, setOpenId] = useState<string | null>(null);
@@ -124,7 +126,7 @@ export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
         .eq('workspace_id', workspaceId)
         .eq('status', statusFilter === 'all' ? undefined : statusFilter)
         .order('due_date', { ascending: true, nullsFirst: false });
-      setInstances((memberInstances || []).map((i: any) => ({ ...i, member_name: 'Én', total_tasks: 0, done_tasks: 0 })));
+      setInstances((memberInstances || []).map((i: any) => ({ ...i, member_name: t('hr_workflow.self_member'), total_tasks: 0, done_tasks: 0 })));
     } else {
       setInstances((data as InstanceRow[]) || []);
     }
@@ -175,7 +177,7 @@ export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
       p_status: status,
     });
     if (error) { toast.error(error.message); return; }
-    toast.success(status === 'completed' ? 'Folyamat lezárva' : 'Folyamat törölve');
+    toast.success(status === 'completed' ? t('hr_workflow.toast_closed') : t('hr_workflow.toast_cancelled'));
     loadInstances();
   };
 
@@ -189,7 +191,7 @@ export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
     const ids = ((ms as any[]) || []).map((m: any) => m.user_id);
     if (ids.length > 0) {
       const { data: prof } = await supabase.from('profiles').select('user_id, display_name').in('user_id', ids);
-      const nameMap = new Map((prof || []).map((p: any) => [p.user_id, p.display_name || 'Ismeretlen']));
+      const nameMap = new Map((prof || []).map((p: any) => [p.user_id, p.display_name || t('hr_workflow.unknown_member')]));
       setMembers(((ms as any[]) || []).map((m: any) => ({ ...m, display_name: nameMap.get(m.user_id) })));
     } else {
       setMembers([]);
@@ -213,7 +215,7 @@ export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
     });
     setBusy(false);
     if (error) { toast.error(error.message); return; }
-    toast.success('Folyamat elindítva');
+    toast.success(t('hr_workflow.toast_started'));
     setShowStartDialog(false);
     loadInstances();
   };
@@ -227,36 +229,36 @@ export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant="secondary">{activeCount} aktív</Badge>
+          <Badge variant="secondary">{t('hr_workflow.active_count', { count: activeCount })}</Badge>
           {overdueCount > 0 && (
             <Badge variant="destructive" className="gap-1">
-              <AlertTriangle className="h-3 w-3" />{overdueCount} késő
+              <AlertTriangle className="h-3 w-3" />{t('hr_workflow.overdue_count', { count: overdueCount })}
             </Badge>
           )}
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="open">Nyitott</SelectItem>
-              <SelectItem value="in_progress">Folyamatban</SelectItem>
-              <SelectItem value="completed">Lezárva</SelectItem>
-              <SelectItem value="cancelled">Törölve</SelectItem>
-              <SelectItem value="all">Mind</SelectItem>
+              <SelectItem value="open">{t('hr_workflow.status_open')}</SelectItem>
+              <SelectItem value="in_progress">{t('hr_workflow.status_in_progress')}</SelectItem>
+              <SelectItem value="completed">{t('hr_workflow.status_completed')}</SelectItem>
+              <SelectItem value="cancelled">{t('hr_workflow.status_cancelled')}</SelectItem>
+              <SelectItem value="all">{t('hr_workflow.filter_all')}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         {isAdmin && (
           <Button size="sm" onClick={openStartDialog}>
             <Plus className="h-3.5 w-3.5 mr-1.5" />
-            Folyamat indítása
+            {t('hr_workflow.start_workflow_btn')}
           </Button>
         )}
       </div>
 
-      {loading && <p className="text-sm text-muted-foreground py-4">Betöltés…</p>}
+      {loading && <p className="text-sm text-muted-foreground py-4">{t('hr_workflow.loading')}</p>}
       {!loading && instances.length === 0 && (
         <Card>
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Nincs találat a kiválasztott szűrőre.
+            {t('hr_workflow.empty_filter')}
           </CardContent>
         </Card>
       )}
@@ -281,9 +283,9 @@ export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
                     </CollapsibleTrigger>
                     <div className="flex items-center gap-1.5 flex-wrap shrink-0">
                       <Badge variant="outline" className="text-xs">
-                        {CATEGORY_LABELS[inst.category] ?? inst.category}
+                        {CATEGORY_I18N_KEY[inst.category] ? t(CATEGORY_I18N_KEY[inst.category] as any) : inst.category}
                       </Badge>
-                      <Badge variant={sm.variant} className="text-xs">{sm.label}</Badge>
+                      <Badge variant={sm.variant} className="text-xs">{t(`hr_workflow.status_${inst.status}` as any)}</Badge>
                     </div>
                   </div>
 
@@ -294,11 +296,11 @@ export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
                     {inst.due_date && (
                       <span className={`flex items-center gap-1 ${dueDateClass(inst.due_date)}`}>
                         <CalendarDays className="h-3 w-3" />
-                        Határidő: {format(new Date(inst.due_date), 'MMM d.', { locale: hu })}
+                        {t('hr_workflow.due_label')} {format(new Date(inst.due_date), 'MMM d.', { locale: hu })}
                       </span>
                     )}
                     {inst.total_tasks > 0 && (
-                      <span>{inst.done_tasks}/{inst.total_tasks} kész</span>
+                      <span>{t('hr_workflow.tasks_done_of_total', { done: inst.done_tasks, total: inst.total_tasks })}</span>
                     )}
                   </div>
 
@@ -349,7 +351,7 @@ export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
                         ))}
                       </ul>
                     ) : (
-                      <p className="text-xs text-muted-foreground">Nincsenek feladatlépések rögzítve.</p>
+                      <p className="text-xs text-muted-foreground">{t('hr_workflow.no_tasks')}</p>
                     )}
 
                     {/* Admin actions */}
@@ -357,11 +359,11 @@ export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
                       <div className="flex gap-2 pt-1">
                         <Button size="sm" variant="outline" onClick={() => closeInstance(inst.id, 'completed')}>
                           <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-                          Lezárás
+                          {t('hr_workflow.btn_close_action')}
                         </Button>
                         <Button size="sm" variant="ghost" className="text-destructive" onClick={() => closeInstance(inst.id, 'cancelled')}>
                           <XCircle className="h-3.5 w-3.5 mr-1.5" />
-                          Törlés
+                          {t('hr_workflow.btn_cancel_action')}
                         </Button>
                       </div>
                     )}
@@ -377,32 +379,32 @@ export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
       <Dialog open={showStartDialog} onOpenChange={setShowStartDialog}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>HR folyamat indítása</DialogTitle>
+            <DialogTitle>{t('hr_workflow.dialog_title')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label>Sablon (opcionális)</Label>
+              <Label>{t('hr_workflow.label_template')}</Label>
               <Select value={fTemplateId} onValueChange={v => {
                 setFTemplateId(v);
-                const t = templates.find(x => x.id === v);
-                if (t && !fTitle) setFTitle(t.name);
+                const tpl = templates.find(x => x.id === v);
+                if (tpl && !fTitle) setFTitle(tpl.name);
               }}>
-                <SelectTrigger><SelectValue placeholder="Válassz sablont…" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t('hr_workflow.placeholder_select_template')} /></SelectTrigger>
                 <SelectContent>
-                  {templates.map(t => (
-                    <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+                  {templates.map(tpl => (
+                    <SelectItem key={tpl.id} value={tpl.id}>{tpl.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label>Cím *</Label>
-              <Input value={fTitle} onChange={e => setFTitle(e.target.value)} placeholder="Folyamat neve" />
+              <Label>{t('hr_workflow.label_title')}</Label>
+              <Input value={fTitle} onChange={e => setFTitle(e.target.value)} placeholder={t('hr_workflow.placeholder_workflow_name')} />
             </div>
             <div className="space-y-1.5">
-              <Label>Érintett munkavállaló</Label>
+              <Label>{t('hr_workflow.label_member')}</Label>
               <Select value={fMemberId} onValueChange={setFMemberId}>
-                <SelectTrigger><SelectValue placeholder="Válassz tagot…" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t('hr_workflow.placeholder_select_member')} /></SelectTrigger>
                 <SelectContent>
                   {members.map(m => (
                     <SelectItem key={m.id} value={m.id}>{m.display_name || m.id}</SelectItem>
@@ -412,29 +414,29 @@ export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Határidő</Label>
+                <Label>{t('hr_workflow.label_due')}</Label>
                 <Input type="date" value={fDueDate} onChange={e => setFDueDate(e.target.value)} />
               </div>
               <div className="space-y-1.5">
-                <Label>Prioritás</Label>
+                <Label>{t('hr_workflow.label_priority')}</Label>
                 <Select value={fPriority} onValueChange={setFPriority}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(PRIORITY_META).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                    {Object.keys(PRIORITY_META).map(k => (
+                      <SelectItem key={k} value={k}>{t(`hr_workflow.priority_${k}` as any)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label>Megjegyzés</Label>
+              <Label>{t('hr_workflow.label_notes')}</Label>
               <Textarea value={fNotes} onChange={e => setFNotes(e.target.value)} rows={2} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowStartDialog(false)}>Mégse</Button>
-            <Button onClick={startWorkflow} disabled={busy || !fTitle.trim()}>Indítás</Button>
+            <Button variant="outline" onClick={() => setShowStartDialog(false)}>{t('hr_workflow.btn_dialog_cancel')}</Button>
+            <Button onClick={startWorkflow} disabled={busy || !fTitle.trim()}>{t('hr_workflow.btn_dialog_start')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

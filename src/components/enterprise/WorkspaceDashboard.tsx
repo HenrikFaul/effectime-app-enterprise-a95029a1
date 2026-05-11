@@ -100,21 +100,21 @@ interface Props {
 }
 
 const WORKSPACE_TOP_NAV_ITEMS = [
-  { value: 'my-portal', label: 'Saját portál', icon: LayoutDashboard },
-  { value: 'members', label: 'Tagok', icon: Users },
-  { value: 'organization', label: 'Szervezet', icon: Building2 },
-  { value: 'calendar', label: 'Naptár', icon: CalendarDays },
-  { value: 'time-attendance', label: 'Időnyilvántartás', icon: Clock },
-  { value: 'requests', label: 'Kérelmek', icon: FileText },
-  { value: 'workflows', label: 'Folyamatok', icon: GitMerge },
-  { value: 'resources', label: 'Erőforrások', icon: Briefcase },
-  { value: 'reports-audit', label: 'Riportok', icon: BarChart3 },
-  { value: 'settings', label: 'Beállítások', icon: Settings },
+  { value: 'my-portal', i18nKey: 'ws_nav.my_portal', icon: LayoutDashboard },
+  { value: 'members', i18nKey: 'ws_nav.members', icon: Users },
+  { value: 'organization', i18nKey: 'ws_nav.organization', icon: Building2 },
+  { value: 'calendar', i18nKey: 'ws_nav.calendar', icon: CalendarDays },
+  { value: 'time-attendance', i18nKey: 'ws_nav.time_attendance', icon: Clock },
+  { value: 'requests', i18nKey: 'ws_nav.requests', icon: FileText },
+  { value: 'workflows', i18nKey: 'ws_nav.workflows', icon: GitMerge },
+  { value: 'resources', i18nKey: 'ws_nav.resources', icon: Briefcase },
+  { value: 'reports-audit', i18nKey: 'ws_nav.reports', icon: BarChart3 },
+  { value: 'settings', i18nKey: 'ws_nav.settings', icon: Settings },
 ] as const;
 
 export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefresh, activeTab: externalTab, onTabChange }: Props) {
   const { signOut } = useAuth();
-  const { loadWorkspaceOverrides } = useI18n();
+  const { loadWorkspaceOverrides, t } = useI18n();
   const [showInvite, setShowInvite] = useState(false);
   const [showMyProfile, setShowMyProfile] = useState(false);
   const [myMembership, setMyMembership] = useState<any>(null);
@@ -240,7 +240,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                 {layout === 'sidebar' ? (
                   <SidebarTrigger />
                 ) : (
-                  <Button variant="ghost" size="icon" onClick={onBack} aria-label="Vissza a munkaterületekhez">
+                  <Button variant="ghost" size="icon" onClick={onBack} aria-label={t('ws_nav.back_to_workspaces')}>
                     <ArrowLeft className="h-4 w-4" />
                   </Button>
                 )}
@@ -258,16 +258,16 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                 <NotificationBell workspaceId={workspace.id} userId={userId} />
                 <DensityToggle workspaceId={workspace.id} />
                 <Button size="sm" variant="outline" onClick={() => setShowMyProfile(true)}>
-                  <User className="h-4 w-4 mr-1" /> Profilom
+                  <User className="h-4 w-4 mr-1" /> {t('ws_nav.profile_btn')}
                 </Button>
                 {isAdmin && (
                   <Button size="sm" onClick={() => setShowInvite(true)}>
-                    <UserPlus className="h-4 w-4 mr-1" /> Meghívás
+                    <UserPlus className="h-4 w-4 mr-1" /> {t('ws_nav.invite_btn')}
                   </Button>
                 )}
                 <LanguageSelector />
                 <Button size="sm" variant="destructive" onClick={signOut} className="gap-1.5">
-                  <LogOut className="h-4 w-4" /> Kilépés
+                  <LogOut className="h-4 w-4" /> {t('ws_nav.sign_out_btn')}
                 </Button>
               </div>
             </div>
@@ -299,7 +299,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                     className="group h-11 shrink-0 gap-2 rounded-xl border border-transparent bg-transparent px-3.5 text-sm font-medium text-muted-foreground data-[state=active]:border-border data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
                   >
                     <Icon className="h-4 w-4" />
-                    <span>{item.label}</span>
+                    <span>{t(item.i18nKey as any)}</span>
                   </TabsTrigger>
                 );
               })}
@@ -347,10 +347,10 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               <TabsContent value="calendar" className="space-y-3">
                 <Tabs defaultValue="calendar-main" className="space-y-3">
                   <TabsList className="sticky top-[calc(var(--ws-header-h)_+_var(--ws-main-tabs-h))] z-10 grid grid-cols-4 w-full h-auto !bg-background border-b rounded-none shadow-sm">
-                    <TabsTrigger value="calendar-main">Naptár</TabsTrigger>
-                    <TabsTrigger value="calendar-timeline">Idővonal</TabsTrigger>
-                    <TabsTrigger value="calendar-coverage">Kapacitástervező</TabsTrigger>
-                    <TabsTrigger value="calendar-annual">Éves nézet</TabsTrigger>
+                    <TabsTrigger value="calendar-main">{t('ws_nav.cal_main')}</TabsTrigger>
+                    <TabsTrigger value="calendar-timeline">{t('ws_nav.cal_timeline')}</TabsTrigger>
+                    <TabsTrigger value="calendar-coverage">{t('ws_nav.cal_coverage')}</TabsTrigger>
+                    <TabsTrigger value="calendar-annual">{t('ws_nav.cal_annual')}</TabsTrigger>
                   </TabsList>
 
                   <TabsContent value="calendar-main" className="space-y-3">
@@ -872,93 +872,91 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
   return (
     <div className="space-y-3">
       {canViewPermissionConfig && (
-        <SettingsSection workspaceId={workspace.id} sectionKey="settings.permissions" icon={<Shield className="h-4 w-4" />} title="Jogosultságok kezelése">
+        <SettingsSection workspaceId={workspace.id} sectionKey="settings.permissions" icon={<Shield className="h-4 w-4" />} title={t('settings_sections.permissions')}>
           <RolePermissionManager workspaceId={workspace.id} userRole={userRole || 'member'} />
         </SettingsSection>
       )}
 
-      {/* Pozíciók és Csapatok átkerültek az Erőforrások fülbe (Single Source of Truth) */}
-
-      <SettingsSection workspaceId={workspace.id} sectionKey="settings.offices" icon={<Settings className="h-4 w-4" />} title="Telephelyek kezelése">
+      <SettingsSection workspaceId={workspace.id} sectionKey="settings.offices" icon={<Settings className="h-4 w-4" />} title={t('settings_sections.offices')}>
         <OfficeManager workspaceId={workspace.id} />
       </SettingsSection>
 
       {isAdmin && (
-        <SettingsSection workspaceId={workspace.id} sectionKey="settings.quota_admin" icon={<Wallet className="h-4 w-4" />} title="Szabadság-kvóták kezelése">
+        <SettingsSection workspaceId={workspace.id} sectionKey="settings.quota_admin" icon={<Wallet className="h-4 w-4" />} title={t('settings_sections.quota_admin')}>
           <QuotaManager workspaceId={workspace.id} adminUserId={userId} />
         </SettingsSection>
       )}
 
       {isAdmin && (
-        <SettingsSection workspaceId={workspace.id} sectionKey="settings.integrations" icon={<Plug className="h-4 w-4" />} title="Integrációk (Jira / Azure DevOps)">
+        <SettingsSection workspaceId={workspace.id} sectionKey="settings.integrations" icon={<Plug className="h-4 w-4" />} title={t('settings_sections.integrations')}>
           <IntegrationManager workspaceId={workspace.id} userId={userId} />
         </SettingsSection>
       )}
 
-      <SettingsSection workspaceId={workspace.id} sectionKey="settings.ical" icon={<Rss className="h-4 w-4" />} title="iCal naptár-feliratkozás">
+      <SettingsSection workspaceId={workspace.id} sectionKey="settings.ical" icon={<Rss className="h-4 w-4" />} title={t('settings_sections.ical')}>
         <ICalSubscription workspaceId={workspace.id} userId={userId} />
       </SettingsSection>
 
-      <SettingsSection workspaceId={workspace.id} sectionKey="settings.localization" icon={<Settings className="h-4 w-4" />} title="Nyelvi beállítások / Localization">
+      <SettingsSection workspaceId={workspace.id} sectionKey="settings.localization" icon={<Settings className="h-4 w-4" />} title={t('settings_sections.localization')}>
         <LocalizationSettings workspaceId={workspace.id} isAdmin={isAdmin} userId={userId} />
       </SettingsSection>
 
       {isAdmin && (
-        <SettingsSection workspaceId={workspace.id} sectionKey="settings.recovery_mode" icon={<ShieldAlert className="h-4 w-4" />} title="Recovery üzemmód / Recovery Mode">
+        <SettingsSection workspaceId={workspace.id} sectionKey="settings.recovery_mode" icon={<ShieldAlert className="h-4 w-4" />} title={t('settings_sections.recovery_mode')}>
           <RecoveryModeSettings workspaceId={workspace.id} userId={userId} />
         </SettingsSection>
       )}
 
       {isAdmin && (
-        <SettingsSection workspaceId={workspace.id} sectionKey="settings.integration_health" icon={<Plug className="h-4 w-4" />} title="Integrációs egészségközpont / Integration Health Center">
+        <SettingsSection workspaceId={workspace.id} sectionKey="settings.integration_health" icon={<Plug className="h-4 w-4" />} title={t('settings_sections.integration_health')}>
           <IntegrationHealthCenter workspaceId={workspace.id} />
         </SettingsSection>
       )}
 
       {isAdmin && (
-        <SettingsSection workspaceId={workspace.id} sectionKey="settings.help_system" icon={<CircleHelp className="h-4 w-4" />} title="AI súgó tartalom / AI Help Content">
+        <SettingsSection workspaceId={workspace.id} sectionKey="settings.help_system" icon={<CircleHelp className="h-4 w-4" />} title={t('settings_sections.help_system')}>
           <HelpSystemSettings workspaceId={workspace.id} />
         </SettingsSection>
       )}
 
       {isAdmin && (
-        <SettingsSection workspaceId={workspace.id} sectionKey="settings.allowances" icon={<Wallet className="h-4 w-4" />} title="Allowance pool kezelése">
+        <SettingsSection workspaceId={workspace.id} sectionKey="settings.allowances" icon={<Wallet className="h-4 w-4" />} title={t('settings_sections.allowances')}>
           <AllowanceManager workspaceId={workspace.id} />
         </SettingsSection>
       )}
 
       {isAdmin && (
-        <SettingsSection workspaceId={workspace.id} sectionKey="settings.workspace_general" icon={<Settings className="h-4 w-4" />} title="Általános workspace szabályok">
+        <SettingsSection workspaceId={workspace.id} sectionKey="settings.workspace_general" icon={<Settings className="h-4 w-4" />} title={t('settings_sections.workspace_general')}>
           <WorkspaceGeneralSettings workspaceId={workspace.id} />
         </SettingsSection>
       )}
 
       {isAdmin && (
-        <SettingsSection workspaceId={workspace.id} sectionKey="settings.branding" icon={<Settings className="h-4 w-4" />} title="Branding és white-label">
+        <SettingsSection workspaceId={workspace.id} sectionKey="settings.branding" icon={<Settings className="h-4 w-4" />} title={t('settings_sections.branding')}>
           <BrandingManager workspaceId={workspace.id} />
         </SettingsSection>
       )}
 
       {isAdmin && (
-        <SettingsSection workspaceId={workspace.id} sectionKey="settings.import_export" icon={<Inbox className="h-4 w-4" />} title="Adatkezelés — Import / Export">
+        <SettingsSection workspaceId={workspace.id} sectionKey="settings.import_export" icon={<Inbox className="h-4 w-4" />} title={t('settings_sections.import_export')}>
           <ImportExportCenter workspaceId={workspace.id} userId={userId} isAdmin={isAdmin} />
         </SettingsSection>
       )}
 
       {isAdmin && (
-        <SettingsSection workspaceId={workspace.id} sectionKey="settings.calendar_filters" icon={<CalendarDays className="h-4 w-4" />} title="Naptár szűrők beállítása">
+        <SettingsSection workspaceId={workspace.id} sectionKey="settings.calendar_filters" icon={<CalendarDays className="h-4 w-4" />} title={t('settings_sections.calendar_filters')}>
           <CalendarFilterSettings workspaceId={workspace.id} userId={userId} />
         </SettingsSection>
       )}
 
       {isAdmin && (
-        <SettingsSection workspaceId={workspace.id} sectionKey="settings.ui_section_states" icon={<Settings className="h-4 w-4" />} title="Menü szekciók alapállapota (cégszintű)">
+        <SettingsSection workspaceId={workspace.id} sectionKey="settings.ui_section_states" icon={<Settings className="h-4 w-4" />} title={t('settings_sections.ui_section_states')}>
           <UiSectionStateManager workspaceId={workspace.id} userId={userId} />
         </SettingsSection>
       )}
 
       {canViewLayoutSetting && (
-        <SettingsSection workspaceId={workspace.id} sectionKey="settings.layout_setting" icon={<LayoutPanelLeft className="h-4 w-4" />} title="Layout Setting">
+        <SettingsSection workspaceId={workspace.id} sectionKey="settings.layout_setting" icon={<LayoutPanelLeft className="h-4 w-4" />} title={t('settings_sections.layout_setting')}>
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">Válassz a 6 eltérő vizuális template közül funkcionális változás nélkül.</p>
             <Select value={themeStyle} onValueChange={(v) => setThemeStyle(v as ThemeStyle)}>

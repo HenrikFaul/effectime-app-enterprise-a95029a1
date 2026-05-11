@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { EffectimeLogo } from '@/components/EffectimeLogo';
+import { useT } from '@/i18n/I18nProvider';
 
 export interface WorkspaceNavItem {
   value: string;
@@ -62,16 +63,17 @@ export function WorkspaceSidebar({
 }: Props) {
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
+  const t = useT();
 
   const items: WorkspaceNavItem[] = [
-    { value: 'members', label: 'Tagok', icon: Users, visible: canViewMembers },
-    { value: 'organization', label: 'Szervezet', icon: Building2, visible: canViewMembers },
-    { value: 'calendar', label: 'Naptár', icon: CalendarDays, visible: hasCalendarAccess },
-    { value: 'requests', label: 'Kérelmek', icon: FileText, visible: hasRequestsAccess },
-    { value: 'workflows', label: 'Folyamatok', icon: GitMerge, visible: canViewMembers },
-    { value: 'resources', label: 'Erőforrások', icon: Briefcase, visible: true },
-    { value: 'reports-audit', label: 'Riportok és Audit', icon: BarChart3, visible: canViewReports },
-    { value: 'settings', label: 'Beállítások', icon: Settings, visible: canViewSettings },
+    { value: 'members', label: t('ws_nav.members'), icon: Users, visible: canViewMembers },
+    { value: 'organization', label: t('ws_nav.organization'), icon: Building2, visible: canViewMembers },
+    { value: 'calendar', label: t('ws_nav.calendar'), icon: CalendarDays, visible: hasCalendarAccess },
+    { value: 'requests', label: t('ws_nav.requests'), icon: FileText, visible: hasRequestsAccess },
+    { value: 'workflows', label: t('ws_nav.workflows'), icon: GitMerge, visible: canViewMembers },
+    { value: 'resources', label: t('ws_nav.resources'), icon: Briefcase, visible: true },
+    { value: 'reports-audit', label: t('ws_nav.reports_audit'), icon: BarChart3, visible: canViewReports },
+    { value: 'settings', label: t('ws_nav.settings'), icon: Settings, visible: canViewSettings },
   ];
 
   return (
@@ -83,8 +85,8 @@ export function WorkspaceSidebar({
             size="icon"
             onClick={onBack}
             className="h-8 w-8 shrink-0"
-            aria-label="Vissza a munkaterületekhez"
-            title="Vissza"
+            aria-label={t('ws_nav.back_to_workspaces')}
+            title={t('ws_nav.back')}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
@@ -93,7 +95,7 @@ export function WorkspaceSidebar({
               <div className="flex items-center gap-1.5">
                 <EffectimeLogo size={18} variant="mark" />
                 <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                  Workspace
+                  {t('ws_nav.workspace_label')}
                 </span>
               </div>
               <div className="text-sm font-semibold truncate" title={workspaceName}>
@@ -105,7 +107,7 @@ export function WorkspaceSidebar({
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          {!collapsed && <SidebarGroupLabel>Navigáció</SidebarGroupLabel>}
+          {!collapsed && <SidebarGroupLabel>{t('ws_nav.navigation_label')}</SidebarGroupLabel>}
           <SidebarGroupContent>
             <SidebarMenu>
               {items
