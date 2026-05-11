@@ -9,6 +9,7 @@ import { logAuditEvent } from '@/lib/auditLog';
 import { hu } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { LeaveRequestDialog } from './LeaveRequestDialog';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -18,24 +19,18 @@ interface Props {
   canViewTeam?: boolean;
 }
 
-const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
-  draft: { label: 'Piszkozat', variant: 'outline' },
-  pending: { label: 'Függőben', variant: 'secondary' },
-  approved: { label: 'Jóváhagyva', variant: 'default' },
-  rejected: { label: 'Elutasítva', variant: 'destructive' },
-  cancelled: { label: 'Visszavonva', variant: 'outline' },
-  withdrawn: { label: 'Lemondva', variant: 'outline' },
-  expired: { label: 'Lejárt', variant: 'outline' },
-};
-
-const TYPE_MAP: Record<string, string> = {
-  vacation: 'Szabadság',
-  sick_leave: 'Betegszabadság',
-  unpaid_leave: 'Fizetés nélküli',
-  other: 'Egyéb',
+const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
+  draft: 'outline',
+  pending: 'secondary',
+  approved: 'default',
+  rejected: 'destructive',
+  cancelled: 'outline',
+  withdrawn: 'outline',
+  expired: 'outline',
 };
 
 export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = true, canViewTeam = false }: Props) {
+  const { t } = useI18n();
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -70,7 +65,7 @@ export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = t
         .select('user_id, display_name')
         .in('user_id', userIds);
       const map: Record<string, string> = {};
-      (profileData || []).forEach((p: any) => { map[p.user_id] = p.display_name || 'Ismeretlen'; });
+      (profileData || []).forEach((p: any) => { map[p.user_id] = p.display_name || t('approval_inbox.unknown'); });
       setProfiles(map);
     }
 
@@ -80,13 +75,13 @@ export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = t
   useEffect(() => { fetchRequests(); }, [workspaceId]);
 
   const handleCancel = async (id: string) => {
-    const reason = window.prompt('Visszavonás indoka (opcionális):') ?? '';
+    const reason = window.prompt(t('approval_inbox.cancel_prompt')) ?? '';
     const { error } = await supabase
       .from('leave_requests')
       .update({ status: 'cancelled' as any, cancellation_reason: reason.trim() || null } as any)
       .eq('id', id);
     if (error) {
-      toast.error('Hiba a visszavonáskor');
+      toast.error(t('approval_inbox.cancel_failed'));
     } else {
       await logAuditEvent({
         workspace_id: workspaceId,
@@ -96,7 +91,7 @@ export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = t
         target_type: 'leave_request',
         metadata: { reason: reason.trim() || null },
       });
-      toast.success('Kérelem visszavonva');
+      toast.success(t('approval_inbox.cancelled'));
       fetchRequests();
     }
   };
@@ -107,7 +102,7 @@ export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = t
       .update({ status: 'cancelled' as any })
       .eq('id', id);
     if (error) {
-      toast.error('Hiba a lemondáskor');
+      toast.error(t('approval_inbox.withdraw_failed'));
     } else {
       await logAuditEvent({
         workspace_id: workspaceId,
@@ -117,7 +112,7 @@ export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = t
         target_type: 'leave_request',
         metadata: { reason: 'Jóváhagyott szabadság lemondva a kérelmező által' },
       });
-      toast.success('Szabadság lemondva');
+      toast.success(t('approval_inbox.withdrawn'));
       fetchRequests();
     }
   };
@@ -130,7 +125,7 @@ export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = t
     <div className="space-y-3">
       <div className="flex justify-end">
         <Button size="sm" onClick={() => setShowCreate(true)}>
-          <Plus className="h-4 w-4 mr-1" /> Új kérelem
+          <Plus className="h-4 w-4 mr-1" /> {t('approval_inbox.new_request')}
         </Button>
       </div>
 
@@ -138,40 +133,40 @@ export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = t
         <Card>
           <CardContent className="text-center py-8 text-muted-foreground">
             {showAllRequests
-              ? 'Nincs távolléti kérelem ebben a munkaterületben.'
-              : 'Nincs saját távolléti kérelmed.'}
+              ? t('approval_inbox.no_workspace_requests')
+              : t('approval_inbox.no_own_requests')}
           </CardContent>
         </Card>
       ) : (
         requests.map((req) => {
           const isCancelled = req.status === 'cancelled';
-          const status = STATUS_MAP[req.status] || STATUS_MAP.pending;
+          const statusVariant = STATUS_VARIANTS[req.status] ?? 'outline';
           return (
             <Card key={req.id} className={isCancelled ? 'opacity-50' : ''}>
               <CardContent className="flex items-center justify-between py-3 px-4">
                 <div className="space-y-1 min-w-0 flex-1">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`font-medium text-sm ${isCancelled ? 'line-through text-muted-foreground' : ''}`}>{profiles[req.user_id] || 'Ismeretlen'}</span>
-                    <Badge variant={status.variant} className="text-xs">{status.label}</Badge>
-                    <Badge variant="outline" className="text-xs">{TYPE_MAP[req.leave_type] || req.leave_type}</Badge>
+                    <span className={`font-medium text-sm ${isCancelled ? 'line-through text-muted-foreground' : ''}`}>{profiles[req.user_id] || t('approval_inbox.unknown')}</span>
+                    <Badge variant={statusVariant} className="text-xs">{t(`approval_inbox.status_${req.status}` as any)}</Badge>
+                    <Badge variant="outline" className="text-xs">{t(`approval_inbox.type_${req.leave_type}` as any)}</Badge>
                   </div>
                   <p className={`text-xs text-muted-foreground ${isCancelled ? 'line-through' : ''}`}>
                     {format(new Date(req.start_date), 'yyyy.MM.dd', { locale: hu })} – {format(new Date(req.end_date), 'yyyy.MM.dd', { locale: hu })}
                   </p>
                   {req.comment && <p className="text-xs text-muted-foreground truncate">{req.comment}</p>}
                   {req.review_comment && (
-                    <p className="text-xs text-muted-foreground italic">Döntés: {req.review_comment}</p>
+                    <p className="text-xs text-muted-foreground italic">{t('approval_inbox.review_decision', { comment: req.review_comment })}</p>
                   )}
                 </div>
                 <div className="flex gap-1 ml-2 shrink-0">
                   {req.user_id === userId && (req.status === 'pending' || req.status === 'draft') && (
                     <Button variant="ghost" size="sm" onClick={() => handleCancel(req.id)} className="text-destructive text-xs">
-                      Visszavonás
+                      {t('approval_inbox.cancel_action')}
                     </Button>
                   )}
                   {req.user_id === userId && req.status === 'approved' && (
                     <Button variant="ghost" size="sm" onClick={() => handleWithdraw(req.id)} className="text-destructive text-xs">
-                      Lemondás
+                      {t('approval_inbox.withdraw_action')}
                     </Button>
                   )}
                 </div>

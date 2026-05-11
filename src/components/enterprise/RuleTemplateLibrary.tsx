@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { format } from 'date-fns';
 import { hu } from 'date-fns/locale';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export function RuleTemplateLibrary({ workspaceId, userId }: Props) {
+  const { t } = useI18n();
   const [templates, setTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -40,9 +42,9 @@ export function RuleTemplateLibrary({ workspaceId, userId }: Props) {
   useEffect(() => { fetchTemplates(); }, [workspaceId]);
 
   const handleCreate = async () => {
-    if (!name.trim()) { toast.error('Add meg a sablon nevét'); return; }
+    if (!name.trim()) { toast.error(t('rule_template_mgr.name_required')); return; }
     let parsed;
-    try { parsed = JSON.parse(templateJson); } catch { toast.error('Érvénytelen JSON'); return; }
+    try { parsed = JSON.parse(templateJson); } catch { toast.error(t('rule_template_mgr.invalid_json')); return; }
 
     const { error } = await supabase.from('enterprise_rule_templates').insert({
       workspace_id: workspaceId,
@@ -51,8 +53,8 @@ export function RuleTemplateLibrary({ workspaceId, userId }: Props) {
       template_data: parsed,
       created_by: userId,
     });
-    if (error) { toast.error('Hiba a létrehozáskor'); return; }
-    toast.success('Sablon létrehozva');
+    if (error) { toast.error(t('rule_template_mgr.create_failed')); return; }
+    toast.success(t('rule_template_mgr.created'));
     setShowForm(false);
     setName('');
     setDescription('');
@@ -60,28 +62,28 @@ export function RuleTemplateLibrary({ workspaceId, userId }: Props) {
     fetchTemplates();
   };
 
-  const handleDuplicate = async (t: any) => {
+  const handleDuplicate = async (tmpl: any) => {
     const { error } = await supabase.from('enterprise_rule_templates').insert({
       workspace_id: workspaceId,
-      name: `${t.name} (másolat)`,
-      description: t.description,
-      template_data: t.template_data,
+      name: `${tmpl.name} (copy)`,
+      description: tmpl.description,
+      template_data: tmpl.template_data,
       created_by: userId,
     });
-    if (error) { toast.error('Hiba'); return; }
-    toast.success('Sablon duplikálva');
+    if (error) { toast.error(t('rule_template_mgr.error')); return; }
+    toast.success(t('rule_template_mgr.duplicated'));
     fetchTemplates();
   };
 
   const handleArchive = async (id: string) => {
     await supabase.from('enterprise_rule_templates').update({ is_archived: true }).eq('id', id);
-    toast.success('Sablon archiválva');
+    toast.success(t('rule_template_mgr.archived'));
     fetchTemplates();
   };
 
   const handleDelete = async (id: string) => {
     await supabase.from('enterprise_rule_templates').delete().eq('id', id);
-    toast.success('Sablon törölve');
+    toast.success(t('rule_template_mgr.deleted'));
     fetchTemplates();
   };
 
@@ -90,36 +92,36 @@ export function RuleTemplateLibrary({ workspaceId, userId }: Props) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Szabálysablonok</h3>
-        <Button size="sm" variant="outline" onClick={() => setShowForm(true)}><Plus className="h-3 w-3 mr-1" /> Új sablon</Button>
+        <h3 className="text-sm font-semibold">{t('rule_template_mgr.title')}</h3>
+        <Button size="sm" variant="outline" onClick={() => setShowForm(true)}><Plus className="h-3 w-3 mr-1" /> {t('rule_template_mgr.btn_new') ?? 'New'}</Button>
       </div>
 
       {templates.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Nincs sablon. Hozz létre egyet a gyakran használt szabálybeállítások mentéséhez.</p>
+        <p className="text-xs text-muted-foreground">{t('rule_template_mgr.empty')}</p>
       ) : (
         <div className="space-y-2">
-          {templates.map(t => (
-            <Card key={t.id}>
+          {templates.map(tmpl => (
+            <Card key={tmpl.id}>
               <CardContent className="py-3 px-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium text-sm">{t.name}</span>
-                      <Badge variant="outline" className="text-[10px]">v{t.version}</Badge>
+                      <span className="font-medium text-sm">{tmpl.name}</span>
+                      <Badge variant="outline" className="text-[10px]">v{tmpl.version}</Badge>
                     </div>
-                    {t.description && <p className="text-xs text-muted-foreground mt-0.5">{t.description}</p>}
+                    {tmpl.description && <p className="text-xs text-muted-foreground mt-0.5">{tmpl.description}</p>}
                     <p className="text-[10px] text-muted-foreground mt-1">
-                      Létrehozva: {format(new Date(t.created_at), 'yyyy.MM.dd', { locale: hu })}
+                      {format(new Date(tmpl.created_at), 'yyyy.MM.dd', { locale: hu })}
                     </p>
                   </div>
                   <div className="flex gap-1 shrink-0">
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDuplicate(t)} title="Duplikálás">
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDuplicate(tmpl)}>
                       <Copy className="h-3 w-3" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleArchive(t.id)} title="Archiválás">
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleArchive(tmpl.id)}>
                       <Archive className="h-3 w-3" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDelete(t.id)} title="Törlés">
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDelete(tmpl.id)}>
                       <Trash2 className="h-3 w-3 text-destructive" />
                     </Button>
                   </div>
@@ -132,18 +134,18 @@ export function RuleTemplateLibrary({ workspaceId, userId }: Props) {
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Új szabálysablon</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t('rule_template_mgr.dialog_title')}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label>Név</Label>
-              <Input className="mt-1" value={name} onChange={e => setName(e.target.value)} placeholder="pl. Nyári szabályok" />
+              <Label>{t('rule_template_mgr.label_name')}</Label>
+              <Input className="mt-1" value={name} onChange={e => setName(e.target.value)} />
             </div>
             <div>
-              <Label>Leírás (opcionális)</Label>
-              <Input className="mt-1" value={description} onChange={e => setDescription(e.target.value)} placeholder="pl. Júl-Aug max 2 fő távol" />
+              <Label>{t('rule_template_mgr.label_description')}</Label>
+              <Input className="mt-1" value={description} onChange={e => setDescription(e.target.value)} />
             </div>
             <div>
-              <Label>Sablon adatok (JSON)</Label>
+              <Label>{t('rule_template_mgr.label_json')}</Label>
               <Textarea
                 className="mt-1 font-mono text-xs"
                 value={templateJson}
@@ -153,8 +155,8 @@ export function RuleTemplateLibrary({ workspaceId, userId }: Props) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowForm(false)}>Mégse</Button>
-            <Button onClick={handleCreate}>Létrehozás</Button>
+            <Button variant="outline" onClick={() => setShowForm(false)}>{t('rule_template_mgr.btn_cancel')}</Button>
+            <Button onClick={handleCreate}>{t('rule_template_mgr.btn_create')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
