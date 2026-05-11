@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { validateLeaveRequest, ConflictResult } from '@/lib/conflictEngine';
+import { formatConflict } from '@/lib/conflictEngineI18n';
 import { logAuditEvent } from '@/lib/auditLog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -275,7 +276,7 @@ export function LeaveRequestDialog({ open, onOpenChange, workspaceId, userId, on
               {conflicts.map((c, i) => (
                 <div key={i} className={cn("flex items-start gap-2 text-xs rounded px-2 py-1", c.severity === 'blocking' ? 'bg-destructive/10 text-destructive' : 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400')}>
                   {c.severity === 'blocking' ? <XCircle className="h-3 w-3 mt-0.5 shrink-0" /> : <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />}
-                  <span>{c.message}</span>
+                  <span>{formatConflict(c, t)}</span>
                 </div>
               ))}
               {hasBlockingConflicts && (

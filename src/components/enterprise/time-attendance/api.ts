@@ -180,9 +180,10 @@ export async function upsertSiteAssignment(
   officeId: string,
   shiftDate: string,
 ): Promise<void> {
-  // Single atomic upsert keyed on (workspace_id, membership_id, shift_date).
-  // Avoids the previous delete-then-insert pattern, which could leave no assignment
-  // if a network error occurred between the two operations.
+  // Single atomic upsert keyed on (workspace_id, user_id, shift_date) — the
+  // existing UNIQUE constraint `uq_shift_user_date` on the table.
+  // Avoids the previous delete-then-insert pattern, which could leave no
+  // assignment if a network error occurred between the two operations.
   const { error } = await sb
     .from('enterprise_shift_assignments')
     .upsert(
@@ -194,7 +195,7 @@ export async function upsertSiteAssignment(
         shift_date: shiftDate,
         created_by: userId,
       },
-      { onConflict: 'workspace_id,membership_id,shift_date' },
+      { onConflict: 'workspace_id,user_id,shift_date' },
     );
   if (error) throw error;
 }

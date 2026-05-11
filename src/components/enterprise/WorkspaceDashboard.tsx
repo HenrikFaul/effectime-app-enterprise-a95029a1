@@ -790,14 +790,14 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
   const [description, setDescription] = useState(workspace.description || '');
   const [saving, setSaving] = useState(false);
   const [customReports, setCustomReports] = useState<{ id: string; name: string; type: string }[]>([
-    { id: '1', name: 'Havi csapat összesítő', type: 'team_monthly' },
-    { id: '2', name: 'Pozíció lefedettségi riport', type: 'role_coverage' },
+    { id: '1', name: t('workspace_settings.tmpl_team_monthly'), type: 'team_monthly' },
+    { id: '2', name: t('workspace_settings.tmpl_role_coverage'), type: 'role_coverage' },
   ]);
   const [calendarWidgets, setCalendarWidgets] = useState<{ id: string; name: string; enabled: boolean }[]>([
-    { id: 'team_avail', name: 'Csapat elérhetőségi összefoglaló', enabled: true },
-    { id: 'upcoming_holidays', name: 'Közelgő ünnepnapok', enabled: true },
-    { id: 'coverage_heatmap', name: 'Lefedettségi hőtérkép', enabled: false },
-    { id: 'role_summary', name: 'Pozíció szerinti összefoglaló', enabled: false },
+    { id: 'team_avail', name: t('workspace_settings.widget_team_avail'), enabled: true },
+    { id: 'upcoming_holidays', name: t('workspace_settings.widget_upcoming_holidays'), enabled: true },
+    { id: 'coverage_heatmap', name: t('workspace_settings.widget_coverage_heatmap'), enabled: false },
+    { id: 'role_summary', name: t('workspace_settings.widget_role_summary'), enabled: false },
   ]);
   const [newReportName, setNewReportName] = useState('');
   const [newReportType, setNewReportType] = useState('custom');
@@ -814,9 +814,9 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
       .update({ name: name.trim(), description: description.trim() || null, settings: settings as any })
       .eq('id', workspace.id);
     if (error) {
-      toast.error('Hiba a mentéskor');
+      toast.error(t('workspace_settings.toast_save_failed'));
     } else {
-      toast.success('Beállítások mentve');
+      toast.success(t('workspace_settings.toast_saved'));
       onRefresh();
     }
     setSaving(false);
@@ -827,7 +827,7 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
     if (!trimmed) return;
     setCustomReports(prev => [...prev, { id: Date.now().toString(), name: trimmed, type: newReportType }]);
     setNewReportName('');
-    toast.success('Riport hozzáadva');
+    toast.success(t('workspace_settings.toast_report_added'));
   };
 
   const removeReport = (id: string) => {
@@ -839,7 +839,7 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
     if (!trimmed) return;
     setCalendarWidgets(prev => [...prev, { id: Date.now().toString(), name: trimmed, enabled: true }]);
     setNewWidgetName('');
-    toast.success('Widget hozzáadva');
+    toast.success(t('workspace_settings.toast_widget_added'));
   };
 
   const toggleWidget = (id: string) => {
@@ -851,11 +851,11 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
   };
 
   const reportTemplates = [
-    { value: 'team_monthly', label: 'Havi csapat összesítő' },
-    { value: 'role_coverage', label: 'Pozíció lefedettség' },
-    { value: 'approval_throughput', label: 'Jóváhagyási átfutás' },
-    { value: 'leave_trend', label: 'Szabadság trend' },
-    { value: 'custom', label: 'Egyéni riport' },
+    { value: 'team_monthly', label: t('workspace_settings.tmpl_team_monthly') },
+    { value: 'role_coverage', label: t('workspace_settings.tmpl_role_coverage_short') },
+    { value: 'approval_throughput', label: t('workspace_settings.tmpl_approval_throughput') },
+    { value: 'leave_trend', label: t('workspace_settings.tmpl_leave_trend') },
+    { value: 'custom', label: t('workspace_settings.tmpl_custom') },
   ];
 
   const isAdmin = userRole === 'owner' || userRole === 'resourceAssistant';
