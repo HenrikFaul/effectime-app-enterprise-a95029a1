@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Plus, Trash2, Users, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -24,6 +25,7 @@ interface Team {
 }
 
 export function TeamManager({ workspaceId, userId }: Props) {
+  const { t } = useI18n();
   const [teams, setTeams] = useState<Team[]>([]);
   const [availableRoles, setAvailableRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,20 +85,20 @@ export function TeamManager({ workspaceId, userId }: Props) {
       .from('enterprise_teams')
       .insert({ workspace_id: workspaceId, name, description: newTeamDesc.trim() || null, created_by: userId, approval_mode: 'linear', max_absent: null });
     if (error) {
-      toast.error(error.message.includes('duplicate') ? 'Ilyen nevű csapat már létezik' : 'Hiba a csapat létrehozásakor');
+      toast.error(error.message.includes('duplicate') ? t('teams.duplicate_name') : t('teams.create_failed'));
       return;
     }
-    toast.success(`"${name}" csapat létrehozva`);
+    toast.success(t('teams.create_success', { name }));
     setNewTeamName('');
     setNewTeamDesc('');
     fetchData();
   };
 
   const handleDeleteTeam = async (teamId: string, name: string) => {
-    if (!confirm(`Biztosan törlöd a "${name}" csapatot?`)) return;
+    if (!confirm(t('teams.delete_confirm', { name }))) return;
     const { error } = await (supabase as any).from('enterprise_teams').delete().eq('id', teamId);
-    if (error) toast.error('Hiba a törléskor');
-    else { toast.success('Csapat törölve'); fetchData(); }
+    if (error) toast.error(t('teams.delete_failed'));
+    else { toast.success(t('teams.delete_success')); fetchData(); }
   };
 
   const handleAddRole = async (teamId: string) => {
@@ -106,7 +108,7 @@ export function TeamManager({ workspaceId, userId }: Props) {
       .from('enterprise_team_roles')
       .insert({ team_id: teamId, workspace_id: workspaceId, business_role: role });
     if (error) {
-      toast.error(error.message.includes('duplicate') ? 'Ez a pozíció már szerepel' : 'Hiba a hozzáadáskor');
+      toast.error(error.message.includes('duplicate') ? t('teams.position_duplicate') : t('teams.position_add_failed'));
       return;
     }
     setRoleToAdd(prev => ({ ...prev, [teamId]: '' }));
@@ -119,10 +121,9 @@ export function TeamManager({ workspaceId, userId }: Props) {
       .delete()
       .eq('team_id', teamId)
       .eq('business_role', role);
-    if (error) toast.error('Hiba az eltávolításkor');
+    if (error) toast.error(t('teams.position_remove_failed'));
     else fetchData();
   };
-
 
   const handleUpdateTeamPolicy = async (teamId: string, updates: { max_absent?: number | null; approval_mode?: string }) => {
     const { error } = await (supabase as any)
@@ -132,12 +133,12 @@ export function TeamManager({ workspaceId, userId }: Props) {
       .eq('workspace_id', workspaceId);
 
     if (error) {
-      toast.error('Hiba a csapat beállításainak mentésekor');
+      toast.error(t('teams.settings_failed'));
       return;
     }
 
     setTeams(prev => prev.map(team => team.id === teamId ? { ...team, ...updates } : team));
-    toast.success('Csapat beállítások mentve');
+    toast.success(t('teams.settings_saved'));
   };
 
   if (loading) {
@@ -146,33 +147,29 @@ export function TeamManager({ workspaceId, userId }: Props) {
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-muted-foreground">
-        A csapatok pozíciók (munkakörök) gyűjteményei. A tagok automatikusan csapathoz tartoznak az általuk betöltött pozícióik alapján.
-      </p>
+      <p className="text-xs text-muted-foreground">{t('teams.description')}</p>
 
-      {/* Create new team */}
       <div className="rounded-md border p-3 bg-muted/30 space-y-2">
-        <p className="text-xs font-medium">Új csapat létrehozása</p>
+        <p className="text-xs font-medium">{t('teams.create_team')}</p>
         <Input
-          placeholder="Csapat neve (pl. Backend Team)"
+          placeholder={t('teams.team_name_placeholder')}
           value={newTeamName}
           onChange={e => setNewTeamName(e.target.value)}
           className="text-sm h-8"
         />
         <Input
-          placeholder="Leírás (opcionális)"
+          placeholder={t('teams.team_desc_placeholder')}
           value={newTeamDesc}
           onChange={e => setNewTeamDesc(e.target.value)}
           className="text-sm h-8"
         />
         <Button size="sm" onClick={handleCreateTeam} disabled={!newTeamName.trim()}>
-          <Plus className="h-3.5 w-3.5 mr-1" /> Csapat létrehozása
+          <Plus className="h-3.5 w-3.5 mr-1" /> {t('teams.create_team')}
         </Button>
       </div>
 
-      {/* Team list */}
       {teams.length === 0 ? (
-        <p className="text-xs text-muted-foreground text-center py-4">Még nincsenek csapatok létrehozva.</p>
+        <p className="text-xs text-muted-foreground text-center py-4">{t('teams.no_teams')}</p>
       ) : (
         <div className="space-y-2">
           {teams.map(team => {
@@ -184,7 +181,7 @@ export function TeamManager({ workspaceId, userId }: Props) {
                     <div className="flex items-center gap-2">
                       <Users className="h-4 w-4 text-primary" />
                       <span className="font-medium text-sm">{team.name}</span>
-                      <Badge variant="secondary" className="text-[10px]">{team.memberCount} fő</Badge>
+                      <Badge variant="secondary" className="text-[10px]">{t('teams.member_count', { count: team.memberCount })}</Badge>
                     </div>
                     <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => handleDeleteTeam(team.id, team.name)}>
                       <Trash2 className="h-3.5 w-3.5" />
@@ -194,19 +191,19 @@ export function TeamManager({ workspaceId, userId }: Props) {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-md border bg-muted/30 p-2">
                     <div className="space-y-1">
-                      <p className="text-[11px] text-muted-foreground">Max. párhuzamos távollévő</p>
+                      <p className="text-[11px] text-muted-foreground">{t('teams.max_absent')}</p>
                       <Input
                         type="number"
                         min={0}
                         value={maxAbsentDraft[team.id] ?? ''}
-                        placeholder="Nincs korlát"
+                        placeholder="–"
                         className="h-8 text-xs"
                         onChange={(e) => setMaxAbsentDraft(prev => ({ ...prev, [team.id]: e.target.value }))}
                         onBlur={() => {
                           const raw = (maxAbsentDraft[team.id] || '').trim();
                           const parsed = raw === '' ? null : Number(raw);
                           if (parsed !== null && (!Number.isFinite(parsed) || parsed < 0)) {
-                            toast.error('A max. távollévők száma csak 0 vagy pozitív érték lehet');
+                            toast.error(t('teams.max_absent_invalid'));
                             setMaxAbsentDraft(prev => ({ ...prev, [team.id]: team.max_absent == null ? '' : String(team.max_absent) }));
                             return;
                           }
@@ -215,23 +212,22 @@ export function TeamManager({ workspaceId, userId }: Props) {
                       />
                     </div>
                     <div className="space-y-1">
-                      <p className="text-[11px] text-muted-foreground">Jóváhagyási mód</p>
+                      <p className="text-[11px] text-muted-foreground">{t('teams.approval_mode')}</p>
                       <Select value={team.approval_mode || 'linear'} onValueChange={(v) => handleUpdateTeamPolicy(team.id, { approval_mode: v })}>
                         <SelectTrigger className="h-8 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="linear">Lineáris</SelectItem>
-                          <SelectItem value="parallel">Párhuzamos</SelectItem>
+                          <SelectItem value="linear">{t('teams.approval_linear')}</SelectItem>
+                          <SelectItem value="parallel">{t('teams.approval_parallel')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
 
-                  {/* Assigned roles */}
                   <div className="flex flex-wrap gap-1">
                     {team.roles.length === 0 ? (
-                      <span className="text-xs text-muted-foreground italic">Nincs pozíció hozzárendelve</span>
+                      <span className="text-xs text-muted-foreground italic">{t('teams.no_positions')}</span>
                     ) : team.roles.map(role => (
                       <Badge key={role} variant="outline" className="text-xs gap-1 pr-1">
                         {role}
@@ -242,19 +238,18 @@ export function TeamManager({ workspaceId, userId }: Props) {
                     ))}
                   </div>
 
-                  {/* Add role */}
                   {rolesNotInTeam.length > 0 && (
                     <div className="flex gap-2">
                       <Select value={roleToAdd[team.id] || ''} onValueChange={v => setRoleToAdd(prev => ({ ...prev, [team.id]: v }))}>
                         <SelectTrigger className="h-7 text-xs flex-1">
-                          <SelectValue placeholder="Pozíció kiválasztása..." />
+                          <SelectValue placeholder={t('teams.role_add_prompt')} />
                         </SelectTrigger>
                         <SelectContent>
                           {rolesNotInTeam.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                         </SelectContent>
                       </Select>
                       <Button size="sm" className="h-7" onClick={() => handleAddRole(team.id)} disabled={!roleToAdd[team.id]}>
-                        <Plus className="h-3 w-3 mr-1" /> Hozzáadás
+                        <Plus className="h-3 w-3 mr-1" /> {t('teams.add_position')}
                       </Button>
                     </div>
                   )}
@@ -266,9 +261,7 @@ export function TeamManager({ workspaceId, userId }: Props) {
       )}
 
       {availableRoles.length === 0 && (
-        <p className="text-xs text-muted-foreground italic">
-          Még nincsenek pozíciók a tagoknál. A "Pozíciók kezelése" szekcióban hozz létre, vagy rendelj pozíciót a tagokhoz, hogy itt választható legyen.
-        </p>
+        <p className="text-xs text-muted-foreground italic">{t('teams.no_positions')}</p>
       )}
     </div>
   );

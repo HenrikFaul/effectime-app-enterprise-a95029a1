@@ -8,13 +8,20 @@ import {
 } from './locales';
 import en from './resources/en';
 import hu from './resources/hu';
+import cs from './resources/cs';
+import sk from './resources/sk';
+import pl from './resources/pl';
 
 type Bundle = typeof en;
 
-const BUNDLES: Record<Locale, Bundle> = {
+// Indexed by locale tag; all non-English bundles are cast so missing keys
+// silently fall back to English at runtime via the lookup chain.
+const BUNDLES: Record<string, Bundle> = {
   en,
-  // Hungarian intentionally typed as English structure; missing keys fall back.
   hu: hu as unknown as Bundle,
+  cs: cs as unknown as Bundle,
+  sk: sk as unknown as Bundle,
+  pl: pl as unknown as Bundle,
 };
 
 interface I18nContextValue {
@@ -58,15 +65,16 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(() => detectInitialLocale());
   const [ready, setReady] = useState(false);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
-  const [overridesByLocale, setOverridesByLocale] = useState<Record<Locale, Map<string, string>>>({
-    en: new Map(),
-    hu: new Map(),
-  });
+  const [overridesByLocale, setOverridesByLocale] = useState<Record<string, Map<string, string>>>(
+    () => Object.fromEntries(SUPPORTED_LOCALES.map((l) => [l, new Map<string, string>()])),
+  );
 
   const loadWorkspaceOverrides = useCallback(async (workspaceId: string | null) => {
     setActiveWorkspaceId(workspaceId);
     if (!workspaceId) {
-      setOverridesByLocale({ en: new Map(), hu: new Map() });
+      setOverridesByLocale(
+        Object.fromEntries(SUPPORTED_LOCALES.map((l) => [l, new Map<string, string>()])),
+      );
       return;
     }
     try {
@@ -74,9 +82,11 @@ export function I18nProvider({ children }: { children: ReactNode }) {
         .from('enterprise_translation_overrides')
         .select('locale, key, value')
         .eq('workspace_id', workspaceId);
-      const next: Record<Locale, Map<string, string>> = { en: new Map(), hu: new Map() };
+      const next: Record<string, Map<string, string>> = Object.fromEntries(
+        SUPPORTED_LOCALES.map((l) => [l, new Map<string, string>()]),
+      );
       ((data as any[]) || []).forEach((row: any) => {
-        const l = row.locale as Locale;
+        const l = row.locale as string;
         if (l in next) next[l].set(row.key, row.value);
       });
       setOverridesByLocale(next);
