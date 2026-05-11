@@ -980,3 +980,15 @@ A workspace-picker `useState('')` került a `if (selectedWorkspaceId) return <Wo
 - **Fájl**: `enterprise_attendance_segments` séma
 - **Logika**: A v1 csak manuális idő-rögzítést szállít, de a `source text DEFAULT 'manual'` és `device_event_id uuid` oszlopok már a sémában vannak. Amikor a jövőben hardver-alapú attendance esemény ingestion bekerül, csak egy új `enterprise_attendance_device_events` tábla és egy új edge function kell — sem séma-migrációra, sem UI átalakításra nincs szükség.
 - **Megelőzés**: Ha tudjuk hogy a v2 új írási forrást fog hozzáadni, már a v1 sémájában legyen ott a `source` flag és FK-helyek. Az alábbi belső költség ezt később már nehéz hozzáadni törés nélkül.
+
+### [LESSON-WF-093] HR workflow engine: pre-built template bank + runtime instance pattern
+- **Dátum**: 2026-05-11
+- **Fájl**: `src/components/enterprise/workflows/HRWorkflowTemplates.tsx`, `supabase/migrations/20260511000001_create_hr_workflows.sql`
+- **Logika**: HR folyamatsablonok (orvosi vizsgálat, előleg-igény, szerződésmódosítás stb.) a DB-ben tárolva (`enterprise_hr_workflow_templates` + `steps` jsonb tömb), fut-time instance-ok az `enterprise_hr_workflow_instances` táblában. Az admin "6 alapértelmezett betöltése" gombbal egyszer feltölti a sablonokat, utána folyamatokat indít belőlük. A template `steps[]` tömbből az `hr_workflow_create_instance` SECURITY DEFINER RPC automatikusan létrehozza a `enterprise_hr_workflow_tasks` sorokat `due_date = instance.due_date + offset_days` logikával.
+- **Megelőzés**: Komplex workflow engine esetén válaszd el: (1) sablonok (statikus definíciók), (2) instance-ok (futó folyamatok), (3) feladatok (lépések). Ez biztosítja a visszakereshetőséget és az auditálhatóságot.
+
+### [LESSON-SELFSERVICE-094] Employee Self-Service portal: aggregált view meglévő táblákból, új UI entrypoint
+- **Dátum**: 2026-05-11
+- **Fájl**: `src/components/enterprise/self-service/EmployeeDashboard.tsx`
+- **Logika**: Az "Önkiszolgáló portál" (Saját portál tab) nem igényel új DB táblákat — a meglévő `enterprise_attendance_periods`, `enterprise_leave_quota_balances`, `leave_requests`, `enterprise_hr_workflow_tasks` lekérdezések összerakva adják a komplett employee dashboard-ot. Kulcs: `membership_id` alapján szűr, ami az aktuális user saját membershipje a workspaceben.
+- **Megelőzés**: Új "összesítő" dashboardhoz elsőként nézd meg, hogy a szükséges adatok már megvannak-e különálló táblákban — nagy valószínűséggel igen, és csak egy aggregáló UI kell hozzá.

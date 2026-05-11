@@ -1,3 +1,63 @@
+## 2026-05-11 — v3.7.0 HR Workflow Automation + Employee Self-Service Portal
+
+### Added — Group 2 (HR Workflow Automation) + Group 4 (Employee Self-Service) + Group 6 (Payroll Readiness)
+
+**HR Workflow Engine (Group 2):**
+
+New general-purpose HR workflow tables and components covering the full lifecycle of recurring and ad-hoc HR processes.
+
+**Database (1 migration `20260511000001_create_hr_workflows.sql`):**
+- `enterprise_hr_workflow_templates` — named workflow templates per workspace; `steps` jsonb array with `title`, `due_offset_days`, `is_required`; optional `recurrence_months` for periodic workflows.
+- `enterprise_hr_workflow_instances` — live workflow runs: status `open → in_progress → completed/cancelled`, priority `low/normal/high/urgent`, `due_date`, member link.
+- `enterprise_hr_workflow_tasks` — individual step rows materialised from template steps at instance creation time; per-task `due_date = instance.due_date + offset`.
+- 4 SECURITY DEFINER RPCs: `hr_workflow_create_instance`, `hr_workflow_update_task`, `hr_workflow_close_instance`, `hr_workflow_list_instances`.
+- RLS: admins full access; members read own instances; assignees read + update own tasks.
+
+**6 Built-in Template Definitions (TypeScript presets, loaded on demand):**
+| Category | Name |
+|----------|------|
+| `medical_exam` | Éves munkavédelmi orvosi vizsgálat (4 lépés, éves ismétlődés) |
+| `salary_advance` | Bér-előleg igény feldolgozása (5 lépés) |
+| `contract_amendment` | Munkaszerződés-módosítás (6 lépés) |
+| `probation_review` | Próbaidő-értékelés (5 lépés) |
+| `fixed_term_expiry` | Határozott idejű szerződés lejárata (4 lépés) |
+| `offboarding` | Kiléptetés — offboarding (7 lépés) |
+
+**Frontend (`src/components/enterprise/workflows/`):**
+- `HRWorkflowTemplates.tsx` — Admin template manager: collapsible step view, create/edit/archive dialog, "6 alapértelmezett betöltése" one-click setup, category-coloured badges.
+- `HRWorkflowInbox.tsx` — Unified task inbox: status/category filter, progress bar per instance, overdue indicators (red), due-soon (amber), per-task checkbox, admin action buttons (close/cancel), "Folyamat indítása" dialog.
+- `WorkflowsModule.tsx` updated — "HR folyamatok" inbox tab is now the default; "HR sablonok" tab added for admins.
+
+**Employee Self-Service Portal (Group 4):**
+
+New top-level workspace tab **Saját portál** (LayoutDashboard icon, first in nav, visible to all members).
+
+- `src/components/enterprise/self-service/EmployeeDashboard.tsx` — Aggregated personal view:
+  - **Attendance card** — current month period status badge + 4 KPI cards (Ledolgozott / Túlóra / Elvárt szab. után / Bér-össz); return-reason alert in red when status = returned; "Megnyitás →" deeplink to time-attendance tab.
+  - **Leave quota card** — all quota balances for the current year with progress bars; "Szabadság igénylése →" deeplink.
+  - **My requests card** — last 5 leave requests with status badges.
+  - **My tasks card** — open workflow tasks assigned to me with due-date colouring; "Összes →" deeplink to workflows tab.
+
+**Payroll Readiness Panel (Group 6):**
+
+`PayrollReadinessPanel` component injected into `AdminOverview.tsx` above the member table.
+
+- 6-point pre-export checklist (all green = export is safe):
+  1. Every active member has an open period
+  2. No draft periods (all submitted or beyond)
+  3. No returned periods (all corrected)
+  4. All submitted periods are approved
+  5. All approved periods are locked
+  6. At least one locked period exists for export
+- Collapsible; header shows pass/fail count with colour coding (green / amber / red).
+- Zero network requests — computed in `useMemo` from already-loaded `rows`.
+
+**Integration:**
+- `WorkspaceDashboard.tsx` — `my-portal` tab added as the first nav item; `EmployeeDashboard` rendered inside; `LayoutDashboard` icon.
+- Existing time-attendance, leave, workflow, request modules untouched.
+
+---
+
 ## 2026-05-10 — v3.6.0 Time Attendance & Payroll Preparation module
 
 ### Added — Complete employee time logging + admin overview + payroll export

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft, LogOut, Building2, GitMerge, CircleHelp, Clock } from 'lucide-react';
+import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft, LogOut, Building2, GitMerge, CircleHelp, Clock, LayoutDashboard } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
@@ -64,6 +64,7 @@ import { OrganizationModule } from './organization/OrganizationModule';
 import { LocalizationSettings } from './settings/LocalizationSettings';
 import { NotificationBell } from './NotificationBell';
 import { WorkflowsModule } from './workflows/WorkflowsModule';
+import { EmployeeDashboard } from './self-service/EmployeeDashboard';
 import { RecoveryModeSettings } from './settings/RecoveryModeSettings';
 import { CapacityDnaPanel } from './CapacityDnaPanel';
 import { OrgPulseButton } from './OrgPulseButton';
@@ -99,6 +100,7 @@ interface Props {
 }
 
 const WORKSPACE_TOP_NAV_ITEMS = [
+  { value: 'my-portal', label: 'Saját portál', icon: LayoutDashboard },
   { value: 'members', label: 'Tagok', icon: Users },
   { value: 'organization', label: 'Szervezet', icon: Building2 },
   { value: 'calendar', label: 'Naptár', icon: CalendarDays },
@@ -136,6 +138,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
 
   // Map active tab → help anchor
   const helpAnchorId =
+    activeTab === 'my-portal' ? 'workspace.my_portal' :
     activeTab === 'members' ? 'workspace.members' :
     activeTab === 'organization' ? 'workspace.organization' :
     activeTab === 'calendar' ? 'workspace.calendar' :
@@ -275,6 +278,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               {WORKSPACE_TOP_NAV_ITEMS.map((item) => {
                 const Icon = item.icon;
                 const visible =
+                  item.value === 'my-portal' ? true :
                   item.value === 'members' ? canView('members') :
                   item.value === 'organization' ? canView('members') :
                   item.value === 'calendar' ? hasCalendarAccess :
@@ -304,6 +308,15 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
             <div id="main-content" className="w-full px-[var(--shell-pad-x,1rem)] py-[var(--shell-pad-y,1rem)]">
               <div className="space-y-4 w-full">
             {null}
+            <TabsContent value="my-portal" className="space-y-3">
+              <EmployeeDashboard
+                workspaceId={workspace.id}
+                userId={userId}
+                isAdmin={isAdmin}
+                onNavigateTab={setActiveTab}
+              />
+            </TabsContent>
+
             {canView('members') && (
               <TabsContent value="members" className="space-y-3">
                 {canView('invitations') && (
