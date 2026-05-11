@@ -8,8 +8,10 @@ import { PasswordRequirements } from '@/components/PasswordRequirements';
 import { validatePassword, isPasswordValid } from '@/lib/passwordValidation';
 import { KeyRound, Save, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { useI18n } from '@/i18n/I18nProvider';
 
 export function ChangePasswordCard() {
+  const { t } = useI18n();
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -23,15 +25,15 @@ export function ChangePasswordCard() {
 
   const handleChangePassword = async () => {
     if (!currentPassword) {
-      toast.error('Add meg a jelenlegi jelszavadat.');
+      toast.error(t('change_password.error_current_required'));
       return;
     }
     if (!valid) {
-      toast.error('A jelszó nem felel meg az összes követelménynek.');
+      toast.error(t('change_password.error_requirements'));
       return;
     }
     if (newPassword !== confirmPassword) {
-      toast.error('A két jelszó nem egyezik.');
+      toast.error(t('change_password.error_mismatch'));
       return;
     }
     setSaving(true);
@@ -43,16 +45,16 @@ export function ChangePasswordCard() {
       password: currentPassword,
     });
     if (signInError) {
-      toast.error('A jelenlegi jelszó helytelen.');
+      toast.error(t('change_password.error_current_wrong'));
       setSaving(false);
       return;
     }
 
     const { error } = await supabase.auth.updateUser({ password: newPassword });
     if (error) {
-      toast.error('Hiba a jelszó módosítása során: ' + error.message);
+      toast.error(t('change_password.error_update') + error.message);
     } else {
-      toast.success('Jelszó sikeresen módosítva!');
+      toast.success(t('change_password.success'));
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
@@ -67,13 +69,13 @@ export function ChangePasswordCard() {
           <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
             <KeyRound className="h-5 w-5 text-primary" />
           </div>
-          Jelszó módosítás
+          {t('change_password.title')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
           <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Jelenlegi jelszó
+            {t('change_password.current_password')}
           </Label>
           <div className="relative">
             <Input
@@ -81,7 +83,7 @@ export function ChangePasswordCard() {
               value={currentPassword}
               onChange={e => setCurrentPassword(e.target.value)}
               className="rounded-xl h-11 pr-10"
-              placeholder="Jelenlegi jelszó"
+              placeholder={t('change_password.current_password')}
             />
             <button
               type="button"
@@ -94,7 +96,7 @@ export function ChangePasswordCard() {
         </div>
         <div className="space-y-2">
           <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Új jelszó
+            {t('change_password.new_password')}
           </Label>
           <div className="relative">
             <Input
@@ -102,7 +104,7 @@ export function ChangePasswordCard() {
               value={newPassword}
               onChange={e => setNewPassword(e.target.value)}
               className="rounded-xl h-11 pr-10"
-              placeholder="Új jelszó"
+              placeholder={t('change_password.new_password')}
             />
             <button
               type="button"
@@ -116,7 +118,7 @@ export function ChangePasswordCard() {
         </div>
         <div className="space-y-2">
           <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Új jelszó megerősítése
+            {t('change_password.confirm_password')}
           </Label>
           <div className="relative">
             <Input
@@ -124,7 +126,7 @@ export function ChangePasswordCard() {
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
               className="rounded-xl h-11 pr-10"
-              placeholder="Jelszó megerősítése"
+              placeholder={t('change_password.confirm_password')}
             />
             <button
               type="button"
@@ -135,7 +137,7 @@ export function ChangePasswordCard() {
             </button>
           </div>
           {confirmPassword.length > 0 && newPassword !== confirmPassword && (
-            <p className="text-xs text-destructive">A két jelszó nem egyezik.</p>
+            <p className="text-xs text-destructive">{t('change_password.error_mismatch')}</p>
           )}
         </div>
         <Button
@@ -144,7 +146,7 @@ export function ChangePasswordCard() {
           disabled={saving || !currentPassword || !valid || newPassword !== confirmPassword}
         >
           <Save className="mr-2 h-4 w-4" />
-          {saving ? 'Mentés...' : 'Jelszó módosítása'}
+          {saving ? t('change_password.saving') : t('change_password.submit')}
         </Button>
       </CardContent>
     </Card>

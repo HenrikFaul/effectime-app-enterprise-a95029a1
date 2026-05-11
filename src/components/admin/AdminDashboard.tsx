@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useI18n } from '@/i18n/I18nProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Calendar, Vote, UserMinus, TrendingUp, UserCheck, Clock } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -49,11 +50,13 @@ const MiniBarChart = ({ data, label }: { data: Record<string, number>; label: st
   const entries = Object.entries(data).sort(([a], [b]) => a.localeCompare(b));
   const max = Math.max(...entries.map(([, v]) => v), 1);
 
+  const { t } = useI18n();
+
   if (entries.length === 0) {
     return (
       <Card className="rounded-2xl shadow-soft">
         <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">{label}</CardTitle></CardHeader>
-        <CardContent><p className="text-sm text-muted-foreground">Nincs adat</p></CardContent>
+        <CardContent><p className="text-sm text-muted-foreground">{t('admin.no_data')}</p></CardContent>
       </Card>
     );
   }
@@ -87,6 +90,7 @@ const MiniBarChart = ({ data, label }: { data: Record<string, number>; label: st
 };
 
 const AdminDashboard = () => {
+  const { t } = useI18n();
   const [overview, setOverview] = useState<OverviewStats | null>(null);
   const [charts, setCharts] = useState<ChartData | null>(null);
   const [topEvents, setTopEvents] = useState<TopEvent[]>([]);
@@ -123,28 +127,28 @@ const AdminDashboard = () => {
     <div className="space-y-6">
       {overview && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Összes felhasználó" value={overview.total_users} icon={Users} color="gradient-primary" />
-          <StatCard title="Regisztrált" value={overview.registered_users} icon={UserCheck} color="bg-accent" />
-          <StatCard title="Vendég" value={overview.temporary_users} icon={Clock} color="bg-warning" />
-          <StatCard title="Törölt fiókok" value={overview.total_deletions} icon={UserMinus} color="bg-destructive" />
-          <StatCard title="Összes esemény" value={overview.total_events} icon={Calendar} color="gradient-primary" />
-          <StatCard title="Aktív esemény" value={overview.active_events} icon={TrendingUp} color="bg-success" />
-          <StatCard title="Összes szavazat" value={overview.total_votes} icon={Vote} color="bg-accent" />
+          <StatCard title={t('admin.stat_total_users')} value={overview.total_users} icon={Users} color="gradient-primary" />
+          <StatCard title={t('admin.stat_registered')} value={overview.registered_users} icon={UserCheck} color="bg-accent" />
+          <StatCard title={t('admin.stat_guests')} value={overview.temporary_users} icon={Clock} color="bg-warning" />
+          <StatCard title={t('admin.stat_deleted_accounts')} value={overview.total_deletions} icon={UserMinus} color="bg-destructive" />
+          <StatCard title={t('admin.stat_total_events')} value={overview.total_events} icon={Calendar} color="gradient-primary" />
+          <StatCard title={t('admin.stat_active_events')} value={overview.active_events} icon={TrendingUp} color="bg-success" />
+          <StatCard title={t('admin.stat_total_votes')} value={overview.total_votes} icon={Vote} color="bg-accent" />
         </div>
       )}
 
       {charts && (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <MiniBarChart data={charts.registrations_by_day} label="Regisztrációk (utolsó 30 nap)" />
-          <MiniBarChart data={charts.votes_by_day} label="Szavazatok (utolsó 30 nap)" />
-          <MiniBarChart data={charts.events_by_month} label="Események (utolsó 6 hónap)" />
+          <MiniBarChart data={charts.registrations_by_day} label={t('admin.chart_registrations')} />
+          <MiniBarChart data={charts.votes_by_day} label={t('admin.chart_votes')} />
+          <MiniBarChart data={charts.events_by_month} label={t('admin.chart_events')} />
         </div>
       )}
 
       {topEvents.length > 0 && (
         <Card className="rounded-2xl shadow-soft">
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Top események (résztvevők száma szerint)</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('admin.top_events_title')}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
@@ -154,12 +158,12 @@ const AdminDashboard = () => {
                     <span className="text-muted-foreground font-mono text-xs w-5 shrink-0">{idx + 1}.</span>
                     <span className="font-medium truncate">{event.title}</span>
                     {!event.is_active && (
-                      <span className="text-[10px] bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-full shrink-0">Inaktív</span>
+                      <span className="text-[10px] bg-destructive/10 text-destructive px-1.5 py-0.5 rounded-full shrink-0">{t('admin.inactive')}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-4 shrink-0 text-xs text-muted-foreground">
-                    <span>{event.participants} résztvevő</span>
-                    <span>{event.votes} szavazat</span>
+                    <span>{t('admin.participants_count', { count: event.participants })}</span>
+                    <span>{t('admin.votes_count', { count: event.votes })}</span>
                   </div>
                 </div>
               ))}

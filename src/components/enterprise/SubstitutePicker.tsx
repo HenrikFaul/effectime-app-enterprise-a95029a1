@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { X, UserPlus } from 'lucide-react';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Member { user_id: string; display_name: string; }
 
@@ -16,6 +17,7 @@ interface Props {
 }
 
 export function SubstitutePicker({ workspaceId, selfUserId, value, onChange }: Props) {
+  const { t } = useI18n();
   const [members, setMembers] = useState<Member[]>([]);
   const [picking, setPicking] = useState<string>('');
 
@@ -43,10 +45,10 @@ export function SubstitutePicker({ workspaceId, selfUserId, value, onChange }: P
 
   return (
     <div>
-      <Label className="text-xs">Helyettesítők (sorrendben)</Label>
+      <Label className="text-xs">{t('substitute_picker.label')}</Label>
       <div className="flex gap-2 mt-1">
         <Select value={picking} onValueChange={setPicking}>
-          <SelectTrigger className="flex-1 h-9 text-xs"><SelectValue placeholder="Válassz tagot..." /></SelectTrigger>
+          <SelectTrigger className="flex-1 h-9 text-xs"><SelectValue placeholder={t('substitute_picker.placeholder')} /></SelectTrigger>
           <SelectContent>
             {members.filter((m) => !value.includes(m.user_id)).map((m) => (
               <SelectItem key={m.user_id} value={m.user_id}>{m.display_name}</SelectItem>
@@ -70,7 +72,7 @@ export function SubstitutePicker({ workspaceId, selfUserId, value, onChange }: P
           })}
         </div>
       )}
-      <p className="text-[10px] text-muted-foreground mt-1">A helyettesítőknek meg kell erősíteniük; sorrendben kérdezzük őket.</p>
+      <p className="text-[10px] text-muted-foreground mt-1">{t('substitute_picker.description')}</p>
     </div>
   );
 }

@@ -1,3 +1,33 @@
+## 2026-05-11 — v3.7.8 Complete Hungarian string overhaul — full i18n for all 5 locales
+
+### Changed — Localization (non-breaking)
+
+**14 new i18n namespaces added across all 5 locales (EN / HU / CS / SK / PL):**
+`admin`, `demo_seed`, `delete_account`, `change_password`, `profile_menu`, `password_req`,
+`coverage_conflict`, `density_toggle`, `annual_trend`, `profile`, `unsubscribe`,
+`import_export`, `enterprise_page`, `calendar_filter_config`
+
+**Additional keys added to existing namespaces:**
+- `common.month_*_short` — 12 abbreviated month names used in `AnnualTrendChart`
+- `admin.tab_overview` — Overview tab label in `Admin.tsx`
+
+**Components migrated to `t()` (hardcoded Hungarian removed):**
+`CoverageConflictSummary`, `DensityToggle`, `AnnualTrendChart`, `LeaveCalendar`,
+`Profile`, `Admin`, `Unsubscribe`, `ImportExportCenter`, `Enterprise`, `AppShell`,
+and 80+ additional component, page, hook, and shell files
+
+**Utility/lib files — English hardcoded (acceptable; non-component context):**
+`calculations.ts`, `coverageEligibility.ts`, `conflictEngine.ts`, `file-parser.ts`,
+`entity-registry.ts`, `useEnterprisePermissions.ts` (FEATURE_GROUPS / STANDALONE_FEATURES)
+
+**Intentional exemptions:**
+- `'kész'` in `AgileInsights.tsx` — Jira board status value, not UI text
+- `BUILTIN_TEMPLATES` in `HRWorkflowTemplates.tsx` — DB-stored seed content
+
+**Test result:** 0 TypeScript errors. All existing tests pass.
+
+---
+
 ## 2026-05-11 — v3.7.7 Fix site assignment in time attendance: RLS bypass + CHECK constraint
 
 ### Fixed — Employee site-assignment (two root causes)

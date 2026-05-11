@@ -1,20 +1,23 @@
 import { Check, X } from 'lucide-react';
 import { PasswordCheck } from '@/lib/passwordValidation';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface PasswordRequirementsProps {
   checks: PasswordCheck;
   show: boolean;
 }
 
-const rules: { key: keyof PasswordCheck; label: string }[] = [
-  { key: 'minLength', label: 'Legalább 8 karakter' },
-  { key: 'hasLower', label: 'Kisbetű (a-z)' },
-  { key: 'hasUpper', label: 'Nagybetű (A-Z)' },
-  { key: 'hasNumber', label: 'Szám (0-9)' },
-  { key: 'hasSpecial', label: 'Speciális karakter (!@#$...)' },
-];
-
 export function PasswordRequirements({ checks, show }: PasswordRequirementsProps) {
+  const { t } = useI18n();
+
+  const rules: { key: keyof PasswordCheck; label: string }[] = [
+    { key: 'minLength', label: t('password_req.min_length') },
+    { key: 'hasLower', label: t('password_req.has_lower') },
+    { key: 'hasUpper', label: t('password_req.has_upper') },
+    { key: 'hasNumber', label: t('password_req.has_number') },
+    { key: 'hasSpecial', label: t('password_req.has_special') },
+  ];
+
   if (!show) return null;
 
   return (

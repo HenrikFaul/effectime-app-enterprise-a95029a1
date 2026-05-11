@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { EntityConfig } from './config/entity-registry';
 import { fetchEntityRows } from './utils/data-fetcher';
 import { generateCSV, generateExcelXML, downloadFile } from './utils/file-parser';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   entity: EntityConfig;
@@ -21,6 +22,8 @@ interface Props {
 type FileFormat = 'xlsx' | 'csv';
 
 export function ExportWizard({ entity, workspaceId, userId, onClose }: Props) {
+  const { t } = useI18n();
+
   const exportableFields = useMemo(() => entity.fields.filter(f => f.exportable), [entity]);
   const requiredKeys = useMemo(() => exportableFields.filter(f => f.required && f.importable).map(f => f.key), [exportableFields]);
 
@@ -36,12 +39,12 @@ export function ExportWizard({ entity, workspaceId, userId, onClose }: Props) {
   const groups = useMemo(() => {
     const m = new Map<string, typeof exportableFields>();
     exportableFields.forEach(f => {
-      const g = f.group || 'Egyéb';
+      const g = f.group || t('export_wizard.other_group');
       if (!m.has(g)) m.set(g, []);
       m.get(g)!.push(f);
     });
     return Array.from(m.entries());
-  }, [exportableFields]);
+  }, [exportableFields, t]);
 
   const toggleField = (key: string) => {
     if (requiredKeys.includes(key)) return; // locked
@@ -102,10 +105,10 @@ export function ExportWizard({ entity, workspaceId, userId, onClose }: Props) {
         },
       });
 
-      toast.success(`${entity.label} export kész — ${dataRows.length} sor`);
+      toast.success(t('export_wizard.export_ready', { count: dataRows.length }));
       onClose();
     } catch (e: any) {
-      toast.error(`Export hiba: ${e?.message || 'ismeretlen'}`);
+      toast.error(t('export_wizard.export_error', { msg: e?.message || '?' }));
     } finally {
       setBusy(false);
     }
@@ -115,14 +118,14 @@ export function ExportWizard({ entity, workspaceId, userId, onClose }: Props) {
     <div className="space-y-4">
       <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
         <p className="font-medium">Export — {entity.label}</p>
-        <p className="text-muted-foreground">Válaszd ki, mely mezőket szeretnéd exportálni. A kötelező mezők zárolva vannak (importhoz szükségesek).</p>
+        <p className="text-muted-foreground">{t('export_wizard.header_description')}</p>
       </div>
 
       <div className="flex items-center justify-between">
-        <Label className="text-xs font-medium">Mezők</Label>
+        <Label className="text-xs font-medium">{t('export_wizard.fields_label')}</Label>
         <div className="flex gap-1.5">
-          <Button type="button" size="sm" variant="ghost" className="h-7 text-[11px]" onClick={selectAll}>Összes</Button>
-          <Button type="button" size="sm" variant="ghost" className="h-7 text-[11px]" onClick={selectRequiredOnly}>Csak kötelező</Button>
+          <Button type="button" size="sm" variant="ghost" className="h-7 text-[11px]" onClick={selectAll}>{t('export_wizard.btn_select_all')}</Button>
+          <Button type="button" size="sm" variant="ghost" className="h-7 text-[11px]" onClick={selectRequiredOnly}>{t('export_wizard.btn_required_only')}</Button>
         </div>
       </div>
 
@@ -140,9 +143,9 @@ export function ExportWizard({ entity, workspaceId, userId, onClose }: Props) {
                     <span className="flex-1 flex items-center gap-1.5">
                       <span className={isLocked ? 'font-medium' : ''}>{f.label}</span>
                       <code className="text-[9px] text-muted-foreground">({f.key})</code>
-                      {f.required && f.importable && <Badge variant="outline" className="h-4 text-[9px] px-1 border-warning text-warning gap-0.5"><Lock className="h-2 w-2" />Kötelező</Badge>}
-                      {f.computed && <Badge variant="secondary" className="h-4 text-[9px] px-1">Csak export</Badge>}
-                      {f.protected && <Badge variant="outline" className="h-4 text-[9px] px-1 border-destructive text-destructive">Védett</Badge>}
+                      {f.required && f.importable && <Badge variant="outline" className="h-4 text-[9px] px-1 border-warning text-warning gap-0.5"><Lock className="h-2 w-2" />{t('export_wizard.badge_required')}</Badge>}
+                      {f.computed && <Badge variant="secondary" className="h-4 text-[9px] px-1">{t('export_wizard.badge_export_only')}</Badge>}
+                      {f.protected && <Badge variant="outline" className="h-4 text-[9px] px-1 border-destructive text-destructive">{t('export_wizard.badge_protected')}</Badge>}
                     </span>
                   </label>
                 );
@@ -154,7 +157,7 @@ export function ExportWizard({ entity, workspaceId, userId, onClose }: Props) {
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label className="text-xs">Formátum</Label>
+          <Label className="text-xs">{t('export_wizard.format_label')}</Label>
           <Select value={format} onValueChange={(v: any) => setFormat(v)}>
             <SelectTrigger className="mt-1 h-9 text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
@@ -165,14 +168,14 @@ export function ExportWizard({ entity, workspaceId, userId, onClose }: Props) {
         </div>
         {entity.key === 'leave' && (
           <div>
-            <Label className="text-xs">Státusz szűrő</Label>
+            <Label className="text-xs">{t('export_wizard.status_filter_label')}</Label>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="mt-1 h-9 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Összes</SelectItem>
-                <SelectItem value="approved">Csak jóváhagyott</SelectItem>
-                <SelectItem value="pending">Csak függőben</SelectItem>
-                <SelectItem value="rejected">Csak elutasított</SelectItem>
+                <SelectItem value="all">{t('export_wizard.status_all')}</SelectItem>
+                <SelectItem value="approved">{t('export_wizard.status_approved')}</SelectItem>
+                <SelectItem value="pending">{t('export_wizard.status_pending')}</SelectItem>
+                <SelectItem value="rejected">{t('export_wizard.status_rejected')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -182,25 +185,25 @@ export function ExportWizard({ entity, workspaceId, userId, onClose }: Props) {
       <label className="flex items-start gap-2 text-xs cursor-pointer">
         <Checkbox checked={importCompatible} onCheckedChange={(v) => setImportCompatible(!!v)} />
         <div>
-          <span className="font-medium">Import-kompatibilis sablon</span>
-          <p className="text-[11px] text-muted-foreground">Hozzáadunk egy második útmutató sort példa értékekkel, és a kötelező oszlopokat csillaggal jelöljük. Ezzel a fájllal közvetlenül importálni lehet új sorokat.</p>
+          <span className="font-medium">{t('export_wizard.import_compat_label')}</span>
+          <p className="text-[11px] text-muted-foreground">{t('export_wizard.import_compat_desc')}</p>
         </div>
       </label>
 
       {importCompatible && (
         <div className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning/10 p-2 text-[11px]">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-warning" />
-          <span>A 2. sor (útmutató sor) nem adat — automatikusan kihagyjuk importnál.</span>
+          <span>{t('export_wizard.guidance_row_note')}</span>
         </div>
       )}
 
       <div className="flex items-center justify-between gap-2 pt-2 border-t">
-        <p className="text-[11px] text-muted-foreground">{selectedKeys.size} mező kiválasztva</p>
+        <p className="text-[11px] text-muted-foreground">{t('export_wizard.fields_selected', { count: selectedKeys.size })}</p>
         <div className="flex gap-2">
-          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={busy}>Mégsem</Button>
+          <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={busy}>{t('export_wizard.btn_cancel')}</Button>
           <Button type="button" size="sm" onClick={handleExport} disabled={busy || selectedKeys.size === 0}>
             {busy ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" /> : <Download className="h-3.5 w-3.5 mr-1" />}
-            {busy ? 'Exportálás...' : 'Letöltés'}
+            {busy ? t('export_wizard.btn_exporting') : t('export_wizard.btn_download')}
           </Button>
         </div>
       </div>

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useI18n } from '@/i18n/I18nProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -38,6 +39,7 @@ function startOfMonth(iso: string) {
 }
 
 export function GanttTimeline({ workspaceId }: Props) {
+  const { t } = useI18n();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [viewStart, setViewStart] = useState<string>(startOfMonth(new Date().toISOString().slice(0, 10)));
@@ -104,7 +106,7 @@ export function GanttTimeline({ workspaceId }: Props) {
           borderTopRightRadius: cutRight ? 0 : undefined,
           borderBottomRightRadius: cutRight ? 0 : undefined,
         }}
-        title={`${p.name} — ${p.start_date} → ${p.is_open_ended ? 'határozatlan' : (p.end_date || '?')}`}
+        title={`${p.name} — ${p.start_date} → ${p.is_open_ended ? t('gantt_timeline.open_ended_label') : (p.end_date || '?')}`}
       >
         <span className="truncate">{p.name}</span>
       </div>
@@ -115,7 +117,7 @@ export function GanttTimeline({ workspaceId }: Props) {
     <Card>
       <CardHeader className="py-3 px-4">
         <CardTitle className="text-sm flex items-center gap-2 justify-between flex-wrap">
-          <span className="flex items-center gap-2"><Calendar className="h-4 w-4" /> Projekt-idővonal</span>
+          <span className="flex items-center gap-2"><Calendar className="h-4 w-4" /> {t('gantt_timeline.card_title')}</span>
           <div className="flex items-center gap-1">
             <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setViewStart(addMonths(viewStart, -1))}>
               <ChevronLeft className="h-4 w-4" />
@@ -134,7 +136,7 @@ export function GanttTimeline({ workspaceId }: Props) {
         {loading ? (
           <div className="flex justify-center py-6"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
         ) : projects.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-4 text-center">Még nincs projekt felvéve.</p>
+          <p className="text-xs text-muted-foreground py-4 text-center">{t('gantt_timeline.no_projects')}</p>
         ) : (
           <div className="overflow-x-auto">
             <div className="min-w-[600px]">

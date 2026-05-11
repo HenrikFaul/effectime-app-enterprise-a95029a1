@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import {
   format, eachDayOfInterval, startOfMonth, endOfMonth, getDay, isSameDay, parseISO,
 } from 'date-fns';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface MemberOption { id: string; user_id: string; display_name: string }
 interface Props {
@@ -23,10 +24,10 @@ interface Props {
 
 interface LeaveDay { date: Date; type: string; status: string; color?: string }
 
-const MONTH_NAMES = ['Jan', 'Feb', 'Már', 'Ápr', 'Máj', 'Jún', 'Júl', 'Aug', 'Sze', 'Okt', 'Nov', 'Dec'];
-const DOW = ['H', 'K', 'Sz', 'Cs', 'P', 'Sz', 'V'];
-
 export function AnnualLeaveGrid({ workspaceId, userId, membershipId: membershipIdProp, allMembers, isAdmin }: Props) {
+  const { t } = useI18n();
+  const MONTH_NAMES = t('annual_leave_grid.months_short').split(',');
+  const DOW = t('annual_leave_grid.days_short').split(',');
   const [year, setYear] = useState(new Date().getFullYear());
   const [selectedUserId, setSelectedUserId] = useState(userId);
   const [resolvedMembershipId, setResolvedMembershipId] = useState<string | undefined>(membershipIdProp);
@@ -195,7 +196,7 @@ export function AnnualLeaveGrid({ workspaceId, userId, membershipId: membershipI
     return { leave, isHoliday, isWeekend };
   };
 
-  const selectedMemberName = allMembers?.find(m => m.user_id === selectedUserId)?.display_name ?? 'Saját';
+  const selectedMemberName = allMembers?.find(m => m.user_id === selectedUserId)?.display_name ?? t('member_profile.self_label');
 
   if (loading) {
     return (
@@ -210,7 +211,7 @@ export function AnnualLeaveGrid({ workspaceId, userId, membershipId: membershipI
       <CardHeader className="pb-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <CardTitle className="text-base flex items-center gap-2">
-            Éves naptár-nézet
+            {t('annual_leave_grid.title')}
             <Badge variant="outline" className="text-[10px]">{year}</Badge>
           </CardTitle>
           <div className="flex items-center gap-2 flex-wrap">
@@ -218,12 +219,12 @@ export function AnnualLeaveGrid({ workspaceId, userId, membershipId: membershipI
             {isAdmin && allMembers && allMembers.length > 0 && (
               <Select value={selectedUserId} onValueChange={setSelectedUserId}>
                 <SelectTrigger className="h-8 text-xs w-44">
-                  <SelectValue placeholder="Tag választása" />
+                  <SelectValue placeholder={t('annual_leave_grid.member_select_placeholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {allMembers.map(m => (
                     <SelectItem key={m.user_id} value={m.user_id}>
-                      {m.user_id === userId ? `${m.display_name} (én)` : m.display_name}
+                      {m.user_id === userId ? `${m.display_name} ${t('member_profile.me_indicator')}` : m.display_name}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -237,24 +238,24 @@ export function AnnualLeaveGrid({ workspaceId, userId, membershipId: membershipI
         {/* Allowance summary */}
         {quotas.initial === 0 && quotas.carryover === 0 && (
           <div className="rounded-md border border-amber-300/60 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700/40 px-3 py-2 text-[11px] text-amber-800 dark:text-amber-300">
-            Nincs még éves keret beállítva ehhez a taghoz erre az évre. A „Vacation used" érték a jóváhagyott szabadságkérelmek alapján becsült. Beállítás: <strong>Beállítások → Kvóták</strong>.
+            {t('annual_leave_grid.quota_missing_warning')}
           </div>
         )}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div className="rounded-md border p-2 text-center">
-            <p className="text-[10px] uppercase text-muted-foreground">Allowance</p>
+            <p className="text-[10px] uppercase text-muted-foreground">{t('annual_leave_grid.allowance_label')}</p>
             <p className="text-lg font-semibold">{quotas.initial}</p>
           </div>
           <div className="rounded-md border p-2 text-center">
-            <p className="text-[10px] uppercase text-muted-foreground">Carried over</p>
+            <p className="text-[10px] uppercase text-muted-foreground">{t('annual_leave_grid.carryover_label')}</p>
             <p className="text-lg font-semibold">{quotas.carryover}</p>
           </div>
           <div className="rounded-md border p-2 text-center">
-            <p className="text-[10px] uppercase text-muted-foreground">Vacation used</p>
+            <p className="text-[10px] uppercase text-muted-foreground">{t('annual_leave_grid.used_label')}</p>
             <p className="text-lg font-semibold">{quotas.used}</p>
           </div>
           <div className="rounded-md border p-2 text-center bg-primary/5">
-            <p className="text-[10px] uppercase text-muted-foreground">Remaining</p>
+            <p className="text-[10px] uppercase text-muted-foreground">{t('annual_leave_grid.remaining_label')}</p>
             <p className="text-lg font-semibold text-primary">{quotas.remaining}</p>
           </div>
         </div>
@@ -280,7 +281,7 @@ export function AnnualLeaveGrid({ workspaceId, userId, membershipId: membershipI
                           leave
                             ? `${leave.type} (${leave.status})`
                             : isHoliday
-                            ? 'Munkaszüneti nap'
+                            ? t('annual_leave_grid.holiday_tooltip')
                             : ''
                         }
                         className={cn(
@@ -305,13 +306,13 @@ export function AnnualLeaveGrid({ workspaceId, userId, membershipId: membershipI
 
         <div className="flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground pt-2 border-t">
           <div className="flex items-center gap-1">
-            <div className="h-3 w-3 rounded-sm bg-primary" /> Jóváhagyott
+            <div className="h-3 w-3 rounded-sm bg-primary" /> {t('annual_leave_grid.legend_approved')}
           </div>
           <div className="flex items-center gap-1">
-            <div className="h-3 w-3 rounded-sm ring-1 ring-primary" /> Függőben
+            <div className="h-3 w-3 rounded-sm ring-1 ring-primary" /> {t('annual_leave_grid.legend_pending')}
           </div>
           <div className="flex items-center gap-1">
-            <div className="h-3 w-3 rounded-sm bg-destructive/15" /> Munkaszünet
+            <div className="h-3 w-3 rounded-sm bg-destructive/15" /> {t('annual_leave_grid.legend_holiday')}
           </div>
         </div>
       </CardContent>
@@ -320,6 +321,7 @@ export function AnnualLeaveGrid({ workspaceId, userId, membershipId: membershipI
 }
 
 function YearPicker({ year, onChange }: { year: number; onChange: (y: number) => void }) {
+  const { t } = useI18n();
   const [input, setInput] = useState(String(year));
   const [open, setOpen] = useState(false);
   const [decadeStart, setDecadeStart] = useState(Math.floor(year / 10) * 10);
@@ -340,7 +342,7 @@ function YearPicker({ year, onChange }: { year: number; onChange: (y: number) =>
 
   return (
     <div className="flex items-center gap-1">
-      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onChange(year - 1)} aria-label="Előző év">
+      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onChange(year - 1)} aria-label={t('annual_leave_grid.prev_year_label')}>
         <ChevronLeft className="h-3.5 w-3.5" />
       </Button>
       <Popover open={open} onOpenChange={setOpen}>
@@ -363,7 +365,7 @@ function YearPicker({ year, onChange }: { year: number; onChange: (y: number) =>
           <PopoverTrigger asChild>
             <button
               className="absolute right-1 top-1/2 -translate-y-1/2 p-1 hover:bg-muted rounded"
-              aria-label="Év választó"
+              aria-label={t('annual_leave_grid.year_picker_label')}
             >
               <ChevronDown className="h-3 w-3" />
             </button>
@@ -394,7 +396,7 @@ function YearPicker({ year, onChange }: { year: number; onChange: (y: number) =>
           </div>
         </PopoverContent>
       </Popover>
-      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onChange(year + 1)} aria-label="Következő év">
+      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onChange(year + 1)} aria-label={t('annual_leave_grid.next_year_label')}>
         <ChevronRight className="h-3.5 w-3.5" />
       </Button>
     </div>

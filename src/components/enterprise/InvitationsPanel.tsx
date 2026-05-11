@@ -9,6 +9,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Mail, Trash2, ChevronDown, Filter } from 'lucide-react';
 import { toast } from 'sonner';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -25,13 +26,15 @@ interface Invitation {
 
 type StatusFilter = 'sent' | 'used' | 'all';
 
-const ROLE_LABEL: Record<string, string> = {
-  owner: 'Tulajdonos',
-  resourceAssistant: 'Erőforrás asszisztens',
-  member: 'Tag',
-};
-
 export function InvitationsPanel({ workspaceId, isAdmin }: Props) {
+  const { t } = useI18n();
+
+  const ROLE_LABEL: Record<string, string> = {
+    owner: t('members.roles.owner'),
+    resourceAssistant: t('members.roles.resource_assistant'),
+    member: t('members.roles.member'),
+  };
+
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
@@ -56,7 +59,7 @@ export function InvitationsPanel({ workspaceId, isAdmin }: Props) {
 
   const handleDelete = async (id: string) => {
     await supabase.from('enterprise_invitations').delete().eq('id', id);
-    toast.success('Meghívó törölve');
+    toast.success(t('members.invitation_deleted'));
     fetchInvitations();
   };
 
@@ -84,10 +87,10 @@ export function InvitationsPanel({ workspaceId, isAdmin }: Props) {
           <CardContent className="flex items-center justify-between py-3 px-4">
             <div className="flex items-center gap-2">
               <Mail className="h-4 w-4 text-primary" />
-              <span className="font-medium text-sm">Meghívók</span>
+              <span className="font-medium text-sm">{t('members.invitations_title')}</span>
               {sentCount > 0 && (
                 <Badge variant="outline" className="text-[10px] border-orange-400 text-orange-500">
-                  {sentCount} kiküldve
+                  {sentCount} {t('invitations.sent_label')}
                 </Badge>
               )}
             </div>
@@ -103,21 +106,21 @@ export function InvitationsPanel({ workspaceId, isAdmin }: Props) {
           <CardContent className="py-3 px-4 grid gap-3 sm:grid-cols-[1fr_auto_auto]">
             <div className="space-y-1">
               <Label className="text-xs flex items-center gap-1">
-                <Filter className="h-3 w-3" /> Státusz
+                <Filter className="h-3 w-3" /> {t('common.status')}
               </Label>
               <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
                 <SelectTrigger className="h-8 text-xs">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="sent">Csak kiküldve</SelectItem>
-                  <SelectItem value="used">Csak felhasználva</SelectItem>
-                  <SelectItem value="all">Összes</SelectItem>
+                  <SelectItem value="sent">{t('invitations.filter_sent')}</SelectItem>
+                  <SelectItem value="used">{t('invitations.filter_used')}</SelectItem>
+                  <SelectItem value="all">{t('invitations.filter_all')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Kiküldve: -tól</Label>
+              <Label className="text-xs">{t('invitations.date_from_label')}</Label>
               <Input
                 type="date"
                 value={fromDate}
@@ -126,7 +129,7 @@ export function InvitationsPanel({ workspaceId, isAdmin }: Props) {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Kiküldve: -ig</Label>
+              <Label className="text-xs">{t('invitations.date_to_label')}</Label>
               <Input
                 type="date"
                 value={toDate}
@@ -144,7 +147,7 @@ export function InvitationsPanel({ workspaceId, isAdmin }: Props) {
         ) : filtered.length === 0 ? (
           <Card>
             <CardContent className="text-center py-6 text-sm text-muted-foreground">
-              Nincs a szűrésnek megfelelő meghívó.
+              {t('invitations.no_matching')}
             </CardContent>
           </Card>
         ) : (
@@ -173,7 +176,7 @@ export function InvitationsPanel({ workspaceId, isAdmin }: Props) {
                               : 'border-orange-400/60 text-orange-500 dark:text-orange-400'
                           }`}
                         >
-                          {isUsed ? 'Felhasználva' : 'Kiküldve'}
+                          {isUsed ? t('invitations.status_used') : t('invitations.status_sent')}
                         </Badge>
                         <Badge variant="outline" className="text-[10px]">
                           {ROLE_LABEL[inv.role] || inv.role}
@@ -183,7 +186,7 @@ export function InvitationsPanel({ workspaceId, isAdmin }: Props) {
                         </span>
                         {isUsed && inv.accepted_at && (
                           <span className="text-[11px] text-muted-foreground">
-                            · elfogadva {new Date(inv.accepted_at).toLocaleDateString('hu-HU')}
+                            · {t('invitations.accepted_label')} {new Date(inv.accepted_at).toLocaleDateString('hu-HU')}
                           </span>
                         )}
                       </div>

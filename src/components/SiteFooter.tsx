@@ -1,6 +1,8 @@
 import { EffectimeLogo } from './EffectimeLogo';
+import { useI18n } from '@/i18n/I18nProvider';
 
 export function SiteFooter() {
+  const { t } = useI18n();
   return (
     <footer className="border-t border-border/60 bg-background">
       <div className="container mx-auto px-6 py-12 lg:px-8">
@@ -9,17 +11,17 @@ export function SiteFooter() {
             <EffectimeLogo size={26} variant="full" />
           </div>
           <p className="text-sm text-muted-foreground">
-            © {new Date().getFullYear()} Effectime. Minden jog fenntartva.
+            {t('landing.footer_copyright', { year: new Date().getFullYear() })}
           </p>
           <div className="flex gap-6 text-sm text-muted-foreground">
             <a href="#" className="hover:text-foreground">
-              Adatvédelem
+              {t('landing.footer_privacy')}
             </a>
             <a href="#" className="hover:text-foreground">
-              ÁSZF
+              {t('landing.footer_terms')}
             </a>
             <a href="mailto:hello@effectime.app" className="hover:text-foreground">
-              Kapcsolat
+              {t('landing.footer_contact')}
             </a>
           </div>
         </div>

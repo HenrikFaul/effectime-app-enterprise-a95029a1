@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useI18n } from '@/i18n/I18nProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
@@ -33,6 +34,7 @@ interface PositionStat {
 }
 
 export function SkillCapacityReport({ workspaceId, filteredUserIds, range }: Props) {
+  const { t } = useI18n();
   const [loading, setLoading] = useState(false);
   const [skillStats, setSkillStats] = useState<SkillStat[]>([]);
   const [positionStats, setPositionStats] = useState<PositionStat[]>([]);
@@ -126,7 +128,7 @@ export function SkillCapacityReport({ workspaceId, filteredUserIds, range }: Pro
       const roleMap: Record<string, PositionStat> = {};
       filteredUserIds.forEach(userId => {
         const m = memberByUserId[userId];
-        const role = m?.business_role || 'Nincs pozíció';
+        const role = m?.business_role || t('skill_capacity_report.no_role');
         if (!roleMap[role]) roleMap[role] = { role, total: 0, available: 0, onLeave: 0 };
         roleMap[role].total++;
         if (onLeaveUserIds.has(userId)) {
@@ -162,7 +164,7 @@ export function SkillCapacityReport({ workspaceId, filteredUserIds, range }: Pro
     <div className="space-y-4 pt-4 border-t mt-4">
       <div className="flex items-center gap-2">
         <Zap className="h-4 w-4 text-primary" />
-        <h3 className="text-sm font-semibold">Kapacitás & Készség riport</h3>
+        <h3 className="text-sm font-semibold">{t('skill_capacity_report.card_title')}</h3>
         <Badge variant="outline" className="text-[10px]">
           {format(range.from, 'yyyy.MM.dd')} – {format(range.to, 'MM.dd')}
         </Badge>
@@ -179,25 +181,25 @@ export function SkillCapacityReport({ workspaceId, filteredUserIds, range }: Pro
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <GlassCard
-            label="Szűrt tagok"
+            label={t('skill_capacity_report.label_filtered_members')}
             value={totalMembers}
             colorClass="bg-blue-500/10 border-blue-200 dark:border-blue-800"
             textClass="text-blue-700 dark:text-blue-300"
           />
           <GlassCard
-            label="Elérhető"
+            label={t('skill_capacity_report.label_available')}
             value={availableCount}
             colorClass="bg-emerald-500/10 border-emerald-200 dark:border-emerald-800"
             textClass="text-emerald-700 dark:text-emerald-300"
           />
           <GlassCard
-            label="Jóváhagyott távollét"
+            label={t('skill_capacity_report.label_approved_leave')}
             value={onLeaveCount}
             colorClass="bg-rose-500/10 border-rose-200 dark:border-rose-800"
             textClass="text-rose-700 dark:text-rose-300"
           />
           <GlassCard
-            label="Elérhetőség"
+            label={t('skill_capacity_report.label_availability_rate')}
             value={`${availabilityPct}%`}
             colorClass="bg-purple-500/10 border-purple-200 dark:border-purple-800"
             textClass="text-purple-700 dark:text-purple-300"
@@ -210,7 +212,7 @@ export function SkillCapacityReport({ workspaceId, filteredUserIds, range }: Pro
         <Card className="backdrop-blur-sm bg-card/80">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Készség elérhetőség
+              {t('skill_capacity_report.skill_availability_title')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -222,7 +224,7 @@ export function SkillCapacityReport({ workspaceId, filteredUserIds, range }: Pro
               </div>
             ) : skillStats.length === 0 ? (
               <p className="text-xs text-muted-foreground py-6 text-center">
-                Nincs készség-adat a szűrt csoportban.
+                {t('skill_capacity_report.no_skill_data')}
               </p>
             ) : (
               <div className="space-y-3">
@@ -231,7 +233,7 @@ export function SkillCapacityReport({ workspaceId, filteredUserIds, range }: Pro
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-medium">{s.name}</span>
                       <span className="text-muted-foreground">
-                        {s.available}/{s.total} elérhető
+                        {t('skill_capacity_report.available_count', { available: s.available, total: s.total } as any)}
                       </span>
                     </div>
                     <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -254,7 +256,7 @@ export function SkillCapacityReport({ workspaceId, filteredUserIds, range }: Pro
         <Card className="backdrop-blur-sm bg-card/80">
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Pozíciók kapacitása
+              {t('skill_capacity_report.position_capacity_title')}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -262,7 +264,7 @@ export function SkillCapacityReport({ workspaceId, filteredUserIds, range }: Pro
               <Skeleton className="h-40 w-full" />
             ) : positionStats.length === 0 ? (
               <p className="text-xs text-muted-foreground py-6 text-center">
-                Nincs pozíció-adat.
+                {t('skill_capacity_report.no_position_data')}
               </p>
             ) : (
               <ResponsiveContainer width="100%" height={Math.max(160, positionStats.length * 28)}>
@@ -282,19 +284,19 @@ export function SkillCapacityReport({ workspaceId, filteredUserIds, range }: Pro
                     contentStyle={{ fontSize: 11 }}
                     formatter={(v: any, name: any) => [
                       v,
-                      name === 'available' ? 'Elérhető' : 'Távol',
+                      name === 'available' ? t('skill_capacity_report.available_bar') : t('skill_capacity_report.away_bar'),
                     ]}
                   />
                   <Bar
                     dataKey="available"
-                    name="Elérhető"
+                    name={t('skill_capacity_report.available_bar')}
                     fill="#10b981"
                     stackId="a"
                     radius={[0, 0, 0, 0]}
                   />
                   <Bar
                     dataKey="onLeave"
-                    name="Távol"
+                    name={t('skill_capacity_report.away_bar')}
                     fill="#f43f5e"
                     stackId="a"
                     radius={[0, 3, 3, 0]}

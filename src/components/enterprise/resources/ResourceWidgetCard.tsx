@@ -12,6 +12,7 @@
  * the existing report-runner flow.
  */
 import { useEffect, useMemo, useState } from 'react';
+import { useI18n } from '@/i18n/I18nProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -49,6 +50,7 @@ function resolveWindow(config: ResourceWidgetConfig) {
 }
 
 export function ResourceWidgetCard({ workspaceId, kind, config, title, onOpenFull }: Props) {
+  const { t } = useI18n();
   const { from, to } = useMemo(() => resolveWindow(config), [config]);
   const includeLeaves = config.include_leaves ?? true;
   const topN = config.top_n ?? 5;
@@ -88,7 +90,7 @@ export function ResourceWidgetCard({ workspaceId, kind, config, title, onOpenFul
 
   const renderCapacity = () => {
     const sorted = [...positions].sort((a, b) => b.total_used - a.total_used).slice(0, topN);
-    if (sorted.length === 0) return <p className="text-xs text-muted-foreground py-2">Nincs allokált pozíció.</p>;
+    if (sorted.length === 0) return <p className="text-xs text-muted-foreground py-2">{t('resources.no_allocated_position')}</p>;
     return (
       <div className="space-y-1.5">
         {sorted.map((p) => {
@@ -125,7 +127,7 @@ export function ResourceWidgetCard({ workspaceId, kind, config, title, onOpenFul
       return { role, required, available, gap: required - available };
     }).filter((g) => g.gap > 0.5).sort((a, b) => b.gap - a.gap).slice(0, topN);
 
-    if (gaps.length === 0) return <p className="text-xs text-emerald-600 py-2">✓ Nincs hiány az időszakban.</p>;
+    if (gaps.length === 0) return <p className="text-xs text-emerald-600 py-2">{t('resources.no_gap')}</p>;
     return (
       <div className="space-y-1.5">
         {gaps.map((g) => (
@@ -134,7 +136,7 @@ export function ResourceWidgetCard({ workspaceId, kind, config, title, onOpenFul
               <Users className="h-3 w-3 flex-shrink-0" />
               <span className="truncate font-medium">{g.role}</span>
             </div>
-            <Badge variant="destructive" className="text-[10px] flex-shrink-0">−{g.gap.toFixed(0)}% (~{(g.gap / 100).toFixed(1)} fő)</Badge>
+            <Badge variant="destructive" className="text-[10px] flex-shrink-0">−{g.gap.toFixed(0)}% (~{(g.gap / 100).toFixed(1)} {t('resources.persons_unit')})</Badge>
           </div>
         ))}
       </div>
@@ -152,11 +154,11 @@ export function ResourceWidgetCard({ workspaceId, kind, config, title, onOpenFul
         </CardTitle>
         <div className="flex items-center gap-1">
           <Badge variant="outline" className="text-[9px] font-normal">{from} → {to}</Badge>
-          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={load} disabled={loading} title="Frissítés">
+          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={load} disabled={loading} title={t('resources.btn_refresh_title')}>
             <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
           </Button>
           {onOpenFull && (
-            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={onOpenFull} title="Részletes nézet">
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={onOpenFull} title={t('resources.btn_detail_view')}>
               <Maximize2 className="h-3 w-3" />
             </Button>
           )}
@@ -181,12 +183,13 @@ export async function pinResourceWidget(opts: {
   kind: ResourceWidgetKind;
   name: string;
   config: ResourceWidgetConfig;
+  description?: string;
 }): Promise<{ error?: string }> {
   const { error } = await (supabase as any).from('enterprise_reports').insert({
     workspace_id: opts.workspaceId,
     created_by: opts.userId,
     name: opts.name,
-    description: opts.kind === 'capacity_gap' ? 'Hiányzó kapacitás widget' : 'Élő kapacitás widget',
+    description: opts.description ?? (opts.kind === 'capacity_gap' ? 'Capacity gap widget' : 'Live capacity widget'),
     data_source: opts.kind, // sentinel value
     chart_type: 'kpi',
     config: opts.config as any,

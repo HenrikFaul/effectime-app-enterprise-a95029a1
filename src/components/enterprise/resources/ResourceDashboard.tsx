@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useI18n } from '@/i18n/I18nProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ function plusDays(iso: string, days: number) {
 }
 
 export function ResourceDashboard({ workspaceId }: Props) {
+  const { t } = useI18n();
   const { user } = useAuth();
   const [from, setFrom] = useState<string>(todayISO());
   const [to, setTo] = useState<string>(plusDays(todayISO(), 30));
@@ -39,12 +41,12 @@ export function ResourceDashboard({ workspaceId }: Props) {
       workspaceId,
       userId: user.id,
       kind: 'resource_capacity',
-      name: `Kapacitás ${from} → ${to}`,
+      name: t('resource_dashboard.widget_name', { from, to }),
       config: { from, to, include_leaves: includeLeaves, top_n: 5 },
     });
     setPinning(false);
-    if (error) toast.error('Kitűzés sikertelen: ' + error);
-    else toast.success('Widget kitűzve a Riportok dashboardra');
+    if (error) toast.error(t('resource_dashboard.pin_error', { msg: error }));
+    else toast.success(t('resource_dashboard.pin_success'));
   };
 
   const load = async () => {
@@ -76,36 +78,36 @@ export function ResourceDashboard({ workspaceId }: Props) {
       <Card>
         <CardHeader className="py-3 px-4 flex-row items-center justify-between space-y-0">
           <CardTitle className="text-sm flex items-center gap-2">
-            <CalendarRange className="h-4 w-4" /> Erőforrás-áttekintés
+            <CalendarRange className="h-4 w-4" /> {t('resource_dashboard.card_title')}
           </CardTitle>
           <Button size="sm" variant="outline" onClick={handlePin} disabled={pinning || !user} className="gap-1">
-            <Pin className="h-3.5 w-3.5" /> Kitűz a Riportokra
+            <Pin className="h-3.5 w-3.5" /> {t('resource_dashboard.btn_pin')}
           </Button>
         </CardHeader>
         <CardContent className="px-4 pb-4">
           <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto_auto] items-end">
             <div>
-              <Label className="text-xs">Időszak kezdete</Label>
+              <Label className="text-xs">{t('resource_dashboard.label_period_from')}</Label>
               <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-9" />
             </div>
             <div>
-              <Label className="text-xs">Időszak vége</Label>
+              <Label className="text-xs">{t('resource_dashboard.label_period_to')}</Label>
               <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-9" />
             </div>
             <div className="flex items-center gap-2 h-9">
               <Switch id="incl-leaves" checked={includeLeaves} onCheckedChange={setIncludeLeaves} />
-              <Label htmlFor="incl-leaves" className="text-xs cursor-pointer">Jóváhagyott szabadságokkal</Label>
+              <Label htmlFor="incl-leaves" className="text-xs cursor-pointer">{t('resource_dashboard.label_incl_leaves')}</Label>
             </div>
             <Button size="sm" variant="outline" onClick={load} disabled={loading}>
-              <RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} /> Frissítés
+              <RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} /> {t('resource_dashboard.btn_refresh')}
             </Button>
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-4">
-            <SummaryTile label="Alap kapacitás" value={`${grandTotals.base.toFixed(0)}%`} tone="default" />
-            <SummaryTile label="Projektre kötve" value={`${grandTotals.used.toFixed(0)}%`} tone="primary" />
-            <SummaryTile label="Szabadság miatti veszteség" value={`${grandTotals.leave.toFixed(0)}%`} tone="warn" />
-            <SummaryTile label="Szabad kapacitás" value={`${grandTotals.avail.toFixed(0)}%`} tone="success" />
+            <SummaryTile label={t('resource_dashboard.tile_base_capacity')} value={`${grandTotals.base.toFixed(0)}%`} tone="default" />
+            <SummaryTile label={t('resource_dashboard.tile_used')} value={`${grandTotals.used.toFixed(0)}%`} tone="primary" />
+            <SummaryTile label={t('resource_dashboard.tile_leave_loss')} value={`${grandTotals.leave.toFixed(0)}%`} tone="warn" />
+            <SummaryTile label={t('resource_dashboard.tile_available')} value={`${grandTotals.avail.toFixed(0)}%`} tone="success" />
           </div>
         </CardContent>
       </Card>
@@ -113,7 +115,7 @@ export function ResourceDashboard({ workspaceId }: Props) {
       <Card>
         <CardHeader className="py-3 px-4">
           <CardTitle className="text-sm flex items-center gap-2">
-            <Users className="h-4 w-4" /> Pozíciónkénti összegzés
+            <Users className="h-4 w-4" /> {t('resource_dashboard.by_role_title')}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-4">
@@ -121,7 +123,7 @@ export function ResourceDashboard({ workspaceId }: Props) {
             <div className="flex justify-center py-6"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
           ) : positions.length === 0 ? (
             <p className="text-xs text-muted-foreground py-4 text-center">
-              Nincsenek allokált pozíciók. Először a Beállítások → Pozíciók fülön rendelj tagokat pozíciókhoz.
+              {t('resource_dashboard.no_allocations')}
             </p>
           ) : (
             <div className="space-y-3">
@@ -134,18 +136,18 @@ export function ResourceDashboard({ workspaceId }: Props) {
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-2">
                         <span className="font-medium text-sm">{p.business_role}</span>
-                        <Badge variant="secondary" className="text-[10px]">{p.member_count} fő</Badge>
+                        <Badge variant="secondary" className="text-[10px]">{t('resource_dashboard.members_unit', { count: p.member_count })}</Badge>
                         {fullyAllocated && (
                           <Badge variant="destructive" className="text-[10px] gap-1">
-                            <AlertTriangle className="h-3 w-3" /> Telített
+                            <AlertTriangle className="h-3 w-3" /> {t('resource_dashboard.overloaded_badge')}
                           </Badge>
                         )}
                       </div>
                       <div className="flex items-center gap-3 text-xs text-muted-foreground">
                         <span>Alap: <strong className="text-foreground">{p.total_base.toFixed(0)}%</strong></span>
-                        <span>Lekötve: <strong className="text-primary">{p.total_used.toFixed(0)}%</strong></span>
+                        <span>{t('resource_dashboard.allocated_label')} <strong className="text-primary">{p.total_used.toFixed(0)}%</strong></span>
                         {includeLeaves && (
-                          <span>Szabadság: <strong className="text-orange-500">−{p.total_leave_deduction.toFixed(0)}%</strong></span>
+                          <span>{t('resource_dashboard.leave_label')} <strong className="text-orange-500">−{p.total_leave_deduction.toFixed(0)}%</strong></span>
                         )}
                         <span>Szabad: <strong className="text-emerald-600">{p.total_available.toFixed(0)}%</strong></span>
                       </div>
@@ -153,19 +155,19 @@ export function ResourceDashboard({ workspaceId }: Props) {
                     <div className="space-y-1">
                       <Progress value={Math.min(100, usedPct)} className="h-2" />
                       {includeLeaves && leavePct > 0 && (
-                        <div className="text-[10px] text-orange-500">Szabadság hatás: {leavePct.toFixed(0)}% a kapacitásból</div>
+                        <div className="text-[10px] text-orange-500">{t('resource_dashboard.leave_impact', { pct: leavePct.toFixed(0) })}</div>
                       )}
                     </div>
                     {/* Members in this role */}
                     <details className="text-xs">
-                      <summary className="cursor-pointer text-muted-foreground hover:text-foreground">Tagok bontásban</summary>
+                      <summary className="cursor-pointer text-muted-foreground hover:text-foreground">{t('resource_dashboard.members_breakdown')}</summary>
                       <div className="mt-2 space-y-1">
                         {rows.filter(r => r.business_role === p.business_role).map(r => (
                           <div key={r.membership_id + r.business_role} className="flex items-center justify-between border-t pt-1">
                             <span>{r.display_name}</span>
                             <div className="flex gap-3 text-[11px]">
                               <span className="text-muted-foreground">alap {r.base_percentage.toFixed(0)}%</span>
-                              <span className="text-primary">lekötve {r.used_percentage.toFixed(0)}%</span>
+                              <span className="text-primary">{t('resource_dashboard.allocated_pct', { pct: r.used_percentage.toFixed(0) })}</span>
                               {includeLeaves && r.leave_deduction > 0 && (
                                 <span className="text-orange-500">−{r.leave_deduction.toFixed(0)}% szabi</span>
                               )}

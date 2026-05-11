@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useI18n } from '@/i18n/I18nProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,14 +15,14 @@ import { logAuditEvent } from '@/lib/auditLog';
 
 interface Props { workspaceId: string; adminUserId: string; }
 
-const LEAVE_TYPES = [
-  { v: 'vacation', l: 'Szabadság' },
-  { v: 'sick_leave', l: 'Betegszabadság' },
-  { v: 'unpaid_leave', l: 'Fizetés nélküli' },
-  { v: 'other', l: 'Egyéb' },
-];
-
 export function QuotaManager({ workspaceId, adminUserId }: Props) {
+  const { t } = useI18n();
+  const LEAVE_TYPES = [
+    { v: 'vacation', l: t('leave_request.type_vacation') },
+    { v: 'sick_leave', l: t('leave_request.type_sick_leave') },
+    { v: 'unpaid_leave', l: t('leave_request.type_unpaid_leave') },
+    { v: 'other', l: t('leave_request.type_other') },
+  ];
   const [members, setMembers] = useState<any[]>([]);
   const [balances, setBalances] = useState<any[]>([]);
   const [year, setYear] = useState(new Date().getFullYear());
@@ -80,14 +81,14 @@ export function QuotaManager({ workspaceId, adminUserId }: Props) {
     } else {
       ({ error } = await supabase.from('enterprise_leave_quotas').insert(payload));
     }
-    if (error) { toast.error('Mentés sikertelen'); return; }
+    if (error) { toast.error(t('quota_manager.save_error')); return; }
     await logAuditEvent({
       workspace_id: workspaceId,
       actor_id: adminUserId,
       action: 'leave_quota.upsert',
       metadata: payload as any,
     });
-    toast.success('Kvóta mentve');
+    toast.success(t('quota_manager.save_success'));
     setEditing(null);
     load();
   };
@@ -96,7 +97,7 @@ export function QuotaManager({ workspaceId, adminUserId }: Props) {
     <Card>
       <CardHeader className="pb-3 flex flex-row items-center justify-between">
         <CardTitle className="text-sm flex items-center gap-2">
-          <Coins className="h-4 w-4 text-primary" /> Kvóta-kezelés
+          <Coins className="h-4 w-4 text-primary" /> {t('quota_manager.title')}
         </CardTitle>
         <Select value={String(year)} onValueChange={(v) => setYear(Number(v))}>
           <SelectTrigger className="w-28 h-8 text-xs"><SelectValue /></SelectTrigger>
@@ -109,7 +110,7 @@ export function QuotaManager({ workspaceId, adminUserId }: Props) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="text-xs">Tag</TableHead>
+              <TableHead className="text-xs">{t('quota_manager.col_member')}</TableHead>
               {LEAVE_TYPES.map((t) => <TableHead key={t.v} className="text-xs text-center">{t.l}</TableHead>)}
             </TableRow>
           </TableHeader>
@@ -142,24 +143,24 @@ export function QuotaManager({ workspaceId, adminUserId }: Props) {
 
         <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
           <DialogContent className="sm:max-w-sm">
-            <DialogHeader><DialogTitle>Kvóta szerkesztése</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{t('quota_manager.edit_title')}</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <div>
-                <Label className="text-xs">Kezdő nap (éves alap)</Label>
+                <Label className="text-xs">{t('quota_manager.base_days_label')}</Label>
                 <Input type="number" step="0.5" value={editForm.initial_days} onChange={(e) => setEditForm({ ...editForm, initial_days: Number(e.target.value) })} />
               </div>
               <div>
-                <Label className="text-xs">Áthozat (előző évből)</Label>
+                <Label className="text-xs">{t('quota_manager.carryover_label')}</Label>
                 <Input type="number" step="0.5" value={editForm.carryover_days} onChange={(e) => setEditForm({ ...editForm, carryover_days: Number(e.target.value) })} />
               </div>
               <div>
-                <Label className="text-xs">Manuális korrekció (+/-)</Label>
+                <Label className="text-xs">{t('quota_manager.correction_label')}</Label>
                 <Input type="number" step="0.5" value={editForm.manual_adjustment_days} onChange={(e) => setEditForm({ ...editForm, manual_adjustment_days: Number(e.target.value) })} />
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setEditing(null)}>Mégse</Button>
-              <Button onClick={save}>Mentés</Button>
+              <Button variant="outline" onClick={() => setEditing(null)}>{t('common.cancel')}</Button>
+              <Button onClick={save}>{t('common.save')}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

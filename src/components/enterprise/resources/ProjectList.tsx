@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Plus, Trash2, Pencil, FolderKanban, Calendar, Users } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProjectEditor } from './ProjectEditor';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -30,6 +31,7 @@ interface Project {
 }
 
 export function ProjectList({ workspaceId, userId, isAdmin }: Props) {
+  const { t } = useI18n();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
@@ -49,10 +51,10 @@ export function ProjectList({ workspaceId, userId, isAdmin }: Props) {
   useEffect(() => { load(); }, [workspaceId]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Biztosan törlöd a projektet és minden allokációját?')) return;
+    if (!confirm(t('resources.confirm_delete_project'))) return;
     const { error } = await supabase.from('enterprise_projects').delete().eq('id', id);
-    if (error) { toast.error('Hiba a törléskor'); return; }
-    toast.success('Projekt törölve');
+    if (error) { toast.error(t('resources.delete_error')); return; }
+    toast.success(t('resources.project_deleted'));
     load();
   };
 
@@ -60,11 +62,11 @@ export function ProjectList({ workspaceId, userId, isAdmin }: Props) {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold flex items-center gap-2">
-          <FolderKanban className="h-4 w-4 text-primary" /> Projektek
+          <FolderKanban className="h-4 w-4 text-primary" /> {t('resources.projects_title')}
         </h3>
         {isAdmin && (
           <Button size="sm" onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4 mr-1" /> Új projekt
+            <Plus className="h-4 w-4 mr-1" /> {t('resources.btn_new_project')}
           </Button>
         )}
       </div>
@@ -72,7 +74,7 @@ export function ProjectList({ workspaceId, userId, isAdmin }: Props) {
       {loading ? (
         <div className="flex justify-center py-8"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
       ) : projects.length === 0 ? (
-        <Card><CardContent className="text-center text-muted-foreground py-8 text-sm">Még nincs projekt létrehozva.</CardContent></Card>
+        <Card><CardContent className="text-center text-muted-foreground py-8 text-sm">{t('resources.no_projects')}</CardContent></Card>
       ) : (
         <div className="space-y-2">
           {projects.map(p => (
@@ -88,13 +90,13 @@ export function ProjectList({ workspaceId, userId, isAdmin }: Props) {
                     {p.description && <p className="text-xs text-muted-foreground truncate">{p.description}</p>}
                     <div className="text-[11px] text-muted-foreground mt-0.5 flex items-center gap-1">
                       <Calendar className="h-3 w-3" />
-                      {p.start_date} → {p.is_open_ended ? 'határozatlan' : (p.end_date || '?')}
+                      {p.start_date} → {p.is_open_ended ? t('resources.project_indefinite') : (p.end_date || '?')}
                     </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
                   <Button size="sm" variant="outline" onClick={() => setEditing(p)}>
-                    <Pencil className="h-3.5 w-3.5 mr-1" /> Szerkesztés
+                    <Pencil className="h-3.5 w-3.5 mr-1" /> {t('resources.btn_edit_project')}
                   </Button>
                   {isAdmin && (
                     <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => handleDelete(p.id)}>

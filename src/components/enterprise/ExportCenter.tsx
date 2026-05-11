@@ -11,17 +11,32 @@ import { format, eachDayOfInterval } from 'date-fns';
 import { hu } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
   userId: string;
 }
 
-const TYPE_MAP: Record<string, string> = { vacation: 'Szabadság', sick_leave: 'Betegszabadság', unpaid_leave: 'Fizetés nélküli', other: 'Egyéb' };
-const STATUS_MAP: Record<string, string> = { pending: 'Függőben', approved: 'Jóváhagyva', rejected: 'Elutasítva', cancelled: 'Visszavonva', expired: 'Lejárt', draft: 'Piszkozat' };
-const DOW = ['Vasárnap', 'Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat'];
-
 export function ExportCenter({ workspaceId, userId }: Props) {
+  const { t } = useI18n();
+
+  const TYPE_MAP: Record<string, string> = {
+    vacation: t('leave_request.type_vacation'),
+    sick_leave: t('leave_request.type_sick_leave'),
+    unpaid_leave: t('leave_request.type_unpaid_leave'),
+    other: t('leave_request.type_other'),
+  };
+  const STATUS_MAP: Record<string, string> = {
+    pending: t('leave_request.status_pending'),
+    approved: t('leave_request.status_approved'),
+    rejected: t('leave_request.status_rejected'),
+    cancelled: t('leave_request.status_cancelled'),
+    expired: t('leave_request.status_expired'),
+    draft: t('leave_request.status_draft'),
+  };
+  const DOW = t('export_center.dow').split(',');
+
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
   const [statusFilter, setStatusFilter] = useState('all');
@@ -36,15 +51,15 @@ export function ExportCenter({ workspaceId, userId }: Props) {
   const loadFilterOptions = async () => {
     if (teams.length > 0) return;
     const { data } = await supabase.from('enterprise_memberships').select('team, business_role').eq('workspace_id', workspaceId).eq('status', 'active' as any);
-    const t = new Set<string>();
+    const teamSet = new Set<string>();
     const r = new Set<string>();
-    (data || []).forEach((m: any) => { if (m.team) t.add(m.team); if (m.business_role) r.add(m.business_role); });
-    setTeams(Array.from(t).sort());
+    (data || []).forEach((m: any) => { if (m.team) teamSet.add(m.team); if (m.business_role) r.add(m.business_role); });
+    setTeams(Array.from(teamSet).sort());
     setRoles(Array.from(r).sort());
   };
 
   const handleExport = async () => {
-    if (!startDate || !endDate) { toast.error('Válassz dátumtartományt'); return; }
+    if (!startDate || !endDate) { toast.error(t('export_center.toast_no_date')); return; }
     setExporting(true);
 
     let query = supabase
@@ -68,7 +83,7 @@ export function ExportCenter({ workspaceId, userId }: Props) {
         supabase.from('profiles').select('user_id, display_name').in('user_id', userIds),
         supabase.from('enterprise_memberships').select('user_id, team, business_role').eq('workspace_id', workspaceId).in('user_id', userIds),
       ]);
-      (profileData || []).forEach((p: any) => { profiles[p.user_id] = p.display_name || 'Ismeretlen'; });
+      (profileData || []).forEach((p: any) => { profiles[p.user_id] = p.display_name || t('export_center.unknown_person'); });
       (memberData || []).forEach((m: any) => { memberInfo[m.user_id] = { team: m.team, role: m.business_role }; });
     }
 
@@ -86,7 +101,19 @@ export function ExportCenter({ workspaceId, userId }: Props) {
     const companyDayMap = new Map((companyDays || []).map((c: any) => [c.leave_date, c.name]));
 
     // Build rows
-    const headers = ['Dátum', 'Nap', 'Név', 'Csapat', 'Pozíció', 'Típus', 'Státusz', 'Félnap', 'Ünnepnap', 'Céges szabadnap', 'Megjegyzés'];
+    const headers = [
+      t('export_center.col_date'),
+      t('export_center.col_day'),
+      t('export_center.col_name'),
+      t('export_center.col_team'),
+      t('export_center.col_position'),
+      t('export_center.col_type'),
+      t('export_center.col_status'),
+      t('export_center.col_half_day'),
+      t('export_center.col_holiday'),
+      t('export_center.col_company_day'),
+      t('export_center.col_comment'),
+    ];
     const rows: string[][] = [];
 
     const allDays = eachDayOfInterval({ start: startDate, end: endDate });
@@ -103,10 +130,10 @@ export function ExportCenter({ workspaceId, userId }: Props) {
       } else {
         for (const req of dayRequests) {
           const mi = memberInfo[req.user_id] || { team: '', role: '' };
-          const halfDay = req.is_half_day ? (req.half_day_period === 'morning' ? 'Délelőtt' : 'Délután') : '';
+          const halfDay = req.is_half_day ? (req.half_day_period === 'morning' ? t('leave_request.half_day_morning') : t('leave_request.half_day_afternoon')) : '';
           rows.push([
             dateStr, dayName,
-            profiles[req.user_id] || 'Ismeretlen',
+            profiles[req.user_id] || t('export_center.unknown_person'),
             mi.team || '', mi.role || '',
             TYPE_MAP[req.leave_type] || req.leave_type,
             STATUS_MAP[req.status] || req.status,
@@ -127,7 +154,10 @@ export function ExportCenter({ workspaceId, userId }: Props) {
     } else if (exportFormat === 'xml') {
       downloadXML(headers, rows, fileName);
     } else if (exportFormat === 'html') {
-      downloadHTML(headers, rows, fileName, startDate, endDate);
+      downloadHTML(headers, rows, fileName, startDate, endDate,
+        t('export_center.html_title'),
+        t('export_center.html_date_rows', { start: format(startDate, 'yyyy.MM.dd'), end: format(endDate, 'yyyy.MM.dd'), rows: rows.length })
+      );
     }
 
     await supabase.from('enterprise_audit_events').insert({
@@ -135,7 +165,7 @@ export function ExportCenter({ workspaceId, userId }: Props) {
       metadata: { start_date: format(startDate, 'yyyy-MM-dd'), end_date: format(endDate, 'yyyy-MM-dd'), row_count: rows.length, format: exportFormat },
     });
 
-    toast.success(`Export kész — ${rows.length} sor (${exportFormat.toUpperCase()})`);
+    toast.success(t('export_center.toast_export_done', { rows: rows.length, format: exportFormat.toUpperCase() }));
     setExporting(false);
   };
 
@@ -150,12 +180,12 @@ export function ExportCenter({ workspaceId, userId }: Props) {
         <CardContent className="py-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs">Kezdő dátum</Label>
+              <Label className="text-xs">{t('export_center.label_start_date')}</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-full mt-1 h-8 justify-start text-left text-xs", !startDate && "text-muted-foreground")}>
                     <CalendarIcon className="mr-1 h-3 w-3" />
-                    {startDate ? format(startDate, 'yyyy.MM.dd', { locale: hu }) : 'Válassz'}
+                    {startDate ? format(startDate, 'yyyy.MM.dd', { locale: hu }) : t('export_center.date_placeholder')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -164,12 +194,12 @@ export function ExportCenter({ workspaceId, userId }: Props) {
               </Popover>
             </div>
             <div>
-              <Label className="text-xs">Záró dátum</Label>
+              <Label className="text-xs">{t('export_center.label_end_date')}</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-full mt-1 h-8 justify-start text-left text-xs", !endDate && "text-muted-foreground")}>
                     <CalendarIcon className="mr-1 h-3 w-3" />
-                    {endDate ? format(endDate, 'yyyy.MM.dd', { locale: hu }) : 'Válassz'}
+                    {endDate ? format(endDate, 'yyyy.MM.dd', { locale: hu }) : t('export_center.date_placeholder')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -181,19 +211,19 @@ export function ExportCenter({ workspaceId, userId }: Props) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs">Státusz szűrő</Label>
+              <Label className="text-xs">{t('export_center.label_status_filter')}</Label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Összes</SelectItem>
-                  <SelectItem value="approved">Jóváhagyva</SelectItem>
-                  <SelectItem value="pending">Függőben</SelectItem>
-                  <SelectItem value="rejected">Elutasítva</SelectItem>
+                  <SelectItem value="all">{t('export_center.option_all')}</SelectItem>
+                  <SelectItem value="approved">{t('leave_request.status_approved')}</SelectItem>
+                  <SelectItem value="pending">{t('leave_request.status_pending')}</SelectItem>
+                  <SelectItem value="rejected">{t('leave_request.status_rejected')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-xs">Formátum</Label>
+              <Label className="text-xs">{t('export_center.label_format')}</Label>
               <Select value={exportFormat} onValueChange={setExportFormat}>
                 <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -208,21 +238,21 @@ export function ExportCenter({ workspaceId, userId }: Props) {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs">Csapat</Label>
+              <Label className="text-xs">{t('export_center.label_team')}</Label>
               <Select value={teamFilter} onValueChange={setTeamFilter} onOpenChange={() => loadFilterOptions()}>
                 <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Összes</SelectItem>
-                  {teams.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                  <SelectItem value="all">{t('export_center.option_all')}</SelectItem>
+                  {teams.map(team => <SelectItem key={team} value={team}>{team}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-xs">Pozíció</Label>
+              <Label className="text-xs">{t('export_center.label_position')}</Label>
               <Select value={roleFilter} onValueChange={setRoleFilter} onOpenChange={() => loadFilterOptions()}>
                 <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Összes</SelectItem>
+                  <SelectItem value="all">{t('export_center.option_all')}</SelectItem>
                   {roles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -231,7 +261,7 @@ export function ExportCenter({ workspaceId, userId }: Props) {
 
           <Button onClick={handleExport} disabled={exporting || !startDate || !endDate} className="w-full text-xs">
             <Download className="h-3 w-3 mr-1" />
-            {exporting ? 'Exportálás...' : `${exportFormat.toUpperCase()} Export letöltése`}
+            {exporting ? t('export_center.btn_exporting') : t('export_center.btn_download', { format: exportFormat.toUpperCase() })}
           </Button>
         </CardContent>
       </Card>
@@ -250,7 +280,7 @@ function downloadFile(content: string, fileName: string, mimeType: string) {
 }
 
 function downloadCSV(headers: string[], rows: string[][], fileName: string) {
-  const BOM = '\uFEFF';
+  const BOM = '﻿';
   const all = [headers, ...rows];
   const csv = BOM + all.map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
   downloadFile(csv, `${fileName}.csv`, 'text/csv;charset=utf-8');
@@ -282,7 +312,7 @@ ${rows.map(r => makeRow(r)).join('\n')}
 
 function downloadXML(headers: string[], rows: string[][], fileName: string) {
   const escXml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  const tagName = (h: string) => h.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z0-9]/g, '_').replace(/^_+|_+$/g, '') || 'field';
+  const tagName = (h: string) => h.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]/g, '_').replace(/^_+|_+$/g, '') || 'field';
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <export>
@@ -291,7 +321,7 @@ ${rows.map(r => `  <record>\n${headers.map((h, i) => `    <${tagName(h)}>${escXm
   downloadFile(xml, `${fileName}.xml`, 'application/xml');
 }
 
-function downloadHTML(headers: string[], rows: string[][], fileName: string, startDate: Date, endDate: Date) {
+function downloadHTML(headers: string[], rows: string[][], fileName: string, startDate: Date, endDate: Date, title: string, dateRowsLabel: string) {
   const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
   const html = `<!DOCTYPE html>
 <html lang="hu">
@@ -307,8 +337,8 @@ function downloadHTML(headers: string[], rows: string[][], fileName: string, sta
   @media print { body { padding: 0; } }
 </style></head>
 <body>
-<h1>Syncfolk — Távollét export</h1>
-<p class="meta">${format(startDate, 'yyyy.MM.dd')} – ${format(endDate, 'yyyy.MM.dd')} | ${rows.length} sor</p>
+<h1>${esc(title)}</h1>
+<p class="meta">${esc(dateRowsLabel)}</p>
 <table>
 <thead><tr>${headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead>
 <tbody>${rows.map(r => `<tr>${r.map(c => `<td>${esc(c)}</td>`).join('')}</tr>`).join('\n')}</tbody>

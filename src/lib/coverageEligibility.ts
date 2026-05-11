@@ -86,11 +86,11 @@ export function evaluateEligibility(
 
   // 1) Holiday / Blocked
   if (ctx.holidaysISO.has(req.shift_date)) {
-    issues.push({ code: 'HOLIDAY', severity: 'warning', message: 'Munkaszüneti nap — beosztás csak tájékoztató jelleggel.' });
+    issues.push({ code: 'HOLIDAY', severity: 'warning', message: 'Public holiday — scheduling is informational only.' });
     score -= 5;
   }
   if (ctx.blockedDatesISO.has(req.shift_date)) {
-    issues.push({ code: 'BLOCKED', severity: 'blocking', message: 'Tiltott nap a workspace szabályok szerint.' });
+    issues.push({ code: 'BLOCKED', severity: 'blocking', message: 'Blocked date according to workspace rules.' });
   }
 
   // 2) Leave constraint
@@ -98,9 +98,9 @@ export function evaluateEligibility(
     if (l.user_id !== member.user_id) continue;
     if (!dateInRange(req.shift_date, l.start_date, l.end_date)) continue;
     if (l.status === 'approved') {
-      issues.push({ code: 'ON_LEAVE', severity: 'blocking', message: 'Jóváhagyott szabadságon van.' });
+      issues.push({ code: 'ON_LEAVE', severity: 'blocking', message: 'On approved leave.' });
     } else if (l.status === 'pending') {
-      issues.push({ code: 'PENDING_LEAVE', severity: 'warning', message: 'Függő szabadságkérelme van erre a napra.' });
+      issues.push({ code: 'PENDING_LEAVE', severity: 'warning', message: 'Has a pending leave request for this day.' });
       score -= 30;
     }
   }
@@ -113,7 +113,7 @@ export function evaluateEligibility(
     if (member.business_role && effectiveRoles.includes(member.business_role)) {
       score += 50;
     } else {
-      issues.push({ code: 'WRONG_ROLE', severity: 'warning', message: `Pozíciója (${member.business_role || '—'}) nem egyezik az elvárt pozíciók egyikével sem.` });
+      issues.push({ code: 'WRONG_ROLE', severity: 'warning', message: `Position (${member.business_role || '—'}) does not match any of the required positions.` });
       score -= 40;
     }
   }
@@ -123,11 +123,11 @@ export function evaluateEligibility(
       // If member's role already matches the requirement, downgrade skill mismatch to warning —
       // a role-matched person is still a valid candidate even without the exact skill tag.
       const hasRoleMatch = !!(effectiveRoles && effectiveRoles.length > 0 && member.business_role && effectiveRoles.includes(member.business_role));
-      issues.push({ code: 'MISSING_SKILL', severity: hasRoleMatch ? 'warning' : 'blocking', message: 'Hiányzó szükséges képesség (egyik sem teljesül).' });
+      issues.push({ code: 'MISSING_SKILL', severity: hasRoleMatch ? 'warning' : 'blocking', message: 'Missing required skill (none satisfied).' });
     } else {
       const need = req.min_skill_level ?? 1;
       if (matchedSkill.level < need) {
-        issues.push({ code: 'SKILL_LEVEL_LOW', severity: 'warning', message: `Képesség szintje (${matchedSkill.level}) alacsonyabb, mint az elvárt (${need}).` });
+        issues.push({ code: 'SKILL_LEVEL_LOW', severity: 'warning', message: `Skill level (${matchedSkill.level}) is lower than required (${need}).` });
         score -= 20;
       } else {
         score += 30 + (matchedSkill.level - need) * 5;
@@ -140,7 +140,7 @@ export function evaluateEligibility(
     if (s.user_id !== member.user_id) continue;
     if (s.shift_date !== req.shift_date) continue;
     if (s.office_id !== req.office_id) {
-      issues.push({ code: 'DOUBLE_BOOKED', severity: 'blocking', message: 'Már be van osztva másik telephelyre ezen a napon.' });
+      issues.push({ code: 'DOUBLE_BOOKED', severity: 'blocking', message: 'Already scheduled at another site on this day.' });
     }
   }
 

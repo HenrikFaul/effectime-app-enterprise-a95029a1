@@ -9,8 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { User, LogOut, Moon, Sun, Pencil, Copy, Check, Save, ShieldCheck, Building2, Palette } from 'lucide-react';
 import { toast } from 'sonner';
+import { useI18n } from '@/i18n/I18nProvider';
 
 export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {}) {
+  const { t } = useI18n();
   const { user, signOut, isTemporary, tempAccessToken } = useAuth();
   const { theme, themeStyle, toggleTheme, toggleThemeStyle } = useTheme();
   const navigate = useNavigate();
@@ -75,8 +77,8 @@ export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {})
   }, [user, isTemporarySession]);
 
   const displayName = isTemporarySession
-    ? tempDisplayName || user?.user_metadata?.display_name || user?.email || 'Felhasználó'
-    : user?.user_metadata?.display_name || user?.email || 'Felhasználó';
+    ? tempDisplayName || user?.user_metadata?.display_name || user?.email || t('profile_menu.default_username')
+    : user?.user_metadata?.display_name || user?.email || t('profile_menu.default_username');
   const initials = displayName.slice(0, 2).toUpperCase();
 
   const handleEditName = () => {
@@ -94,7 +96,7 @@ export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {})
     });
 
     if (error || data?.error) {
-      toast.error(data?.error || 'Hiba a név mentésekor.');
+      toast.error(data?.error || t('profile_menu.error_save_name'));
       setSavingName(false);
       return;
     }
@@ -107,7 +109,7 @@ export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {})
       },
     });
 
-    toast.success('Név frissítve!');
+    toast.success(t('profile_menu.name_updated'));
     setEditingName(false);
     setSavingName(false);
   };
@@ -117,7 +119,7 @@ export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {})
     const link = `${window.location.origin}/temp/${tempAccessToken}`;
     await navigator.clipboard.writeText(link);
     setCopied(true);
-    toast.success('Visszatérési link vágólapra másolva!');
+    toast.success(t('profile_menu.return_link_copied'));
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -159,25 +161,25 @@ export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {})
                 </Button>
               </div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">Vendég felhasználó</p>
+            <p className="text-xs text-muted-foreground mt-1">{t('profile_menu.guest_user')}</p>
           </div>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleCopyReturnLink} className="rounded-lg cursor-pointer">
             {copied ? <Check className="mr-2 h-4 w-4 text-primary" /> : <Copy className="mr-2 h-4 w-4" />}
-            Visszatérési link másolása
+            {t('profile_menu.copy_return_link')}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={toggleThemeStyle} className="rounded-lg cursor-pointer">
             <Palette className="mr-2 h-4 w-4" />
-            Következő layout: {layoutLabels[themeStyle] || themeStyle}
+            {t('profile_menu.next_layout')}: {layoutLabels[themeStyle] || themeStyle}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={toggleTheme} className="rounded-lg cursor-pointer" disabled={['nebula', 'nebula-obsidian', 'graphite'].includes(themeStyle)}>
             {theme === 'dark' ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
-            {['nebula', 'nebula-obsidian', 'graphite'].includes(themeStyle) ? 'A kiválasztott layout fix dark módú' : theme === 'dark' ? 'Világos mód' : 'Sötét mód'}
+            {['nebula', 'nebula-obsidian', 'graphite'].includes(themeStyle) ? t('profile_menu.layout_fixed_dark') : theme === 'dark' ? t('profile_menu.light_mode') : t('profile_menu.dark_mode')}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={signOut} className="rounded-lg cursor-pointer text-destructive focus:text-destructive">
             <LogOut className="mr-2 h-4 w-4" />
-            Kijelentkezés
+            {t('profile_menu.sign_out')}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -194,7 +196,7 @@ export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {})
               {initials}
             </AvatarFallback>
           </Avatar>
-          {showLabel && <span className="font-display font-semibold text-sm hidden sm:inline">Profilom</span>}
+          {showLabel && <span className="font-display font-semibold text-sm hidden sm:inline">{t('profile_menu.my_profile')}</span>}
         </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56 rounded-xl p-1.5">
@@ -205,7 +207,7 @@ export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {})
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => navigate('/profile')} className="rounded-lg cursor-pointer">
           <User className="mr-2 h-4 w-4" />
-          Profilom
+          {t('profile_menu.my_profile')}
         </DropdownMenuItem>
         {isAdmin && (
           <DropdownMenuItem onClick={() => navigate('/admin')} className="rounded-lg cursor-pointer">
@@ -215,20 +217,20 @@ export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {})
         )}
         <DropdownMenuItem onClick={() => navigate('/app?select=1')} className="rounded-lg cursor-pointer">
           <Building2 className="mr-2 h-4 w-4" />
-          Munkaterület
+          {t('profile_menu.workspace')}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={toggleThemeStyle} className="rounded-lg cursor-pointer">
           <Palette className="mr-2 h-4 w-4" />
-          Következő layout: {layoutLabels[themeStyle] || themeStyle}
+          {t('profile_menu.next_layout')}: {layoutLabels[themeStyle] || themeStyle}
         </DropdownMenuItem>
         <DropdownMenuItem onClick={toggleTheme} className="rounded-lg cursor-pointer" disabled={['nebula', 'nebula-obsidian', 'graphite'].includes(themeStyle)}>
           {theme === 'dark' ? <Sun className="mr-2 h-4 w-4" /> : <Moon className="mr-2 h-4 w-4" />}
-          {['nebula', 'nebula-obsidian', 'graphite'].includes(themeStyle) ? 'A kiválasztott layout fix dark módú' : theme === 'dark' ? 'Világos mód' : 'Sötét mód'}
+          {['nebula', 'nebula-obsidian', 'graphite'].includes(themeStyle) ? t('profile_menu.layout_fixed_dark') : theme === 'dark' ? t('profile_menu.light_mode') : t('profile_menu.dark_mode')}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={signOut} className="rounded-lg cursor-pointer text-destructive focus:text-destructive">
           <LogOut className="mr-2 h-4 w-4" />
-          Kijelentkezés
+          {t('profile_menu.sign_out')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

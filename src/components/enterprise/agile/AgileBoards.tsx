@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { JiraIssueEditor } from './JiraIssueEditor';
 import { GiGanttIcBoard, type GiGanttIssueRow } from './GiGanttIcBoard';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface IntegrationMini {
   id: string;
@@ -46,6 +47,7 @@ const ISSUE_TYPE_COLOR: Record<string, string> = {
 };
 
 export function AgileBoards({ integration }: { integration: IntegrationMini }) {
+  const { t } = useI18n();
   const [issues, setIssues] = useState<IssueRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [editorKey, setEditorKey] = useState<string | null>(null);
@@ -71,11 +73,11 @@ export function AgileBoards({ integration }: { integration: IntegrationMini }) {
         body: { action: 'search_issues', integration_id: integration.id, params: { query, max: 200 } },
       });
       if (error) throw error;
-      if (!(data as any)?.ok) throw new Error((data as any)?.error ?? 'Hibás válasz');
-      toast.success(`${(data as any).count} ticket szinkronizálva`);
+      if (!(data as any)?.ok) throw new Error((data as any)?.error ?? t('agile_boards.error_bad_response'));
+      toast.success(t('agile_boards.tickets_synced', { count: (data as any).count }));
       await refresh();
     } catch (e: any) {
-      toast.error('Szinkron sikertelen: ' + (e?.message ?? String(e)));
+      toast.error(t('agile_boards.sync_failed', { msg: e?.message ?? String(e) }));
     } finally {
       setLoading(false);
     }
@@ -104,7 +106,7 @@ export function AgileBoards({ integration }: { integration: IntegrationMini }) {
               <Sparkles className="h-3.5 w-3.5 text-teal-400" />
               <span className="font-semibold tracking-tight text-[11px]">
                 <span className="text-teal-400">Gi</span>
-                <span>Gantt</span>
+                <span>{t('agile_boards.tab_gantt')}</span>
                 <span className="text-teal-400 italic">Ic</span>
               </span>
             </TabsTrigger>
@@ -219,15 +221,16 @@ function KanbanView({ issues, onOpen }: { issues: IssueRow[]; onOpen?: (key: str
 
 // ───── Scrum: group by sprint, then status sub-columns ─────
 function ScrumView({ issues, onOpen }: { issues: IssueRow[]; onOpen?: (key: string) => void }) {
+  const { t } = useI18n();
   const sprints = useMemo(() => {
     const map = new Map<string, IssueRow[]>();
     for (const i of issues) {
-      const k = i.sprint_name ?? 'Backlog (nincs sprint)';
+      const k = i.sprint_name ?? t('agile_boards.backlog_no_sprint');
       if (!map.has(k)) map.set(k, []);
       map.get(k)!.push(i);
     }
     return Array.from(map.entries());
-  }, [issues]);
+  }, [issues, t]);
 
   if (issues.length === 0) return <Empty />;
   return (
@@ -271,9 +274,10 @@ function ScrumView({ issues, onOpen }: { issues: IssueRow[]; onOpen?: (key: stri
 
 
 function Empty({ hint }: { hint?: string } = {}) {
+  const { t } = useI18n();
   return (
     <div className="py-10 text-center text-xs text-muted-foreground">
-      Nincs adat. {hint ?? 'Indíts el egy szinkront a fenti gombbal.'}
+      {t('agile_boards.no_data')} {hint ?? t('agile_boards.no_data_hint')}
     </div>
   );
 }

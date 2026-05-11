@@ -151,9 +151,9 @@ export function validateSegment(
   const errors: string[] = [];
   const a = new Date(candidate.starts_at).getTime();
   const b = new Date(candidate.ends_at).getTime();
-  if (!isFinite(a) || !isFinite(b)) errors.push('Érvénytelen dátum/időpont.');
-  if (b <= a) errors.push('A vége nem lehet korábbi vagy egyenlő a kezdéssel.');
-  if ((b - a) / HOURS_MS > 24) errors.push('Egy szegmens nem lehet hosszabb 24 óránál.');
+  if (!isFinite(a) || !isFinite(b)) errors.push('Invalid date/time.');
+  if (b <= a) errors.push('End cannot be earlier than or equal to start.');
+  if ((b - a) / HOURS_MS > 24) errors.push('A segment cannot be longer than 24 hours.');
 
   for (const s of existing) {
     if (s.id === ignoreId) continue;

@@ -159,14 +159,14 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
         (supabase as any).from('enterprise_memberships').select('id, user_id, role, status, team, location, business_role, joined_at, city, office_id, base_working_hours').eq('workspace_id', workspace.id).eq('status', 'active'),
       ]);
       if (membership) {
-        setMyMembership({ ...membership, display_name: profile?.display_name || 'Ismeretlen' });
+        setMyMembership({ ...membership, display_name: profile?.display_name || t('ws_nav.unknown_user') });
       }
       // Enrich members with display names
       if (members && members.length > 0) {
         const userIds = members.map((m: any) => m.user_id);
         const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);
-        const nameMap = new Map((profiles || []).map((p: any) => [p.user_id, p.display_name || 'Ismeretlen']));
-        setAllMembers(members.map((m: any) => ({ ...m, display_name: nameMap.get(m.user_id) || 'Ismeretlen' })));
+        const nameMap = new Map((profiles || []).map((p: any) => [p.user_id, p.display_name || t('ws_nav.unknown_user')]));
+        setAllMembers(members.map((m: any) => ({ ...m, display_name: nameMap.get(m.user_id) || t('ws_nav.unknown_user') })));
       }
     };
     fetchMyMembership();
@@ -469,6 +469,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
 
 // ===== Combined Requests + Approvals Tab =====
 function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canApprove, canOverride, canSubmit, canViewOwn, canViewTeam, canViewRules }: { workspaceId: string; userId: string; userRole: string; isAdmin: boolean; canApprove?: boolean; canOverride?: boolean; canSubmit?: boolean; canViewOwn?: boolean; canViewTeam?: boolean; canViewRules?: boolean }) {
+  const { t } = useI18n();
   const [showOverride, setShowOverride] = useState(false);
   // Per user request: all top-level sections start collapsed.
   const [approvalsOpen, setApprovalsOpen] = useState(false);
@@ -501,7 +502,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
               <CardContent className="flex items-center justify-between py-3 px-4">
                 <div className="flex items-center gap-2">
                   <Shield className="h-4 w-4 text-primary" />
-                  <span className="font-medium text-sm">Jóváhagyások</span>
+                  <span className="font-medium text-sm">{t('ws_nav.section_approvals')}</span>
                 </div>
                 <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${approvalsOpen ? 'rotate-180' : ''}`} />
               </CardContent>
@@ -510,7 +511,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
           <CollapsibleContent className="mt-2">
             <div className="flex justify-end mb-2">
               <Button size="sm" variant="outline" onClick={() => setShowOverride(true)} className="text-xs">
-                <ShieldAlert className="h-3.5 w-3.5 mr-1" /> Kérelem más nevében
+                <ShieldAlert className="h-3.5 w-3.5 mr-1" /> {t('ws_nav.override_btn')}
               </Button>
             </div>
             <ApprovalInbox workspaceId={workspaceId} userId={userId} />
@@ -526,7 +527,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
             <CardContent className="flex items-center justify-between py-3 px-4">
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium text-sm">Kérelmek</span>
+                <span className="font-medium text-sm">{t('ws_nav.section_requests')}</span>
               </div>
               <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${requestsOpen ? 'rotate-180' : ''}`} />
             </CardContent>
@@ -544,7 +545,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
               <CardContent className="flex items-center justify-between py-3 px-4">
                 <div className="flex items-center gap-2">
                   <ShieldAlert className="h-4 w-4 text-primary" />
-                  <span className="font-medium text-sm">Szabályok</span>
+                  <span className="font-medium text-sm">{t('ws_nav.section_rules')}</span>
                 </div>
                 <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${rulesOpen ? 'rotate-180' : ''}`} />
               </CardContent>
@@ -555,7 +556,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
               <CollapsibleTrigger asChild>
                 <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
                   <CardContent className="flex items-center justify-between py-2.5 px-4">
-                    <span className="text-xs font-medium">Jóváhagyási láncok</span>
+                    <span className="text-xs font-medium">{t('ws_nav.section_approval_chains')}</span>
                     <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openApprovalChain ? 'rotate-180' : ''}`} />
                   </CardContent>
                 </Card>
@@ -567,7 +568,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
               <CollapsibleTrigger asChild>
                 <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
                   <CardContent className="flex items-center justify-between py-2.5 px-4">
-                    <span className="text-xs font-medium">Távollét típusok</span>
+                    <span className="text-xs font-medium">{t('ws_nav.section_leave_types')}</span>
                     <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openLeaveTypes ? 'rotate-180' : ''}`} />
                   </CardContent>
                 </Card>
@@ -579,7 +580,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
               <CollapsibleTrigger asChild>
                 <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
                   <CardContent className="flex items-center justify-between py-2.5 px-4">
-                    <span className="text-xs font-medium">Ünnepnapok</span>
+                    <span className="text-xs font-medium">{t('ws_nav.section_holidays')}</span>
                     <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openHolidays ? 'rotate-180' : ''}`} />
                   </CardContent>
                 </Card>
@@ -591,7 +592,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
               <CollapsibleTrigger asChild>
                 <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
                   <CardContent className="flex items-center justify-between py-2.5 px-4">
-                    <span className="text-xs font-medium">Cég-szintű napok</span>
+                    <span className="text-xs font-medium">{t('ws_nav.section_company_days')}</span>
                     <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openCompanyDays ? 'rotate-180' : ''}`} />
                   </CardContent>
                 </Card>
@@ -603,7 +604,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
               <CollapsibleTrigger asChild>
                 <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
                   <CardContent className="flex items-center justify-between py-2.5 px-4">
-                    <span className="text-xs font-medium">Tiltott napok</span>
+                    <span className="text-xs font-medium">{t('ws_nav.section_blocked_dates')}</span>
                     <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openBlockedDates ? 'rotate-180' : ''}`} />
                   </CardContent>
                 </Card>
@@ -615,7 +616,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
               <CollapsibleTrigger asChild>
                 <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
                   <CardContent className="flex items-center justify-between py-2.5 px-4">
-                    <span className="text-xs font-medium">Napi szabályok</span>
+                    <span className="text-xs font-medium">{t('ws_nav.section_daily_rules')}</span>
                     <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openDailyRules ? 'rotate-180' : ''}`} />
                   </CardContent>
                 </Card>
@@ -627,7 +628,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
               <CollapsibleTrigger asChild>
                 <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
                   <CardContent className="flex items-center justify-between py-2.5 px-4">
-                    <span className="text-xs font-medium">Telephelyi lefedettségi szabályok</span>
+                    <span className="text-xs font-medium">{t('ws_nav.section_coverage_rules')}</span>
                     <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openOfficeCoverage ? 'rotate-180' : ''}`} />
                   </CardContent>
                 </Card>
@@ -639,7 +640,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
               <CollapsibleTrigger asChild>
                 <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
                   <CardContent className="flex items-center justify-between py-2.5 px-4">
-                    <span className="text-xs font-medium">Szabálysablon-könyvtár</span>
+                    <span className="text-xs font-medium">{t('ws_nav.section_rule_templates')}</span>
                     <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openRuleTemplates ? 'rotate-180' : ''}`} />
                   </CardContent>
                 </Card>
@@ -655,6 +656,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
 
 // ===== Combined Reports + Audit + Export Tab =====
 function ReportsAndAuditTab({ workspaceId, userId }: { workspaceId: string; userId: string }) {
+  const { t } = useI18n();
   const [auditOpen, setAuditOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [reportsOpen, setReportsOpen] = useState(true);
@@ -667,7 +669,7 @@ function ReportsAndAuditTab({ workspaceId, userId }: { workspaceId: string; user
             <CardContent className="flex items-center justify-between py-3 px-4">
               <div className="flex items-center gap-2">
                 <History className="h-4 w-4 text-primary" />
-                <span className="font-medium text-sm">Audit napló</span>
+                <span className="font-medium text-sm">{t('ws_nav.section_audit')}</span>
               </div>
               <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${auditOpen ? 'rotate-180' : ''}`} />
             </CardContent>
@@ -684,7 +686,7 @@ function ReportsAndAuditTab({ workspaceId, userId }: { workspaceId: string; user
             <CardContent className="flex items-center justify-between py-3 px-4">
               <div className="flex items-center gap-2">
                 <Download className="h-4 w-4 text-primary" />
-                <span className="font-medium text-sm">Export</span>
+                <span className="font-medium text-sm">{t('ws_nav.section_export')}</span>
               </div>
               <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${exportOpen ? 'rotate-180' : ''}`} />
             </CardContent>
@@ -701,7 +703,7 @@ function ReportsAndAuditTab({ workspaceId, userId }: { workspaceId: string; user
             <CardContent className="flex items-center justify-between py-3 px-4">
               <div className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 text-primary" />
-                <span className="font-medium text-sm">Riportok</span>
+                <span className="font-medium text-sm">{t('ws_nav.section_reports')}</span>
               </div>
               <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${reportsOpen ? 'rotate-180' : ''}`} />
             </CardContent>
@@ -719,6 +721,7 @@ function ReportsAndAuditTab({ workspaceId, userId }: { workspaceId: string; user
 
 // ===== Invitation List =====
 function InvitationList({ workspaceId, isAdmin }: { workspaceId: string; isAdmin: boolean }) {
+  const { t } = useI18n();
   const [invitations, setInvitations] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -738,15 +741,15 @@ function InvitationList({ workspaceId, isAdmin }: { workspaceId: string; isAdmin
 
   const handleDelete = async (id: string) => {
     await supabase.from('enterprise_invitations').delete().eq('id', id);
-    toast.success('Meghívó törölve');
+    toast.success(t('members.invitation_deleted'));
     fetchInvitations();
   };
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'owner': return 'Tulajdonos';
-      case 'resourceAssistant': return 'Erőforrás asszisztens';
-      default: return 'Tag';
+      case 'owner': return t('members.roles.owner');
+      case 'resourceAssistant': return t('members.roles.resource_assistant');
+      default: return t('members.roles.member');
     }
   };
 
@@ -756,7 +759,7 @@ function InvitationList({ workspaceId, isAdmin }: { workspaceId: string; isAdmin
     return (
       <Card>
         <CardContent className="text-center py-8 text-muted-foreground">
-          Nincs függő meghívó.
+          {t('members.no_pending_invitations')}
         </CardContent>
       </Card>
     );
@@ -959,7 +962,7 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
       {canViewLayoutSetting && (
         <SettingsSection workspaceId={workspace.id} sectionKey="settings.layout_setting" icon={<LayoutPanelLeft className="h-4 w-4" />} title={t('settings_sections.layout_setting')}>
           <div className="space-y-3">
-            <p className="text-xs text-muted-foreground">Válassz a 6 eltérő vizuális template közül funkcionális változás nélkül.</p>
+            <p className="text-xs text-muted-foreground">{t('workspace_settings.section_layout_desc')}</p>
             <Select value={themeStyle} onValueChange={(v) => setThemeStyle(v as ThemeStyle)}>
               <SelectTrigger className="max-w-md">
                 <SelectValue />
@@ -974,10 +977,10 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
         </SettingsSection>
       )}
 
-      <SettingsSection workspaceId={workspace.id} sectionKey="settings.workspace_meta" icon={<Settings className="h-4 w-4" />} title="Munkaterület beállítások">
+      <SettingsSection workspaceId={workspace.id} sectionKey="settings.workspace_meta" icon={<Settings className="h-4 w-4" />} title={t('workspace_settings.section_meta_title')}>
         <div className="space-y-4">
           <div>
-            <label className="text-sm font-medium">Név</label>
+            <label className="text-sm font-medium">{t('common.name')}</label>
             <input
               className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm"
               value={name}
@@ -985,7 +988,7 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
             />
           </div>
           <div>
-            <label className="text-sm font-medium">Leírás</label>
+            <label className="text-sm font-medium">{t('common.description')}</label>
             <textarea
               className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm"
               value={description}
@@ -994,20 +997,20 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
             />
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span>Időzóna: {workspace.timezone}</span>
+            <span>{t('workspace_settings.section_meta_timezone')} {workspace.timezone}</span>
             <span>•</span>
-            <span>Locale: {workspace.locale}</span>
+            <span>{t('workspace_settings.section_meta_locale')} {workspace.locale}</span>
           </div>
           <Button onClick={handleSave} disabled={saving || !name.trim()}>
-            {saving ? 'Mentés...' : 'Mentés'}
+            {saving ? t('common.saving') : t('common.save')}
           </Button>
         </div>
       </SettingsSection>
 
-      <SettingsSection workspaceId={workspace.id} sectionKey="settings.report_config" icon={<BarChart3 className="h-4 w-4" />} title="Riport konfiguráció">
+      <SettingsSection workspaceId={workspace.id} sectionKey="settings.report_config" icon={<BarChart3 className="h-4 w-4" />} title={t('workspace_settings.section_report_title')}>
         <div className="space-y-4">
           <p className="text-xs text-muted-foreground">
-            Válaszd ki az előre elkészített sablonokból, vagy hozz létre saját riportot a Riportok szekcióhoz.
+            {t('workspace_settings.section_report_desc')}
           </p>
           <div className="space-y-2">
             {customReports.map(report => (
@@ -1016,7 +1019,7 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
                   <BarChart3 className="h-4 w-4 text-primary" />
                   <span className="text-sm">{report.name}</span>
                   <Badge variant="outline" className="text-[9px]">
-                    {reportTemplates.find(t => t.value === report.type)?.label || 'Egyéni'}
+                    {reportTemplates.find(tmpl => tmpl.value === report.type)?.label || t('workspace_settings.section_report_custom_badge')}
                   </Badge>
                 </div>
                 <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeReport(report.id)}>
@@ -1026,21 +1029,21 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
             ))}
           </div>
           <div className="border rounded-md p-3 space-y-2 bg-muted/30">
-            <p className="text-xs font-medium">Új riport hozzáadása</p>
+            <p className="text-xs font-medium">{t('workspace_settings.section_report_add_label')}</p>
             <div className="flex gap-2">
               <Select value={newReportType} onValueChange={setNewReportType}>
                 <SelectTrigger className="h-8 text-xs w-48">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {reportTemplates.map(t => (
-                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  {reportTemplates.map(tmpl => (
+                    <SelectItem key={tmpl.value} value={tmpl.value}>{tmpl.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <input
                 className="flex-1 rounded-md border bg-background px-2 py-1 text-sm"
-                placeholder="Riport neve"
+                placeholder={t('workspace_settings.section_report_name_placeholder')}
                 value={newReportName}
                 onChange={(e) => setNewReportName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addCustomReport()}
@@ -1053,17 +1056,21 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
         </div>
       </SettingsSection>
 
-      <SettingsSection workspaceId={workspace.id} sectionKey="settings.calendar_sidebar" icon={<CalendarDays className="h-4 w-4" />} title="Naptár oldalsáv widgetek">
+      <SettingsSection workspaceId={workspace.id} sectionKey="settings.calendar_sidebar" icon={<CalendarDays className="h-4 w-4" />} title={t('workspace_settings.section_calendar_title')}>
         <div className="space-y-4">
           <p className="text-xs text-muted-foreground">
-            Konfiguráld, mely extra panelek jelenjenek meg a naptár nézetben. Az alapértelmezett panelek (Szabadságnapok, Konfliktusok, Igények) mindig láthatóak.
+            {t('workspace_settings.section_calendar_desc')}
           </p>
           <div className="space-y-1.5">
-            {['Szabadságnapok panel', 'Konfliktusok panel', 'Igények panel'].map(name => (
-              <label key={name} className="flex items-center gap-2 text-sm opacity-60">
+            {[
+              t('workspace_settings.section_calendar_panel_leave'),
+              t('workspace_settings.section_calendar_panel_conflicts'),
+              t('workspace_settings.section_calendar_panel_requests'),
+            ].map(panelName => (
+              <label key={panelName} className="flex items-center gap-2 text-sm opacity-60">
                 <input type="checkbox" checked disabled className="rounded border-border" />
-                <span>{name}</span>
-                <Badge variant="outline" className="text-[9px] h-4">Kötelező</Badge>
+                <span>{panelName}</span>
+                <Badge variant="outline" className="text-[9px] h-4">{t('common.required')}</Badge>
               </label>
             ))}
           </div>
@@ -1089,13 +1096,13 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
           <div className="flex gap-2">
             <input
               className="flex-1 rounded-md border bg-background px-2 py-1.5 text-sm"
-              placeholder="Új widget neve (pl. Sprint kapacitás)"
+              placeholder={t('workspace_settings.section_calendar_widget_placeholder')}
               value={newWidgetName}
               onChange={(e) => setNewWidgetName(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && addCalendarWidget()}
             />
             <Button size="sm" onClick={addCalendarWidget} disabled={!newWidgetName.trim()}>
-              <Plus className="h-3.5 w-3.5 mr-1" /> Hozzáadás
+              <Plus className="h-3.5 w-3.5 mr-1" /> {t('common.add')}
             </Button>
           </div>
         </div>

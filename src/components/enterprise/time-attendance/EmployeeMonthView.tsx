@@ -116,7 +116,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
         if (offices.length === 0) setOffices(offs);
       }
     } catch (e: any) {
-      toast.error(e?.message || 'Időszak betöltése sikertelen');
+      toast.error(e?.message || t('attendance_view.load_error'));
     } finally {
       setLoading(false);
     }
@@ -356,14 +356,14 @@ export function EmployeeMonthView({ workspaceId }: Props) {
 
       {/* Day grid */}
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm">Napi bontás</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">{t('attendance_view.daily_breakdown')}</CardTitle></CardHeader>
         <CardContent className="px-3 pb-3">
           <div
             className="grid grid-cols-7 gap-1.5 select-none"
             onPointerMove={handleGridPointerMove}
             style={{ touchAction: canEdit ? 'none' : 'auto' }}
           >
-            {['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V'].map(d => (
+            {t('attendance_view.days_short').split(',').map(d => (
               <div key={d} className="text-[10px] uppercase tracking-wide text-muted-foreground text-center pb-1">{d}</div>
             ))}
             {/* Pad to align first day to ISO weekday (Mon-first) */}
@@ -408,7 +408,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
                   } ${totalH > 0 ? 'border-primary/40' : ''} ${
                     inDragPreview ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-950/30' : ''
                   } ${canEdit ? 'cursor-pointer hover:bg-accent' : 'cursor-default'}`}
-                  title={canEdit ? 'Kattints szerkesztéshez vagy húzd több napra batch kitöltéshez' : (totalH > 0 || hasOncall ? 'Megtekintés (csak olvasható)' : '')}
+                  title={canEdit ? t('attendance_view.day_edit_tooltip') : (totalH > 0 || hasOncall ? t('attendance_view.day_view_tooltip') : '')}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-mono">{format(d, 'd')}</span>
@@ -432,7 +432,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
                     </span>
                   )}
                   {daySegs.some(s => s.segment_type === 'overtime') && !displayConfig.overtime && (
-                    <Badge variant="destructive" className="text-[8px] px-1 py-0 self-start">+TÚL</Badge>
+                    <Badge variant="destructive" className="text-[8px] px-1 py-0 self-start">{t('attendance_view.overtime_badge')}</Badge>
                   )}
                 </button>
               );
@@ -442,7 +442,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
           {/* Read-only hint */}
           {!serverReadOnly && !editMode && (
             <p className="mt-3 text-xs text-muted-foreground">
-              A szerkesztéshez kattints a fenti <strong>Szerkesztés</strong> gombra. A naptárt addig csak olvashatod.
+              {t('attendance_view.readonly_hint')}
             </p>
           )}
         </CardContent>

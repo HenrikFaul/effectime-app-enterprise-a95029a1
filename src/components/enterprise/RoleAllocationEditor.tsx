@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trash2, Lock, Unlock, Plus, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/i18n/I18nProvider';
 
 export interface Allocation {
   business_role: string;
@@ -27,6 +28,7 @@ interface Props {
  * - Priority (star) toggle: marks the primary position; only ONE allocation can be priority
  */
 export function RoleAllocationEditor({ allocations, onChange, availableRoles }: Props) {
+  const { t } = useI18n();
   const [pendingRole, setPendingRole] = useState<string>('');
 
   const remainingRoles = availableRoles.filter(r => !allocations.some(a => a.business_role === r));
@@ -154,7 +156,7 @@ export function RoleAllocationEditor({ allocations, onChange, availableRoles }: 
                 variant="ghost"
                 className="h-7 w-7 flex-shrink-0"
                 onClick={() => setPriority(a.business_role)}
-                title={a.is_priority ? 'Elsődleges pozíció' : 'Tedd elsődlegessé'}
+                title={a.is_priority ? t('role_alloc.title_primary') : t('role_alloc.make_primary')}
               >
                 <Star className={cn("h-4 w-4", a.is_priority ? "fill-primary text-primary" : "text-muted-foreground")} />
               </Button>
@@ -177,7 +179,7 @@ export function RoleAllocationEditor({ allocations, onChange, availableRoles }: 
                 variant={a.locked ? 'default' : 'ghost'}
                 className="h-7 w-7 ml-auto"
                 onClick={() => toggleLock(a.business_role)}
-                title={a.locked ? 'Feloldás' : 'Fixálás'}
+                title={a.locked ? t('role_alloc.unlock') : t('role_alloc.lock')}
               >
                 {a.locked ? <Lock className="h-3.5 w-3.5" /> : <Unlock className="h-3.5 w-3.5" />}
               </Button>
@@ -186,14 +188,14 @@ export function RoleAllocationEditor({ allocations, onChange, availableRoles }: 
                 variant="ghost"
                 className="h-7 w-7"
                 onClick={() => removeRole(a.business_role)}
-                title="Eltávolítás"
+                title={t('role_alloc.remove')}
               >
                 <Trash2 className="h-3.5 w-3.5 text-destructive" />
               </Button>
             </div>
           ))}
           <p className={`text-xs ${isValid ? 'text-muted-foreground' : 'text-destructive'}`}>
-            Összesen: {total.toFixed(1)}% &middot; <span className="text-primary">★ = elsődleges pozíció</span>
+            {t('role_alloc.total_pct', { pct: total.toFixed(1) })} &middot; <span className="text-primary">{t('role_alloc.primary_legend')}</span>
           </p>
         </div>
       )}
@@ -202,7 +204,7 @@ export function RoleAllocationEditor({ allocations, onChange, availableRoles }: 
         <div className="flex items-center gap-2 pt-1 border-t">
           <Select value={pendingRole} onValueChange={setPendingRole}>
             <SelectTrigger className="h-8 text-xs flex-1">
-              <SelectValue placeholder="Válassz munkakört..." />
+              <SelectValue placeholder={t('role_alloc.role_placeholder')} />
             </SelectTrigger>
             <SelectContent>
               {remainingRoles.map(r => (
@@ -217,7 +219,7 @@ export function RoleAllocationEditor({ allocations, onChange, availableRoles }: 
             onClick={addRole}
             disabled={!pendingRole}
           >
-            <Plus className="h-3.5 w-3.5 mr-1" /> Hozzáadás
+            <Plus className="h-3.5 w-3.5 mr-1" /> {t('role_alloc.btn_add')}
           </Button>
         </div>
       )}

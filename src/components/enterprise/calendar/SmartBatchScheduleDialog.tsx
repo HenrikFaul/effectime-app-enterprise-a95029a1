@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useI18n } from '@/i18n/I18nProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -79,6 +80,7 @@ function ruleAppliesOn(r: CoverageRule, d: Date): boolean {
 }
 
 export function SmartBatchScheduleDialog(props: Props) {
+  const { t } = useI18n();
   const { open, onOpenChange, workspaceId, userId, office, rules, members, ctx, sitePriorityMap, defaultStart, defaultEnd, onCompleted } = props;
 
   const [startDate, setStartDate] = useState(format(defaultStart, 'yyyy-MM-dd'));
@@ -125,9 +127,9 @@ export function SmartBatchScheduleDialog(props: Props) {
     setPlanning(true);
     try {
       let s: Date, e: Date;
-      try { s = parseISO(startDate); e = parseISO(endDate); } catch { toast.error('Érvénytelen dátumok'); return; }
-      if (s > e) { toast.error('A kezdő dátum nem lehet későbbi mint a záró'); return; }
-      if (selectedRuleIds.size === 0) { toast.error('Válassz legalább egy szabályt'); return; }
+      try { s = parseISO(startDate); e = parseISO(endDate); } catch { toast.error(t('smart_batch.invalid_dates')); return; }
+      if (s > e) { toast.error(t('smart_batch.start_after_end')); return; }
+      if (selectedRuleIds.size === 0) { toast.error(t('smart_batch.no_rule_selected')); return; }
 
       const days = eachDayOfInterval({ start: s, end: e });
       const usedPerDay = new Map<string, Set<string>>(); // iso -> set of user_ids already planned/assigned that day anywhere
@@ -229,7 +231,7 @@ export function SmartBatchScheduleDialog(props: Props) {
               business_role: slotRole ?? pick.m.business_role ?? null,
               skill_id: skillIds[0] ?? null,
               matched,
-              warning: matched ? undefined : (slotRole ? `Pozíciója (${pick.m.business_role || '—'}) nem egyezik az elvárt ${slotRole}-val` : undefined),
+              warning: matched ? undefined : (slotRole ? t('smart_batch.pos_mismatch_warning', { current: pick.m.business_role || '—', expected: slotRole }) : undefined),
             });
           }
         }
@@ -237,9 +239,9 @@ export function SmartBatchScheduleDialog(props: Props) {
 
       setPlan(out);
       if (out.length === 0) {
-        toast.message('Nincs javasolható beosztás (vagy minden szabály már teljesül).');
+        toast.message(t('smart_batch.no_suggestion'));
       } else {
-        toast.success(`${out.length} javaslat előállítva`);
+        toast.success(t('smart_batch.suggestions_generated', { count: out.length }));
       }
     } finally {
       setPlanning(false);
@@ -265,11 +267,11 @@ export function SmartBatchScheduleDialog(props: Props) {
         const chunk = rows.slice(i, i + 200);
         const { error } = await (supabase as any).from('enterprise_shift_assignments').insert(chunk);
         if (error) {
-          toast.error(`Mentési hiba (${i}-${i + chunk.length}): ${error.message}`);
+          toast.error(t('smart_batch.save_error_chunk', { from: i, to: i + chunk.length, msg: error.message }));
           return;
         }
       }
-      toast.success(`${rows.length} beosztás véglegesítve`);
+      toast.success(t('smart_batch.schedules_finalized', { count: rows.length }));
       onCompleted();
       onOpenChange(false);
     } finally {
@@ -296,14 +298,13 @@ export function SmartBatchScheduleDialog(props: Props) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            Intelligens beosztás varázsló
+            {t('smart_batch.wizard_title')}
           </DialogTitle>
           <DialogDescription>
             <span className="font-medium text-foreground">{office.name}</span>
             {office.city && <span className="text-muted-foreground"> ({office.city})</span>}
             <span className="block text-xs mt-0.5">
-              Az algoritmus figyelembe veszi: szabadságokat, ünnepeket, blokkolt napokat, dupla beosztást,
-              telephely-prioritást, pozícióegyezést és terheléselosztást.
+              {t('smart_batch.wizard_desc')}
             </span>
           </DialogDescription>
         </DialogHeader>
@@ -312,24 +313,24 @@ export function SmartBatchScheduleDialog(props: Props) {
           {/* Date range */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs">Időszak kezdete</Label>
+              <Label className="text-xs">{t('smart_batch.period_start_label')}</Label>
               <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)} className="h-8" />
             </div>
             <div>
-              <Label className="text-xs">Időszak vége</Label>
+              <Label className="text-xs">{t('smart_batch.period_end_label')}</Label>
               <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)} className="h-8" />
             </div>
           </div>
 
           {/* Strategy */}
           <div>
-            <Label className="text-xs">Optimalizációs stratégia</Label>
+            <Label className="text-xs">{t('smart_batch.strategy_label')}</Label>
             <Select value={strategy} onValueChange={v => setStrategy(v as any)}>
               <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="role_match_first">Pozíció-egyezés elsőként (ajánlott)</SelectItem>
-                <SelectItem value="priority_first">Telephely-prioritás elsőként</SelectItem>
-                <SelectItem value="load_balanced">Terheléselosztás (fair-play)</SelectItem>
+                <SelectItem value="role_match_first">{t('smart_batch.strategy_role_first')}</SelectItem>
+                <SelectItem value="priority_first">{t('smart_batch.strategy_priority_first')}</SelectItem>
+                <SelectItem value="load_balanced">{t('smart_batch.strategy_load_balanced')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -338,36 +339,36 @@ export function SmartBatchScheduleDialog(props: Props) {
           <div className="space-y-2">
             <label className="flex items-center gap-2 text-xs cursor-pointer">
               <Checkbox checked={respectExistingShifts} onCheckedChange={v => setRespectExistingShifts(!!v)} />
-              <span>Meglévő beosztások meghagyása (csak a hiányzó helyeket tölti)</span>
+              <span>{t('smart_batch.opt_keep_existing')}</span>
             </label>
             <label className="flex items-center gap-2 text-xs cursor-pointer">
               <Checkbox checked={overwriteUnmatched} onCheckedChange={v => setOverwriteUnmatched(!!v)} />
-              <span>Telephely-prioritás nélküli tagok bevonása ha nincs megfelelő jelölt</span>
+              <span>{t('smart_batch.opt_include_unmatched')}</span>
             </label>
           </div>
 
           {/* Rules */}
           <div>
             <Label className="text-xs flex items-center justify-between mb-1">
-              <span>Szabályok ({selectedRuleIds.size}/{officeRules.length})</span>
+              <span>{t('smart_batch.rules_label', { selected: selectedRuleIds.size, total: officeRules.length })}</span>
               <button
                 type="button"
                 className="text-[10px] text-primary hover:underline"
                 onClick={() => setSelectedRuleIds(prev => prev.size === officeRules.length ? new Set() : new Set(officeRules.map(r => r.id)))}
               >
-                {selectedRuleIds.size === officeRules.length ? 'Egyiket sem' : 'Mind'}
+                {selectedRuleIds.size === officeRules.length ? t('smart_batch.none_selected_label') : t('smart_batch.all_selected_label')}
               </button>
             </Label>
             <div className="border rounded-md max-h-32 overflow-y-auto divide-y">
               {officeRules.length === 0 ? (
-                <div className="p-3 text-xs text-muted-foreground italic">Nincs szabály ehhez a telephelyhez.</div>
+                <div className="p-3 text-xs text-muted-foreground italic">{t('smart_batch.no_rules')}</div>
               ) : officeRules.map(r => (
                 <label key={r.id} className="flex items-center gap-2 p-2 text-xs cursor-pointer hover:bg-accent/50">
                   <Checkbox checked={selectedRuleIds.has(r.id)} onCheckedChange={() => toggleRule(r.id)} />
                   <span className="flex-1">
-                    <span className="font-medium">{r.name || 'Névtelen szabály'}</span>
+                    <span className="font-medium">{r.name || t('smart_batch.unnamed_rule')}</span>
                     <span className="ml-2 text-muted-foreground">
-                      min {r.min_headcount} fő{ruleRoles(r).length > 0 ? ` · ${ruleRoles(r).join(', ')}` : ''}
+                      {t('smart_batch.min_headcount', { count: r.min_headcount })}{ruleRoles(r).length > 0 ? ` · ${ruleRoles(r).join(', ')}` : ''}
                     </span>
                   </span>
                 </label>
@@ -377,7 +378,7 @@ export function SmartBatchScheduleDialog(props: Props) {
 
           <Button onClick={generatePlan} disabled={planning} className="w-full">
             {planning ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-            Javaslat generálása
+            {t('smart_batch.generate_btn')}
           </Button>
 
           {/* Preview */}
@@ -385,15 +386,15 @@ export function SmartBatchScheduleDialog(props: Props) {
             <div className="space-y-2">
               <div className="flex items-center gap-2 text-xs">
                 <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300">
-                  <CheckCircle2 className="h-3 w-3 mr-1" /> {matchedCount} egyező
+                  <CheckCircle2 className="h-3 w-3 mr-1" /> {t('smart_batch.matched_badge', { count: matchedCount })}
                 </Badge>
                 {mismatchCount > 0 && (
                   <Badge variant="outline" className="bg-amber-500/15 text-amber-700 dark:text-amber-300">
-                    <AlertTriangle className="h-3 w-3 mr-1" /> {mismatchCount} pozíció-eltérés
+                    <AlertTriangle className="h-3 w-3 mr-1" /> {t('smart_batch.mismatched_badge', { count: mismatchCount })}
                   </Badge>
                 )}
                 <Badge variant="outline">
-                  <Users className="h-3 w-3 mr-1" /> {new Set(plan.map(p => p.user_id)).size} tag
+                  <Users className="h-3 w-3 mr-1" /> {t('smart_batch.members_badge', { count: new Set(plan.map(p => p.user_id)).size })}
                 </Badge>
               </div>
               <ScrollArea className="border rounded-md max-h-64">
@@ -415,8 +416,8 @@ export function SmartBatchScheduleDialog(props: Props) {
                             )}
                           >
                             <span className="flex-1 font-medium">{p.display_name}</span>
-                            <Badge variant="outline" className="text-[9px]">{p.business_role || 'Bármely'}</Badge>
-                            <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">{p.rule.name || 'Szabály'}</span>
+                            <Badge variant="outline" className="text-[9px]">{p.business_role || t('smart_batch.any_role')}</Badge>
+                            <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">{p.rule.name || t('smart_batch.rule_fallback')}</span>
                           </div>
                         ))}
                       </div>
@@ -429,10 +430,10 @@ export function SmartBatchScheduleDialog(props: Props) {
         </div>
 
         <DialogFooter className="border-t pt-3 mt-2">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>Mégse</Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={saving}>{t('common.cancel')}</Button>
           <Button onClick={persist} disabled={plan.length === 0 || saving}>
             {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-            Beosztás véglegesítése ({plan.length})
+            {t('smart_batch.finalize_btn', { count: plan.length })}
           </Button>
         </DialogFooter>
       </DialogContent>

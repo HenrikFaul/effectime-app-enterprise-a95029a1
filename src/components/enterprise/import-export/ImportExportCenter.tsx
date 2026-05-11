@@ -7,6 +7,7 @@ import { EntitySelector } from './EntitySelector';
 import { ExportWizard } from './ExportWizard';
 import { ImportWizard } from './ImportWizard';
 import { ENTITY_REGISTRY, getEntityConfig } from './config/entity-registry';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -17,6 +18,7 @@ interface Props {
 type ActionMode = 'export' | 'import';
 
 export function ImportExportCenter({ workspaceId, userId, isAdmin }: Props) {
+  const { t } = useI18n();
   const [mode, setMode] = useState<ActionMode>('export');
   const [selectedEntity, setSelectedEntity] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -26,7 +28,7 @@ export function ImportExportCenter({ workspaceId, userId, isAdmin }: Props) {
   if (!isAdmin) {
     return (
       <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-        Adatkezelés (import / export) csak owner és resourceAssistant szerepkörnek érhető el.
+        {t('import_export.access_restricted')}
       </div>
     );
   }
@@ -58,7 +60,7 @@ export function ImportExportCenter({ workspaceId, userId, isAdmin }: Props) {
           </div>
           <div>
             <p className="text-sm font-semibold">Export</p>
-            <p className="text-[11px] text-muted-foreground">Adatok letöltése Excelbe / CSV-be</p>
+            <p className="text-[11px] text-muted-foreground">{t('import_export.export_description')}</p>
           </div>
         </button>
         <button
@@ -74,21 +76,21 @@ export function ImportExportCenter({ workspaceId, userId, isAdmin }: Props) {
           </div>
           <div>
             <p className="text-sm font-semibold">Import</p>
-            <p className="text-[11px] text-muted-foreground">Adatok feltöltése sablon alapján</p>
+            <p className="text-[11px] text-muted-foreground">{t('import_export.import_description')}</p>
           </div>
         </button>
       </div>
 
       {/* Entity selector */}
       <div>
-        <p className="text-xs font-medium mb-2">Válassz entitást:</p>
+        <p className="text-xs font-medium mb-2">{t('import_export.select_entity')}</p>
         <EntitySelector mode={mode} selected={selectedEntity} onSelect={setSelectedEntity} />
       </div>
 
       {/* Continue button */}
       <div className="flex justify-end pt-2 border-t">
         <Button type="button" size="sm" onClick={openWizard} disabled={!selectedEntity}>
-          Tovább →
+          {t('import_export.continue_btn')}
         </Button>
       </div>
 

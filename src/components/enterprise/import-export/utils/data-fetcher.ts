@@ -30,7 +30,7 @@ async function fetchMembers(workspaceId: string): Promise<Record<string, string>
   const { data, error } = await (supabase as any).rpc('get_workspace_members_for_export', {
     p_workspace_id: workspaceId,
   });
-  if (error) throw new Error(`Tagok lekérése sikertelen: ${error.message}`);
+  if (error) throw new Error(`Failed to fetch members: ${error.message}`);
   return (data || []).map((r: any): Record<string, string> => ({
     email: r.email || '',
     display_name: r.display_name || '',
@@ -65,7 +65,7 @@ async function fetchLeave(workspaceId: string, filters?: { startDate?: string; e
     p_end_date: filters?.endDate || null,
     p_status: filters?.statusFilter && filters.statusFilter !== 'all' ? filters.statusFilter : null,
   });
-  if (error) throw new Error(`Szabadságok lekérése sikertelen: ${error.message}`);
+  if (error) throw new Error(`Failed to fetch leave records: ${error.message}`);
   return (data || []).map((r: any): Record<string, string> => ({
     email: r.email || '',
     display_name: r.display_name || '',
@@ -86,7 +86,7 @@ async function fetchOffices(workspaceId: string): Promise<Record<string, string>
     .select('id, name, city, address')
     .eq('workspace_id', workspaceId)
     .order('name');
-  if (error) throw new Error(`Telephelyek lekérése sikertelen: ${error.message}`);
+  if (error) throw new Error(`Failed to fetch offices: ${error.message}`);
   return (data || []).map((o: any) => ({
     name: o.name || '',
     city: o.city || '',
@@ -101,7 +101,7 @@ async function fetchWorkCategories(workspaceId: string): Promise<Record<string, 
     .select('id, name, is_active')
     .eq('workspace_id', workspaceId)
     .order('name');
-  if (error) throw new Error(`Munkakategóriák lekérése sikertelen: ${error.message}`);
+  if (error) throw new Error(`Failed to fetch work categories: ${error.message}`);
   return (data || []).map((c: any) => ({
     name: c.name || '',
     is_active: c.is_active ? 'true' : 'false',
@@ -115,7 +115,7 @@ async function fetchJobRoles(workspaceId: string): Promise<Record<string, string
     .select('id, name, is_active, category_id')
     .eq('workspace_id', workspaceId)
     .order('name');
-  if (error) throw new Error(`Munkakörök lekérése sikertelen: ${error.message}`);
+  if (error) throw new Error(`Failed to fetch job roles: ${error.message}`);
   if (!roles || roles.length === 0) return [];
   const { data: cats } = await (supabase as any)
     .from('enterprise_workspace_role_categories')
@@ -150,7 +150,7 @@ async function fetchSkills(workspaceId: string): Promise<Record<string, string>[
     .select('id, name, category, color')
     .eq('workspace_id', workspaceId)
     .order('name');
-  if (error) throw new Error(`Készségek lekérése sikertelen: ${error.message}`);
+  if (error) throw new Error(`Failed to fetch skills: ${error.message}`);
   return (data || []).map((s: any) => ({
     name: s.name || '',
     category: s.category || '',

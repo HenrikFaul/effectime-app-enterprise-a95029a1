@@ -111,20 +111,20 @@ export function DayEditorDialog({
       setEditing({});
       onChanged();
     } catch (e: any) {
-      toast.error(e?.message || 'Mentés sikertelen');
+      toast.error(e?.message || t('day_editor.save_error'));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Biztosan törlöd ezt a szegmenst?')) return;
+    if (!confirm(t('day_editor.delete_confirm'))) return;
     try {
       await deleteSegment(id);
-      toast.success('Törölve');
+      toast.success(t('day_editor.deleted_success'));
       onChanged();
     } catch (e: any) {
-      toast.error(e?.message || 'Törlés sikertelen');
+      toast.error(e?.message || t('day_editor.delete_error'));
     }
   };
 
@@ -136,7 +136,7 @@ export function DayEditorDialog({
       toast.success(t('attendance.site_saved'));
       onSiteChanged?.();
     } catch (e: any) {
-      toast.error(e?.message || 'Telephely mentése sikertelen');
+      toast.error(e?.message || t('day_editor.site_save_error'));
     } finally {
       setSavingSite(false);
     }
@@ -151,7 +151,7 @@ export function DayEditorDialog({
       toast.success(t('attendance.site_removed'));
       onSiteChanged?.();
     } catch (e: any) {
-      toast.error(e?.message || 'Telephely törlése sikertelen');
+      toast.error(e?.message || t('day_editor.site_delete_error'));
     } finally {
       setSavingSite(false);
     }
@@ -167,9 +167,9 @@ export function DayEditorDialog({
           <DialogTitle className="flex items-center gap-2">
             <CalendarDays className="h-4 w-4" />
             {format(date, 'yyyy. MM. dd., EEEE')}
-            {isWeekendDate(date) && <Badge variant="destructive" className="text-[10px]">Hétvége</Badge>}
+            {isWeekendDate(date) && <Badge variant="destructive" className="text-[10px]">{t('day_editor.weekend_badge')}</Badge>}
             <span className="ml-auto text-xs text-muted-foreground tabular-nums">
-              Napi össz: {totalDayHours.toFixed(2)} óra
+              {t('day_editor.daily_total', { hours: totalDayHours.toFixed(2) })}
             </span>
           </DialogTitle>
         </DialogHeader>
@@ -177,15 +177,15 @@ export function DayEditorDialog({
         {/* Existing segments */}
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label className="text-xs uppercase tracking-wide text-muted-foreground">Szegmensek</Label>
+            <Label className="text-xs uppercase tracking-wide text-muted-foreground">{t('day_editor.segments_label')}</Label>
             {!readOnly && (
               <Button size="sm" variant="outline" onClick={() => startEdit()}>
-                <Plus className="h-3 w-3 mr-1" /> Új szegmens
+                <Plus className="h-3 w-3 mr-1" /> {t('day_editor.new_segment_btn')}
               </Button>
             )}
           </div>
           {daySegments.length === 0 && !editing.starts_at ? (
-            <p className="text-sm text-muted-foreground">Még nincs szegmens. Kattints az "Új szegmens" gombra.</p>
+            <p className="text-sm text-muted-foreground">{t('day_editor.no_segments')}</p>
           ) : (
             <div className="space-y-1.5">
               {daySegments.map(s => (
@@ -197,12 +197,12 @@ export function DayEditorDialog({
                   <span className="text-xs text-muted-foreground">
                     ({durationHours(s.starts_at, s.ends_at).toFixed(2)}h)
                   </span>
-                  {s.is_night && <Moon className="h-3 w-3 text-blue-500" aria-label="Éjszakai" />}
+                  {s.is_night && <Moon className="h-3 w-3 text-blue-500" aria-label={t('day_editor.night_aria')} />}
                   {s.is_weekend && <Badge variant="destructive" className="text-[9px] px-1">HV</Badge>}
                   {s.note && <span className="text-xs text-muted-foreground truncate max-w-[150px]" title={s.note}>{s.note}</span>}
                   {!readOnly && (
                     <div className="ml-auto flex items-center gap-1">
-                      <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => startEdit(s)}>Szerk.</Button>
+                      <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => startEdit(s)}>{t('day_editor.edit_btn')}</Button>
                       <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive" onClick={() => handleDelete(s.id)}>
                         <Trash2 className="h-3 w-3" />
                       </Button>
@@ -215,7 +215,7 @@ export function DayEditorDialog({
 
           {dayWindows.length > 0 && (
             <div className="mt-2 space-y-1.5">
-              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Készenlét (on-call)</Label>
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">{t('day_editor.oncall_section_label')}</Label>
               {dayWindows.map(w => (
                 <div key={w.id} className="flex items-center gap-2 p-2 border rounded-md bg-amber-50 dark:bg-amber-900/20 text-sm">
                   <Phone className="h-3 w-3 text-amber-600" />
@@ -286,7 +286,7 @@ export function DayEditorDialog({
           <div className="border rounded-md p-3 space-y-3 bg-card">
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Kezdés</Label>
+                <Label className="text-xs">{t('day_editor.start_label')}</Label>
                 <Input
                   type="datetime-local"
                   value={editing.starts_at?.slice(0, 16)}
@@ -295,7 +295,7 @@ export function DayEditorDialog({
                 />
               </div>
               <div>
-                <Label className="text-xs">Vége</Label>
+                <Label className="text-xs">{t('day_editor.end_label')}</Label>
                 <Input
                   type="datetime-local"
                   value={editing.ends_at?.slice(0, 16)}
@@ -305,17 +305,17 @@ export function DayEditorDialog({
               </div>
             </div>
             <div>
-              <Label className="text-xs">Típus</Label>
+              <Label className="text-xs">{t('day_editor.type_label')}</Label>
               <Select
                 value={editing.segment_type as string}
                 onValueChange={v => setEditing(p => ({ ...p, segment_type: v as AttendanceSegmentType }))}
               >
                 <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="regular">Normál munkaidő</SelectItem>
-                  <SelectItem value="overtime">Túlóra</SelectItem>
-                  <SelectItem value="break">Szünet / megszakítás</SelectItem>
-                  <SelectItem value="oncall_intervention">Készenléti behívás (tényleges munka)</SelectItem>
+                  <SelectItem value="regular">{t('day_editor.type_regular')}</SelectItem>
+                  <SelectItem value="overtime">{t('day_editor.type_overtime')}</SelectItem>
+                  <SelectItem value="break">{t('day_editor.type_break')}</SelectItem>
+                  <SelectItem value="oncall_intervention">{t('day_editor.type_oncall')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -325,23 +325,23 @@ export function DayEditorDialog({
                   checked={!!editing.is_weekend}
                   onCheckedChange={v => setEditing(p => ({ ...p, is_weekend: v }))}
                 />
-                <Label className="text-xs cursor-pointer">Hétvégi munka</Label>
+                <Label className="text-xs cursor-pointer">{t('day_editor.weekend_work_label')}</Label>
               </div>
               <div className="flex items-center gap-2">
                 <Switch
                   checked={!!editing.is_night}
                   onCheckedChange={v => setEditing(p => ({ ...p, is_night: v }))}
                 />
-                <Label className="text-xs cursor-pointer">Éjszakai munka</Label>
+                <Label className="text-xs cursor-pointer">{t('day_editor.night_work_label')}</Label>
               </div>
             </div>
             <div>
-              <Label className="text-xs">Megjegyzés (opcionális)</Label>
+              <Label className="text-xs">{t('day_editor.note_label')}</Label>
               <Input
                 value={editing.note ?? ''}
                 onChange={e => setEditing(p => ({ ...p, note: e.target.value }))}
                 className="h-8"
-                placeholder="Pl. Ügyfél megbeszélés"
+                placeholder={t('day_editor.note_placeholder')}
               />
             </div>
             {errors.length > 0 && (
@@ -351,14 +351,14 @@ export function DayEditorDialog({
               </div>
             )}
             <div className="flex items-center gap-2">
-              <Button size="sm" onClick={handleSave} disabled={saving}>Mentés</Button>
-              <Button size="sm" variant="ghost" onClick={() => setEditing({})}>Mégse</Button>
+              <Button size="sm" onClick={handleSave} disabled={saving}>{t('common.save')}</Button>
+              <Button size="sm" variant="ghost" onClick={() => setEditing({})}>{t('common.cancel')}</Button>
             </div>
           </div>
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Bezárás</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t('common.close')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -366,11 +366,12 @@ export function DayEditorDialog({
 }
 
 function SegmentTypeBadge({ type }: { type: AttendanceSegmentType }) {
+  const { t } = useI18n();
   const cfg: Record<AttendanceSegmentType, { label: string; variant: 'default' | 'outline' | 'secondary' | 'destructive'; icon?: React.ReactNode }> = {
-    regular: { label: 'Normál', variant: 'default', icon: <Briefcase className="h-2.5 w-2.5" /> },
-    overtime: { label: 'Túlóra', variant: 'destructive' },
-    break: { label: 'Szünet', variant: 'secondary' },
-    oncall_intervention: { label: 'Behívás', variant: 'destructive', icon: <Phone className="h-2.5 w-2.5" /> },
+    regular: { label: t('day_editor.badge_regular'), variant: 'default', icon: <Briefcase className="h-2.5 w-2.5" /> },
+    overtime: { label: t('day_editor.badge_overtime'), variant: 'destructive' },
+    break: { label: t('day_editor.badge_break'), variant: 'secondary' },
+    oncall_intervention: { label: t('day_editor.badge_oncall'), variant: 'destructive', icon: <Phone className="h-2.5 w-2.5" /> },
   };
   const c = cfg[type];
   return (

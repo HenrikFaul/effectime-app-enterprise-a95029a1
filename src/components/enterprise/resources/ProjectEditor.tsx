@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useI18n } from '@/i18n/I18nProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -58,6 +59,7 @@ function todayISO() { return new Date().toISOString().slice(0, 10); }
 function plusDays(iso: string, d: number) { const dt = new Date(iso); dt.setDate(dt.getDate() + d); return dt.toISOString().slice(0, 10); }
 
 export function ProjectEditor({ mode, workspaceId, userId, isAdmin, project, open, onOpenChange, onSaved }: Props) {
+  const { t } = useI18n();
   const [name, setName] = useState(project?.name || '');
   const [description, setDescription] = useState(project?.description || '');
   const [startDate, setStartDate] = useState(project?.start_date || todayISO());
@@ -139,8 +141,8 @@ export function ProjectEditor({ mode, workspaceId, userId, isAdmin, project, ope
   };
 
   const handleSave = async () => {
-    if (!name.trim()) { toast.error('A projekt neve kötelező'); return; }
-    if (!isOpenEnded && (!endDate || endDate < startDate)) { toast.error('Érvénytelen időszak'); return; }
+    if (!name.trim()) { toast.error(t('project_editor.name_required')); return; }
+    if (!isOpenEnded && (!endDate || endDate < startDate)) { toast.error(t('project_editor.invalid_period')); return; }
 
     setSaving(true);
     try {
@@ -214,12 +216,12 @@ export function ProjectEditor({ mode, workspaceId, userId, isAdmin, project, ope
         });
       } catch { /* audit best-effort */ }
 
-      toast.success(mode === 'create' ? 'Projekt létrehozva' : 'Projekt frissítve');
+      toast.success(mode === 'create' ? t('project_editor.created') : t('project_editor.updated'));
       onSaved();
       onOpenChange(false);
     } catch (e: any) {
       console.error(e);
-      toast.error(e.message || 'Mentés sikertelen');
+      toast.error(e.message || t('project_editor.save_failed'));
     } finally {
       setSaving(false);
     }
@@ -230,7 +232,7 @@ export function ProjectEditor({ mode, workspaceId, userId, isAdmin, project, ope
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{mode === 'create' ? 'Új projekt' : `Projekt szerkesztése – ${project?.name}`}</DialogTitle>
+            <DialogTitle>{mode === 'create' ? t('project_editor.dialog_create_title') : t('project_editor.dialog_edit_title', { name: project?.name })}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
@@ -241,37 +243,37 @@ export function ProjectEditor({ mode, workspaceId, userId, isAdmin, project, ope
                 <Input value={name} onChange={(e) => setName(e.target.value)} disabled={!isAdmin} />
               </div>
               <div>
-                <Label className="text-xs">Státusz</Label>
+                <Label className="text-xs">{t('project_editor.status_label')}</Label>
                 <Select value={status} onValueChange={setStatus} disabled={!isAdmin}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Aktív</SelectItem>
+                    <SelectItem value="active">{t('project_editor.status_active')}</SelectItem>
                     <SelectItem value="planned">Tervezett</SelectItem>
-                    <SelectItem value="on_hold">Felfüggesztve</SelectItem>
+                    <SelectItem value="on_hold">{t('project_editor.status_on_hold')}</SelectItem>
                     <SelectItem value="completed">Befejezett</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="md:col-span-2">
-                <Label className="text-xs">Leírás</Label>
+                <Label className="text-xs">{t('project_editor.description_label')}</Label>
                 <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} disabled={!isAdmin} />
               </div>
               <div>
-                <Label className="text-xs">Kezdő dátum *</Label>
+                <Label className="text-xs">{t('project_editor.start_date_label')}</Label>
                 <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} disabled={!isAdmin} />
               </div>
               <div>
-                <Label className="text-xs">Záró dátum</Label>
+                <Label className="text-xs">{t('project_editor.end_date_label')}</Label>
                 <div className="flex items-center gap-2">
                   <Input type="date" value={endDate || ''} onChange={(e) => setEndDate(e.target.value)} disabled={isOpenEnded || !isAdmin} />
                   <div className="flex items-center gap-1 whitespace-nowrap">
                     <Switch checked={isOpenEnded} onCheckedChange={setIsOpenEnded} disabled={!isAdmin} />
-                    <Label className="text-xs">Határozatlan</Label>
+                    <Label className="text-xs">{t('project_editor.open_ended_label')}</Label>
                   </div>
                 </div>
               </div>
               <div className="md:col-span-2">
-                <Label className="text-xs">Szín</Label>
+                <Label className="text-xs">{t('project_editor.color_label')}</Label>
                 <div className="flex gap-2 mt-1">
                   {COLORS.map((c) => (
                     <button
@@ -290,20 +292,20 @@ export function ProjectEditor({ mode, workspaceId, userId, isAdmin, project, ope
             {/* Requirements */}
             <div className="border-t pt-4 space-y-3">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <h4 className="font-medium text-sm flex items-center gap-2"><Users className="h-4 w-4" /> Erőforrásigények pozíciónként</h4>
+                <h4 className="font-medium text-sm flex items-center gap-2"><Users className="h-4 w-4" /> {t('project_editor.roles_title')}</h4>
                 {isAdmin && (
                   <div className="flex items-center gap-1">
                     <Select value="" onValueChange={(v) => v && addRequirement(v)}>
-                      <SelectTrigger className="w-[200px] h-8 text-xs"><SelectValue placeholder="+ Pozíció hozzáadása" /></SelectTrigger>
+                      <SelectTrigger className="w-[200px] h-8 text-xs"><SelectValue placeholder={t('project_editor.add_role_placeholder')} /></SelectTrigger>
                       <SelectContent>
                         {availableRoles.filter((r) => !requirements.some((req) => req.business_role === r)).map((r) => (
                           <SelectItem key={r} value={r}>{r}</SelectItem>
                         ))}
-                        {availableRoles.length === 0 && <div className="px-2 py-1 text-xs text-muted-foreground">Még nincs pozíció.</div>}
+                        {availableRoles.length === 0 && <div className="px-2 py-1 text-xs text-muted-foreground">{t('project_editor.no_roles_hint')}</div>}
                       </SelectContent>
                     </Select>
                     <Button size="sm" variant="outline" className="h-8 text-xs" onClick={() => setShowNewRole((v) => !v)}>
-                      <Plus className="h-3.5 w-3.5 mr-1" /> Új pozíció
+                      <Plus className="h-3.5 w-3.5 mr-1" /> {t('project_editor.btn_new_role')}
                     </Button>
                   </div>
                 )}
@@ -312,7 +314,7 @@ export function ProjectEditor({ mode, workspaceId, userId, isAdmin, project, ope
               {showNewRole && isAdmin && (
                 <div className="flex items-center gap-2 bg-muted/40 rounded p-2">
                   <Input
-                    placeholder="Új pozíció neve (pl. Senior Backend Developer)"
+                    placeholder={t('project_editor.new_role_placeholder')}
                     value={newRoleInput}
                     onChange={(e) => setNewRoleInput(e.target.value)}
                     className="h-8 text-xs"
@@ -322,7 +324,7 @@ export function ProjectEditor({ mode, workspaceId, userId, isAdmin, project, ope
                         const t = newRoleInput.trim();
                         if (!t) return;
                         if (availableRoles.includes(t) || requirements.some((r) => r.business_role === t)) {
-                          toast.error('Ez a pozíció már létezik'); return;
+                          toast.error(t('project_editor.role_exists_error')); return;
                         }
                         setAvailableRoles([...availableRoles, t].sort());
                         addRequirement(t);
@@ -337,7 +339,7 @@ export function ProjectEditor({ mode, workspaceId, userId, isAdmin, project, ope
                       const t = newRoleInput.trim();
                       if (!t) return;
                       if (availableRoles.includes(t) || requirements.some((r) => r.business_role === t)) {
-                        toast.error('Ez a pozíció már létezik'); return;
+                        toast.error(t('project_editor.role_exists_error')); return;
                       }
                       setAvailableRoles([...availableRoles, t].sort());
                       addRequirement(t);
@@ -346,18 +348,18 @@ export function ProjectEditor({ mode, workspaceId, userId, isAdmin, project, ope
                     }}
                     disabled={!newRoleInput.trim()}
                   >
-                    Hozzáad
+                    {t('project_editor.btn_add')}
                   </Button>
-                  <Button size="sm" variant="ghost" onClick={() => { setShowNewRole(false); setNewRoleInput(''); }}>Mégse</Button>
+                  <Button size="sm" variant="ghost" onClick={() => { setShowNewRole(false); setNewRoleInput(''); }}>{t('project_editor.btn_cancel_role')}</Button>
                 </div>
               )}
               <p className="text-[10px] text-muted-foreground -mt-1">
-                Az új pozíció akkor lesz végleges, ha legalább egy taghoz allokálva lesz (akár a Beállítások → Pozíciók fülön, akár itt egy tag hozzárendelésekor).
+                {t('project_editor.new_role_note')}
               </p>
 
 
               {requirements.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic">Adj hozzá legalább egy pozíció-igényt.</p>
+                <p className="text-xs text-muted-foreground italic">{t('project_editor.no_demands_hint')}</p>
               ) : (
                 <div className="space-y-2">
                   {fulfillment.map((f) => {
@@ -369,7 +371,7 @@ export function ProjectEditor({ mode, workspaceId, userId, isAdmin, project, ope
                         <CardContent className="p-3 space-y-2">
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant="outline" className="text-xs">{f.business_role}</Badge>
-                            <Label className="text-xs">Igény:</Label>
+                            <Label className="text-xs">{t('project_editor.demand_label')}</Label>
                             <Input
                               type="number" min={0} step={5}
                               value={req.required_percentage}
@@ -378,18 +380,18 @@ export function ProjectEditor({ mode, workspaceId, userId, isAdmin, project, ope
                               disabled={!isAdmin}
                             />
                             <span className="text-xs">%</span>
-                            <span className="text-xs text-muted-foreground">→ Lekötve: <strong>{f.assigned.toFixed(0)}%</strong></span>
+                            <span className="text-xs text-muted-foreground">{t('project_editor.allocated_label', { pct: f.assigned.toFixed(0) })}</span>
                             {isFulfilled && <Badge className="text-[10px] gap-1 bg-emerald-600"><CheckCircle2 className="h-3 w-3" /> Lefedve</Badge>}
                             {!isFulfilled && !isOver && (
                               <Badge variant="destructive" className="text-[10px] gap-1">
-                                <AlertTriangle className="h-3 w-3" /> Még szükséges: {f.gap.toFixed(0)}%
+                                <AlertTriangle className="h-3 w-3" /> {t('project_editor.gap_needed', { pct: f.gap.toFixed(0) })}
                               </Badge>
                             )}
-                            {isOver && <Badge variant="secondary" className="text-[10px]">Túl-allokálva: {Math.abs(f.gap).toFixed(0)}%</Badge>}
+                            {isOver && <Badge variant="secondary" className="text-[10px]">{t('project_editor.over_allocated_badge', { pct: Math.abs(f.gap).toFixed(0) })}</Badge>}
                             {isAdmin && (
                               <div className="ml-auto flex gap-1">
                                 <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setPickerRole(req.business_role)}>
-                                  <UserPlus className="h-3.5 w-3.5 mr-1" /> Tag hozzárendelése
+                                  <UserPlus className="h-3.5 w-3.5 mr-1" /> {t('project_editor.btn_assign_member')}
                                 </Button>
                                 <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeRequirement(req.business_role)}>
                                   <Trash2 className="h-3.5 w-3.5" />
@@ -436,10 +438,10 @@ export function ProjectEditor({ mode, workspaceId, userId, isAdmin, project, ope
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)}>Mégse</Button>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>{t('project_editor.btn_cancel')}</Button>
             {isAdmin && (
               <Button onClick={handleSave} disabled={saving}>
-                {saving ? 'Mentés...' : (mode === 'create' ? 'Létrehozás' : 'Mentés')}
+                {saving ? t('project_editor.btn_save_action') : (mode === 'create' ? t('project_editor.btn_create_action') : t('project_editor.btn_save_action'))}
               </Button>
             )}
           </DialogFooter>
@@ -490,6 +492,7 @@ interface PickerProps {
 }
 
 function SmartCandidatePicker({ workspaceId, businessRole, requiredPercentage, windowStart, windowEnd, excludeProjectId, alreadyAssigned, onPick, onClose }: PickerProps) {
+  const { t } = useI18n();
   const [includeLeaves, setIncludeLeaves] = useState(true);
   const [loading, setLoading] = useState(true);
   const [candidates, setCandidates] = useState<CapacityRow[]>([]);
@@ -534,28 +537,28 @@ function SmartCandidatePicker({ workspaceId, businessRole, requiredPercentage, w
     <Dialog open={true} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Tag hozzárendelése: {businessRole}</DialogTitle>
+          <DialogTitle>{t('project_editor.assign_member_title', { role: businessRole })}</DialogTitle>
         </DialogHeader>
         <div className="text-xs text-muted-foreground">
-          Időszak: <strong>{windowStart} → {windowEnd}</strong> · Igény: <strong>{requiredPercentage}%</strong>
+          {t('project_editor.assign_period_summary', { from: windowStart, to: windowEnd, pct: requiredPercentage })}
         </div>
         <div className="flex items-center gap-2">
           <Switch id="cand-leaves" checked={includeLeaves} onCheckedChange={setIncludeLeaves} />
-          <Label htmlFor="cand-leaves" className="text-xs cursor-pointer">Jóváhagyott szabadságok levonása</Label>
+          <Label htmlFor="cand-leaves" className="text-xs cursor-pointer">{t('project_editor.deduct_leaves_label')}</Label>
         </div>
 
         {loading ? (
           <div className="flex justify-center py-8"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
         ) : candidates.length === 0 ? (
           <div className="text-center py-6 text-sm text-muted-foreground">
-            Nincs szabad kapacitású tag ehhez a pozícióhoz az adott időszakra.
+            {t('project_editor.no_capacity_members')}
           </div>
         ) : (
           <div className="space-y-2">
             <p className="text-[11px] text-muted-foreground">
               {requiredPercentage >= 90
-                ? 'Teljes munkaidős igény → a legtöbb szabad kapacitású tagok elöl.'
-                : `Részleges igény (${requiredPercentage}%) → a leginkább megfelelő kapacitású tagok elöl.`}
+                ? t('project_editor.sort_hint_full')
+                : t('project_editor.sort_hint_partial', { pct: requiredPercentage })}
             </p>
             {candidates.map((c) => {
               const picked = picks.has(c.membership_id);
@@ -566,7 +569,7 @@ function SmartCandidatePicker({ workspaceId, businessRole, requiredPercentage, w
                   <div className="flex-1 min-w-0">
                     <div className="text-sm font-medium truncate">{c.display_name}</div>
                     <div className="text-[11px] text-muted-foreground">
-                      Alap: {c.base_percentage.toFixed(0)}% · Lekötve: {c.used_percentage.toFixed(0)}%
+                      {t('project_editor.candidate_capacity_detail', { base: c.base_percentage.toFixed(0), used: c.used_percentage.toFixed(0) })}
                       {c.leave_deduction > 0 && ` · Szabi: −${c.leave_deduction.toFixed(0)}%`}
                       · <span className="text-emerald-600 font-medium">Szabad: {c.available_percentage.toFixed(0)}%</span>
                     </div>
@@ -589,9 +592,9 @@ function SmartCandidatePicker({ workspaceId, businessRole, requiredPercentage, w
         )}
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Mégse</Button>
+          <Button variant="outline" onClick={onClose}>{t('common.cancel')}</Button>
           <Button onClick={handleConfirm} disabled={picks.size === 0}>
-            Hozzárendelés ({picks.size})
+            {t('project_editor.btn_assign_count', { count: picks.size })}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useI18n } from '@/i18n/I18nProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -35,15 +36,6 @@ interface Template {
   created_at: string;
 }
 
-const CATEGORY_META: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  medical_exam:        { label: 'Orvosi vizsgálat',       icon: Stethoscope,     color: 'bg-red-100 text-red-700 border-red-200' },
-  salary_advance:      { label: 'Előleg-igény',           icon: Wallet,          color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-  contract_amendment:  { label: 'Szerződésmódosítás',     icon: FileSignature,   color: 'bg-blue-100 text-blue-700 border-blue-200' },
-  probation_review:    { label: 'Próbaidő-értékelés',     icon: ClipboardCheck,  color: 'bg-amber-100 text-amber-700 border-amber-200' },
-  fixed_term_expiry:   { label: 'Határozott szerz. lejár', icon: CalendarClock,  color: 'bg-orange-100 text-orange-700 border-orange-200' },
-  offboarding:         { label: 'Kiléptetés',             icon: UserMinus,       color: 'bg-slate-100 text-slate-700 border-slate-200' },
-  custom:              { label: 'Egyedi',                 icon: Settings2,       color: 'bg-violet-100 text-violet-700 border-violet-200' },
-};
 
 const BUILTIN_TEMPLATES: Omit<Template, 'id' | 'created_at' | 'is_active'>[] = [
   {
@@ -128,17 +120,28 @@ const BUILTIN_TEMPLATES: Omit<Template, 'id' | 'created_at' | 'is_active'>[] = [
 ];
 
 function CategoryBadge({ category }: { category: string }) {
+  const { t } = useI18n();
   const meta = CATEGORY_META[category] ?? CATEGORY_META.custom;
   const Icon = meta.icon;
   return (
     <Badge variant="outline" className={`gap-1 text-xs ${meta.color}`}>
       <Icon className="h-3 w-3" />
-      {meta.label}
+      {t(`hr_workflow.cat_${category}`)}
     </Badge>
   );
 }
 
 export function HRWorkflowTemplates({ workspaceId }: Props) {
+  const { t } = useI18n();
+  const CATEGORY_META: Record<string, { label: string; icon: React.ElementType; color: string }> = {
+    medical_exam:        { label: t('hr_workflow_templates.cat_medical_exam'),       icon: Stethoscope,     color: 'bg-red-100 text-red-700 border-red-200' },
+    salary_advance:      { label: t('hr_workflow_templates.cat_salary_advance'),     icon: Wallet,          color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+    contract_amendment:  { label: t('hr_workflow_templates.cat_contract_amendment'), icon: FileSignature,   color: 'bg-blue-100 text-blue-700 border-blue-200' },
+    probation_review:    { label: t('hr_workflow_templates.cat_probation_review'),   icon: ClipboardCheck,  color: 'bg-amber-100 text-amber-700 border-amber-200' },
+    fixed_term_expiry:   { label: t('hr_workflow_templates.cat_fixed_term_expiry'),  icon: CalendarClock,   color: 'bg-orange-100 text-orange-700 border-orange-200' },
+    offboarding:         { label: t('hr_workflow_templates.cat_offboarding'),        icon: UserMinus,       color: 'bg-slate-100 text-slate-700 border-slate-200' },
+    custom:              { label: t('hr_workflow_templates.cat_custom'),             icon: Settings2,       color: 'bg-violet-100 text-violet-700 border-violet-200' },
+  };
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
   const [showDialog, setShowDialog] = useState(false);
@@ -174,11 +177,11 @@ export function HRWorkflowTemplates({ workspaceId }: Props) {
     setShowDialog(true);
   };
 
-  const openEdit = (t: Template) => {
-    setEditTemplate(t);
-    setFName(t.name); setFCategory(t.category); setFDescription(t.description || '');
-    setFRecurrence(t.recurrence_months ? String(t.recurrence_months) : '');
-    setFSteps(t.steps || []);
+  const openEdit = (tmpl: Template) => {
+    setEditTemplate(tmpl);
+    setFName(tmpl.name); setFCategory(tmpl.category); setFDescription(tmpl.description || '');
+    setFRecurrence(tmpl.recurrence_months ? String(tmpl.recurrence_months) : '');
+    setFSteps(tmpl.steps || []);
     setShowDialog(true);
   };
 
@@ -190,7 +193,7 @@ export function HRWorkflowTemplates({ workspaceId }: Props) {
     setFSteps(s => s.map(x => x.id === id ? { ...x, [field]: val } : x));
 
   const save = async () => {
-    if (!fName.trim()) { toast.error('Adj meg nevet'); return; }
+    if (!fName.trim()) { toast.error(t('hr_workflow_templates.name_required')); return; }
     setBusy(true);
     const payload = {
       workspace_id: workspaceId,
@@ -213,7 +216,7 @@ export function HRWorkflowTemplates({ workspaceId }: Props) {
     }
     setBusy(false);
     if (err) { toast.error(err.message); return; }
-    toast.success(editTemplate ? 'Sablon frissítve' : 'Sablon létrehozva');
+    toast.success(editTemplate ? t('hr_workflow_templates.template_updated') : t('hr_workflow_templates.template_created'));
     setShowDialog(false);
     load();
   };
@@ -223,40 +226,40 @@ export function HRWorkflowTemplates({ workspaceId }: Props) {
       .from('enterprise_hr_workflow_templates')
       .update({ is_active: false })
       .eq('id', id);
-    toast.success('Sablon archiválva');
+    toast.success(t('hr_workflow_templates.template_archived'));
     load();
   };
 
   const loadBuiltins = async () => {
     setBusy(true);
-    const rows = BUILTIN_TEMPLATES.map(t => ({ ...t, workspace_id: workspaceId }));
+    const rows = BUILTIN_TEMPLATES.map(tmpl => ({ ...tmpl, workspace_id: workspaceId }));
     const { error } = await (supabase as any)
       .from('enterprise_hr_workflow_templates')
       .insert(rows);
     setBusy(false);
     if (error) { toast.error(error.message); return; }
-    toast.success(`${rows.length} alapértelmezett sablon betöltve`);
+    toast.success(t('hr_workflow_templates.builtins_loaded', { count: rows.length }));
     load();
   };
 
-  if (loading) return <p className="text-sm text-muted-foreground py-4">Betöltés…</p>;
+  if (loading) return <p className="text-sm text-muted-foreground py-4">{t('hr_workflow_templates.loading')}</p>;
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm text-muted-foreground">
-          {templates.length} aktív sablon
+          {t('hr_workflow_templates.active_count', { count: templates.length })}
         </p>
         <div className="flex gap-2 flex-wrap">
           {templates.length === 0 && (
             <Button variant="outline" size="sm" onClick={loadBuiltins} disabled={busy}>
               <Layers className="h-3.5 w-3.5 mr-1.5" />
-              6 alapértelmezett betöltése
+              {t('hr_workflow_templates.load_builtins_btn')}
             </Button>
           )}
           <Button size="sm" onClick={openNew}>
             <Plus className="h-3.5 w-3.5 mr-1.5" />
-            Új sablon
+            {t('hr_workflow_templates.new_template_btn')}
           </Button>
         </div>
       </div>
@@ -264,56 +267,56 @@ export function HRWorkflowTemplates({ workspaceId }: Props) {
       {templates.length === 0 && (
         <Card>
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Még nincsenek sablonok. Kattints a „6 alapértelmezett betöltése" gombra az előre definiált HR folyamatsablonokhoz.
+            {t('hr_workflow_templates.empty_templates')}
           </CardContent>
         </Card>
       )}
 
       <div className="space-y-2">
-        {templates.filter(t => t.is_active).map(t => (
-          <Collapsible key={t.id} open={openId === t.id} onOpenChange={v => setOpenId(v ? t.id : null)}>
+        {templates.filter(tmpl => tmpl.is_active).map(tmpl => (
+          <Collapsible key={tmpl.id} open={openId === tmpl.id} onOpenChange={v => setOpenId(v ? tmpl.id : null)}>
             <Card>
               <CardHeader className="py-3 px-4">
                 <div className="flex flex-wrap items-center gap-2">
                   <CollapsibleTrigger asChild>
                     <button className="flex items-center gap-2 flex-1 min-w-0 text-left hover:text-primary transition-colors">
-                      <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${openId === t.id ? 'rotate-180' : ''}`} />
-                      <CardTitle className="text-sm font-medium truncate flex-1">{t.name}</CardTitle>
+                      <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${openId === tmpl.id ? 'rotate-180' : ''}`} />
+                      <CardTitle className="text-sm font-medium truncate flex-1">{tmpl.name}</CardTitle>
                     </button>
                   </CollapsibleTrigger>
-                  <CategoryBadge category={t.category} />
-                  {t.recurrence_months && (
+                  <CategoryBadge category={tmpl.category} />
+                  {tmpl.recurrence_months && (
                     <Badge variant="secondary" className="text-xs">
-                      {t.recurrence_months === 12 ? 'Éves' : t.recurrence_months === 6 ? 'Félévente' : `${t.recurrence_months} havonta`}
+                      {tmpl.recurrence_months === 12 ? t('hr_workflow_templates.recurrence_yearly') : tmpl.recurrence_months === 6 ? t('hr_workflow_templates.recurrence_semiannual') : t('hr_workflow_templates.recurrence_monthly', { months: tmpl.recurrence_months })}
                     </Badge>
                   )}
-                  <span className="text-xs text-muted-foreground">{(t.steps || []).length} lépés</span>
+                  <span className="text-xs text-muted-foreground">{t('hr_workflow_templates.steps_count', { count: (tmpl.steps || []).length })}</span>
                   <div className="flex gap-1 ml-auto shrink-0">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(t)}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(tmpl)}>
                       <Settings2 className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => archive(t.id)}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => archive(tmpl.id)}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </div>
-                {t.description && (
-                  <p className="text-xs text-muted-foreground pl-6 mt-0.5">{t.description}</p>
+                {tmpl.description && (
+                  <p className="text-xs text-muted-foreground pl-6 mt-0.5">{tmpl.description}</p>
                 )}
               </CardHeader>
               <CollapsibleContent>
                 <CardContent className="pt-0 pb-3 px-4">
                   <ol className="space-y-1 pl-2">
-                    {(t.steps || []).map((s, i) => (
+                    {(tmpl.steps || []).map((s, i) => (
                       <li key={s.id} className="flex items-start gap-2 text-xs">
                         <span className="font-mono text-muted-foreground w-5 shrink-0">{i + 1}.</span>
                         <span className="flex-1">{s.title}</span>
                         {s.due_offset_days !== 0 && (
                           <span className="text-muted-foreground shrink-0">
-                            {s.due_offset_days > 0 ? `+${s.due_offset_days}` : s.due_offset_days} nap
+                            {s.due_offset_days > 0 ? `+${s.due_offset_days}` : s.due_offset_days} {t('hr_workflow_templates.days_offset')}
                           </span>
                         )}
-                        {s.is_required && <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0">kötelező</Badge>}
+                        {s.is_required && <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0">{t('hr_workflow_templates.required_badge')}</Badge>}
                       </li>
                     ))}
                   </ol>
@@ -328,48 +331,48 @@ export function HRWorkflowTemplates({ workspaceId }: Props) {
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{editTemplate ? 'Sablon szerkesztése' : 'Új HR folyamatsablon'}</DialogTitle>
+            <DialogTitle>{editTemplate ? t('hr_workflow_templates.edit_dialog_title') : t('hr_workflow_templates.create_dialog_title')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2 space-y-1.5">
-                <Label>Sablon neve *</Label>
-                <Input value={fName} onChange={e => setFName(e.target.value)} placeholder="pl. Éves orvosi vizsgálat" />
+                <Label>{t('hr_workflow_templates.name_label')}</Label>
+                <Input value={fName} onChange={e => setFName(e.target.value)} placeholder={t('hr_workflow_templates.name_placeholder')} />
               </div>
               <div className="space-y-1.5">
-                <Label>Kategória</Label>
+                <Label>{t('hr_workflow_templates.category_label')}</Label>
                 <Select value={fCategory} onValueChange={setFCategory}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(CATEGORY_META).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                    {Object.keys(CATEGORY_META).map(k => (
+                      <SelectItem key={k} value={k}>{t(`hr_workflow.cat_${k}`)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label>Ismétlődés (hónapokban, opcionális)</Label>
+                <Label>{t('hr_workflow_templates.recurrence_label')}</Label>
                 <Input
                   type="number" min={1} value={fRecurrence}
                   onChange={e => setFRecurrence(e.target.value)}
-                  placeholder="pl. 12 = évente"
+                  placeholder={t('hr_workflow_templates.recurrence_placeholder')}
                 />
               </div>
               <div className="col-span-2 space-y-1.5">
-                <Label>Leírás (opcionális)</Label>
+                <Label>{t('hr_workflow_templates.description_label')}</Label>
                 <Textarea value={fDescription} onChange={e => setFDescription(e.target.value)} rows={2} />
               </div>
             </div>
 
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label>Lépések</Label>
+                <Label>{t('hr_workflow_templates.steps_label')}</Label>
                 <Button variant="outline" size="sm" onClick={addStep}>
-                  <Plus className="h-3.5 w-3.5 mr-1" />Lépés hozzáadása
+                  <Plus className="h-3.5 w-3.5 mr-1" />{t('hr_workflow_templates.add_step_btn')}
                 </Button>
               </div>
               {fSteps.length === 0 && (
-                <p className="text-xs text-muted-foreground">Még nincsenek lépések. Add hozzá az első lépést.</p>
+                <p className="text-xs text-muted-foreground">{t('hr_workflow_templates.no_steps')}</p>
               )}
               {fSteps.map((s, i) => (
                 <div key={s.id} className="flex items-start gap-2 p-2 border rounded-md bg-muted/30">
@@ -377,14 +380,14 @@ export function HRWorkflowTemplates({ workspaceId }: Props) {
                   <div className="flex-1 grid grid-cols-2 gap-2">
                     <Input
                       className="col-span-2 h-8 text-sm"
-                      placeholder="Lépés neve *"
+                      placeholder={t('hr_workflow_templates.step_name_placeholder')}
                       value={s.title}
                       onChange={e => updateStep(s.id, 'title', e.target.value)}
                     />
                     <Input
                       className="h-8 text-sm"
                       type="number"
-                      placeholder="Eltolás (nap)"
+                      placeholder={t('hr_workflow_templates.step_offset_placeholder')}
                       value={s.due_offset_days}
                       onChange={e => updateStep(s.id, 'due_offset_days', parseInt(e.target.value) || 0)}
                     />
@@ -394,7 +397,7 @@ export function HRWorkflowTemplates({ workspaceId }: Props) {
                         checked={s.is_required}
                         onChange={e => updateStep(s.id, 'is_required', e.target.checked)}
                       />
-                      Kötelező
+                      {t('hr_workflow_templates.step_required_label')}
                     </label>
                   </div>
                   <Button variant="ghost" size="icon" className="h-7 w-7 mt-0.5 shrink-0 text-destructive" onClick={() => removeStep(s.id)}>
@@ -405,8 +408,8 @@ export function HRWorkflowTemplates({ workspaceId }: Props) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowDialog(false)}>Mégse</Button>
-            <Button onClick={save} disabled={busy}>{editTemplate ? 'Mentés' : 'Létrehozás'}</Button>
+            <Button variant="outline" onClick={() => setShowDialog(false)}>{t('common.cancel')}</Button>
+            <Button onClick={save} disabled={busy}>{editTemplate ? t('common.save') : t('common.create')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

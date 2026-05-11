@@ -43,7 +43,7 @@ export function EntitySelector({ mode, selected, onSelect }: Props) {
                     <Badge variant="outline" className="h-4 text-[9px] gap-0.5 px-1"><ArrowUp className="h-2.5 w-2.5" />Import</Badge>
                   )}
                   {!enabled && (
-                    <Badge variant="secondary" className="h-4 text-[9px] px-1">Hamarosan</Badge>
+                    <Badge variant="secondary" className="h-4 text-[9px] px-1">Coming soon</Badge>
                   )}
                 </div>
                 <p className="text-[11px] text-muted-foreground mt-0.5 truncate">{entity.description}</p>

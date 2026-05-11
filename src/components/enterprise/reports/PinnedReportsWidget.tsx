@@ -22,7 +22,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ReportRunner } from './ReportRunner';
-import { DATA_SOURCE_LABELS } from './reportTemplates';
+import { getDataSourceLabels } from './reportTemplates';
+import { useI18n } from '@/i18n/I18nProvider';
 import type { SavedReport } from './ReportLibrary';
 import { ResourceWidgetCard, type ResourceWidgetKind, type ResourceWidgetConfig } from '../resources/ResourceWidgetCard';
 import { toast } from 'sonner';
@@ -56,6 +57,8 @@ function SortableTile({ report, onRun, onResize, workspaceId }: {
   onResize: (r: SavedReport) => void;
   workspaceId: string;
 }) {
+  const { t } = useI18n();
+  const DATA_SOURCE_LABELS = getDataSourceLabels(t);
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: report.id });
   const size = (report.widget_size as WidgetSize) || 'medium';
   const isResource = isResourceWidget(report.data_source as string);
@@ -71,10 +74,10 @@ function SortableTile({ report, onRun, onResize, workspaceId }: {
     return (
       <div ref={setNodeRef} style={style} className={`group relative ${SIZE_CLASS[size]}`}>
         <div className="absolute top-1 right-1 z-10 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none p-1 rounded hover:bg-accent" title="Áthelyezés">
+          <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing touch-none p-1 rounded hover:bg-accent" title={t('report_library.move_tile')}>
             <GripVertical className="h-3 w-3 text-muted-foreground" />
           </button>
-          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onResize(report)} title="Méret váltás">
+          <Button size="icon" variant="ghost" className="h-6 w-6" onClick={() => onResize(report)} title={t('report_library.resize_tile')}>
             <Maximize2 className="h-3 w-3" />
           </Button>
         </div>
@@ -102,7 +105,7 @@ function SortableTile({ report, onRun, onResize, workspaceId }: {
         <p className="text-[10px] text-muted-foreground truncate">{DATA_SOURCE_LABELS[report.data_source]} · {size}</p>
       </button>
       <div className="flex items-center gap-1 flex-shrink-0">
-        <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => onResize(report)} title="Méret váltás">
+        <Button size="icon" variant="ghost" className="h-7 w-7 opacity-0 group-hover:opacity-100" onClick={() => onResize(report)} title={t('report_library.resize_tile')}>
           <Maximize2 className="h-3.5 w-3.5" />
         </Button>
         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onRun(report)}>
@@ -114,6 +117,7 @@ function SortableTile({ report, onRun, onResize, workspaceId }: {
 }
 
 export function PinnedReportsWidget({ workspaceId }: Props) {
+  const { t } = useI18n();
   const [pinned, setPinned] = useState<SavedReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [running, setRunning] = useState<SavedReport | null>(null);
@@ -155,7 +159,7 @@ export function PinnedReportsWidget({ workspaceId }: Props) {
     const updates = reordered.map((r, i) =>
       (supabase as any).from('enterprise_reports').update({ dashboard_slot: i }).eq('id', r.id)
     );
-    await Promise.all(updates).catch(() => toast.error('Sorrend mentése sikertelen'));
+    await Promise.all(updates).catch(() => toast.error(t('report_library.sort_order_error')));
   };
 
   const handleResize = async (report: SavedReport) => {
@@ -186,9 +190,9 @@ export function PinnedReportsWidget({ workspaceId }: Props) {
       <CardHeader className="pb-2">
         <CardTitle className="text-sm flex items-center gap-2">
           <Pin className="h-4 w-4 text-primary" />
-          Kitűzött riportok
+          {t('report_library.pinned_title')}
           <Badge variant="outline" className="text-[10px] ml-1">{pinned.length}</Badge>
-          <span className="text-[10px] text-muted-foreground font-normal ml-auto">Húzd át a sorrendhez · kattints a méretre</span>
+          <span className="text-[10px] text-muted-foreground font-normal ml-auto">{t('report_library.drag_hint')}</span>
         </CardTitle>
       </CardHeader>
       <CardContent>
