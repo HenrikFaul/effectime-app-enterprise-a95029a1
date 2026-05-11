@@ -20,12 +20,18 @@ This file contains shared UI and UX rules for this repository.
 - minimal-regression redesigns
 
 ## Core principle: Full localization (non-negotiable, from v3.7.2)
-Every user-facing string in every new feature MUST be added to ALL supported language
-files simultaneously. Current supported locales: **en** and **hu**.
+Every user-facing string in every new feature MUST be added to ALL existing locale
+resources in the same change. Current supported locales: **en** and **hu**. Czech,
+Slovak, and Polish are planned and will become mandatory the moment their resource
+files appear in `src/i18n/resources/`.
 - Never hardcode UI text in components; always use `useI18n()` and `t('namespace.key')`.
 - When a new locale is added later, every key already exists — just fill in the translation.
-- Add the key to `src/i18n/resources/en.ts` AND `src/i18n/resources/hu.ts` in the same commit.
-- If the feature has 3 strings, all 3 go into both files. No partial localization.
+- If the feature has 3 strings, all 3 go into every active locale file. No partial localization.
+- **Authoritative controller:** `AI_PROMPTING_FOLDERSTRUCTURE/localization_controller.md`
+  defines the full methodology — locale discovery, source authoring, terminology governance,
+  translation memory, self-review checklist, pseudolocalization QA, string-authoring rules,
+  fail conditions, and per-feature deliverable format. It is mandatory reading for any
+  task involving user-facing copy.
 
 ## Core principle: Browser Back button must always work (non-negotiable, from v3.7.2)
 All intra-app navigation that the user can meaningfully go "back" from MUST push a new
