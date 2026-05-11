@@ -145,6 +145,89 @@ export async function recordPayrollExport(
   return data as string;
 }
 
+// ─── Site-assignment API (enterprise_shift_assignments) ────────────────────
+
+export interface SiteAssignment {
+  id: string;
+  workspace_id: string;
+  membership_id: string;
+  user_id: string;
+  office_id: string;
+  shift_date: string;
+}
+
+export async function fetchShiftAssignmentsForMember(
+  workspaceId: string,
+  membershipId: string,
+  from: string,
+  to: string,
+): Promise<SiteAssignment[]> {
+  const { data, error } = await sb
+    .from('enterprise_shift_assignments')
+    .select('id, workspace_id, membership_id, user_id, office_id, shift_date')
+    .eq('workspace_id', workspaceId)
+    .eq('membership_id', membershipId)
+    .gte('shift_date', from)
+    .lte('shift_date', to);
+  if (error) throw error;
+  return (data || []) as SiteAssignment[];
+}
+
+export async function upsertSiteAssignment(
+  workspaceId: string,
+  membershipId: string,
+  userId: string,
+  officeId: string,
+  shiftDate: string,
+): Promise<void> {
+  // Delete existing for same membership+date, then insert fresh
+  await sb
+    .from('enterprise_shift_assignments')
+    .delete()
+    .eq('workspace_id', workspaceId)
+    .eq('membership_id', membershipId)
+    .eq('shift_date', shiftDate);
+  const { error } = await sb.from('enterprise_shift_assignments').insert({
+    workspace_id: workspaceId,
+    membership_id: membershipId,
+    user_id: userId,
+    office_id: officeId,
+    shift_date: shiftDate,
+    created_by: userId,
+  });
+  if (error) throw error;
+}
+
+export async function removeSiteAssignment(
+  workspaceId: string,
+  membershipId: string,
+  shiftDate: string,
+): Promise<void> {
+  const { error } = await sb
+    .from('enterprise_shift_assignments')
+    .delete()
+    .eq('workspace_id', workspaceId)
+    .eq('membership_id', membershipId)
+    .eq('shift_date', shiftDate);
+  if (error) throw error;
+}
+
+export interface OfficeOption {
+  id: string;
+  name: string;
+  city: string | null;
+}
+
+export async function fetchOfficesForWorkspace(workspaceId: string): Promise<OfficeOption[]> {
+  const { data, error } = await sb
+    .from('enterprise_offices')
+    .select('id, name, city')
+    .eq('workspace_id', workspaceId)
+    .order('name');
+  if (error) throw error;
+  return (data || []) as OfficeOption[];
+}
+
 export async function fetchScheduleTemplates(workspaceId: string): Promise<any[]> {
   const { data, error } = await sb.from('enterprise_attendance_schedule_templates')
     .select('*').eq('workspace_id', workspaceId).is('archived_at', null).order('name');

@@ -113,7 +113,8 @@ export default function Enterprise() {
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set('tab', tab);
     nextParams.delete('ws');
-    setSearchParams(nextParams, { replace: true });
+    // push (not replace) so the browser Back button traverses tab history
+    setSearchParams(nextParams);
   };
 
   const fetchWorkspaces = useCallback(async () => {

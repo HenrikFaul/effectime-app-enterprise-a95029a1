@@ -621,6 +621,17 @@ const hu = {
     success: 'Sikeres',
     error: 'Hiba',
   },
+  attendance: {
+    display_config: 'Megjelenített adatok',
+    show_work_hours: 'Munkaidő',
+    show_overtime: 'Túlóra',
+    show_site: 'Telephely',
+    site_picker_label: 'Telephely (ezen a napon)',
+    no_site: 'Nincs telephely megadva',
+    site_saved: 'Telephely mentve',
+    site_removed: 'Telephely törölve',
+    select_site_placeholder: 'Válassz telephelyet…',
+  },
   help_settings: {
     title: 'AI súgó tartalom',
     ai_toggle_label: 'AI tartalom-újragenerálás',
