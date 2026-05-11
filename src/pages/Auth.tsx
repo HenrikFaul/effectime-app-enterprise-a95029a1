@@ -16,6 +16,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { EffectimeLogo } from "@/components/EffectimeLogo";
+import { useT } from '@/i18n/I18nProvider';
+import { LanguageSelector } from '@/components/i18n/LanguageSelector';
 
 type AuthView = "login" | "register" | "verify" | "forgot";
 
@@ -29,147 +31,6 @@ const buildAuthRedirectUrl = (redirectPath: string) => {
   return `${window.location.origin}/#/auth?redirect=${encodeURIComponent(normalized)}`;
 };
 
-const features = [
-  {
-    icon: CalendarDays,
-    title: "Egységes csapatnaptár",
-    desc: "Lásd egy nézetben a kollégák elérhetőségét, szabadságokat és projektütemezéseket — automatikus szinkronizációval.",
-  },
-  {
-    icon: ClipboardCheck,
-    title: "Szabadság- és kérelemkezelés",
-    desc: "Egyszerű igénylés, gyors jóváhagyás. Kvóták, féléves egyenlegek és félnapos szabadságok támogatásával.",
-  },
-  {
-    icon: LayoutDashboard,
-    title: "Erőforrás-tervezés",
-    desc: "Vizualizáld csapatod kapacitását, kerüld el a túlterheltséget és tartsd egyensúlyban a projekteket.",
-  },
-  {
-    icon: Sparkles,
-    title: "Intelligens beosztás varázsló",
-    desc: "Automatikus javaslatokat készít szabadságok, ünnepnapok, telephely-prioritás és pozícióegyezés alapján.",
-  },
-  {
-    icon: Users,
-    title: "Munkaterületek",
-    desc: "Külön munkaterületek cégegységenként, dedikált tagsággal, szabályokkal és audit traillel.",
-  },
-  {
-    icon: CheckCircle2,
-    title: "Jóváhagyási munkafolyamatok",
-    desc: "Átlátható, követhető folyamatok minden kérelemhez. Értesítések, naplózás és exportálás.",
-  },
-];
-
-const trustBadges = [
-  {
-    icon: Shield,
-    label: "GDPR-kompatibilis",
-    sub: "EU adatvédelmi előírások",
-    color: "from-blue-500 to-blue-600",
-    bg: "bg-blue-50 dark:bg-blue-900/20",
-    border: "border-blue-200 dark:border-blue-500/30",
-    text: "text-blue-700 dark:text-blue-300",
-  },
-  {
-    icon: Lock,
-    label: "ISO 27001 elvek",
-    sub: "Biztonsági best practice",
-    color: "from-violet-500 to-violet-600",
-    bg: "bg-violet-50 dark:bg-violet-900/20",
-    border: "border-violet-200 dark:border-violet-500/30",
-    text: "text-violet-700 dark:text-violet-300",
-  },
-  {
-    icon: BadgeCheck,
-    label: "Enterprise Ready",
-    sub: "B2B vállalati szint",
-    color: "from-emerald-500 to-emerald-600",
-    bg: "bg-emerald-50 dark:bg-emerald-900/20",
-    border: "border-emerald-200 dark:border-emerald-500/30",
-    text: "text-emerald-700 dark:text-emerald-300",
-  },
-  {
-    icon: Server,
-    label: "99,9% Uptime SLA",
-    sub: "Magas rendelkezésre állás",
-    color: "from-amber-500 to-amber-600",
-    bg: "bg-amber-50 dark:bg-amber-900/20",
-    border: "border-amber-200 dark:border-amber-500/30",
-    text: "text-amber-700 dark:text-amber-300",
-  },
-  {
-    icon: Fingerprint,
-    label: "RLS adatelérés",
-    sub: "Sor szintű biztonság",
-    color: "from-rose-500 to-rose-600",
-    bg: "bg-rose-50 dark:bg-rose-900/20",
-    border: "border-rose-200 dark:border-rose-500/30",
-    text: "text-rose-700 dark:text-rose-300",
-  },
-  {
-    icon: Trophy,
-    label: "Top SaaS 2026",
-    sub: "Vállalati HR platform",
-    color: "from-primary to-emerald-500",
-    bg: "bg-primary/5 dark:bg-primary/10",
-    border: "border-primary/20 dark:border-primary/30",
-    text: "text-primary dark:text-emerald-300",
-  },
-];
-
-const workflowSteps = [
-  {
-    title: "Munkaterület létrehozása",
-    desc: "Állítsd be a cégegységeket, telephelyeket, pozíciókat és az alap jogosultságokat.",
-  },
-  {
-    title: "Csapat és szabályok felvétele",
-    desc: "Hívd meg a kollégákat, rendelj hozzá kvótákat, jóváhagyási láncokat és naptárbeállításokat.",
-  },
-  {
-    title: "Kapacitás optimalizálása",
-    desc: "Használd az intelligens beosztás varázslót, riportokat és projekttervezést a napi döntésekhez.",
-  },
-];
-
-const comparisonRows = [
-  { label: "Beállítási idő", old: "Napok / hetekig tart", ours: "2 perc alatt elindul" },
-  { label: "Jóváhagyási folyamat", old: "E-mail, Excel, szóbeli egyeztetés", ours: "Automatizált, nyomon követhető lánc" },
-  { label: "Kapacitásnézet", old: "Hiányzik vagy manuálisan készül", ours: "Valós idejű csapatkapacitás dashboard" },
-  { label: "Szabadságegyenleg", old: "HR manuálisan számolja", ours: "Automatikus kvóta- és egyenlegkezelés" },
-  { label: "Audit trail", old: "Nincs vagy hiányos", ours: "Teljes körű, immutable audit napló" },
-  { label: "Mobilos hozzáférés", old: "Korlátozott", ours: "Teljesen reszponzív, minden eszközön" },
-];
-
-const faqItems = [
-  {
-    question: "Miben segít az Effectime a mindennapi működésben?",
-    answer: "Egy helyre hozza a szabadságkérelmeket, jóváhagyásokat, csapatnaptárat, kapacitástervezést és riportokat, így kevesebb kézi egyeztetésre van szükség.",
-  },
-  {
-    question: "Támogatja a vállalati struktúrát és jogosultságokat?",
-    answer: "Igen. Munkaterületekkel, szerepkörökkel (owner / resourceAssistant / member), telephelyekkel, pozíciókkal, csapatokkal és auditált jóváhagyási folyamatokkal működik.",
-  },
-  {
-    question: "Miért fontos az intelligens beosztás varázsló?",
-    answer: "A varázsló figyelembe veszi a hiányzó helyeket, ünnepnapokat, blokkolt napokat, telephely-prioritást és pozícióegyezést, majd javaslatot készít a beosztásra — emberi egyeztetés nélkül.",
-  },
-  {
-    question: "Testreszabhatók a jóváhagyási folyamatok?",
-    answer: "Igen, többlépéses jóváhagyási láncok konfigurálhatók osztályonként és szerepköronként, eszkalációs szabályokkal és határidő-kezeléssel együtt.",
-  },
-  {
-    question: "Elérhető mobilon is a platform?",
-    answer: "A platform teljesen reszponzív: tablet és mobil nézetben ugyanolyan átláthatón kezelhető a szabadságok tervezése és a csapatkommunikáció.",
-  },
-  {
-    question: "Milyen adatbiztonsági garanciák vannak?",
-    answer: "Sor szintű RLS biztonság, immutable audit trail minden változáshoz, GDPR-kompatibilis adatkezelés és role-alapú hozzáférés-szabályozás védi az adatokat.",
-  },
-];
-
 const GoogleIcon = () => (
   <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
@@ -180,6 +41,149 @@ const GoogleIcon = () => (
 );
 
 const Auth = () => {
+  const t = useT();
+
+  const features = [
+    {
+      icon: CalendarDays,
+      title: t('auth_page.f1_title'),
+      desc: t('auth_page.f1_desc'),
+    },
+    {
+      icon: ClipboardCheck,
+      title: t('auth_page.f2_title'),
+      desc: t('auth_page.f2_desc'),
+    },
+    {
+      icon: LayoutDashboard,
+      title: t('auth_page.f3_title'),
+      desc: t('auth_page.f3_desc'),
+    },
+    {
+      icon: Sparkles,
+      title: t('auth_page.f4_title'),
+      desc: t('auth_page.f4_desc'),
+    },
+    {
+      icon: Users,
+      title: t('auth_page.f5_title'),
+      desc: t('auth_page.f5_desc'),
+    },
+    {
+      icon: CheckCircle2,
+      title: t('auth_page.f6_title'),
+      desc: t('auth_page.f6_desc'),
+    },
+  ];
+
+  const trustBadges = [
+    {
+      icon: Shield,
+      label: t('auth_page.tb1_label'),
+      sub: t('auth_page.tb1_sub'),
+      color: "from-blue-500 to-blue-600",
+      bg: "bg-blue-50 dark:bg-blue-900/20",
+      border: "border-blue-200 dark:border-blue-500/30",
+      text: "text-blue-700 dark:text-blue-300",
+    },
+    {
+      icon: Lock,
+      label: t('auth_page.tb2_label'),
+      sub: t('auth_page.tb2_sub'),
+      color: "from-violet-500 to-violet-600",
+      bg: "bg-violet-50 dark:bg-violet-900/20",
+      border: "border-violet-200 dark:border-violet-500/30",
+      text: "text-violet-700 dark:text-violet-300",
+    },
+    {
+      icon: BadgeCheck,
+      label: t('auth_page.tb3_label'),
+      sub: t('auth_page.tb3_sub'),
+      color: "from-emerald-500 to-emerald-600",
+      bg: "bg-emerald-50 dark:bg-emerald-900/20",
+      border: "border-emerald-200 dark:border-emerald-500/30",
+      text: "text-emerald-700 dark:text-emerald-300",
+    },
+    {
+      icon: Server,
+      label: t('auth_page.tb4_label'),
+      sub: t('auth_page.tb4_sub'),
+      color: "from-amber-500 to-amber-600",
+      bg: "bg-amber-50 dark:bg-amber-900/20",
+      border: "border-amber-200 dark:border-amber-500/30",
+      text: "text-amber-700 dark:text-amber-300",
+    },
+    {
+      icon: Fingerprint,
+      label: t('auth_page.tb5_label'),
+      sub: t('auth_page.tb5_sub'),
+      color: "from-rose-500 to-rose-600",
+      bg: "bg-rose-50 dark:bg-rose-900/20",
+      border: "border-rose-200 dark:border-rose-500/30",
+      text: "text-rose-700 dark:text-rose-300",
+    },
+    {
+      icon: Trophy,
+      label: t('auth_page.tb6_label'),
+      sub: t('auth_page.tb6_sub'),
+      color: "from-primary to-emerald-500",
+      bg: "bg-primary/5 dark:bg-primary/10",
+      border: "border-primary/20 dark:border-primary/30",
+      text: "text-primary dark:text-emerald-300",
+    },
+  ];
+
+  const workflowSteps = [
+    {
+      title: t('auth_page.ws1_title'),
+      desc: t('auth_page.ws1_desc'),
+    },
+    {
+      title: t('auth_page.ws2_title'),
+      desc: t('auth_page.ws2_desc'),
+    },
+    {
+      title: t('auth_page.ws3_title'),
+      desc: t('auth_page.ws3_desc'),
+    },
+  ];
+
+  const comparisonRows = [
+    { label: t('auth_page.cmp1_label'), old: t('auth_page.cmp1_old'), ours: t('auth_page.cmp1_ours') },
+    { label: t('auth_page.cmp2_label'), old: t('auth_page.cmp2_old'), ours: t('auth_page.cmp2_ours') },
+    { label: t('auth_page.cmp3_label'), old: t('auth_page.cmp3_old'), ours: t('auth_page.cmp3_ours') },
+    { label: t('auth_page.cmp4_label'), old: t('auth_page.cmp4_old'), ours: t('auth_page.cmp4_ours') },
+    { label: t('auth_page.cmp5_label'), old: t('auth_page.cmp5_old'), ours: t('auth_page.cmp5_ours') },
+    { label: t('auth_page.cmp6_label'), old: t('auth_page.cmp6_old'), ours: t('auth_page.cmp6_ours') },
+  ];
+
+  const faqItems = [
+    {
+      question: t('auth_page.faq1_q'),
+      answer: t('auth_page.faq1_a'),
+    },
+    {
+      question: t('auth_page.faq2_q'),
+      answer: t('auth_page.faq2_a'),
+    },
+    {
+      question: t('auth_page.faq3_q'),
+      answer: t('auth_page.faq3_a'),
+    },
+    {
+      question: t('auth_page.faq4_q'),
+      answer: t('auth_page.faq4_a'),
+    },
+    {
+      question: t('auth_page.faq5_q'),
+      answer: t('auth_page.faq5_a'),
+    },
+    {
+      question: t('auth_page.faq6_q'),
+      answer: t('auth_page.faq6_a'),
+    },
+  ];
+
   const [view, setView] = useState<AuthView>("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -225,7 +229,7 @@ const Auth = () => {
         await setSessionFromTokens(accessToken, refreshToken);
         window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
       } catch {
-        toast.error("Google bejelentkezési munkamenet helyreállítása sikertelen.");
+        toast.error(t('auth_page.toast_google_session_failed'));
       } finally {
         setLoading(false);
       }
@@ -251,13 +255,13 @@ const Auth = () => {
           });
 
           if (activationError) {
-            toast.error("Érvénytelen vagy lejárt aktivációs link. Kérj új aktivációs e-mailt.");
+            toast.error(t('auth_page.toast_activation_invalid'));
             await signOut();
             navigate("/auth", { replace: true });
             return;
           }
 
-          toast.success("E-mail sikeresen megerősítve!");
+          toast.success(t('auth_page.toast_email_activated'));
         }
 
         navigate(redirectTo, { replace: true });
@@ -277,7 +281,7 @@ const Auth = () => {
       const { error } = await signIn(email, password);
       if (error) {
         if (error.message.includes("Email not confirmed")) {
-          toast.error("Az e-mail címed még nincs megerősítve. Kérjük, ellenőrizd a postaládádat.");
+          toast.error(t('auth_page.toast_email_unconfirmed'));
         } else {
           toast.error(error.message);
         }
@@ -291,7 +295,7 @@ const Auth = () => {
       } else {
         setView("verify");
         setResendCooldown(60);
-        toast.success("Megerősítő e-mail elküldve!");
+        toast.success(t('auth_page.toast_confirm_sent'));
       }
     }
 
@@ -300,7 +304,7 @@ const Auth = () => {
 
   const handleVerifyOtp = async () => {
     if (otpCode.length < OTP_LENGTH) {
-      toast.error(`Kérjük, add meg a ${OTP_LENGTH} jegyű kódot.`);
+      toast.error(t('auth_page.toast_otp_too_short', { n: String(OTP_LENGTH) }));
       return;
     }
 
@@ -318,12 +322,12 @@ const Auth = () => {
     }
 
     if (!verified) {
-      toast.error("Érvénytelen vagy lejárt kód. Kérjük, próbáld újra.");
+      toast.error(t('auth_page.toast_invalid_code'));
       setVerifying(false);
       return;
     }
 
-    toast.success("E-mail sikeresen megerősítve! Üdvözlünk!");
+    toast.success(t('auth_page.toast_verified_welcome'));
     navigate(redirectTo);
     setVerifying(false);
   };
@@ -338,9 +342,9 @@ const Auth = () => {
       });
 
       if (error || data?.error) {
-        toast.error("Hiba az újraküldés során. Kérjük, próbáld újra később.");
+        toast.error(t('auth_page.toast_resend_error'));
       } else {
-        toast.success("Aktivációs e-mail újraküldve!");
+        toast.success(t('auth_page.toast_resend_activation_sent'));
         setResendCooldown(60);
       }
 
@@ -355,9 +359,9 @@ const Auth = () => {
     });
 
     if (error) {
-      toast.error("Hiba az újraküldés során. Kérjük, próbáld újra később.");
+      toast.error(t('auth_page.toast_resend_error'));
     } else {
-      toast.success("Megerősítő e-mail újraküldve!");
+      toast.success(t('auth_page.toast_resend_signup_sent'));
       setResendCooldown(60);
     }
 
@@ -367,7 +371,7 @@ const Auth = () => {
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email) {
-      toast.error("Kérjük, add meg az e-mail címedet.");
+      toast.error(t('auth_page.toast_forgot_missing_email'));
       return;
     }
     setLoading(true);
@@ -376,9 +380,9 @@ const Auth = () => {
     });
 
     if (error) {
-      toast.error("Hiba történt. Kérjük, próbáld újra később.");
+      toast.error(t('auth_page.toast_forgot_error'));
     } else {
-      toast.success("Jelszó-visszaállító e-mail elküldve! Ellenőrizd a postaládádat.");
+      toast.success(t('auth_page.toast_forgot_sent'));
     }
 
     setLoading(false);
@@ -423,10 +427,10 @@ const Auth = () => {
               <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 shadow-glow">
                 <Mail className="h-6 w-6 text-primary" />
               </div>
-              <h2 className="font-display text-2xl font-bold">E-mail megerősítése</h2>
+              <h2 className="font-display text-2xl font-bold">{t('auth_page.verify_title')}</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Küldtünk egy megerősítő e-mailt a(z){" "}
-                <span className="font-medium text-foreground">{email}</span> címre.
+                {t('auth_page.verify_subtitle_prefix')}{' '}
+                <span className="font-medium text-foreground">{email}</span>{t('auth_page.verify_subtitle_suffix')}
               </p>
             </div>
 
@@ -434,17 +438,17 @@ const Auth = () => {
               <div className="flex items-start gap-3">
                 <CheckCircle2 className="mt-0.5 h-5 w-5 flex-shrink-0 text-primary" />
                 <div className="space-y-1 text-sm">
-                  <p className="font-medium">Kétféleképpen erősítheted meg:</p>
+                  <p className="font-medium">{t('auth_page.verify_methods_title')}</p>
                   <ol className="list-inside list-decimal space-y-1 text-muted-foreground">
-                    <li>Kattints az e-mailben kapott <strong>aktivációs linkre</strong></li>
-                    <li>Vagy add meg az e-mailben kapott <strong>8 jegyű kódot</strong></li>
+                    <li><strong>{t('auth_page.verify_method_1')}</strong></li>
+                    <li><strong>{t('auth_page.verify_method_2')}</strong></li>
                   </ol>
                 </div>
               </div>
             </div>
 
             <div className="space-y-3">
-              <Label className="block text-center">Megerősítő kód</Label>
+              <Label className="block text-center">{t('auth_page.verify_code_label')}</Label>
               <div className="flex justify-center">
                 <InputOTP maxLength={OTP_LENGTH} value={otpCode} onChange={setOtpCode}>
                   <InputOTPGroup>
@@ -459,12 +463,12 @@ const Auth = () => {
                 className="h-12 w-full rounded-2xl gradient-primary font-semibold text-primary-foreground shadow-glow"
                 disabled={verifying || otpCode.length < OTP_LENGTH}
               >
-                {verifying ? "Ellenőrzés..." : "Kód megerősítése"}
+                {verifying ? t('auth_page.verify_btn_confirming') : t('auth_page.verify_btn_confirm')}
               </Button>
             </div>
 
             <div className="space-y-2 text-center">
-              <p className="text-sm text-muted-foreground">Nem kaptál e-mailt?</p>
+              <p className="text-sm text-muted-foreground">{t('auth_page.verify_no_email')}</p>
               <Button
                 variant="outline"
                 size="sm"
@@ -472,7 +476,7 @@ const Auth = () => {
                 disabled={resendCooldown > 0 || loading}
                 className="rounded-xl"
               >
-                {resendCooldown > 0 ? `Újraküldés (${resendCooldown}s)` : "E-mail újraküldése"}
+                {resendCooldown > 0 ? t('auth_page.verify_resend_cooldown', { sec: String(resendCooldown) }) : t('auth_page.verify_resend')}
               </Button>
             </div>
 
@@ -481,7 +485,7 @@ const Auth = () => {
               className="flex w-full items-center justify-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
-              Vissza a bejelentkezéshez
+              {t('auth_page.verify_back')}
             </button>
           </div>
         )}
@@ -492,15 +496,15 @@ const Auth = () => {
               <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/15 shadow-glow">
                 <KeyRound className="h-6 w-6 text-primary" />
               </div>
-              <h2 className="font-display text-2xl font-bold">Elfelejtett jelszó</h2>
+              <h2 className="font-display text-2xl font-bold">{t('auth_page.forgot_title')}</h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                Add meg az e-mail címedet és küldünk egy visszaállító linket.
+                {t('auth_page.forgot_subtitle')}
               </p>
             </div>
 
             <form onSubmit={handleForgotPassword} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="forgot-email">E-mail</Label>
+                <Label htmlFor="forgot-email">{t('auth_page.forgot_email_label')}</Label>
                 <Input
                   id="forgot-email"
                   type="email"
@@ -516,7 +520,7 @@ const Auth = () => {
                 className="h-12 w-full rounded-2xl gradient-primary font-semibold text-primary-foreground shadow-glow"
                 disabled={loading}
               >
-                {loading ? "Küldés..." : "Visszaállító e-mail küldése"}
+                {loading ? t('auth_page.forgot_btn_sending') : t('auth_page.forgot_btn_send')}
               </Button>
             </form>
 
@@ -525,7 +529,7 @@ const Auth = () => {
               className="flex w-full items-center justify-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
-              Vissza a bejelentkezéshez
+              {t('auth_page.forgot_back')}
             </button>
           </div>
         )}
@@ -534,12 +538,12 @@ const Auth = () => {
           <div className="space-y-4">
             <div className="text-center">
               <h2 className="font-display text-[clamp(2rem,2.2vw,2.55rem)] font-bold">
-                {view === "login" ? "Üdv újra!" : "Csatlakozz hozzánk!"}
+                {view === "login" ? t('auth_page.login_title') : t('auth_page.register_title')}
               </h2>
               <p className="mt-1 text-[0.96rem] text-muted-foreground">
                 {view === "login"
-                  ? "Jelentkezz be az Effectime fiókodba"
-                  : "Hozd létre az Effectime fiókodat"}
+                  ? t('auth_page.login_subtitle')
+                  : t('auth_page.register_subtitle')}
               </p>
             </div>
 
@@ -550,24 +554,24 @@ const Auth = () => {
               onClick={handleGoogleSignIn}
             >
               <GoogleIcon />
-              Folytatás Google fiókkal
+              {t('auth_page.btn_google')}
             </Button>
 
             <div className="flex items-center gap-3">
               <Separator className="flex-1" />
-              <span className="text-xs font-medium text-muted-foreground">vagy e-maillel</span>
+              <span className="text-xs font-medium text-muted-foreground">{t('auth_page.separator_or')}</span>
               <Separator className="flex-1" />
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-3.5">
               {view === "register" && (
                 <div className="space-y-2">
-                  <Label htmlFor="displayName">Megjelenített név</Label>
+                  <Label htmlFor="displayName">{t('auth_page.label_display_name')}</Label>
                   <Input
                     id="displayName"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="Kovács Anna"
+                    placeholder={t('auth_page.placeholder_display_name')}
                     required
                     className="h-12 rounded-2xl focus-visible:ring-primary"
                   />
@@ -575,20 +579,20 @@ const Auth = () => {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email">E-mail</Label>
+                <Label htmlFor="email">{t('auth_page.label_email')}</Label>
                 <Input
                   id="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="pelda@ceg.hu"
+                  placeholder={t('auth_page.placeholder_email')}
                   required
                   className="h-12 rounded-2xl focus-visible:ring-primary"
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password">Jelszó</Label>
+                <Label htmlFor="password">{t('auth_page.label_password')}</Label>
                 <Input
                   id="password"
                   type="password"
@@ -605,7 +609,7 @@ const Auth = () => {
                     onClick={() => setView("forgot")}
                     className="text-xs text-muted-foreground transition-colors hover:text-primary"
                   >
-                    Elfelejtett jelszó?
+                    {t('auth_page.forgot_password_link')}
                   </button>
                 )}
               </div>
@@ -615,17 +619,17 @@ const Auth = () => {
                 className="h-13 w-full rounded-2xl gradient-primary font-semibold text-primary-foreground shadow-glow transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-8px_rgba(16,185,129,0.5)]"
                 disabled={loading}
               >
-                {loading ? "Kérlek várj..." : view === "login" ? "Bejelentkezés" : "Regisztráció"}
+                {loading ? t('auth_page.btn_loading') : view === "login" ? t('auth_page.btn_login') : t('auth_page.btn_register')}
               </Button>
             </form>
 
             <div className="text-center text-sm text-muted-foreground">
-              {view === "login" ? "Nincs fiókod?" : "Már van fiókod?"}{" "}
+              {view === "login" ? t('auth_page.no_account') : t('auth_page.has_account')}{" "}
               <button
                 onClick={() => setView(view === "login" ? "register" : "login")}
                 className="font-medium text-primary underline-offset-4 hover:underline"
               >
-                {view === "login" ? "Regisztráció" : "Bejelentkezés"}
+                {view === "login" ? t('auth_page.nav_register') : t('auth_page.nav_signin')}
               </button>
             </div>
           </div>
@@ -643,11 +647,12 @@ const Auth = () => {
             <EffectimeLogo size={34} variant="full" />
           </button>
           <div className="flex items-center gap-2">
+            <LanguageSelector size="sm" align="end" />
             <Button variant="ghost" size="sm" onClick={() => navigate('/')} className="rounded-xl">
-              Főoldal
+              {t('auth_page.nav_home')}
             </Button>
             <Button variant="outline" size="sm" onClick={() => setView(view === 'login' ? 'register' : 'login')} className="rounded-xl">
-              {view === "login" ? "Regisztráció" : "Bejelentkezés"}
+              {view === "login" ? t('auth_page.nav_register') : t('auth_page.nav_signin')}
             </Button>
           </div>
         </div>
@@ -667,18 +672,18 @@ const Auth = () => {
             >
               <div className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-white/80 px-4 py-2 text-sm font-semibold text-primary shadow-sm dark:border-primary/25 dark:bg-white/8 dark:text-emerald-200">
                 <Shield className="h-4 w-4" />
-                Enterprise kapacitáskezelő platform
+                {t('auth_page.badge_platform')}
               </div>
 
               <div className="max-w-3xl">
                 <h1 className="font-display text-[clamp(2.35rem,5vw,5.25rem)] font-bold leading-[0.95] tracking-[-0.055em] text-slate-950 dark:text-white">
-                  Navigáld vállalkozásod erőforrásait{" "}
+                  {t('auth_page.hero_title_prefix')}{" "}
                   <span className="bg-gradient-to-r from-primary via-emerald-400 to-blue-500 bg-clip-text text-transparent">
-                    stratégiával.
+                    {t('auth_page.hero_title_accent')}
                   </span>
                 </h1>
                 <p className="mt-6 max-w-2xl text-base leading-relaxed text-slate-600 sm:text-lg dark:text-slate-300">
-                  Intelligens idő-, szabadság- és erőforrás-kezelés egy platformon. Az Effectime segít átlátni a kapacitást, gyorsítani a jóváhagyásokat és stabilan ütemezni a projekteket.
+                  {t('auth_page.hero_subtitle')}
                 </p>
               </div>
 
@@ -711,16 +716,16 @@ const Auth = () => {
               </div>
               <div className="mt-4 grid grid-cols-3 gap-3 text-center text-xs text-slate-500 dark:text-slate-400">
                 <div className="rounded-2xl border border-slate-200 bg-white/70 p-3 dark:border-white/10 dark:bg-white/[0.04]">
-                  <div className="font-bold text-slate-900 dark:text-white">RLS</div>
-                  Biztonságos adatelérés
+                  <div className="font-bold text-slate-900 dark:text-white">{t('auth_page.chip_rls_title')}</div>
+                  {t('auth_page.chip_rls_desc')}
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white/70 p-3 dark:border-white/10 dark:bg-white/[0.04]">
-                  <div className="font-bold text-slate-900 dark:text-white">Audit</div>
-                  Követhető folyamatok
+                  <div className="font-bold text-slate-900 dark:text-white">{t('auth_page.chip_audit_title')}</div>
+                  {t('auth_page.chip_audit_desc')}
                 </div>
                 <div className="rounded-2xl border border-slate-200 bg-white/70 p-3 dark:border-white/10 dark:bg-white/[0.04]">
-                  <div className="font-bold text-slate-900 dark:text-white">Jira</div>
-                  Agilis integráció
+                  <div className="font-bold text-slate-900 dark:text-white">{t('auth_page.chip_jira_title')}</div>
+                  {t('auth_page.chip_jira_desc')}
                 </div>
               </div>
             </motion.div>
@@ -732,7 +737,7 @@ const Auth = () => {
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <div className="mb-7 text-center">
               <p className="text-sm font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                Minőség és biztonság, amire számíthatsz
+                {t('auth_page.badge_quality')}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -763,13 +768,13 @@ const Auth = () => {
           <div className="mx-auto max-w-2xl text-center">
             <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
               <Workflow className="h-4 w-4" />
-              Így működik
+              {t('auth_page.badge_how')}
             </div>
             <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
-              Három lépés a tiszta kapacitásképig
+              {t('auth_page.how_title')}
             </h2>
             <p className="mt-4 text-slate-600 dark:text-slate-300">
-              Gyors indulás, kevesebb adminisztráció, jobb döntések a csapat napi elérhetőségéről és projektterheléséről.
+              {t('auth_page.how_desc')}
             </p>
           </div>
 
@@ -804,19 +809,19 @@ const Auth = () => {
             <div>
               <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
                 <BarChart3 className="h-4 w-4" />
-                Példa nézet
+                {t('auth_page.badge_example')}
               </div>
               <h2 className="mt-5 font-display text-3xl font-bold tracking-tight sm:text-4xl">
-                Áttekinthető naptár és kapacitás egy oldalon
+                {t('auth_page.cal_title')}
               </h2>
               <p className="mt-4 leading-relaxed text-slate-600 dark:text-slate-300">
-                Az éves nézet, csapatnaptár, kapacitástervező és skill riportok együtt segítenek megérteni, hol van valódi lefedettség és hol kell beavatkozni.
+                {t('auth_page.cal_desc')}
               </p>
               <div className="mt-6 flex flex-wrap gap-3">
                 {[
-                  { icon: CalendarDays, label: "Csapatnaptár" },
-                  { icon: Clock, label: "Éves nézet" },
-                  { icon: Zap, label: "Valós idejű" },
+                  { icon: CalendarDays, label: t('auth_page.chip_cal') },
+                  { icon: Clock, label: t('auth_page.chip_annual') },
+                  { icon: Zap, label: t('auth_page.chip_realtime') },
                 ].map(({ icon: Icon, label }) => (
                   <span key={label} className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm font-medium text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
                     <Icon className="h-3.5 w-3.5 text-primary" />
@@ -829,10 +834,10 @@ const Auth = () => {
               <div className="rounded-[1.5rem] bg-white p-5 dark:bg-[#111827]">
                 <div className="mb-5 flex items-center justify-between">
                   <div>
-                    <div className="text-sm font-semibold text-slate-500 dark:text-slate-400">Mai kapacitás</div>
-                    <div className="font-display text-2xl font-bold">Budapest · Resource team</div>
+                    <div className="text-sm font-semibold text-slate-500 dark:text-slate-400">{t('auth_page.cal_today_capacity')}</div>
+                    <div className="font-display text-2xl font-bold">{t('auth_page.cal_team')}</div>
                   </div>
-                  <div className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">82% elérhető</div>
+                  <div className="rounded-full bg-primary/10 px-3 py-1 text-sm font-semibold text-primary">{t('auth_page.cal_available_pct')}</div>
                 </div>
                 <div className="grid grid-cols-7 gap-2 text-center text-xs text-slate-500">
                   {['H','K','Sze','Cs','P','Szo','V'].map((d) => <div key={d}>{d}</div>)}
@@ -843,9 +848,9 @@ const Auth = () => {
                   ))}
                 </div>
                 <div className="mt-4 flex items-center gap-4 text-xs text-slate-500">
-                  <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />Elérhető</span>
-                  <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-amber-400" />Szabadság</span>
-                  <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-rose-400" />Betegszabadság</span>
+                  <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />{t('auth_page.cal_legend_available')}</span>
+                  <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-amber-400" />{t('auth_page.cal_legend_leave')}</span>
+                  <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-rose-400" />{t('auth_page.cal_legend_sick')}</span>
                 </div>
               </div>
             </div>
@@ -857,25 +862,25 @@ const Auth = () => {
           <div className="mb-10 text-center">
             <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
               <Star className="h-4 w-4" />
-              Miben más az Effectime
+              {t('auth_page.badge_comparison')}
             </div>
             <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
-              Hagyományos eszközök vs. Effectime
+              {t('auth_page.comparison_title')}
             </h2>
             <p className="mt-4 text-slate-600 dark:text-slate-300">
-              Nézd meg, mi az a különbség, ami valóban számít a napi működésben.
+              {t('auth_page.comparison_desc')}
             </p>
           </div>
 
           <div className="overflow-hidden rounded-[2rem] border border-slate-200 bg-white shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
             {/* Header row */}
             <div className="grid grid-cols-3 gap-0 border-b border-slate-200 dark:border-white/10">
-              <div className="p-5 text-sm font-semibold text-slate-500 dark:text-slate-400">Szempont</div>
+              <div className="p-5 text-sm font-semibold text-slate-500 dark:text-slate-400">{t('auth_page.col_aspect')}</div>
               <div className="border-x border-slate-200 bg-slate-50 p-5 text-center text-sm font-semibold text-slate-500 dark:border-white/10 dark:bg-white/[0.03] dark:text-slate-400">
-                Hagyományos megoldások
+                {t('auth_page.col_old')}
               </div>
               <div className="bg-gradient-to-br from-primary/8 to-emerald-400/8 p-5 text-center text-sm font-bold text-primary dark:from-primary/15 dark:to-emerald-400/15">
-                Effectime ✦
+                {t('auth_page.col_new')}
               </div>
             </div>
 
@@ -905,10 +910,10 @@ const Auth = () => {
           <div className="mb-8 text-center">
             <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-semibold text-primary">
               <HelpCircle className="h-4 w-4" />
-              Gyakori kérdések
+              {t('auth_page.badge_faq')}
             </div>
             <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
-              Amit indulás előtt érdemes tudni
+              {t('auth_page.faq_title')}
             </h2>
           </div>
           <div className="divide-y divide-slate-200 rounded-[2rem] border border-slate-200 bg-white dark:divide-white/10 dark:border-white/10 dark:bg-white/[0.045]">
@@ -933,13 +938,13 @@ const Auth = () => {
           <div className="mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-gradient-to-r from-primary to-emerald-400 p-8 text-white shadow-xl shadow-primary/20 sm:p-10">
             <div className="grid gap-6 lg:grid-cols-[1fr_auto] lg:items-center">
               <div>
-                <h2 className="font-display text-3xl font-bold">Kezdd el percek alatt</h2>
+                <h2 className="font-display text-3xl font-bold">{t('auth_page.cta_title')}</h2>
                 <p className="mt-3 max-w-2xl text-white/85">
-                  Hozz létre fiókot, állítsd be a munkaterületet és nézd meg, hogyan válik átláthatóbbá a csapatod kapacitása.
+                  {t('auth_page.cta_desc')}
                 </p>
               </div>
               <Button size="lg" variant="secondary" onClick={() => setView('register')} className="rounded-2xl px-8 font-semibold transition-all hover:-translate-y-0.5 hover:shadow-lg">
-                Regisztráció
+                {t('auth_page.btn_cta_register')}
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
             </div>
@@ -949,15 +954,15 @@ const Auth = () => {
         {/* ── Footer links ── */}
         <footer className="border-t border-slate-200/70 bg-white py-8 text-center text-sm text-slate-400 dark:border-white/10 dark:bg-[#060a17]">
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-6 gap-y-2 px-4">
-            <button onClick={() => navigate('/')} className="hover:text-slate-700 dark:hover:text-slate-200">Főoldal</button>
+            <button onClick={() => navigate('/')} className="hover:text-slate-700 dark:hover:text-slate-200">{t('auth_page.footer_home')}</button>
             <span className="text-slate-200 dark:text-slate-700">·</span>
-            <span className="cursor-default">Adatvédelmi tájékoztató</span>
+            <span className="cursor-default">{t('auth_page.footer_privacy')}</span>
             <span className="text-slate-200 dark:text-slate-700">·</span>
-            <span className="cursor-default">Felhasználási feltételek</span>
+            <span className="cursor-default">{t('auth_page.footer_terms')}</span>
             <span className="text-slate-200 dark:text-slate-700">·</span>
-            <span className="cursor-default">Támogatás</span>
+            <span className="cursor-default">{t('auth_page.footer_support')}</span>
           </div>
-          <p className="mt-4 text-xs text-slate-300 dark:text-slate-600">© {new Date().getFullYear()} Effectime. Minden jog fenntartva.</p>
+          <p className="mt-4 text-xs text-slate-300 dark:text-slate-600">{t('auth_page.footer_copyright', { year: String(new Date().getFullYear()) })}</p>
         </footer>
       </main>
     </div>

@@ -1,3 +1,26 @@
+## 2026-05-11 — v3.7.3 Language selector on public pages; full i18n for Landing, Auth, ResetPassword
+
+### Added — Language selector visible on all public pages before login; auto-detects visitor locale
+
+Per the v3.7.x localization mandate the language selector (flag icons) now appears in the header of every public-facing page so visitors can switch language before they ever log in. Browser locale auto-detection picks the correct language for new visitors with no saved preference (HU → Hungarian, CS → Czech, SK → Slovak, PL → Polish, everything else → English).
+
+**New locale namespaces (added to en, hu, cs, sk, pl in lockstep):**
+
+- `landing` — all strings on the marketing landing page: nav links, hero title (split `hero_title_prefix` / `hero_title_accent` for grammatical flexibility), feature/benefit items f1–f6 / b1–b6, CTA buttons, footer copyright with `{{year}}` interpolation.
+- `auth_page` — all strings on the Auth page: feature panel (f1–f6), trust badges (tb1–tb6), workflow steps (ws1–ws3), comparison table (cmp1–cmp6), FAQ accordion (faq1–faq6), form labels, validation toasts, verify-email view (split `verify_subtitle_prefix` / `verify_subtitle_suffix` to keep email address bold with correct word order per language).
+- `reset_password` — all 12 strings on the password-reset page: title, subtitle, labels, button, toasts, validation messages.
+
+**Component updates:**
+
+- `Landing.tsx` — `LanguageSelector` added to header; all hardcoded strings replaced with `t('landing.*')`; `FEATURES` and `BENEFITS` arrays moved inside component to access `t()`; hero H1 uses split-key pattern for accented span.
+- `Auth.tsx` — `LanguageSelector` added to header; all data arrays (`features`, `trustBadges`, `workflowSteps`, `comparisonRows`, `faqItems`) moved inside component; all toasts and UI strings use `t('auth_page.*')`; verify-subtitle uses prefix/suffix split.
+- `ResetPassword.tsx` — `LanguageSelector` placed in both render branches (invalid-link fallback + main form); all 12 strings replaced with `t('reset_password.*')`.
+
+**Files touched (8):**
+`src/i18n/resources/en.ts`, `src/i18n/resources/hu.ts`, `src/i18n/resources/cs.ts`, `src/i18n/resources/sk.ts`, `src/i18n/resources/pl.ts`, `src/pages/Landing.tsx`, `src/pages/Auth.tsx`, `src/pages/ResetPassword.tsx`
+
+---
+
 ## 2026-05-11 — v3.7.2 Localization sweep: top nav, header, settings sections, HR workflow inbox, attendance buttons
 
 ### Added — Full localization of remaining hardcoded UI strings across all 5 locales
