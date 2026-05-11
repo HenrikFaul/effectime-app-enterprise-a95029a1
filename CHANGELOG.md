@@ -1,3 +1,24 @@
+## 2026-05-11 — v3.7.7 Fix site assignment in time attendance: RLS bypass + CHECK constraint
+
+### Fixed — Employee site-assignment (two root causes)
+
+**1. RLS policies blocked employee writes (Critical)**
+The `enterprise_shift_assignments` table's INSERT/UPDATE/DELETE policies require `owner` or `resourceAssistant` role. Regular employees (role `member`) received a silent rejection when the time-attendance day editor tried to save a site assignment. The SELECT policy correctly allows all members to read.
+
+**2. `shift_role_or_skill` CHECK constraint violated (Critical)**
+The table enforces `business_role IS NOT NULL OR skill_id IS NOT NULL`. The previous `upsertSiteAssignment` sent neither field, so every insert failed at the DB level with a constraint violation.
+
+**Fix — two SECURITY DEFINER RPCs (`20260511100000_attendance_site_assignment_rpcs.sql`)**
+- `attendance_upsert_site_assignment(p_workspace_id, p_membership_id, p_office_id, p_shift_date)` — verifies the caller owns the membership record, reads their `business_role` (falls back to `'employee'` if not set), and does an atomic upsert keyed on the `uq_shift_user_date` constraint.
+- `attendance_remove_site_assignment(p_workspace_id, p_membership_id, p_shift_date)` — allows the membership owner or a workspace admin to delete the assignment.
+- `api.ts` `upsertSiteAssignment` / `removeSiteAssignment` updated to call these RPCs (no frontend signature change; `userId` arg is now unused since the RPC uses `auth.uid()` server-side).
+
+**Files touched (2):** `src/components/enterprise/time-attendance/api.ts`, `supabase/migrations/20260511100000_attendance_site_assignment_rpcs.sql` (new)
+
+**Test result:** All existing tests pass. 0 TypeScript errors. Production build clean.
+
+---
+
 ## 2026-05-11 — v3.7.6 Critical follow-ups from v3.7.5 audit: correct onConflict key, full conflict-engine localization, hardcoded HU sweep
 
 ### Fixed — Runtime correctness and localization gaps surfaced after v3.7.5

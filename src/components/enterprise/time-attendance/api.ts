@@ -176,27 +176,20 @@ export async function fetchShiftAssignmentsForMember(
 export async function upsertSiteAssignment(
   workspaceId: string,
   membershipId: string,
-  userId: string,
+  _userId: string, // auth.uid() is resolved server-side by the SECURITY DEFINER RPC
   officeId: string,
   shiftDate: string,
 ): Promise<void> {
-  // Single atomic upsert keyed on (workspace_id, user_id, shift_date) — the
-  // existing UNIQUE constraint `uq_shift_user_date` on the table.
-  // Avoids the previous delete-then-insert pattern, which could leave no
-  // assignment if a network error occurred between the two operations.
-  const { error } = await sb
-    .from('enterprise_shift_assignments')
-    .upsert(
-      {
-        workspace_id: workspaceId,
-        membership_id: membershipId,
-        user_id: userId,
-        office_id: officeId,
-        shift_date: shiftDate,
-        created_by: userId,
-      },
-      { onConflict: 'workspace_id,user_id,shift_date' },
-    );
+  // Route through a SECURITY DEFINER RPC so that:
+  //   • Regular employees can write (table RLS blocks non-admin direct writes)
+  //   • business_role is populated from the membership (satisfies shift_role_or_skill CHECK)
+  //   • The upsert is keyed on uq_shift_user_date (workspace_id, user_id, shift_date)
+  const { error } = await sb.rpc('attendance_upsert_site_assignment', {
+    p_workspace_id:  workspaceId,
+    p_membership_id: membershipId,
+    p_office_id:     officeId,
+    p_shift_date:    shiftDate,
+  });
   if (error) throw error;
 }
 
@@ -205,12 +198,11 @@ export async function removeSiteAssignment(
   membershipId: string,
   shiftDate: string,
 ): Promise<void> {
-  const { error } = await sb
-    .from('enterprise_shift_assignments')
-    .delete()
-    .eq('workspace_id', workspaceId)
-    .eq('membership_id', membershipId)
-    .eq('shift_date', shiftDate);
+  const { error } = await sb.rpc('attendance_remove_site_assignment', {
+    p_workspace_id:  workspaceId,
+    p_membership_id: membershipId,
+    p_shift_date:    shiftDate,
+  });
   if (error) throw error;
 }
 
