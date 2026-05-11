@@ -929,6 +929,7 @@ const hu = {
     error_end_before_start: 'A záró dátum nem lehet korábbi a kezdő dátumnál',
     error_blocking: 'Nem küldhető be: blokkolt ütközések vannak',
     error_attachment: 'A csatolmány feltöltése nem sikerült',
+    error_validation_failed: 'Az ellenőrzés nem sikerült — kérjük, próbálja újra',
     types: {
       vacation: 'Szabadság',
       sick_leave: 'Betegszabadság',
@@ -1425,6 +1426,8 @@ const hu = {
     submit_warning_confirm: 'Figyelmeztetések:\n\n{{issues}}\n\nMégis benyújtod?',
     submit_success: 'Időszak benyújtva jóváhagyásra',
     submit_failed: 'Benyújtás sikertelen',
+    warn_no_segments: 'Egyetlen rögzített szegmens sincs.',
+    warn_low_hours: 'A ledolgozott idő ({{worked}}h) jóval az elvárt alatt van ({{expected}}h, levonva a szabadságokat).',
   },
   landing: {
     nav_workspace: 'Munkaterület',

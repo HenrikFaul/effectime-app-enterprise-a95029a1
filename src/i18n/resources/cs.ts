@@ -661,6 +661,7 @@ const cs = {
     error_end_before_start: 'Datum ukončení nemůže být dříve než datum zahájení',
     error_blocking: 'Nelze odeslat: jsou blokující konflikty',
     error_attachment: 'Nahrávání přílohy selhalo',
+    error_validation_failed: 'Ověření se nezdařilo — zkuste to prosím znovu',
     types: {
       vacation: 'Dovolená',
       sick_leave: 'Nemocenská',
@@ -1157,6 +1158,8 @@ const cs = {
     submit_warning_confirm: 'Upozornění:\n\n{{issues}}\n\nPřesto odeslat?',
     submit_success: 'Období odesláno ke schválení',
     submit_failed: 'Odeslání selhalo',
+    warn_no_segments: 'Nebyl zaznamenán žádný časový segment.',
+    warn_low_hours: 'Odpracované hodiny ({{worked}}h) jsou výrazně pod očekáváním ({{expected}}h po odečtení dovolené).',
   },
   landing: {
     nav_workspace: 'Pracovní prostor',

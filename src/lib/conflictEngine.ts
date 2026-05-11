@@ -11,6 +11,9 @@ export interface ConflictResult {
 /**
  * Validate a leave request against workspace rules.
  * Returns an array of conflicts (empty = no conflicts).
+ *
+ * Throws if any required data cannot be fetched — callers must treat a thrown
+ * error as "validation could not complete" and block submission accordingly.
  */
 export async function validateLeaveRequest(
   workspaceId: string,
@@ -61,12 +64,32 @@ export async function validateLeaveRequest(
       .eq('status', 'active'),
   ]);
 
+  // Surface fetch errors — never silently return "no conflicts" when data is missing.
+  // A network or auth failure here must block submission so bad requests aren't let through.
+  const fetchErrors = [
+    holidaysRes.error && `holidays: ${holidaysRes.error.message}`,
+    blockedRes.error && `blocked_dates: ${blockedRes.error.message}`,
+    rulesRes.error && `daily_rules: ${rulesRes.error.message}`,
+    existingRequestsRes.error && `leave_requests: ${existingRequestsRes.error.message}`,
+    officeRulesRes.error && `office_coverage_rules: ${officeRulesRes.error.message}`,
+    membershipsRes.error && `memberships: ${membershipsRes.error.message}`,
+  ].filter(Boolean);
+
+  if (fetchErrors.length > 0) {
+    throw new Error(`Validáció sikertelen — adatbetöltési hiba: ${fetchErrors.join('; ')}`);
+  }
+
   const holidays = (holidaysRes.data as any[]) || [];
   const blockedDates = (blockedRes.data as any[]) || [];
   const dailyRules = (rulesRes.data as any[]) || [];
   const existingRequests = (existingRequestsRes.data as any[]) || [];
   const officeRules = (officeRulesRes.data as any[]) || [];
   const memberships = (membershipsRes.data as any[]) || [];
+
+  // Build a user_id → business_role map for fast role-scoped counting.
+  const memberRoleByUserId = new Map<string, string>(
+    memberships.map((m: any) => [m.user_id as string, (m.business_role ?? '') as string]),
+  );
 
   // 1. Check blocked dates (BLOCKING)
   for (const bd of blockedDates) {
@@ -92,16 +115,18 @@ export async function validateLeaveRequest(
     }
   }
 
-  // 3. Check daily max-off rules
+  // 3. Check daily max-off rules.
+  //
+  // ruleApplies: returns true when a daily_rule governs a given date+dow.
+  // Empty days_of_week (and no legacy day_of_week) means "all days" — consistent
+  // with officeRuleApplies below.
   const ruleApplies = (rule: any, dateStr: string, dow: number): boolean => {
-    // Specific date rule
     if (rule.rule_date) return rule.rule_date === dateStr;
-    // Day-of-week rule (supports both legacy single day and new array)
     const days: number[] = (rule.days_of_week && rule.days_of_week.length > 0)
       ? rule.days_of_week
       : (rule.day_of_week !== null && rule.day_of_week !== undefined ? [rule.day_of_week] : []);
-    if (!days.includes(dow)) return false;
-    // Validity range
+    // Empty days array → rule applies every day of the week.
+    if (days.length > 0 && !days.includes(dow)) return false;
     if (rule.valid_from && dateStr < rule.valid_from) return false;
     if (rule.valid_until && dateStr > rule.valid_until) return false;
     return true;
@@ -122,9 +147,21 @@ export async function validateLeaveRequest(
     for (const rule of applicable) {
       if (rule.max_off === null || rule.max_off === undefined) continue;
 
+      // Resolve which roles this rule constrains (prefer multi-value array over legacy scalars).
+      const constrainedRoles: string[] = (rule.role_filters && rule.role_filters.length > 0)
+        ? rule.role_filters
+        : (rule.role_filter ? [rule.role_filter] : (rule.team_filter ? [rule.team_filter] : []));
+
+      // Count how many OTHER members (respecting role scope) already have leave on this day.
       const offCount = existingRequests.filter((req: any) => {
         if (req.user_id === userId) return false;
-        return req.start_date <= dateStr && req.end_date >= dateStr;
+        if (!(req.start_date <= dateStr && req.end_date >= dateStr)) return false;
+        // When the rule has a role filter, only count members whose business_role is in scope.
+        if (constrainedRoles.length > 0) {
+          const theirRole = memberRoleByUserId.get(req.user_id) ?? '';
+          if (!constrainedRoles.includes(theirRole)) return false;
+        }
+        return true;
       }).length;
 
       if (offCount >= rule.max_off) {
@@ -152,7 +189,6 @@ export async function validateLeaveRequest(
   const myMembership = memberships.find((m: any) => m.user_id === userId);
   const officeRuleApplies = (rule: any, dateStr: string, dow: number): boolean => {
     if (rule.rule_date) return rule.rule_date === dateStr;
-    // Support both multi-value array (new) and legacy scalar day_of_week column.
     const days: number[] = (rule.days_of_week && rule.days_of_week.length > 0)
       ? rule.days_of_week
       : (rule.day_of_week !== null && rule.day_of_week !== undefined ? [rule.day_of_week] : []);
@@ -167,7 +203,6 @@ export async function validateLeaveRequest(
     const dow = getDay(day);
     const applicable = officeRules.filter((r: any) => officeRuleApplies(r, dateStr, dow));
     for (const rule of applicable) {
-      // Resolve effective roles (prefer multi-value)
       const effectiveRoles: string[] = (rule.business_roles && rule.business_roles.length > 0)
         ? rule.business_roles
         : (rule.business_role ? [rule.business_role] : []);
@@ -206,13 +241,13 @@ export async function validateLeaveRequest(
       }
     }
   }
+
+  // 4. Self-overlap check (WARNING)
   const ownOverlapping = existingRequests.filter((req: any) => {
     if (req.user_id !== userId) return false;
-    const reqStart = req.start_date;
-    const reqEnd = req.end_date;
     const myStart = requestDateStrings[0];
     const myEnd = requestDateStrings[requestDateStrings.length - 1];
-    return reqStart <= myEnd && reqEnd >= myStart;
+    return req.start_date <= myEnd && req.end_date >= myStart;
   });
 
   if (ownOverlapping.length > 0) {

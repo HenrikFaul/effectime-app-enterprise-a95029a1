@@ -149,7 +149,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
 
   const handleSubmit = async () => {
     if (!period) return;
-    const issues = collectSubmissionWarnings(period, segments);
+    const issues = collectSubmissionWarnings(period, segments, t);
     if (issues.length > 0) {
       const proceed = confirm(t('attendance_view.submit_warning_confirm', { issues: issues.join('\n') }));
       if (!proceed) return;
@@ -495,12 +495,21 @@ export function EmployeeMonthView({ workspaceId }: Props) {
   );
 }
 
-function collectSubmissionWarnings(period: AttendancePeriod, segments: AttendanceSegment[]): string[] {
+function collectSubmissionWarnings(
+  period: AttendancePeriod,
+  segments: AttendanceSegment[],
+  t: (key: any, vars?: Record<string, string>) => string,
+): string[] {
   const warnings: string[] = [];
-  if (segments.length === 0) warnings.push('• Nincs egyetlen rögzített szegmens sem.');
-  const t = period.totals;
-  if (t.worked_hours < t.expected_after_leave * 0.5) {
-    warnings.push(`• A ledolgozott idő (${t.worked_hours}h) jóval az elvárt alatt van (${t.expected_after_leave}h, levonva a szabadságokat).`);
+  if (segments.length === 0) {
+    warnings.push(`• ${t('attendance_view.warn_no_segments')}`);
+  }
+  const totals = period.totals;
+  if (totals.worked_hours < totals.expected_after_leave * 0.5) {
+    warnings.push(`• ${t('attendance_view.warn_low_hours', {
+      worked: String(totals.worked_hours),
+      expected: String(totals.expected_after_leave),
+    })}`);
   }
   return warnings;
 }
