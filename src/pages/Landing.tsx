@@ -4,53 +4,56 @@ import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { CalendarDays, Users, BarChart3, Shield, ArrowRight, CheckCircle2, ClipboardCheck, LayoutDashboard, Sparkles, LogOut } from 'lucide-react';
 import { EffectimeLogo } from '@/components/EffectimeLogo';
-
-const FEATURES = [
-  {
-    icon: CalendarDays,
-    title: 'Egységes csapatnaptár',
-    description: 'Lásd egy nézetben a kollégák elérhetőségét, szabadságokat és projektütemezéseket — automatikus szinkronizációval.',
-  },
-  {
-    icon: ClipboardCheck,
-    title: 'Szabadság- és kérelemkezelés',
-    description: 'Egyszerű igénylés, gyors jóváhagyás. Kvóták, féléves egyenlegek és félnapos szabadságok támogatásával.',
-  },
-  {
-    icon: LayoutDashboard,
-    title: 'Erőforrás-tervezés',
-    description: 'Vizualizáld csapatod kapacitását, kerüld el a túlterheltséget és tartsd egyensúlyban a projekteket.',
-  },
-  {
-    icon: Sparkles,
-    title: 'Intelligens beosztás varázsló',
-    description: 'Automatikus javaslatokat készít a szabadságok, ünnepnapok, telephely-prioritás és pozícióegyezés figyelembevételével.',
-  },
-  {
-    icon: Users,
-    title: 'Munkaterületek',
-    description: 'Külön munkaterületek cégegységenként, dedikált tagsággal, szabályokkal és audit traillel.',
-  },
-  {
-    icon: CheckCircle2,
-    title: 'Jóváhagyási munkafolyamatok',
-    description: 'Átlátható, követhető folyamatok minden kérelemhez. Értesítések, naplózás és exportálás.',
-  },
-];
-
-const BENEFITS = [
-  'Korlátlan munkaterület tagok',
-  'Jóváhagyási munkafolyamatok',
-  'iCal / naptár integráció',
-  'Agilis sprint-integráció',
-  'Email értesítések',
-  'Dedikált ügyfélszolgálat',
-];
+import { useT } from '@/i18n/I18nProvider';
+import { LanguageSelector } from '@/components/i18n/LanguageSelector';
 
 export default function Landing() {
   const navigate = useNavigate();
   const { user, signOut } = useAuth();
   const [searchParams] = useSearchParams();
+  const t = useT();
+
+  const FEATURES = [
+    {
+      icon: CalendarDays,
+      title: t('landing.f1_title'),
+      description: t('landing.f1_desc'),
+    },
+    {
+      icon: ClipboardCheck,
+      title: t('landing.f2_title'),
+      description: t('landing.f2_desc'),
+    },
+    {
+      icon: LayoutDashboard,
+      title: t('landing.f3_title'),
+      description: t('landing.f3_desc'),
+    },
+    {
+      icon: Sparkles,
+      title: t('landing.f4_title'),
+      description: t('landing.f4_desc'),
+    },
+    {
+      icon: Users,
+      title: t('landing.f5_title'),
+      description: t('landing.f5_desc'),
+    },
+    {
+      icon: CheckCircle2,
+      title: t('landing.f6_title'),
+      description: t('landing.f6_desc'),
+    },
+  ];
+
+  const BENEFITS = [
+    t('landing.b1'),
+    t('landing.b2'),
+    t('landing.b3'),
+    t('landing.b4'),
+    t('landing.b5'),
+    t('landing.b6'),
+  ];
 
   // From the landing page we always land on the workspace picker, never on
   // whichever workspace was last opened. Pass ?select=1 so Enterprise.tsx
@@ -74,19 +77,20 @@ export default function Landing() {
         >
           <EffectimeLogo size={32} variant="full" />
           <div className="flex items-center gap-2">
+            <LanguageSelector size="sm" align="end" />
             {user ? (
               <>
                 <Button variant="outline" size="sm" onClick={goToWorkspaceSelector} className="rounded-xl">
-                  Munkaterület
+                  {t('landing.nav_workspace')}
                 </Button>
                 <Button variant="destructive" size="sm" onClick={signOut} className="rounded-xl gap-1.5">
                   <LogOut className="h-4 w-4" />
-                  <span className="hidden sm:inline">Kilépés</span>
+                  <span className="hidden sm:inline">{t('landing.nav_signout')}</span>
                 </Button>
               </>
             ) : (
               <Button variant="outline" size="sm" onClick={() => navigate('/auth')} className="rounded-xl">
-                Bejelentkezés
+                {t('landing.nav_signin')}
               </Button>
             )}
           </div>
@@ -108,17 +112,16 @@ export default function Landing() {
           <div className="mx-auto w-full max-w-[min(1280px,92vw)] text-center">
             <div className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm text-primary-foreground font-semibold mb-6 shadow-lg shadow-primary/25">
               <Shield className="h-3.5 w-3.5" />
-              Enterprise kapacitáskezelő platform
+              {t('landing.badge_platform')}
             </div>
             <h1 className="font-display font-bold leading-tight mb-6 text-foreground"
                 style={{ fontSize: 'clamp(2.25rem, 5.5vw, 4.75rem)' }}>
-              Navigáld vállalkozásod erőforrásait{' '}
-              <span className="text-primary">stratégiával</span>
+              {t('landing.hero_title_prefix')}{' '}
+              <span className="text-primary">{t('landing.hero_title_accent')}</span>
             </h1>
             <p className="text-muted-foreground leading-relaxed mx-auto mb-10"
                style={{ fontSize: 'clamp(1rem, 1.4vw, 1.25rem)', maxWidth: '52rem' }}>
-              Az Effectime platformmal valós időben láthatod és optimalizálhatod csapatod kapacitását.
-              Egységesítjük a tervezést, projektek ütemezését és az erőforrás-gazdálkodást, hogy szervezeted minden pillanatban a stratégiára koncentrálhasson.
+              {t('landing.hero_subtitle')}
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Button
@@ -126,7 +129,7 @@ export default function Landing() {
                 className="rounded-xl gradient-primary text-primary-foreground px-8 gap-2 shadow-glow"
                 onClick={() => (user ? goToWorkspaceSelector() : navigate('/auth'))}
               >
-                {user ? 'Munkaterületre' : 'Kezdje el ingyen'}
+                {user ? t('landing.btn_goto_workspace') : t('landing.btn_start_free')}
                 <ArrowRight className="h-4 w-4" />
               </Button>
               {!user && (
@@ -136,7 +139,7 @@ export default function Landing() {
                   className="rounded-xl px-8"
                   onClick={() => navigate('/auth')}
                 >
-                  Bejelentkezés
+                  {t('landing.btn_signin')}
                 </Button>
               )}
             </div>
@@ -147,10 +150,10 @@ export default function Landing() {
         <section className="shell-page" style={{ paddingBlock: 'clamp(3rem, 6vw, 5rem)' }}>
           <div className="mx-auto max-w-2xl text-center mb-12">
             <h2 className="font-display font-bold text-3xl sm:text-4xl">
-              Mindent egy helyen
+              {t('landing.features_title')}
             </h2>
             <p className="mt-4 text-muted-foreground leading-relaxed">
-              Az Effectime modulokra épül, melyek együtt egy teljes vállalati erőforrás-rendszert alkotnak.
+              {t('landing.features_desc')}
             </p>
           </div>
           <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
@@ -172,10 +175,10 @@ export default function Landing() {
             <div className="grid grid-cols-1 lg:grid-cols-[1.4fr_1fr] gap-12 items-center">
               <div>
                 <h2 className="font-display font-bold text-2xl sm:text-3xl mb-4">
-                  Mindent tartalmaz, ami kell
+                  {t('landing.benefits_title')}
                 </h2>
                 <p className="text-muted-foreground mb-8 leading-relaxed">
-                  Nincs szükség további integrációkra. Az Effectime Enterprise-ban minden funkció beépítve érkezik.
+                  {t('landing.benefits_desc')}
                 </p>
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {BENEFITS.map((b) => (
@@ -187,16 +190,16 @@ export default function Landing() {
                 </ul>
               </div>
               <div className="rounded-2xl border border-border bg-card p-8 flex flex-col gap-6 shadow-sm">
-                <div className="font-display font-bold text-xl">Próbálja ki már ma</div>
+                <div className="font-display font-bold text-xl">{t('landing.cta_title')}</div>
                 <p className="text-muted-foreground text-sm leading-relaxed">
-                  Regisztráljon ingyenesen, hozza létre munkaterületét, és invitálja meg csapatát percek alatt.
+                  {t('landing.cta_desc')}
                 </p>
                 <Button
                   size="lg"
                   className="rounded-xl gradient-primary text-primary-foreground gap-2 shadow-glow"
                   onClick={() => (user ? goToWorkspaceSelector() : navigate('/auth'))}
                 >
-                  {user ? 'Munkaterületre' : 'Ingyenes regisztráció'}
+                  {user ? t('landing.btn_to_workspace') : t('landing.btn_free_reg')}
                   <ArrowRight className="h-4 w-4" />
                 </Button>
               </div>
@@ -211,7 +214,7 @@ export default function Landing() {
           style={{ paddingInline: 'var(--density-page-pad-x)' }}
         >
           <EffectimeLogo size={24} variant="full" />
-          <span>© {new Date().getFullYear()} Effectime. Minden jog fenntartva.</span>
+          <span>{t('landing.footer_copyright', { year: String(new Date().getFullYear()) })}</span>
         </div>
       </footer>
     </div>
