@@ -7,7 +7,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText,
   CheckCircle2, RotateCcw, Lock, Loader2, Send, AlertTriangle,
+  XCircle, ChevronDown,
 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format, getYear, getMonth, addMonths, subMonths } from 'date-fns';
 import { hu } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -196,6 +198,8 @@ export function AdminOverview({ workspaceId }: Props) {
             </Select>
           </div>
 
+          <PayrollReadinessPanel rows={rows} />
+
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="text-[10px] uppercase tracking-wide text-muted-foreground border-b">
@@ -280,6 +284,100 @@ export function AdminOverview({ workspaceId }: Props) {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function PayrollReadinessPanel({ rows }: { rows: AdminPeriodRow[] }) {
+  const [open, setOpen] = useState(false);
+
+  if (rows.length === 0) return null;
+
+  const total = rows.length;
+  const noPeriod      = rows.filter(r => !r.status).length;
+  const draft         = rows.filter(r => r.status === 'draft').length;
+  const returned      = rows.filter(r => r.status === 'returned').length;
+  const submitted     = rows.filter(r => r.status === 'submitted').length;
+  const approved      = rows.filter(r => r.status === 'approved').length;
+  const locked        = rows.filter(r => r.status === 'locked').length;
+  const exported      = rows.filter(r => r.status === 'exported').length;
+
+  const checks: { label: string; ok: boolean; detail: string }[] = [
+    {
+      label: 'Minden tagnak van nyitott időszaka',
+      ok: noPeriod === 0,
+      detail: noPeriod > 0 ? `${noPeriod} tagnak hiányzik — ők nem szerepelnek az exportban` : '',
+    },
+    {
+      label: 'Nincs vázlat státuszú időszak',
+      ok: draft === 0,
+      detail: draft > 0 ? `${draft} tag még nem nyújtotta be az ívét` : '',
+    },
+    {
+      label: 'Nincs visszaküldött időszak',
+      ok: returned === 0,
+      detail: returned > 0 ? `${returned} tag visszaküldött időszaka javításra vár` : '',
+    },
+    {
+      label: 'Minden benyújtott időszak jóváhagyva',
+      ok: submitted === 0,
+      detail: submitted > 0 ? `${submitted} elbírálatlan benyújtás van` : '',
+    },
+    {
+      label: 'Minden jóváhagyott időszak zárolva',
+      ok: approved === 0,
+      detail: approved > 0 ? `${approved} jóváhagyott időszakot még zárolni kell` : '',
+    },
+    {
+      label: 'Van zárolt időszak az exporthoz',
+      ok: locked > 0 || exported > 0,
+      detail: locked === 0 && exported === 0 ? 'Nincs zárolt időszak — az XLSX export üres lesz' : '',
+    },
+  ];
+
+  const failCount = checks.filter(c => !c.ok).length;
+  const allGreen = failCount === 0;
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen} className="mb-3">
+      <CollapsibleTrigger className="w-full">
+        <div className={`flex items-center gap-2 rounded-md px-3 py-2 text-sm border ${
+          allGreen ? 'bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900' :
+          failCount <= 2 ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800' :
+          'bg-destructive/5 border-destructive/20'
+        }`}>
+          {allGreen
+            ? <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+            : <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+          }
+          <span className="flex-1 text-left font-medium">
+            {allGreen
+              ? 'Bérelőkészítés kész — minden ellenőrzés zöld'
+              : `${failCount} bérelőkészítési figyelmeztetés`
+            }
+          </span>
+          <span className="text-xs text-muted-foreground">{total} tag · {locked} zárolva · {exported} exportálva</span>
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
+        </div>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="mt-2 rounded-md border bg-card px-3 py-2 space-y-1.5">
+          {checks.map((c, i) => (
+            <div key={i} className="flex items-start gap-2 text-sm">
+              {c.ok
+                ? <CheckCircle2 className="h-4 w-4 text-green-600 mt-0.5 shrink-0" />
+                : <XCircle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+              }
+              <div className="flex-1 min-w-0">
+                <span className={c.ok ? 'text-muted-foreground' : ''}>{c.label}</span>
+                {!c.ok && c.detail && (
+                  <p className="text-xs text-destructive">{c.detail}</p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 

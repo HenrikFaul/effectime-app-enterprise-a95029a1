@@ -1,12 +1,14 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { GitMerge, ListChecks, Plug, Inbox, Server } from 'lucide-react';
+import { GitMerge, ListChecks, Plug, Inbox, Server, Stethoscope, ClipboardList } from 'lucide-react';
 import { useT } from '@/i18n/I18nProvider';
 import { OnboardingTemplates } from './OnboardingTemplates';
 import { OnboardingInbox } from './OnboardingInbox';
 import { AccessSystems } from './AccessSystems';
 import { AccessTemplates } from './AccessTemplates';
 import { AccessInbox } from './AccessInbox';
+import { HRWorkflowTemplates } from './HRWorkflowTemplates';
+import { HRWorkflowInbox } from './HRWorkflowInbox';
 
 interface Props {
   workspaceId: string;
@@ -29,14 +31,24 @@ export function WorkflowsModule({ workspaceId, isAdmin, userId }: Props) {
           </div>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="onboarding-templates">
+          <Tabs defaultValue="hr-inbox">
             <TabsList className="flex flex-wrap h-auto gap-1">
+              <TabsTrigger value="hr-inbox" className="gap-1">
+                <Inbox className="h-4 w-4" />
+                HR folyamatok
+              </TabsTrigger>
+              {isAdmin && (
+                <TabsTrigger value="hr-templates" className="gap-1">
+                  <Stethoscope className="h-4 w-4" />
+                  HR sablonok
+                </TabsTrigger>
+              )}
               <TabsTrigger value="onboarding-templates" className="gap-1">
                 <ListChecks className="h-4 w-4" />
                 {t('workflows.tabs.onboarding_templates')}
               </TabsTrigger>
               <TabsTrigger value="onboarding-inbox" className="gap-1">
-                <Inbox className="h-4 w-4" />
+                <ClipboardList className="h-4 w-4" />
                 {t('workflows.tabs.onboarding_inbox')}
               </TabsTrigger>
               <TabsTrigger value="access-systems" className="gap-1">
@@ -53,6 +65,14 @@ export function WorkflowsModule({ workspaceId, isAdmin, userId }: Props) {
               </TabsTrigger>
             </TabsList>
 
+            <TabsContent value="hr-inbox" className="mt-4">
+              <HRWorkflowInbox workspaceId={workspaceId} isAdmin={isAdmin} userId={userId} />
+            </TabsContent>
+            {isAdmin && (
+              <TabsContent value="hr-templates" className="mt-4">
+                <HRWorkflowTemplates workspaceId={workspaceId} />
+              </TabsContent>
+            )}
             <TabsContent value="onboarding-templates" className="mt-4">
               <OnboardingTemplates workspaceId={workspaceId} isAdmin={isAdmin} />
             </TabsContent>
