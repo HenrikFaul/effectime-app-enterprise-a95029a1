@@ -27,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -55,14 +56,8 @@ interface OfficeRef {
   name: string;
 }
 
-const STATUS_OPTIONS = [
-  { value: 'all', label: 'Összes státusz' },
-  { value: 'active', label: 'Aktív' },
-  { value: 'invited', label: 'Meghívott' },
-  { value: 'suspended', label: 'Felfüggesztett' },
-];
-
 export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Props) {
+  const { t } = useI18n();
   const [members, setMembers] = useState<Member[]>([]);
   const [offices, setOffices] = useState<OfficeRef[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,7 +101,7 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
 
       const profileMap = new Map((profiles as any[] || []).map((p: any) => [p.user_id, p.display_name]));
       membersList.forEach((m: any) => {
-        m.display_name = profileMap.get(m.user_id) || 'Ismeretlen';
+        m.display_name = profileMap.get(m.user_id) || t('members.unknown_member');
       });
     }
 
@@ -123,7 +118,7 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
       .eq('id', memberId);
 
     if (error) {
-      toast.error('Hiba a szerepkör módosításakor');
+      toast.error(t('members.role_change_failed'));
     } else {
       const member = members.find(m => m.id === memberId);
       await logAuditEvent({
@@ -133,7 +128,7 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
         affected_user_id: member?.user_id,
         metadata: { prev_role: member?.role, new_role: newRole },
       });
-      toast.success('Szerepkör módosítva');
+      toast.success(t('members.role_changed'));
       fetchMembers();
     }
   };
@@ -145,7 +140,7 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
       .eq('id', memberId);
 
     if (error) {
-      toast.error('Hiba az eltávolításkor');
+      toast.error(t('members.remove_failed'));
     } else {
       const member = members.find(m => m.id === memberId);
       await logAuditEvent({
@@ -154,7 +149,7 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
         action: 'membership.removed',
         affected_user_id: member?.user_id,
       });
-      toast.success('Tag eltávolítva');
+      toast.success(t('members.removed'));
       fetchMembers();
     }
     setRemovingId(null);
@@ -168,7 +163,7 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
       .eq('id', memberId);
 
     if (error) {
-      toast.error('Hiba a státusz módosításakor');
+      toast.error(t('members.status_change_failed'));
     } else {
       const member = members.find(m => m.id === memberId);
       await logAuditEvent({
@@ -178,24 +173,24 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
         affected_user_id: member?.user_id,
         metadata: { prev_status: currentStatus, new_status: newStatus },
       });
-      toast.success(newStatus === 'suspended' ? 'Tag felfüggesztve' : 'Tag újraaktiválva');
+      toast.success(newStatus === 'suspended' ? t('members.status_changed_suspended') : t('members.status_changed_active'));
       fetchMembers();
     }
   };
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'owner': return 'Tulajdonos';
-      case 'resourceAssistant': return 'Erőforrás asszisztens';
-      default: return 'Tag';
+      case 'owner': return t('members.roles.owner');
+      case 'resourceAssistant': return t('members.roles.resource_assistant');
+      default: return t('members.roles.member');
     }
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'active': return <Badge variant="default" className="text-xs bg-green-600">Aktív</Badge>;
-      case 'invited': return <Badge variant="secondary" className="text-xs">Meghívott</Badge>;
-      case 'suspended': return <Badge variant="destructive" className="text-xs">Felfüggesztett</Badge>;
+      case 'active': return <Badge variant="default" className="text-xs bg-green-600">{t('members.status_active')}</Badge>;
+      case 'invited': return <Badge variant="secondary" className="text-xs">{t('members.status_invited')}</Badge>;
+      case 'suspended': return <Badge variant="destructive" className="text-xs">{t('members.status_suspended')}</Badge>;
       default: return <Badge variant="outline" className="text-xs">{status}</Badge>;
     }
   };
@@ -267,7 +262,7 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
 
-      toast.success(`Instant user létrehozva: ${data?.display_name || 'új teszt tag'}`);
+      toast.success(t('members.instant_user_created', { name: data?.display_name || 'instant user' }));
       await logAuditEvent({
         workspace_id: workspaceId,
         actor_id: userId,
@@ -282,7 +277,7 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
       });
       fetchMembers();
     } catch (e: any) {
-      toast.error(`Instant user hiba: ${e?.message || 'ismeretlen hiba'}`);
+      toast.error(t('members.instant_user_failed', { message: e?.message || '?' }));
     } finally {
       setCreatingInstantUser(false);
     }
@@ -295,10 +290,10 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
       {isAdmin && (
         <div className="flex justify-end mb-3">
           <Button size="sm" onClick={() => setShowInvite(true)}>
-            <UserPlus className="h-4 w-4 mr-1" /> Új tag hozzáadása
+            <UserPlus className="h-4 w-4 mr-1" /> {t('members.add_member')}
           </Button>
           <Button size="sm" variant="secondary" className="ml-2" onClick={handleInstantUser} disabled={creatingInstantUser}>
-            {creatingInstantUser ? 'Létrehozás...' : 'Instant user'}
+            {creatingInstantUser ? t('members.instant_user_creating') : 'Instant user'}
           </Button>
         </div>
       )}
@@ -309,7 +304,7 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
             <CardContent className="flex items-center justify-between py-3 px-4">
               <div className="flex items-center gap-2">
                 <UsersIcon className="h-4 w-4 text-primary" />
-                <span className="font-medium text-sm">Tagok</span>
+                <span className="font-medium text-sm">{t('members.members_title')}</span>
                 <Badge variant="outline" className="text-[10px]">{members.length}</Badge>
               </div>
               <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
@@ -325,7 +320,7 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
           ) : members.length === 0 ? (
             <Card>
               <CardContent className="text-center py-8 text-muted-foreground">
-                Még nincsenek tagok.
+                {t('members.no_members')}
               </CardContent>
             </Card>
           ) : (
@@ -336,41 +331,48 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
                   <div className="flex flex-wrap items-end gap-3">
                     <div className="space-y-1 min-w-[160px]">
                       <Label className="text-xs flex items-center gap-1">
-                        <Filter className="h-3 w-3" /> Státusz
+                        <Filter className="h-3 w-3" /> {t('members.filter_status')}
                       </Label>
                       <Select value={statusFilter} onValueChange={setStatusFilter}>
                         <SelectTrigger className="h-8 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          {STATUS_OPTIONS.map(o => (
-                            <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
-                          ))}
+                          <SelectItem value="all">{t('members.status_all')}</SelectItem>
+                          <SelectItem value="active">{t('members.status_active')}</SelectItem>
+                          <SelectItem value="invited">{t('members.status_invited')}</SelectItem>
+                          <SelectItem value="suspended">{t('members.status_suspended')}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <MultiSelectFilter
-                      label="Munkakör"
+                      label={t('members.filter_position')}
+                      emptyLabel={t('members.filter_empty')}
+                      allPrefix={t('members.filter_all_prefix')}
+                      selectedCountLabel={t('members.filter_selected_count', { count: businessRoleFilter.length })}
                       options={allBusinessRoles}
                       value={businessRoleFilter}
                       onChange={setBusinessRoleFilter}
                     />
                     <MultiSelectFilter
-                      label="Csapat"
+                      label={t('members.filter_team')}
+                      emptyLabel={t('members.filter_empty')}
+                      allPrefix={t('members.filter_all_prefix')}
+                      selectedCountLabel={t('members.filter_selected_count', { count: teamFilter.length })}
                       options={allTeams}
                       value={teamFilter}
                       onChange={setTeamFilter}
                     />
 
                     <div className="space-y-1 min-w-[160px]">
-                      <Label className="text-xs">Telephely</Label>
+                      <Label className="text-xs">{t('members.filter_location')}</Label>
                       <Select value={locationFilter} onValueChange={setLocationFilter}>
                         <SelectTrigger className="h-8 text-xs">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="all">Összes telephely</SelectItem>
+                          <SelectItem value="all">{t('members.filter_all_location')}</SelectItem>
                           {allLocations.map(loc => (
                             <SelectItem key={loc} value={loc}>{loc}</SelectItem>
                           ))}
@@ -380,12 +382,12 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
 
                     {activeFilterCount > 0 && (
                       <Button variant="ghost" size="sm" onClick={clearFilters} className="h-8">
-                        <X className="h-3 w-3 mr-1" /> Szűrők törlése
+                        <X className="h-3 w-3 mr-1" /> {t('members.filter_clear')}
                       </Button>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground mt-2">
-                    {filteredMembers.length} / {members.length} tag megjelenítve
+                    {t('members.filter_showing', { shown: filteredMembers.length, total: members.length })}
                   </p>
                 </CardContent>
               </Card>
@@ -394,7 +396,7 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
               {filteredMembers.length === 0 ? (
                 <Card>
                   <CardContent className="text-center py-6 text-sm text-muted-foreground">
-                    Nincs a szűrésnek megfelelő tag.
+                    {t('members.filter_no_results')}
                   </CardContent>
                 </Card>
               ) : (
@@ -413,8 +415,8 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="min-w-0">
                               <p className="font-medium text-sm truncate">
-                                {member.display_name || 'Ismeretlen'}
-                                {isSelf && <span className="text-muted-foreground ml-1">(te)</span>}
+                                {member.display_name || t('members.unknown_member')}
+                                {isSelf && <span className="text-muted-foreground ml-1">{t('members.self_suffix')}</span>}
                               </p>
                               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                                 {getStatusBadge(member.status)}
@@ -439,9 +441,9 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
                                     <SelectValue />
                                   </SelectTrigger>
                                   <SelectContent>
-                                    <SelectItem value="member">Tag</SelectItem>
-                                    <SelectItem value="resourceAssistant">Asszisztens</SelectItem>
-                                    <SelectItem value="owner">Tulajdonos</SelectItem>
+                                    <SelectItem value="member">{t('members.roles.member')}</SelectItem>
+                                    <SelectItem value="resourceAssistant">{t('members.roles.resource_assistant')}</SelectItem>
+                                    <SelectItem value="owner">{t('members.roles.owner')}</SelectItem>
                                   </SelectContent>
                                 </Select>
                               )}
@@ -450,7 +452,7 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
                                 size="icon"
                                 className="h-8 w-8"
                                 onClick={() => handleSuspend(member.id, member.status)}
-                                title={member.status === 'suspended' ? 'Újraaktiválás' : 'Felfüggesztés'}
+                                title={member.status === 'suspended' ? t('members.reactivate_title') : t('members.suspend_title')}
                               >
                                 <Shield className="h-4 w-4" />
                               </Button>
@@ -480,15 +482,15 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
       <AlertDialog open={!!removingId} onOpenChange={(o) => !o && setRemovingId(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Tag eltávolítása</AlertDialogTitle>
+            <AlertDialogTitle>{t('members.remove_dialog_title')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Biztosan el akarod távolítani ezt a tagot? Ez a művelet nem vonható vissza.
+              {t('members.remove_dialog_desc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Mégse</AlertDialogCancel>
+            <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction onClick={() => removingId && handleRemove(removingId)}>
-              Eltávolítás
+              {t('members.remove_action')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -523,11 +525,17 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
 
 function MultiSelectFilter({
   label,
+  emptyLabel,
+  allPrefix,
+  selectedCountLabel,
   options,
   value,
   onChange,
 }: {
   label: string;
+  emptyLabel: string;
+  allPrefix: string;
+  selectedCountLabel: string;
   options: string[];
   value: string[];
   onChange: (v: string[]) => void;
@@ -546,17 +554,17 @@ function MultiSelectFilter({
           <Button variant="outline" size="sm" className="h-8 w-full justify-between text-xs font-normal">
             <span className="truncate">
               {value.length === 0
-                ? `Összes ${label.toLowerCase()}`
+                ? `${allPrefix} ${label.toLowerCase()}`
                 : value.length === 1
                 ? value[0]
-                : `${value.length} kiválasztva`}
+                : selectedCountLabel}
             </span>
             <ChevronDown className="h-3 w-3 ml-1 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-56 p-2" align="start">
           {options.length === 0 ? (
-            <p className="text-xs text-muted-foreground p-2">Nincs elérhető érték</p>
+            <p className="text-xs text-muted-foreground p-2">{emptyLabel}</p>
           ) : (
             <div className="max-h-60 overflow-y-auto space-y-1">
               {options.map(opt => (
