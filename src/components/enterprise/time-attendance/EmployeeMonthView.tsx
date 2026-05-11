@@ -1,18 +1,21 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronLeft, ChevronRight, Send, AlertTriangle, Loader2, Phone, Plus, Lock } from 'lucide-react';
+import {
+  ChevronLeft, ChevronRight, Send, AlertTriangle, Loader2, Phone, Plus, Lock,
+  Pencil, Save, Zap, Info,
+} from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend as dfIsWeekend, getYear, getMonth, addMonths, subMonths } from 'date-fns';
 import { hu } from 'date-fns/locale';
 import { toast } from 'sonner';
 import {
   getOrCreatePeriod, fetchPeriod, fetchSegments, fetchOnCallWindows,
-  upsertOnCallWindow, transitionPeriod,
+  transitionPeriod,
 } from './api';
 import { durationHours } from './calculations';
 import { DayEditorDialog } from './DayEditorDialog';
+import { BatchFillDialog } from './BatchFillDialog';
 import {
   AttendancePeriod, AttendanceSegment, OnCallWindow,
   STATUS_LABELS, STATUS_BADGE_VARIANT,
@@ -34,6 +37,24 @@ export function EmployeeMonthView({ workspaceId }: Props) {
   const [loading, setLoading] = useState(true);
   const [editingDate, setEditingDate] = useState<Date | null>(null);
   const [oncallOpen, setOncallOpen] = useState(false);
+  const [batchOpen, setBatchOpen] = useState(false);
+  const [batchInitialRange, setBatchInitialRange] = useState<{ start: Date | null; end: Date | null }>({ start: null, end: null });
+
+  // Edit-mode gate: the calendar is read-only by default; user must click the
+  // pencil to enter edit mode, then save to commit + exit. The server-side
+  // status (submitted/approved/locked/exported) overrides this — if the period
+  // is not editable on the server, edit mode is unavailable.
+  const [editMode, setEditMode] = useState(false);
+
+  // Drag-selection state for multi-day batch fill
+  const dragRef = useRef<{
+    active: boolean;
+    pointerId: number | null;
+    startDate: string | null;
+    hovered: Set<string>;
+    moved: boolean;
+  }>({ active: false, pointerId: null, startDate: null, hovered: new Set(), moved: false });
+  const [dragPreview, setDragPreview] = useState<Set<string>>(new Set());
 
   const days = useMemo(
     () => eachDayOfInterval({ start: startOfMonth(new Date(year, month - 1, 1)), end: endOfMonth(new Date(year, month - 1, 1)) }),
@@ -57,6 +78,14 @@ export function EmployeeMonthView({ workspaceId }: Props) {
 
   useEffect(() => { reload(); /* eslint-disable-line react-hooks/exhaustive-deps */ }, [workspaceId, year, month]);
 
+  // Leaving edit mode whenever month changes or status flips to non-editable
+  useEffect(() => { setEditMode(false); }, [year, month]);
+  useEffect(() => {
+    if (period && ['submitted', 'approved', 'locked', 'exported'].includes(period.status)) {
+      setEditMode(false);
+    }
+  }, [period?.status]);
+
   const segmentsByDay = useMemo(() => {
     const map = new Map<string, AttendanceSegment[]>();
     for (const s of segments) {
@@ -67,7 +96,10 @@ export function EmployeeMonthView({ workspaceId }: Props) {
     return map;
   }, [segments]);
 
-  const isReadOnly = !period || ['submitted', 'approved', 'locked', 'exported'].includes(period.status);
+  // Server-side read-only (the state machine forbids edits)
+  const serverReadOnly = !period || ['submitted', 'approved', 'locked', 'exported'].includes(period.status);
+  // Effective read-only: edit mode must also be ON to actually edit
+  const canEdit = !serverReadOnly && editMode;
 
   const handleSubmit = async () => {
     if (!period) return;
@@ -79,6 +111,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
     try {
       await transitionPeriod(period.id, 'submitted');
       toast.success('Időszak benyújtva jóváhagyásra');
+      setEditMode(false);
       reload();
     } catch (e: any) {
       toast.error(e?.message || 'Benyújtás sikertelen');
@@ -93,6 +126,75 @@ export function EmployeeMonthView({ workspaceId }: Props) {
     const d = addMonths(new Date(year, month - 1), 1);
     setYear(getYear(d)); setMonth(getMonth(d) + 1);
   };
+
+  // ─── Drag-select handlers ──────────────────────────────────────────────────
+
+  const resetDrag = useCallback(() => {
+    dragRef.current = { active: false, pointerId: null, startDate: null, hovered: new Set(), moved: false };
+    setDragPreview(new Set());
+  }, []);
+
+  // Global cleanup so we don't get stuck in drag state if pointer leaves the grid
+  useEffect(() => {
+    const cancel = () => {
+      if (dragRef.current.active) resetDrag();
+    };
+    window.addEventListener('pointercancel', cancel);
+    return () => window.removeEventListener('pointercancel', cancel);
+  }, [resetDrag]);
+
+  const getDateFromPoint = useCallback((clientX: number, clientY: number) => {
+    const el = document.elementFromPoint(clientX, clientY);
+    const cell = el?.closest('[data-day-cell]') as HTMLElement | null;
+    return cell?.dataset.date || null;
+  }, []);
+
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLButtonElement>, dateStr: string) => {
+    if (!canEdit) return;
+    // Only respond to primary button / touch / pen
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    dragRef.current = {
+      active: true, pointerId: e.pointerId, startDate: dateStr,
+      hovered: new Set([dateStr]), moved: false,
+    };
+    setDragPreview(new Set([dateStr]));
+  }, [canEdit]);
+
+  const handleGridPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (!dragRef.current.active) return;
+    if (dragRef.current.pointerId !== null && e.pointerId !== dragRef.current.pointerId) return;
+
+    const dateStr = getDateFromPoint(e.clientX, e.clientY);
+    if (!dateStr) return;
+
+    if (dateStr !== dragRef.current.startDate) dragRef.current.moved = true;
+
+    if (!dragRef.current.hovered.has(dateStr)) {
+      dragRef.current.hovered.add(dateStr);
+      setDragPreview(new Set(dragRef.current.hovered));
+    }
+  }, [getDateFromPoint]);
+
+  const handlePointerUpOnDay = useCallback((dateStr: string) => {
+    if (!dragRef.current.active) return;
+    const moved = dragRef.current.moved;
+    const hovered = Array.from(dragRef.current.hovered).sort();
+    resetDrag();
+
+    if (!moved || hovered.length <= 1) {
+      // Plain click → open day editor
+      setEditingDate(new Date(dateStr));
+      return;
+    }
+
+    // Drag across multiple days → open batch dialog with range
+    const start = new Date(hovered[0]);
+    const end = new Date(hovered[hovered.length - 1]);
+    setBatchInitialRange({ start, end });
+    setBatchOpen(true);
+  }, [resetDrag]);
+
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   if (loading) {
     return <div className="flex items-center justify-center p-8 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin mr-2" /> Betöltés...</div>;
@@ -115,23 +217,56 @@ export function EmployeeMonthView({ workspaceId }: Props) {
                 {period.status === 'locked' && <Lock className="h-3 w-3 ml-1" />}
               </Badge>
             )}
-            <div className="ml-auto flex items-center gap-2">
-              {!isReadOnly && period && (
+            {canEdit && (
+              <Badge variant="default" className="ml-1 gap-1 bg-amber-500 hover:bg-amber-500/90 text-amber-50">
+                <Pencil className="h-3 w-3" />
+                Szerkesztésre megnyitva
+              </Badge>
+            )}
+
+            <div className="ml-auto flex items-center gap-2 flex-wrap">
+              {!serverReadOnly && !editMode && (
+                <Button size="sm" variant="default" onClick={() => setEditMode(true)} title="Időnyilvántartás szerkesztése">
+                  <Pencil className="h-3 w-3 mr-1" /> Szerkesztés
+                </Button>
+              )}
+              {canEdit && (
                 <>
+                  <Button size="sm" variant="outline" onClick={() => {
+                    setBatchInitialRange({ start: null, end: null });
+                    setBatchOpen(true);
+                  }} title="Időszak kitöltése egyetlen művelettel">
+                    <Zap className="h-3 w-3 mr-1 text-amber-500" /> Batch kitöltés
+                  </Button>
                   <Button size="sm" variant="outline" onClick={() => setOncallOpen(true)}>
                     <Phone className="h-3 w-3 mr-1" /> Készenlét rögzítése
                   </Button>
-                  <Button size="sm" onClick={handleSubmit}>
-                    <Send className="h-3 w-3 mr-1" /> Benyújtás
+                  <Button size="sm" variant="default" onClick={() => setEditMode(false)} title="Módosítások mentése és a szerkesztés bezárása">
+                    <Save className="h-3 w-3 mr-1" /> Módosítások mentése
                   </Button>
                 </>
               )}
+              {!serverReadOnly && !editMode && period && segments.length > 0 && (
+                <Button size="sm" onClick={handleSubmit}>
+                  <Send className="h-3 w-3 mr-1" /> Benyújtás
+                </Button>
+              )}
             </div>
           </div>
+
+          {/* Status banners */}
           {period?.status === 'returned' && period.return_reason && (
             <div className="mt-2 p-2 rounded-md bg-destructive/10 border border-destructive/30 text-xs text-destructive flex items-start gap-2">
               <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
               <div><strong>Javításra visszaküldve:</strong> {period.return_reason}</div>
+            </div>
+          )}
+          {canEdit && (
+            <div className="mt-2 p-2 rounded-md bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 text-xs flex items-start gap-2">
+              <Info className="h-3 w-3 mt-0.5 shrink-0 text-amber-700 dark:text-amber-400" />
+              <div className="text-amber-800 dark:text-amber-200">
+                A naptár szerkesztésre meg van nyitva. Egy napra kattintva napi szerkesztő nyílik. Több napon át húzva (egér/érintő) batch kitöltés indul. A „Módosítások mentése" gombra kattintva zárod a szerkesztést.
+              </div>
             </div>
           )}
         </CardHeader>
@@ -144,11 +279,15 @@ export function EmployeeMonthView({ workspaceId }: Props) {
       <Card>
         <CardHeader className="pb-2"><CardTitle className="text-sm">Napi bontás</CardTitle></CardHeader>
         <CardContent className="px-3 pb-3">
-          <div className="grid grid-cols-7 gap-1.5">
+          <div
+            className="grid grid-cols-7 gap-1.5 select-none"
+            onPointerMove={handleGridPointerMove}
+            style={{ touchAction: canEdit ? 'none' : 'auto' }}
+          >
             {['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V'].map(d => (
               <div key={d} className="text-[10px] uppercase tracking-wide text-muted-foreground text-center pb-1">{d}</div>
             ))}
-            {/* Pad to align first day to ISO weekday */}
+            {/* Pad to align first day to ISO weekday (Mon-first) */}
             {(() => {
               const first = days[0];
               const isoDow = first ? ((first.getDay() + 6) % 7) : 0;
@@ -160,13 +299,27 @@ export function EmployeeMonthView({ workspaceId }: Props) {
               const totalH = daySegs.filter(s => s.segment_type !== 'break').reduce((s, x) => s + durationHours(x.starts_at, x.ends_at), 0);
               const isWeekend = dfIsWeekend(d);
               const hasOncall = windows.some(w => w.starts_at.slice(0, 10) === key);
+              const inDragPreview = dragPreview.has(key);
+
               return (
                 <button
                   key={key}
-                  onClick={() => setEditingDate(d)}
-                  className={`p-2 rounded-md border text-left hover:bg-accent transition-colors min-h-[64px] flex flex-col gap-0.5 ${
+                  data-day-cell
+                  data-date={key}
+                  type="button"
+                  onPointerDown={(e) => handlePointerDown(e, key)}
+                  onPointerUp={() => handlePointerUpOnDay(key)}
+                  onClick={(e) => {
+                    // Block legacy click when drag was active (covered by pointerup)
+                    if (canEdit) { e.preventDefault(); return; }
+                  }}
+                  disabled={!canEdit && !daySegs.length && !hasOncall}
+                  className={`p-2 rounded-md border text-left transition-colors min-h-[64px] flex flex-col gap-0.5 touch-none ${
                     isWeekend ? 'bg-muted/30 border-muted' : 'bg-card'
-                  } ${totalH > 0 ? 'border-primary/40' : ''}`}
+                  } ${totalH > 0 ? 'border-primary/40' : ''} ${
+                    inDragPreview ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-950/30' : ''
+                  } ${canEdit ? 'cursor-pointer hover:bg-accent' : 'cursor-default'}`}
+                  title={canEdit ? 'Kattints szerkesztéshez vagy húzd több napra batch kitöltéshez' : (totalH > 0 || hasOncall ? 'Megtekintés (csak olvasható)' : '')}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-mono">{format(d, 'd')}</span>
@@ -175,7 +328,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
                   {totalH > 0 ? (
                     <span className="text-[11px] tabular-nums font-medium">{totalH.toFixed(1)}h</span>
                   ) : (
-                    !isReadOnly && <Plus className="h-3 w-3 text-muted-foreground/50" />
+                    canEdit && <Plus className="h-3 w-3 text-muted-foreground/50" />
                   )}
                   {daySegs.some(s => s.segment_type === 'overtime') && (
                     <Badge variant="destructive" className="text-[8px] px-1 py-0 self-start">+TÚL</Badge>
@@ -184,6 +337,13 @@ export function EmployeeMonthView({ workspaceId }: Props) {
               );
             })}
           </div>
+
+          {/* Read-only hint */}
+          {!serverReadOnly && !editMode && (
+            <p className="mt-3 text-xs text-muted-foreground">
+              A szerkesztéshez kattints a fenti <strong>Szerkesztés</strong> gombra. A naptárt addig csak olvashatod.
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -196,7 +356,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
           date={editingDate}
           segments={segments}
           oncallWindows={windows}
-          readOnly={isReadOnly}
+          readOnly={!canEdit}
           onChanged={reload}
         />
       )}
@@ -207,6 +367,19 @@ export function EmployeeMonthView({ workspaceId }: Props) {
           periodId={period.id}
           year={year}
           month={month}
+          onSaved={reload}
+        />
+      )}
+      {batchOpen && period && (
+        <BatchFillDialog
+          open={batchOpen}
+          onOpenChange={setBatchOpen}
+          periodId={period.id}
+          year={year}
+          month={month}
+          initialStart={batchInitialRange.start}
+          initialEnd={batchInitialRange.end}
+          segments={segments}
           onSaved={reload}
         />
       )}
