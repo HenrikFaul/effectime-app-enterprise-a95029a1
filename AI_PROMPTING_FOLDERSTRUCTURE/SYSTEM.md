@@ -34,6 +34,7 @@ Bootstrap rule for every AI run:
 2. From this file, load the mandatory global files:
    - `build_log.md` — resume state, completed work, pending work, verification history.
    - `ai_dev_system.md` — global Product-Engineering OS principles, hierarchy, source corpus, production-ready asset contract.
+   - `localization_controller.md` — **mandatory** multilingual-delivery and localization-governance controller. All feature-generation prompts inherit its rules; no feature ships in English only.
    - `README.md` — repository usage overview and operator-facing setup notes.
    - `.ai/agents.md` — role ownership and team-agent responsibilities.
    - `.ai/skills.md` — skill mapping by role/domain.
@@ -111,12 +112,13 @@ When rules conflict, follow this order:
 2. **Data Integrity** — preserve correctness, migrations, idempotency, transactions, and rollback safety.
 3. **Cross‑Layer Integrity** — contracts must remain compatible from DB through QA.
 4. **Security by Default** — auth, authorization, CSRF protection, input validation, secrets handling, and safe error exposure are mandatory.
-5. **Accessibility First** — WCAG 2.2 AA minimum for all user‑facing interactive work.
-6. **Design System Adherence** — UI must use semantic tokens and approved primitives; no hardcoded visual values unless explicitly allowed.
-7. **Error State Completeness** — loading, empty, error, success, timeout, retry, conflict, and permission states must be defined where relevant.
-8. **Test Coverage Mandate** — no production feature ships without meaningful unit and integration coverage; target ≥ 80% where measurable.
-9. **Performance Budget** — frontend, backend, database, and integration work must respect documented performance budgets.
-10. **Traceability** — source files, assumptions, decisions, verification steps, and handoff notes must be recorded.
+5. **Full Localization** — every new user-facing string must be added to every existing locale resource in the same change. See `localization_controller.md`.
+6. **Accessibility First** — WCAG 2.2 AA minimum for all user‑facing interactive work.
+7. **Design System Adherence** — UI must use semantic tokens and approved primitives; no hardcoded visual values unless explicitly allowed.
+8. **Error State Completeness** — loading, empty, error, success, timeout, retry, conflict, and permission states must be defined where relevant.
+9. **Test Coverage Mandate** — no production feature ships without meaningful unit and integration coverage; target ≥ 80% where measurable.
+10. **Performance Budget** — frontend, backend, database, and integration work must respect documented performance budgets.
+11. **Traceability** — source files, assumptions, decisions, verification steps, and handoff notes must be recorded.
 
 ---
 
@@ -651,6 +653,7 @@ For any substantial task, the AI should return:
 Primary references:
 
 - `ai_dev_system.md` — global Product‑Engineering OS rules.
+- `localization_controller.md` — global multilingual-delivery and localization-governance rules. Mandatory for every feature.
 - `SYSTEM.md` — this master controller and navigation hub.
 - `build_log.md` — execution state and task history.
 - `.ai/agents.md` — team roles.
