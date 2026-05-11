@@ -6,12 +6,14 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
-import { Trash2, Plus, Moon, CalendarDays, Phone, Briefcase, AlertTriangle } from 'lucide-react';
+import { Trash2, Plus, Moon, CalendarDays, Phone, Briefcase, AlertTriangle, Building2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import type { AttendanceSegment, AttendanceSegmentType, OnCallWindow } from './types';
 import { durationHours, isWeekendDate, validateSegment } from './calculations';
-import { upsertSegment, deleteSegment } from './api';
+import { upsertSegment, deleteSegment, upsertSiteAssignment, removeSiteAssignment } from './api';
+import type { OfficeOption, SiteAssignment } from './api';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   open: boolean;
@@ -22,9 +24,20 @@ interface Props {
   oncallWindows: OnCallWindow[];
   readOnly: boolean;
   onChanged: () => void;
+  // Site-assignment props (optional — omit to hide the site section)
+  workspaceId?: string;
+  membershipId?: string | null;
+  userId?: string;
+  offices?: OfficeOption[];
+  siteAssignment?: SiteAssignment | null;
+  onSiteChanged?: () => void;
 }
 
-export function DayEditorDialog({ open, onOpenChange, periodId, date, segments, oncallWindows, readOnly, onChanged }: Props) {
+export function DayEditorDialog({
+  open, onOpenChange, periodId, date, segments, oncallWindows, readOnly, onChanged,
+  workspaceId, membershipId, userId, offices, siteAssignment, onSiteChanged,
+}: Props) {
+  const { t } = useI18n();
   const dayKey = format(date, 'yyyy-MM-dd');
   const daySegments = useMemo(
     () => segments.filter(s => s.work_date === dayKey).sort((a, b) => a.starts_at.localeCompare(b.starts_at)),
@@ -39,12 +52,17 @@ export function DayEditorDialog({ open, onOpenChange, periodId, date, segments, 
   const [errors, setErrors] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
+  // Site picker local state
+  const [selectedOfficeId, setSelectedOfficeId] = useState<string>('');
+  const [savingSite, setSavingSite] = useState(false);
+
   useEffect(() => {
     if (open) {
       setEditing({});
       setErrors([]);
+      setSelectedOfficeId(siteAssignment?.office_id ?? '');
     }
-  }, [open, dayKey]);
+  }, [open, dayKey, siteAssignment?.office_id]);
 
   const totalDayHours = useMemo(
     () => daySegments
@@ -89,7 +107,7 @@ export function DayEditorDialog({ open, onOpenChange, periodId, date, segments, 
         oncall_window_id: editing.oncall_window_id ?? null,
         note: editing.note ?? null,
       });
-      toast.success('Mentve');
+      toast.success(t('common.save'));
       setEditing({});
       onChanged();
     } catch (e: any) {
@@ -109,6 +127,38 @@ export function DayEditorDialog({ open, onOpenChange, periodId, date, segments, 
       toast.error(e?.message || 'Törlés sikertelen');
     }
   };
+
+  const handleSaveSite = async () => {
+    if (!workspaceId || !membershipId || !userId || !selectedOfficeId) return;
+    setSavingSite(true);
+    try {
+      await upsertSiteAssignment(workspaceId, membershipId, userId, selectedOfficeId, dayKey);
+      toast.success(t('attendance.site_saved'));
+      onSiteChanged?.();
+    } catch (e: any) {
+      toast.error(e?.message || 'Telephely mentése sikertelen');
+    } finally {
+      setSavingSite(false);
+    }
+  };
+
+  const handleRemoveSite = async () => {
+    if (!workspaceId || !membershipId) return;
+    setSavingSite(true);
+    try {
+      await removeSiteAssignment(workspaceId, membershipId, dayKey);
+      setSelectedOfficeId('');
+      toast.success(t('attendance.site_removed'));
+      onSiteChanged?.();
+    } catch (e: any) {
+      toast.error(e?.message || 'Telephely törlése sikertelen');
+    } finally {
+      setSavingSite(false);
+    }
+  };
+
+  const showSiteSection = !!(workspaceId && membershipId && userId && offices && offices.length > 0);
+  const siteChanged = selectedOfficeId !== (siteAssignment?.office_id ?? '');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -180,6 +230,56 @@ export function DayEditorDialog({ open, onOpenChange, periodId, date, segments, 
             </div>
           )}
         </div>
+
+        {/* Site picker */}
+        {showSiteSection && (
+          <div className="border rounded-md p-3 space-y-2 bg-sky-50/50 dark:bg-sky-950/20 border-sky-200 dark:border-sky-900">
+            <div className="flex items-center gap-1.5">
+              <Building2 className="h-3.5 w-3.5 text-sky-600 dark:text-sky-400" />
+              <Label className="text-xs font-medium text-sky-700 dark:text-sky-300">
+                {t('attendance.site_picker_label')}
+              </Label>
+              {siteAssignment && !readOnly && (
+                <Button
+                  size="sm" variant="ghost"
+                  className="ml-auto h-6 px-1.5 text-[10px] text-destructive"
+                  onClick={handleRemoveSite} disabled={savingSite}
+                >
+                  <Trash2 className="h-2.5 w-2.5 mr-1" />{t('common.delete')}
+                </Button>
+              )}
+            </div>
+            {readOnly ? (
+              <p className="text-xs text-muted-foreground">
+                {siteAssignment
+                  ? offices?.find(o => o.id === siteAssignment.office_id)?.name ?? siteAssignment.office_id
+                  : t('attendance.no_site')}
+              </p>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Select value={selectedOfficeId} onValueChange={setSelectedOfficeId}>
+                  <SelectTrigger className="h-8 flex-1">
+                    <SelectValue placeholder={t('attendance.select_site_placeholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {offices?.map(o => (
+                      <SelectItem key={o.id} value={o.id}>
+                        {o.name}{o.city ? ` (${o.city})` : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="sm" onClick={handleSaveSite}
+                  disabled={savingSite || !selectedOfficeId || !siteChanged}
+                  className="h-8"
+                >
+                  {t('common.save')}
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Editor */}
         {editing.starts_at && (

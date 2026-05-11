@@ -621,6 +621,17 @@ const en = {
     success: 'Success',
     error: 'Error',
   },
+  attendance: {
+    display_config: 'Displayed data',
+    show_work_hours: 'Work hours',
+    show_overtime: 'Overtime',
+    show_site: 'Site',
+    site_picker_label: 'Site (this day)',
+    no_site: 'No site assigned',
+    site_saved: 'Site saved',
+    site_removed: 'Site removed',
+    select_site_placeholder: 'Select site…',
+  },
   help_settings: {
     title: 'AI Help Content',
     ai_toggle_label: 'AI content regeneration',

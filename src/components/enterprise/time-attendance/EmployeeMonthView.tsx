@@ -3,16 +3,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
+  DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent,
+  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   ChevronLeft, ChevronRight, Send, AlertTriangle, Loader2, Phone, Plus, Lock,
-  Pencil, Save, Zap, Info,
+  Pencil, Save, Zap, Info, SlidersHorizontal, Building2,
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend as dfIsWeekend, getYear, getMonth, addMonths, subMonths } from 'date-fns';
 import { hu } from 'date-fns/locale';
 import { toast } from 'sonner';
 import {
   getOrCreatePeriod, fetchPeriod, fetchSegments, fetchOnCallWindows,
-  transitionPeriod,
+  transitionPeriod, fetchShiftAssignmentsForMember, fetchOfficesForWorkspace,
 } from './api';
+import type { OfficeOption, SiteAssignment } from './api';
 import { durationHours } from './calculations';
 import { DayEditorDialog } from './DayEditorDialog';
 import { BatchFillDialog } from './BatchFillDialog';
@@ -22,13 +27,27 @@ import {
 } from './types';
 import { TotalsSummary } from './TotalsSummary';
 import { OnCallDialog } from './OnCallDialog';
+import { useAuth } from '@/hooks/useAuth';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
 }
 
+const DISPLAY_CONFIG_KEY = 'effectime_attendance_display_config';
+type DisplayConfig = { workHours: boolean; overtime: boolean; site: boolean };
+function loadDisplayConfig(): DisplayConfig {
+  try {
+    const raw = localStorage.getItem(DISPLAY_CONFIG_KEY);
+    if (raw) return { workHours: true, overtime: true, site: true, ...JSON.parse(raw) };
+  } catch { /* ignore */ }
+  return { workHours: true, overtime: true, site: true };
+}
+
 export function EmployeeMonthView({ workspaceId }: Props) {
   const today = new Date();
+  const { user } = useAuth();
+  const { t } = useI18n();
   const [year, setYear] = useState(getYear(today));
   const [month, setMonth] = useState(getMonth(today) + 1); // 1-12
   const [period, setPeriod] = useState<AttendancePeriod | null>(null);
@@ -40,6 +59,20 @@ export function EmployeeMonthView({ workspaceId }: Props) {
   const [batchOpen, setBatchOpen] = useState(false);
   const [batchInitialRange, setBatchInitialRange] = useState<{ start: Date | null; end: Date | null }>({ start: null, end: null });
   const [batchSelectedDays, setBatchSelectedDays] = useState<Date[] | null>(null);
+
+  // Display configuration
+  const [displayConfig, setDisplayConfig] = useState<DisplayConfig>(loadDisplayConfig);
+  const updateDisplayConfig = (patch: Partial<DisplayConfig>) => {
+    setDisplayConfig(prev => {
+      const next = { ...prev, ...patch };
+      localStorage.setItem(DISPLAY_CONFIG_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  // Site assignments (from enterprise_shift_assignments)
+  const [siteAssignments, setSiteAssignments] = useState<SiteAssignment[]>([]);
+  const [offices, setOffices] = useState<OfficeOption[]>([]);
 
   // Edit-mode gate: the calendar is read-only by default; user must click the
   // pencil to enter edit mode, then save to commit + exit. The server-side
@@ -70,6 +103,18 @@ export function EmployeeMonthView({ workspaceId }: Props) {
       setPeriod(p);
       setSegments(segs);
       setWindows(ws);
+
+      // Load site assignments + offices for this period/month
+      if (p?.membership_id) {
+        const from = format(startOfMonth(new Date(year, month - 1)), 'yyyy-MM-dd');
+        const to = format(endOfMonth(new Date(year, month - 1)), 'yyyy-MM-dd');
+        const [shifts, offs] = await Promise.all([
+          fetchShiftAssignmentsForMember(workspaceId, p.membership_id, from, to),
+          offices.length === 0 ? fetchOfficesForWorkspace(workspaceId) : Promise.resolve(offices),
+        ]);
+        setSiteAssignments(shifts);
+        if (offices.length === 0) setOffices(offs);
+      }
     } catch (e: any) {
       toast.error(e?.message || 'Időszak betöltése sikertelen');
     } finally {
@@ -226,6 +271,38 @@ export function EmployeeMonthView({ workspaceId }: Props) {
             )}
 
             <div className="ml-auto flex items-center gap-2 flex-wrap">
+              {/* Display config dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button size="sm" variant="outline" title={t('attendance.display_config')}>
+                    <SlidersHorizontal className="h-3 w-3 mr-1" />
+                    {t('attendance.display_config')}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel className="text-xs">{t('attendance.display_config')}</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuCheckboxItem
+                    checked={displayConfig.workHours}
+                    onCheckedChange={v => updateDisplayConfig({ workHours: v })}
+                  >
+                    {t('attendance.show_work_hours')}
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={displayConfig.overtime}
+                    onCheckedChange={v => updateDisplayConfig({ overtime: v })}
+                  >
+                    {t('attendance.show_overtime')}
+                  </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={displayConfig.site}
+                    onCheckedChange={v => updateDisplayConfig({ site: v })}
+                  >
+                    {t('attendance.show_site')}
+                  </DropdownMenuCheckboxItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               {!serverReadOnly && !editMode && (
                 <Button size="sm" variant="default" onClick={() => setEditMode(true)} title="Időnyilvántartás szerkesztése">
                   <Pencil className="h-3 w-3 mr-1" /> Szerkesztés
@@ -303,6 +380,16 @@ export function EmployeeMonthView({ workspaceId }: Props) {
               const hasOncall = windows.some(w => w.starts_at.slice(0, 10) === key);
               const inDragPreview = dragPreview.has(key);
 
+              // Display-config derived values
+              const regularSegs = daySegs.filter(s => s.segment_type === 'regular');
+              const overtimeSegs = daySegs.filter(s => s.segment_type === 'overtime');
+              const regularRange = regularSegs.length > 0
+                ? `${regularSegs[0].starts_at.slice(11, 16)}–${regularSegs[regularSegs.length - 1].ends_at.slice(11, 16)}`
+                : null;
+              const overtimeRanges = overtimeSegs.map(s => `${s.starts_at.slice(11, 16)}–${s.ends_at.slice(11, 16)}`);
+              const siteForDay = siteAssignments.find(sa => sa.shift_date === key);
+              const officeName = siteForDay ? (offices.find(o => o.id === siteForDay.office_id)?.name ?? null) : null;
+
               return (
                 <button
                   key={key}
@@ -332,7 +419,19 @@ export function EmployeeMonthView({ workspaceId }: Props) {
                   ) : (
                     canEdit && <Plus className="h-3 w-3 text-muted-foreground/50" />
                   )}
-                  {daySegs.some(s => s.segment_type === 'overtime') && (
+                  {displayConfig.workHours && regularRange && (
+                    <span className="text-[9px] tabular-nums text-emerald-700 dark:text-emerald-400 leading-tight">{regularRange}</span>
+                  )}
+                  {displayConfig.overtime && overtimeRanges.map((r, i) => (
+                    <span key={i} className="text-[9px] tabular-nums text-amber-600 dark:text-amber-400 leading-tight">+{r}</span>
+                  ))}
+                  {displayConfig.site && officeName && (
+                    <span className="text-[9px] text-sky-600 dark:text-sky-400 flex items-center gap-0.5 leading-tight">
+                      <Building2 className="h-2 w-2 shrink-0" />
+                      <span className="truncate">{officeName}</span>
+                    </span>
+                  )}
+                  {daySegs.some(s => s.segment_type === 'overtime') && !displayConfig.overtime && (
                     <Badge variant="destructive" className="text-[8px] px-1 py-0 self-start">+TÚL</Badge>
                   )}
                 </button>
@@ -360,6 +459,12 @@ export function EmployeeMonthView({ workspaceId }: Props) {
           oncallWindows={windows}
           readOnly={!canEdit}
           onChanged={reload}
+          workspaceId={workspaceId}
+          membershipId={period.membership_id}
+          userId={user?.id}
+          offices={offices}
+          siteAssignment={siteAssignments.find(sa => sa.shift_date === format(editingDate, 'yyyy-MM-dd')) ?? null}
+          onSiteChanged={reload}
         />
       )}
       {oncallOpen && period && (
