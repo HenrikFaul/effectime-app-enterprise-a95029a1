@@ -1,3 +1,33 @@
+## 2026-05-11 — v3.7.1 Time Attendance: explicit edit mode + drag-select batch fill
+
+### Added — Member-side calendar UX upgrade
+
+**Explicit edit mode toggle.** The employee's monthly calendar is now read-only by default. To make changes, the user clicks a pencil **„Szerkesztés"** button — a yellow „Szerkesztésre megnyitva" badge appears, the helper banner explains the new interactions, and only then are day cells clickable / draggable. Clicking **„Módosítások mentése"** (save icon) returns the calendar to read-only. The pencil button re-appears so editing can be resumed. This prevents accidental edits and creates an unambiguous commit point that is separate from the final **Benyújtás** (submit-for-approval) action.
+
+- Edit mode is automatically left when the month changes or the period transitions to a non-editable status (submitted / approved / locked / exported).
+- The server-side state machine still governs whether editing is possible at all; edit mode is a UI-layer gate on top of that.
+
+**Batch kitöltés (one-shot range fill).** New **Batch kitöltés** button (Zap icon) opens a dialog that fills a date range with one daily start/end time in a single action.
+
+- Inputs: start date, end date, daily start time, daily end time, segment type (regular / overtime).
+- Toggles: skip weekends, auto-detect night hours (22:00–06:00), overwrite existing rows.
+- Live summary: shows how many days will be written, how many weekends are skipped, how many days already have data.
+- Loops `attendance_upsert_segment` per day; reports counts (ok / skipped / failed) in a single toast.
+- `BatchFillDialog.tsx` (~190 sor).
+
+**Drag-select multi-day.** In edit mode, click-and-drag across day cells (mouse, touch, or pen) selects the range; on pointer-up the **Batch kitöltés** dialog opens pre-populated with `[min, max]` of the dragged dates. A single click (no drag) still opens the per-day editor.
+
+- Implemented with pointer events + `data-day-cell` markers + `document.elementFromPoint` for touch coverage.
+- Visual: amber ring on hovered cells while dragging.
+- `touch-action: none` on the grid while in edit mode to prevent mobile scroll-jitter.
+- Global `pointercancel` listener resets state safely if the pointer leaves the grid.
+
+**File:** `src/components/enterprise/time-attendance/EmployeeMonthView.tsx` (rewritten; ~280 sor).
+
+**Compatibility:** Existing read paths, segment storage, server RPCs, payroll export, and audit trail are unchanged. The change is UI-only and additive.
+
+---
+
 ## 2026-05-11 — v3.7.0 HR Workflow Automation + Employee Self-Service Portal
 
 ### Added — Group 2 (HR Workflow Automation) + Group 4 (Employee Self-Service) + Group 6 (Payroll Readiness)

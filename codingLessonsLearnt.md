@@ -992,3 +992,18 @@ A workspace-picker `useState('')` került a `if (selectedWorkspaceId) return <Wo
 - **Fájl**: `src/components/enterprise/self-service/EmployeeDashboard.tsx`
 - **Logika**: Az "Önkiszolgáló portál" (Saját portál tab) nem igényel új DB táblákat — a meglévő `enterprise_attendance_periods`, `enterprise_leave_quota_balances`, `leave_requests`, `enterprise_hr_workflow_tasks` lekérdezések összerakva adják a komplett employee dashboard-ot. Kulcs: `membership_id` alapján szűr, ami az aktuális user saját membershipje a workspaceben.
 - **Megelőzés**: Új "összesítő" dashboardhoz elsőként nézd meg, hogy a szükséges adatok már megvannak-e különálló táblákban — nagy valószínűséggel igen, és csak egy aggregáló UI kell hozzá.
+
+### [LESSON-DRAGSELECT-095] Drag-select naptár cellákon: pointer events + data-attribute + elementFromPoint
+- **Dátum**: 2026-05-11
+- **Fájl**: `src/components/enterprise/time-attendance/EmployeeMonthView.tsx`
+- **Probléma**: A felhasználó egér-húzással vagy érintéssel akar több naptárcellát kijelölni (Mac trackpad lasso-szerűen). A naïv `onMouseEnter` megoldás nem működik mobilon (nincs hover).
+- **Megoldás**: Pointer events (`onPointerDown`/`onPointerUp` a cellára, `onPointerMove` a gridre), minden cella `data-day-cell data-date={key}` attribútummal. Touch-on érintés alatt `document.elementFromPoint(e.clientX, e.clientY).closest('[data-day-cell]')` adja vissza az aktuális cellát. A `useRef` tárolja a drag állapotot (active, hovered Set, moved flag, pointerId) hogy ne triggereljen re-rendert minden pointer-move-on. `touch-action: none` a gridre amíg edit mode aktív, különben a mobil scroll-jitter zavarja a húzást. Globális `pointercancel` listener resetolja az állapotot.
+- **Kulcs UX szabály**: Single click (no movement) → per-day editor; drag (moved=true, hovered.length > 1) → batch dialog `[min, max]`-szal pre-populated.
+- **Megelőzés**: Bármilyen drag-to-select naptáron / gridre — soha ne csak `onMouseEnter`-rel oldd meg (mobil halott). Pointer events + data-attribute + elementFromPoint a kompatibilis recept.
+
+### [LESSON-EDITMODE-096] Explicit edit-mode gate komoly mutációkhoz: véletlen szerkesztés elkerülése
+- **Dátum**: 2026-05-11
+- **Fájl**: `src/components/enterprise/time-attendance/EmployeeMonthView.tsx`
+- **Probléma**: Időnyilvántartás közvetlenül kattintható volt — egy véletlen tap is megnyitotta a napi szerkesztőt. A user nem kapott egyértelmű "kész vagyok" commit pontot, ami megkülönböztette volna a piszkozati változásokat a hivatalos benyújtástól.
+- **Megoldás**: `editMode` UI-state (default `false`). „Szerkesztés" ceruza gomb → `setEditMode(true)` → sárga „Szerkesztésre megnyitva" badge + helper banner. Cellák `cursor: pointer` és reagálnak. „Módosítások mentése" save ikonra → `setEditMode(false)`. A „Benyújtás" gomb egy SEPARATE záró művelet (server-side state transition). A two-tier gate: server-side `period.status` (állapotgép) + client-side `editMode` flag. Ha bármelyik nem engedélyez, a UI nem szerkeszthető.
+- **Megelőzés**: Bármilyen formanyomtatvány / time-tracker / pénzügyi modul, ahol az adatok módosítása következményekkel jár — explicit „edit / save / submit" three-stage flow, nem one-click direct mutation. A user mindig tudja, hogy most miben van.
