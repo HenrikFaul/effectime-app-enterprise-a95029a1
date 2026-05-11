@@ -46,9 +46,17 @@ export function LeaveRequestDialog({ open, onOpenChange, workspaceId, userId, on
   const handleValidate = async () => {
     if (!startDate || (!isHalfDay && !endDate)) return;
     const ed = isHalfDay ? startDate : endDate!;
-    const results = await validateLeaveRequest(workspaceId, userId, startDate, ed);
-    setConflicts(results);
-    setValidated(true);
+    try {
+      const results = await validateLeaveRequest(workspaceId, userId, startDate, ed);
+      setConflicts(results);
+      setValidated(true);
+    } catch (err) {
+      // A thrown error means validation data could not be loaded — block submission
+      // so the request isn't silently approved despite unverified constraints.
+      toast.error(t('leave_request.error_validation_failed'));
+      setConflicts([{ code: 'VALIDATION_ERROR', severity: 'blocking', message: String(err) }]);
+      setValidated(true);
+    }
   };
 
   const hasBlockingConflicts = conflicts.some(c => c.severity === 'blocking');

@@ -941,6 +941,7 @@ const en = {
     error_end_before_start: 'End date cannot be before start date',
     error_blocking: 'Cannot submit: has blocking conflicts',
     error_attachment: 'Attachment upload failed',
+    error_validation_failed: 'Validation could not be completed — please try again',
     types: {
       vacation: 'Vacation',
       sick_leave: 'Sick leave',
@@ -1437,6 +1438,8 @@ const en = {
     submit_warning_confirm: 'Warnings:\n\n{{issues}}\n\nSubmit anyway?',
     submit_success: 'Period submitted for approval',
     submit_failed: 'Submit failed',
+    warn_no_segments: 'No time segments have been recorded.',
+    warn_low_hours: 'Worked hours ({{worked}}h) are significantly below expected ({{expected}}h after leave deduction).',
   },
   landing: {
     nav_workspace: 'Workspace',
@@ -1579,7 +1582,7 @@ const en = {
     footer_copyright: '© {{year}} Effectime. All rights reserved.',
     verify_title: 'Email verification',
     verify_subtitle_prefix: 'We sent a confirmation email to',
-    verify_subtitle_suffix: '',
+    verify_subtitle_suffix: '.',
     verify_methods_title: 'Two ways to verify:',
     verify_method_1: 'Click the activation link in the email',
     verify_method_2: 'Or enter the 8-digit code from the email',

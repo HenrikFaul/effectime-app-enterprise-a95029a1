@@ -1,3 +1,32 @@
+## 2026-05-11 — v3.7.5 System audit: conflict-engine bugs, i18n completeness, atomic site-assignment
+
+### Fixed — Four production bugs identified by full-system audit
+
+**1. `conflictEngine.ts` — silent validation bypass on fetch error (Critical)**
+When any of the six parallel Supabase calls in `validateLeaveRequest()` failed (network, auth, or schema error), the result was silently replaced with `[]`. This meant a leave request could proceed through validation with no conflicts reported even though the blocking rules were never evaluated. Fix: all fetch errors are now aggregated and thrown immediately, and `LeaveRequestDialog` catches the throw, blocks submission, and shows a user-facing toast.
+
+**2. `conflictEngine.ts` — `max_off` rule ignores `role_filters` (Major)**
+The `offCount` calculation counted every approved/pending leave request in the date range, regardless of the rule's `role_filters`. A rule scoped to "senior engineers" was silently evaluated against all employees. Fix: role-scoped rules now only count requests from members whose `business_role` matches the filter, using an O(1) userId→role map built from the already-fetched memberships.
+
+**3. `conflictEngine.ts` — `ruleApplies` never fired for rules with no `days_of_week` (Major)**
+`ruleApplies` (daily max-off) used `!days.includes(dow)` which returns false for an empty array — so a recurring rule with no day restriction was silently skipped every day. `officeRuleApplies` (coverage rules) correctly used `days.length > 0 && !days.includes(dow)`. Both functions now use the same "empty = all days" semantics.
+
+**4. `api.ts` — `upsertSiteAssignment` non-atomic delete→insert (Major)**
+The previous delete-then-insert pattern left a gap where no shift assignment existed. A concurrent call or a failure between the two operations could silently delete the assignment. Replaced with a single atomic `upsert` with `onConflict: 'workspace_id,membership_id,shift_date'`.
+
+**5. `i18n` — `en.verify_subtitle_suffix` empty (Minor / test failure)**
+`auth_page.verify_subtitle_suffix` was `''` in EN while HU had `'.'`. Failing i18n parity test. Fixed to `'.'`.
+
+**6. `EmployeeMonthView.tsx` — `collectSubmissionWarnings` hardcoded Hungarian (Minor)**
+Two warning strings in the attendance submission flow were hardcoded HU. Extracted to `attendance_view.warn_no_segments` and `attendance_view.warn_low_hours` (with `{{worked}}` / `{{expected}}` interpolation) across all 5 locales.
+
+**Files touched (9):**
+`src/lib/conflictEngine.ts`, `src/components/enterprise/LeaveRequestDialog.tsx`, `src/components/enterprise/time-attendance/api.ts`, `src/components/enterprise/time-attendance/EmployeeMonthView.tsx`, `src/i18n/resources/en.ts`, `src/i18n/resources/hu.ts`, `src/i18n/resources/cs.ts`, `src/i18n/resources/sk.ts`, `src/i18n/resources/pl.ts`
+
+**Test result:** 101/101 tests pass. 0 TypeScript errors.
+
+---
+
 ## 2026-05-11 — v3.7.4 Fix: ReferenceError "t is not defined" in WorkspaceSettings
 
 ### Fixed — Workspace settings tab failed to render with `ReferenceError: t is not defined`

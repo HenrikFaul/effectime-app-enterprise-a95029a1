@@ -180,21 +180,22 @@ export async function upsertSiteAssignment(
   officeId: string,
   shiftDate: string,
 ): Promise<void> {
-  // Delete existing for same membership+date, then insert fresh
-  await sb
+  // Single atomic upsert keyed on (workspace_id, membership_id, shift_date).
+  // Avoids the previous delete-then-insert pattern, which could leave no assignment
+  // if a network error occurred between the two operations.
+  const { error } = await sb
     .from('enterprise_shift_assignments')
-    .delete()
-    .eq('workspace_id', workspaceId)
-    .eq('membership_id', membershipId)
-    .eq('shift_date', shiftDate);
-  const { error } = await sb.from('enterprise_shift_assignments').insert({
-    workspace_id: workspaceId,
-    membership_id: membershipId,
-    user_id: userId,
-    office_id: officeId,
-    shift_date: shiftDate,
-    created_by: userId,
-  });
+    .upsert(
+      {
+        workspace_id: workspaceId,
+        membership_id: membershipId,
+        user_id: userId,
+        office_id: officeId,
+        shift_date: shiftDate,
+        created_by: userId,
+      },
+      { onConflict: 'workspace_id,membership_id,shift_date' },
+    );
   if (error) throw error;
 }
 

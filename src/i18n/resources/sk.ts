@@ -661,6 +661,7 @@ const sk = {
     error_end_before_start: 'Dátum ukončenia nemôže byť skôr ako dátum začiatku',
     error_blocking: 'Nie je možné odoslať: sú blokujúce konflikty',
     error_attachment: 'Nahrávanie prílohy zlyhalo',
+    error_validation_failed: 'Overenie zlyhalo — skúste to prosím znova',
     types: {
       vacation: 'Dovolenka',
       sick_leave: 'Práceneschopnosť',
@@ -1157,6 +1158,8 @@ const sk = {
     submit_warning_confirm: 'Upozornenia:\n\n{{issues}}\n\nNapriek tomu odoslať?',
     submit_success: 'Obdobie odoslané na schválenie',
     submit_failed: 'Odoslanie zlyhalo',
+    warn_no_segments: 'Nebol zaznamenaný žiadny časový segment.',
+    warn_low_hours: 'Odpracované hodiny ({{worked}}h) sú výrazne pod očakávaním ({{expected}}h po odrátaní dovolenky).',
   },
   landing: {
     nav_workspace: 'Pracovný priestor',

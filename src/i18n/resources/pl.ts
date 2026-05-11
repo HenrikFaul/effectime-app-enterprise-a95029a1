@@ -661,6 +661,7 @@ const pl = {
     error_end_before_start: 'Data zakończenia nie może być wcześniej niż data rozpoczęcia',
     error_blocking: 'Nie można przesłać: są konflikty blokujące',
     error_attachment: 'Przesyłanie załącznika nie powiodło się',
+    error_validation_failed: 'Weryfikacja nie powiodła się — spróbuj ponownie',
     types: {
       vacation: 'Urlop',
       sick_leave: 'Zwolnienie lekarskie',
@@ -1157,6 +1158,8 @@ const pl = {
     submit_warning_confirm: 'Ostrzeżenia:\n\n{{issues}}\n\nWysłać mimo to?',
     submit_success: 'Okres przesłany do zatwierdzenia',
     submit_failed: 'Wysłanie nie powiodło się',
+    warn_no_segments: 'Nie zarejestrowano żadnego segmentu czasu.',
+    warn_low_hours: 'Przepracowane godziny ({{worked}}h) są znacznie poniżej oczekiwanych ({{expected}}h po odliczeniu urlopu).',
   },
   landing: {
     nav_workspace: 'Obszar roboczy',
