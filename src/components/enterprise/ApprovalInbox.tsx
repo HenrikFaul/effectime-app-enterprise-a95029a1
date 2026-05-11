@@ -14,37 +14,24 @@ import { hu } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
   userId: string;
 }
 
-const STATUS_FILTER_OPTIONS = [
-  { value: 'all', label: 'Összes' },
-  { value: 'pending', label: 'Függőben' },
-  { value: 'approved', label: 'Jóváhagyva' },
-  { value: 'rejected', label: 'Elutasítva' },
-  { value: 'cancelled', label: 'Visszavonva' },
-];
-
-const TYPE_MAP: Record<string, string> = {
-  vacation: 'Szabadság',
-  sick_leave: 'Betegszabadság',
-  unpaid_leave: 'Fizetés nélküli',
-  other: 'Egyéb',
-};
-
-const STATUS_MAP: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
-  draft: { label: 'Piszkozat', variant: 'outline' },
-  pending: { label: 'Függőben', variant: 'secondary' },
-  approved: { label: 'Jóváhagyva', variant: 'default' },
-  rejected: { label: 'Elutasítva', variant: 'destructive' },
-  cancelled: { label: 'Visszavonva', variant: 'outline' },
-  expired: { label: 'Lejárt', variant: 'outline' },
+const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
+  draft: 'outline',
+  pending: 'secondary',
+  approved: 'default',
+  rejected: 'destructive',
+  cancelled: 'outline',
+  expired: 'outline',
 };
 
 export function ApprovalInbox({ workspaceId, userId }: Props) {
+  const { t } = useI18n();
   const [requests, setRequests] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [memberInfo, setMemberInfo] = useState<Record<string, { team: string | null; role: string | null }>>({});
@@ -87,7 +74,7 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
         supabase.from('enterprise_memberships').select('user_id, team, business_role').eq('workspace_id', workspaceId).in('user_id', userIds),
       ]);
       const pMap: Record<string, string> = {};
-      (profileData || []).forEach((p: any) => { pMap[p.user_id] = p.display_name || 'Ismeretlen'; });
+      (profileData || []).forEach((p: any) => { pMap[p.user_id] = p.display_name || t('approval_inbox.unknown'); });
       setProfiles(pMap);
 
       const mMap: Record<string, { team: string | null; role: string | null }> = {};
@@ -126,7 +113,7 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
       .update({ status: decision as any, reviewer_id: userId, reviewed_at: new Date().toISOString(), review_comment: reviewComment })
       .eq('id', requestId);
 
-    if (updateError) { toast.error('Hiba a döntés mentésekor'); setProcessing(false); return; }
+    if (updateError) { toast.error(t('approval_inbox.decision_failed')); setProcessing(false); return; }
 
     await supabase.from('approval_decisions').insert({
       leave_request_id: requestId, workspace_id: workspaceId, decided_by: userId, decision: decision as any, comment: reviewComment,
@@ -159,7 +146,7 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
       }).catch(err => console.warn('Email notification failed:', err));
     }
 
-    toast.success(decision === 'approved' ? 'Kérelem jóváhagyva' : 'Kérelem elutasítva');
+    toast.success(decision === 'approved' ? t('approval_inbox.approved') : t('approval_inbox.rejected'));
     setCommentMap(prev => { const n = { ...prev }; delete n[requestId]; return n; });
     fetchRequests();
     setProcessing(false);
@@ -172,7 +159,7 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
       await supabase.from('leave_requests').update({ status: decision as any, reviewer_id: userId, reviewed_at: new Date().toISOString() }).eq('id', id);
       await supabase.from('approval_decisions').insert({ leave_request_id: id, workspace_id: workspaceId, decided_by: userId, decision: decision as any });
     }
-    toast.success(`${selectedIds.size} kérelem ${decision === 'approved' ? 'jóváhagyva' : 'elutasítva'}`);
+    toast.success(decision === 'approved' ? t('approval_inbox.bulk_approved', { count: selectedIds.size }) : t('approval_inbox.bulk_rejected', { count: selectedIds.size }));
     fetchRequests();
     setProcessing(false);
   };
@@ -199,18 +186,25 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
-            {STATUS_FILTER_OPTIONS.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            <SelectItem value="all">{t('approval_inbox.filter_all_status')}</SelectItem>
+            <SelectItem value="pending">{t('approval_inbox.filter_pending')}</SelectItem>
+            <SelectItem value="approved">{t('approval_inbox.filter_approved')}</SelectItem>
+            <SelectItem value="rejected">{t('approval_inbox.filter_rejected')}</SelectItem>
+            <SelectItem value="cancelled">{t('approval_inbox.filter_cancelled')}</SelectItem>
           </SelectContent>
         </Select>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-[150px] h-8 text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Minden típus</SelectItem>
-            {Object.entries(TYPE_MAP).map(([v, l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+            <SelectItem value="all">{t('approval_inbox.filter_all_types')}</SelectItem>
+            <SelectItem value="vacation">{t('approval_inbox.type_vacation')}</SelectItem>
+            <SelectItem value="sick_leave">{t('approval_inbox.type_sick_leave')}</SelectItem>
+            <SelectItem value="unpaid_leave">{t('approval_inbox.type_unpaid_leave')}</SelectItem>
+            <SelectItem value="other">{t('approval_inbox.type_other')}</SelectItem>
           </SelectContent>
         </Select>
         <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setShowAdvanced(!showAdvanced)}>
-          {showAdvanced ? 'Szűrők elrejtése' : 'Részletes szűrők'}
+          {showAdvanced ? t('approval_inbox.filter_hide') : t('approval_inbox.filter_advanced')}
         </Button>
       </div>
 
@@ -218,37 +212,37 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
       {showAdvanced && (
         <div className="flex flex-wrap items-end gap-2 p-3 rounded-md border bg-muted/30">
           <div>
-            <label className="text-[10px] text-muted-foreground font-medium">Kérelmező</label>
+            <label className="text-[10px] text-muted-foreground font-medium">{t('approval_inbox.filter_requester')}</label>
             <Select value={requesterFilter} onValueChange={setRequesterFilter}>
               <SelectTrigger className="w-[150px] h-8 text-xs mt-0.5"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Összes</SelectItem>
-                {uniqueRequesters.map(uid => <SelectItem key={uid} value={uid}>{profiles[uid] || 'Ismeretlen'}</SelectItem>)}
+                <SelectItem value="all">{t('approval_inbox.filter_all_status')}</SelectItem>
+                {uniqueRequesters.map(uid => <SelectItem key={uid} value={uid}>{profiles[uid] || t('approval_inbox.unknown')}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div>
-            <label className="text-[10px] text-muted-foreground font-medium">Csapat</label>
+            <label className="text-[10px] text-muted-foreground font-medium">{t('approval_inbox.filter_team')}</label>
             <Select value={teamFilter} onValueChange={setTeamFilter}>
               <SelectTrigger className="w-[130px] h-8 text-xs mt-0.5"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Összes</SelectItem>
-                {teams.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
+                <SelectItem value="all">{t('approval_inbox.filter_all_status')}</SelectItem>
+                {teams.map(team => <SelectItem key={team} value={team}>{team}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div>
-            <label className="text-[10px] text-muted-foreground font-medium">Pozíció</label>
+            <label className="text-[10px] text-muted-foreground font-medium">{t('approval_inbox.filter_position')}</label>
             <Select value={roleFilter} onValueChange={setRoleFilter}>
               <SelectTrigger className="w-[130px] h-8 text-xs mt-0.5"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Összes</SelectItem>
+                <SelectItem value="all">{t('approval_inbox.filter_all_status')}</SelectItem>
                 {roles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
           <div>
-            <label className="text-[10px] text-muted-foreground font-medium">Dátumtól</label>
+            <label className="text-[10px] text-muted-foreground font-medium">{t('approval_inbox.filter_from')}</label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className={cn("h-8 text-xs mt-0.5", !dateFrom && "text-muted-foreground")}>
@@ -262,7 +256,7 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
             </Popover>
           </div>
           <div>
-            <label className="text-[10px] text-muted-foreground font-medium">Dátumig</label>
+            <label className="text-[10px] text-muted-foreground font-medium">{t('approval_inbox.filter_to')}</label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className={cn("h-8 text-xs mt-0.5", !dateTo && "text-muted-foreground")}>
@@ -277,7 +271,7 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
           </div>
           {(dateFrom || dateTo || teamFilter !== 'all' || roleFilter !== 'all' || requesterFilter !== 'all') && (
             <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => { setDateFrom(undefined); setDateTo(undefined); setTeamFilter('all'); setRoleFilter('all'); setRequesterFilter('all'); }}>
-              Szűrők törlése
+              {t('approval_inbox.filter_clear')}
             </Button>
           )}
         </div>
@@ -287,15 +281,15 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
       {statusFilter === 'pending' && pendingRequests.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" className="text-xs h-8" onClick={toggleSelectAll}>
-            {selectedIds.size === pendingRequests.length ? 'Mind törlése' : 'Mind kijelölése'}
+            {selectedIds.size === pendingRequests.length ? t('approval_inbox.deselect_all') : t('approval_inbox.select_all')}
           </Button>
           {selectedIds.size > 0 && (
             <>
               <Button size="sm" className="text-xs h-8" onClick={() => handleBulkDecision('approved')} disabled={processing}>
-                <Check className="h-3 w-3 mr-1" /> Kijelöltek jóváhagyása ({selectedIds.size})
+                <Check className="h-3 w-3 mr-1" /> {t('approval_inbox.bulk_approve', { count: selectedIds.size })}
               </Button>
               <Button variant="destructive" size="sm" className="text-xs h-8" onClick={() => handleBulkDecision('rejected')} disabled={processing}>
-                <X className="h-3 w-3 mr-1" /> Kijelöltek elutasítása ({selectedIds.size})
+                <X className="h-3 w-3 mr-1" /> {t('approval_inbox.bulk_reject', { count: selectedIds.size })}
               </Button>
             </>
           )}
@@ -305,12 +299,14 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
       {requests.length === 0 ? (
         <Card>
           <CardContent className="text-center py-8 text-muted-foreground">
-            Nincs {statusFilter !== 'all' ? STATUS_FILTER_OPTIONS.find(o => o.value === statusFilter)?.label.toLowerCase() : ''} kérelem.
+            {t('approval_inbox.no_requests', { status: statusFilter !== 'all' ? t(`approval_inbox.filter_${statusFilter}` as any).toLowerCase() : '' })}
           </CardContent>
         </Card>
       ) : (
         requests.map((req) => {
-          const status = STATUS_MAP[req.status] || STATUS_MAP.pending;
+          const statusVariant = STATUS_VARIANTS[req.status] || 'secondary';
+          const statusLabel = t(`approval_inbox.status_${req.status}` as any) || req.status;
+          const typeLabel = t(`approval_inbox.type_${req.leave_type}` as any) || req.leave_type;
           const isPending = req.status === 'pending';
           const mi = memberInfo[req.user_id];
           return (
@@ -322,10 +318,10 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
                   )}
                   <div className="flex-1 min-w-0 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-sm">{profiles[req.user_id] || 'Ismeretlen'}</span>
-                      <Badge variant={status.variant} className="text-xs">{status.label}</Badge>
-                      <Badge variant="outline" className="text-xs">{TYPE_MAP[req.leave_type] || req.leave_type}</Badge>
-                      {req.is_half_day && <Badge variant="outline" className="text-[9px]">{req.half_day_period === 'morning' ? 'Délelőtt' : 'Délután'}</Badge>}
+                      <span className="font-medium text-sm">{profiles[req.user_id] || t('approval_inbox.unknown')}</span>
+                      <Badge variant={statusVariant} className="text-xs">{statusLabel}</Badge>
+                      <Badge variant="outline" className="text-xs">{typeLabel}</Badge>
+                      {req.is_half_day && <Badge variant="outline" className="text-[9px]">{req.half_day_period === 'morning' ? t('approval_inbox.half_day_morning') : t('approval_inbox.half_day_afternoon')}</Badge>}
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {format(new Date(req.start_date), 'yyyy.MM.dd', { locale: hu })} – {format(new Date(req.end_date), 'yyyy.MM.dd', { locale: hu })}
@@ -333,19 +329,19 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
                       {mi?.role && <span className="ml-1 text-primary/70">({mi.role})</span>}
                     </p>
                     {req.comment && <p className="text-xs text-muted-foreground">{req.comment}</p>}
-                    {req.review_comment && <p className="text-xs text-muted-foreground italic">Döntés megjegyzés: {req.review_comment}</p>}
+                    {req.review_comment && <p className="text-xs text-muted-foreground italic">{t('approval_inbox.review_comment_label', { comment: req.review_comment })}</p>}
                   </div>
                 </div>
 
                 {isPending && (
                   <div className="space-y-2 pt-1 border-t">
-                    <Textarea placeholder="Megjegyzés a döntéshez (opcionális)..." className="text-xs h-16" value={commentMap[req.id] || ''} onChange={(e) => setCommentMap(prev => ({ ...prev, [req.id]: e.target.value }))} />
+                    <Textarea placeholder={t('approval_inbox.comment_placeholder')} className="text-xs h-16" value={commentMap[req.id] || ''} onChange={(e) => setCommentMap(prev => ({ ...prev, [req.id]: e.target.value }))} />
                     <div className="flex gap-2 justify-end">
                       <Button size="sm" variant="destructive" className="text-xs" onClick={() => handleDecision(req.id, 'rejected')} disabled={processing}>
-                        <X className="h-3 w-3 mr-1" /> Elutasítás
+                        <X className="h-3 w-3 mr-1" /> {t('approval_inbox.reject')}
                       </Button>
                       <Button size="sm" className="text-xs" onClick={() => handleDecision(req.id, 'approved')} disabled={processing}>
-                        <Check className="h-3 w-3 mr-1" /> Jóváhagyás
+                        <Check className="h-3 w-3 mr-1" /> {t('approval_inbox.approve')}
                       </Button>
                     </div>
                   </div>

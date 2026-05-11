@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import { hu } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   open: boolean;
@@ -24,14 +25,8 @@ interface Props {
   onCreated: () => void;
 }
 
-const LEAVE_TYPES = [
-  { value: 'vacation', label: 'Szabadság' },
-  { value: 'sick_leave', label: 'Betegszabadság' },
-  { value: 'unpaid_leave', label: 'Fizetés nélküli szabadság' },
-  { value: 'other', label: 'Egyéb' },
-] as const;
-
 export function AdminLeaveOverride({ open, onOpenChange, workspaceId, adminUserId, onCreated }: Props) {
+  const { t } = useI18n();
   const [members, setMembers] = useState<{ user_id: string; display_name: string }[]>([]);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [leaveType, setLeaveType] = useState('vacation');
@@ -53,7 +48,7 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, adminUserI
       const userIds = (mData || []).map((m: any) => m.user_id);
       if (userIds.length === 0) { setMembers([]); return; }
       const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);
-      setMembers((profiles || []).map((p: any) => ({ user_id: p.user_id, display_name: p.display_name || 'Ismeretlen' })).sort((a, b) => a.display_name.localeCompare(b.display_name)));
+      setMembers((profiles || []).map((p: any) => ({ user_id: p.user_id, display_name: p.display_name || t('approval_inbox.unknown') })).sort((a, b) => a.display_name.localeCompare(b.display_name)));
     })();
   }, [open, workspaceId]);
 
@@ -67,8 +62,8 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, adminUserI
   const hasBlockingConflicts = conflicts.some(c => c.severity === 'blocking');
 
   const handleSubmit = async () => {
-    if (!startDate || !endDate || !selectedUserId) { toast.error('Töltsd ki az összes mezőt'); return; }
-    if (!justification.trim()) { toast.error('Admin indoklás kötelező'); return; }
+    if (!startDate || !endDate || !selectedUserId) { toast.error(t('admin_leave_override.fill_all_fields')); return; }
+    if (!justification.trim()) { toast.error(t('admin_leave_override.justification_required')); return; }
 
     if (!validated) { await handleValidate(); return; }
 
@@ -91,7 +86,7 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, adminUserI
     });
 
     if (error) {
-      toast.error('Hiba a kérelem létrehozásakor');
+      toast.error(t('admin_leave_override.create_failed'));
       console.error(error);
     } else {
       await logAuditEvent({
@@ -108,7 +103,7 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, adminUserI
           is_half_day: isHalfDay,
         },
       });
-      toast.success(autoApprove ? 'Kérelem létrehozva és jóváhagyva' : 'Kérelem létrehozva');
+      toast.success(autoApprove ? t('admin_leave_override.created_approved') : t('admin_leave_override.created'));
       resetForm();
       onOpenChange(false);
       onCreated();
@@ -131,15 +126,15 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, adminUserI
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShieldAlert className="h-5 w-5 text-primary" />
-            Kérelem létrehozása más nevében
+            {t('admin_leave_override.dialog_title')}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 max-h-[60vh] overflow-y-auto">
           <div>
-            <Label>Tag kiválasztása</Label>
+            <Label>{t('admin_leave_override.label_member')}</Label>
             <Select value={selectedUserId} onValueChange={v => { setSelectedUserId(v); setValidated(false); setConflicts([]); }}>
-              <SelectTrigger className="mt-1"><SelectValue placeholder="Válassz tagot..." /></SelectTrigger>
+              <SelectTrigger className="mt-1"><SelectValue placeholder={t('admin_leave_override.select_member_placeholder')} /></SelectTrigger>
               <SelectContent>
                 {members.map(m => <SelectItem key={m.user_id} value={m.user_id}>{m.display_name}</SelectItem>)}
               </SelectContent>
@@ -147,24 +142,27 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, adminUserI
           </div>
 
           <div>
-            <Label>Típus</Label>
+            <Label>{t('admin_leave_override.label_type')}</Label>
             <Select value={leaveType} onValueChange={setLeaveType}>
               <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {LEAVE_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                <SelectItem value="vacation">{t('leave_request.types.vacation')}</SelectItem>
+                <SelectItem value="sick_leave">{t('leave_request.types.sick_leave')}</SelectItem>
+                <SelectItem value="unpaid_leave">{t('leave_request.types.unpaid_leave')}</SelectItem>
+                <SelectItem value="other">{t('leave_request.types.other')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="flex items-center gap-2">
             <Checkbox checked={isHalfDay} onCheckedChange={v => setIsHalfDay(!!v)} id="halfday" />
-            <Label htmlFor="halfday" className="cursor-pointer">Fél nap</Label>
+            <Label htmlFor="halfday" className="cursor-pointer">{t('admin_leave_override.label_half_day')}</Label>
             {isHalfDay && (
               <Select value={halfDayPeriod} onValueChange={setHalfDayPeriod}>
                 <SelectTrigger className="w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="morning">Délelőtt</SelectItem>
-                  <SelectItem value="afternoon">Délután</SelectItem>
+                  <SelectItem value="morning">{t('leave_request.morning')}</SelectItem>
+                  <SelectItem value="afternoon">{t('leave_request.afternoon')}</SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -172,12 +170,12 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, adminUserI
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Kezdő dátum</Label>
+              <Label>{t('admin_leave_override.label_start_date')}</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-full mt-1 justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, 'yyyy.MM.dd', { locale: hu }) : 'Válassz'}
+                    {startDate ? format(startDate, 'yyyy.MM.dd', { locale: hu }) : t('admin_leave_override.pick_date')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -187,12 +185,12 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, adminUserI
             </div>
             {!isHalfDay && (
               <div>
-                <Label>Záró dátum</Label>
+                <Label>{t('admin_leave_override.label_end_date')}</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full mt-1 justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, 'yyyy.MM.dd', { locale: hu }) : 'Válassz'}
+                      {endDate ? format(endDate, 'yyyy.MM.dd', { locale: hu }) : t('admin_leave_override.pick_date')}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -204,23 +202,23 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, adminUserI
           </div>
 
           <div>
-            <Label>Megjegyzés (opcionális)</Label>
-            <Textarea className="mt-1" value={comment} onChange={e => setComment(e.target.value)} placeholder="Megjegyzés a kérelemhez..." rows={2} />
+            <Label>{t('admin_leave_override.label_comment')}</Label>
+            <Textarea className="mt-1" value={comment} onChange={e => setComment(e.target.value)} placeholder={t('admin_leave_override.comment_placeholder')} rows={2} />
           </div>
 
           <div>
-            <Label className="text-destructive">Admin indoklás *</Label>
-            <Textarea className="mt-1 border-destructive/30" value={justification} onChange={e => setJustification(e.target.value)} placeholder="Miért hozod létre más nevében? (kötelező)" rows={2} />
+            <Label className="text-destructive">{t('admin_leave_override.label_justification')}</Label>
+            <Textarea className="mt-1 border-destructive/30" value={justification} onChange={e => setJustification(e.target.value)} placeholder={t('admin_leave_override.justification_placeholder')} rows={2} />
           </div>
 
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <Checkbox checked={autoApprove} onCheckedChange={v => setAutoApprove(!!v)} />
-            Automatikus jóváhagyás (admin override)
+            {t('admin_leave_override.auto_approve_label')}
           </label>
 
           {validated && conflicts.length > 0 && (
             <div className="space-y-1 rounded-md border p-3">
-              <p className="text-xs font-semibold mb-1">Ütközések:</p>
+              <p className="text-xs font-semibold mb-1">{t('admin_leave_override.conflicts_title')}</p>
               {conflicts.map((c, i) => (
                 <div key={i} className={cn("flex items-start gap-2 text-xs rounded px-2 py-1", c.severity === 'blocking' ? 'bg-destructive/10 text-destructive' : 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400')}>
                   {c.severity === 'blocking' ? <XCircle className="h-3 w-3 mt-0.5 shrink-0" /> : <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />}
@@ -228,23 +226,23 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, adminUserI
                 </div>
               ))}
               {autoApprove && hasBlockingConflicts && (
-                <p className="text-xs text-amber-600 font-medium mt-1">⚠️ Admin override: blokkolt ütközések felülbírálhatók.</p>
+                <p className="text-xs text-amber-600 font-medium mt-1">{t('admin_leave_override.blocking_override')}</p>
               )}
             </div>
           )}
 
           {validated && conflicts.length === 0 && (
-            <p className="text-xs text-green-600 dark:text-green-400">✓ Nincs ütközés.</p>
+            <p className="text-xs text-green-600 dark:text-green-400">{t('admin_leave_override.no_conflicts')}</p>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Mégse</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t('admin_leave_override.btn_cancel')}</Button>
           {!validated ? (
-            <Button onClick={handleValidate} disabled={!startDate || (!isHalfDay && !endDate) || !selectedUserId}>Ellenőrzés</Button>
+            <Button onClick={handleValidate} disabled={!startDate || (!isHalfDay && !endDate) || !selectedUserId}>{t('admin_leave_override.btn_validate')}</Button>
           ) : (
             <Button onClick={handleSubmit} disabled={submitting || !selectedUserId || !justification.trim() || !startDate || (!isHalfDay && !endDate)}>
-              {submitting ? 'Küldés...' : 'Létrehozás'}
+              {submitting ? t('admin_leave_override.btn_creating') : t('admin_leave_override.btn_create')}
             </Button>
           )}
         </DialogFooter>

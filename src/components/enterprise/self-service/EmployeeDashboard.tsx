@@ -13,6 +13,7 @@ import {
 import { format, isPast, isWithinInterval, addDays } from 'date-fns';
 import { hu } from 'date-fns/locale';
 import { AttendancePeriodTotals, STATUS_LABELS, STATUS_BADGE_VARIANT, AttendancePeriodStatus } from '../time-attendance/types';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -61,18 +62,11 @@ interface AttendancePeriod {
   return_reason: string | null;
 }
 
-const LEAVE_TYPE_LABELS: Record<string, string> = {
-  vacation: 'Szabadság',
-  sick_leave: 'Betegszabadság',
-  unpaid_leave: 'Fizetés nélküli',
-  other: 'Egyéb',
-};
-
-const LEAVE_STATUS_META: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
-  pending:  { label: 'Elbírálás alatt', variant: 'secondary' },
-  approved: { label: 'Jóváhagyva',     variant: 'default' },
-  rejected: { label: 'Elutasítva',     variant: 'destructive' },
-  cancelled:{ label: 'Visszavonva',    variant: 'outline' },
+const LEAVE_STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
+  pending: 'secondary',
+  approved: 'default',
+  rejected: 'destructive',
+  cancelled: 'outline',
 };
 
 function StatCard({
@@ -94,6 +88,7 @@ function StatCard({
 }
 
 export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab }: Props) {
+  const { t } = useI18n();
   const [membershipId, setMembershipId] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [attendance, setAttendance] = useState<AttendancePeriod | null>(null);
@@ -180,29 +175,28 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
 
   useEffect(() => { load(); }, [load]);
 
-  if (loading) return <p className="text-sm text-muted-foreground py-6">Betöltés…</p>;
+  if (loading) return <p className="text-sm text-muted-foreground py-6">{t('common.loading')}</p>;
   if (!membershipId) return (
-    <p className="text-sm text-muted-foreground py-6">Nem vagy aktív tagja ennek a munkaterületnek.</p>
+    <p className="text-sm text-muted-foreground py-6">{t('self_service.not_active_member')}</p>
   );
 
   const totals = attendance?.totals;
   const monthLabel = format(new Date(year, month - 1), 'MMMM', { locale: hu });
-  const statusLabel = attendance ? STATUS_LABELS[attendance.status] : 'Nincs rögzítve';
+  const statusLabel = attendance ? STATUS_LABELS[attendance.status] : t('attendance.status_no_period');
   const statusVariant = attendance ? STATUS_BADGE_VARIANT[attendance.status] : 'outline';
 
   const pendingRequests = requests.filter(r => r.status === 'pending').length;
-  const openTasks = tasks.filter(t => ['pending', 'in_progress'].includes(t.status)).length;
-  const overdueTasks = tasks.filter(t =>
-    ['pending', 'in_progress'].includes(t.status) && t.due_date && isPast(new Date(t.due_date))
+  const openTasks = tasks.filter(task => ['pending', 'in_progress'].includes(task.status)).length;
+  const overdueTasks = tasks.filter(task =>
+    ['pending', 'in_progress'].includes(task.status) && task.due_date && isPast(new Date(task.due_date))
   ).length;
 
   return (
     <div className="space-y-5">
-      {/* Greeting */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-lg font-semibold">
-            Szia{displayName ? `, ${displayName}` : ''}!
+            {t('self_service.greeting', { name: displayName ? `, ${displayName}` : '' })}
           </h2>
           <p className="text-sm text-muted-foreground">
             {format(now, 'yyyy. MMMM d., EEEE', { locale: hu })}
@@ -212,30 +206,29 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
           {pendingRequests > 0 && (
             <Badge variant="secondary" className="gap-1">
               <Hourglass className="h-3 w-3" />
-              {pendingRequests} kérelem elbírálás alatt
+              {t('self_service.pending_badge', { count: pendingRequests })}
             </Badge>
           )}
           {overdueTasks > 0 && (
             <Badge variant="destructive" className="gap-1">
               <AlertTriangle className="h-3 w-3" />
-              {overdueTasks} lejárt feladat
+              {t('self_service.overdue_badge', { count: overdueTasks })}
             </Badge>
           )}
         </div>
       </div>
 
-      {/* Attendance Summary */}
       <Card>
         <CardHeader className="py-3 px-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <CardTitle className="text-sm flex items-center gap-1.5">
               <Clock className="h-4 w-4 text-primary" />
-              Munkaidőnyilvántartás — {monthLabel}
+              {t('self_service.attendance_title', { month: monthLabel })}
             </CardTitle>
             <div className="flex items-center gap-2 shrink-0">
               <Badge variant={statusVariant}>{statusLabel}</Badge>
               <Button variant="ghost" size="sm" className="h-7 gap-1" onClick={() => onNavigateTab('time-attendance')}>
-                Megnyitás <ArrowRight className="h-3.5 w-3.5" />
+                {t('self_service.open_timesheet')} <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </div>
           </div>
@@ -243,48 +236,49 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
         <CardContent className="px-4 pb-4">
           {attendance?.status === 'returned' && attendance.return_reason && (
             <div className="mb-3 rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-xs text-destructive">
-              <strong>Visszaküldve:</strong> {attendance.return_reason}
+              <strong>{t('self_service.returned_prefix')}</strong> {attendance.return_reason}
             </div>
           )}
           {totals ? (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <StatCard label="Ledolgozott" value={`${(totals.worked_hours || 0).toFixed(1)} ó`} icon={TrendingUp} />
-              <StatCard label="Túlóra" value={`${(totals.overtime_hours || 0).toFixed(1)} ó`} icon={Clock}
+              <StatCard label={t('self_service.stat_worked')} value={`${(totals.worked_hours || 0).toFixed(1)} h`} icon={TrendingUp} />
+              <StatCard label={t('self_service.stat_overtime')} value={`${(totals.overtime_hours || 0).toFixed(1)} h`} icon={Clock}
                 accent={(totals.overtime_hours || 0) > 0 ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/20' : undefined}
               />
-              <StatCard label="Elvárt (szab. után)" value={`${(totals.expected_after_leave || 0).toFixed(1)} ó`} icon={CalendarCheck} />
-              <StatCard label="Bér-összesítő" value={`${(totals.payroll_total_hours || 0).toFixed(1)} ó`} icon={Wallet} />
+              <StatCard label={t('self_service.stat_expected')} value={`${(totals.expected_after_leave || 0).toFixed(1)} h`} icon={CalendarCheck} />
+              <StatCard label={t('self_service.stat_payroll')} value={`${(totals.payroll_total_hours || 0).toFixed(1)} h`} icon={Wallet} />
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">
               {attendance
-                ? 'Nincsenek rögzített szegmensek ebben a hónapban.'
-                : 'Még nem nyitottad meg az idei ' + monthLabel + ' nyilvántartást. Kattints a Megnyitás gombra a kezdéshez.'}
+                ? t('self_service.no_segments')
+                : t('self_service.no_period', { month: monthLabel })}
             </p>
           )}
         </CardContent>
       </Card>
 
-      {/* Leave Quotas */}
       {quotas.length > 0 && (
         <Card>
           <CardHeader className="py-3 px-4">
             <CardTitle className="text-sm flex items-center gap-1.5">
               <CalendarDays className="h-4 w-4 text-primary" />
-              Szabadság-egyenleg ({year})
+              {t('self_service.quota_title', { year })}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4 space-y-3">
             {quotas.map(q => {
               const total = q.initial_days + q.carryover_days + q.manual_adjustment_days;
               const usedPct = total > 0 ? Math.round((q.consumed_days / total) * 100) : 0;
+              const leaveTypeKey = `self_service.leave_type_${q.leave_type}` as any;
+              const leaveLabel = t(leaveTypeKey) !== leaveTypeKey ? t(leaveTypeKey) : q.leave_type;
               return (
                 <div key={q.quota_id} className="space-y-1">
                   <div className="flex items-center justify-between text-sm">
-                    <span>{LEAVE_TYPE_LABELS[q.leave_type] ?? q.leave_type}</span>
+                    <span>{leaveLabel}</span>
                     <span className="font-medium">
-                      {q.available_days} nap maradt
-                      <span className="text-muted-foreground font-normal"> / {total} nap összesen</span>
+                      {t('self_service.quota_available', { count: q.available_days })}
+                      <span className="text-muted-foreground font-normal"> {t('self_service.quota_total', { total })}</span>
                     </span>
                   </div>
                   <Progress value={usedPct} className="h-1.5" />
@@ -292,38 +286,41 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
               );
             })}
             <Button variant="ghost" size="sm" className="h-7 gap-1 px-0 text-xs" onClick={() => onNavigateTab('requests')}>
-              Szabadság igénylése <ArrowRight className="h-3.5 w-3.5" />
+              {t('self_service.quota_nav')} <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           </CardContent>
         </Card>
       )}
 
-      {/* Recent Leave Requests */}
       {requests.length > 0 && (
         <Card>
           <CardHeader className="py-3 px-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle className="text-sm flex items-center gap-1.5">
                 <FileText className="h-4 w-4 text-primary" />
-                Kérelmeim
+                {t('self_service.requests_title')}
               </CardTitle>
               <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs shrink-0" onClick={() => onNavigateTab('requests')}>
-                Összes <ArrowRight className="h-3.5 w-3.5" />
+                {t('self_service.requests_nav')} <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </div>
           </CardHeader>
           <CardContent className="px-4 pb-3">
             <div className="space-y-2">
               {requests.slice(0, 5).map(req => {
-                const sm = LEAVE_STATUS_META[req.status] ?? LEAVE_STATUS_META.pending;
+                const variant = LEAVE_STATUS_VARIANTS[req.status] ?? 'secondary';
+                const statusKey = `self_service.leave_status_${req.status}` as any;
+                const statusLabel = t(statusKey) !== statusKey ? t(statusKey) : req.status;
+                const leaveTypeKey = `self_service.leave_type_${req.leave_type}` as any;
+                const leaveLabel = t(leaveTypeKey) !== leaveTypeKey ? t(leaveTypeKey) : req.leave_type;
                 const start = format(new Date(req.start_date), 'MMM d.', { locale: hu });
                 const end = format(new Date(req.end_date), 'MMM d.', { locale: hu });
                 return (
                   <div key={req.id} className="flex items-center gap-2 text-sm">
                     <span className="flex-1 truncate">
-                      {LEAVE_TYPE_LABELS[req.leave_type] ?? req.leave_type} · {start}–{end}
+                      {leaveLabel} · {start}–{end}
                     </span>
-                    <Badge variant={sm.variant} className="text-xs shrink-0">{sm.label}</Badge>
+                    <Badge variant={variant} className="text-xs shrink-0">{statusLabel}</Badge>
                   </div>
                 );
               })}
@@ -332,18 +329,17 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
         </Card>
       )}
 
-      {/* My Workflow Tasks */}
       {tasks.length > 0 && (
         <Card>
           <CardHeader className="py-3 px-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle className="text-sm flex items-center gap-1.5">
                 <ListChecks className="h-4 w-4 text-primary" />
-                Hozzám rendelt feladatok
+                {t('self_service.tasks_title')}
                 {openTasks > 0 && <Badge variant="secondary" className="text-xs">{openTasks}</Badge>}
               </CardTitle>
               <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs shrink-0" onClick={() => onNavigateTab('workflows')}>
-                Összes <ArrowRight className="h-3.5 w-3.5" />
+                {t('self_service.tasks_nav')} <ArrowRight className="h-3.5 w-3.5" />
               </Button>
             </div>
           </CardHeader>
@@ -379,7 +375,7 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
       {tasks.length === 0 && requests.length === 0 && quotas.length === 0 && !attendance && (
         <Card>
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Nincs megjeleníthető adat erre a munkaterületre. Nyisd meg az Időnyilvántartás vagy Kérelmek fület az első adatok rögzítéséhez.
+            {t('self_service.empty_state')}
           </CardContent>
         </Card>
       )}

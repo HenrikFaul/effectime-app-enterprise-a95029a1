@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import { hu } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -35,17 +36,16 @@ interface DailyRule {
   role_filter: string | null;
 }
 
-const DOW_LABELS = ['Vasárnap', 'Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat'];
-const DOW_ORDER = [1, 2, 3, 4, 5, 6, 0]; // Hé–Vas megjelenítési sorrend
+const DOW_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
 export function DailyRuleManager({ workspaceId, userId }: Props) {
+  const { t } = useI18n();
   const [rules, setRules] = useState<DailyRule[]>([]);
   const [businessRoles, setBusinessRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // Form state
   const [selectedDays, setSelectedDays] = useState<number[]>([1]);
   const [validFrom, setValidFrom] = useState<Date>();
   const [validUntil, setValidUntil] = useState<Date>();
@@ -113,7 +113,7 @@ export function DailyRuleManager({ workspaceId, userId }: Props) {
 
   const addRole = () => {
     if (!roleToAdd) return;
-    if (selectedRoles.includes(roleToAdd)) { toast.error('Már hozzáadva'); return; }
+    if (selectedRoles.includes(roleToAdd)) { toast.error(t('daily_rule_mgr.already_added')); return; }
     setSelectedRoles(prev => [...prev, roleToAdd]);
     setRoleToAdd('');
   };
@@ -123,14 +123,14 @@ export function DailyRuleManager({ workspaceId, userId }: Props) {
   };
 
   const handleSave = async () => {
-    if (selectedDays.length === 0) { toast.error('Válassz legalább egy napot'); return; }
-    if (!maxOff && !minCoverage) { toast.error('Add meg a max távollévők számát vagy a minimum lefedettséget'); return; }
+    if (selectedDays.length === 0) { toast.error(t('daily_rule_mgr.select_days')); return; }
+    if (!maxOff && !minCoverage) { toast.error(t('daily_rule_mgr.fill_limits')); return; }
 
     const payload: any = {
       workspace_id: workspaceId,
       created_by: userId,
       days_of_week: selectedDays,
-      day_of_week: selectedDays.length === 1 ? selectedDays[0] : null, // backwards compat
+      day_of_week: selectedDays.length === 1 ? selectedDays[0] : null,
       rule_date: null,
       valid_from: validFrom ? format(validFrom, 'yyyy-MM-dd') : null,
       valid_until: validUntil ? format(validUntil, 'yyyy-MM-dd') : null,
@@ -149,10 +149,10 @@ export function DailyRuleManager({ workspaceId, userId }: Props) {
     }
     if (error) {
       console.error('Daily rule save error:', error);
-      toast.error(`Hiba a szabály mentésekor: ${error.message || 'ismeretlen hiba'}`);
+      toast.error(t('daily_rule_mgr.save_failed', { message: error.message || 'unknown' }));
       return;
     }
-    toast.success(editingId ? 'Szabály frissítve' : 'Szabály hozzáadva');
+    toast.success(editingId ? t('daily_rule_mgr.updated') : t('daily_rule_mgr.added'));
     setShowForm(false);
     resetForm();
     fetchRules();
@@ -160,7 +160,7 @@ export function DailyRuleManager({ workspaceId, userId }: Props) {
 
   const handleDelete = async (id: string) => {
     await supabase.from('enterprise_daily_rules').delete().eq('id', id);
-    toast.success('Szabály törölve');
+    toast.success(t('daily_rule_mgr.deleted'));
     fetchRules();
   };
 
@@ -172,7 +172,7 @@ export function DailyRuleManager({ workspaceId, userId }: Props) {
     return days
       .slice()
       .sort((a, b) => DOW_ORDER.indexOf(a) - DOW_ORDER.indexOf(b))
-      .map(d => DOW_LABELS[d].slice(0, 3))
+      .map(d => t(`coverage_rule_mgr.dow_${d}` as any))
       .join(', ');
   };
 
@@ -197,14 +197,14 @@ export function DailyRuleManager({ workspaceId, userId }: Props) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Napi szabályok (max távollévők, min lefedettség)</h3>
+        <h3 className="text-sm font-semibold">{t('daily_rule_mgr.title')}</h3>
         <Button size="sm" variant="outline" onClick={() => { resetForm(); setShowForm(true); }}>
-          <Plus className="h-3 w-3 mr-1" /> Szabály
+          <Plus className="h-3 w-3 mr-1" /> {t('daily_rule_mgr.btn_new')}
         </Button>
       </div>
 
       {rules.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Nincs napi szabály definiálva.</p>
+        <p className="text-xs text-muted-foreground">{t('daily_rule_mgr.empty')}</p>
       ) : (
         <div className="space-y-1">
           {rules.map(r => {
@@ -213,17 +213,17 @@ export function DailyRuleManager({ workspaceId, userId }: Props) {
             return (
               <div key={r.id} className="flex items-center gap-2 p-2 rounded-md border text-sm flex-wrap">
                 <span className="font-medium">{formatDays(r)}</span>
-                {r.max_off !== null && <span className="text-xs text-muted-foreground">Max távollévő: {r.max_off}</span>}
-                {r.min_coverage !== null && <span className="text-xs text-muted-foreground">Min jelenlét: {r.min_coverage}</span>}
+                {r.max_off !== null && <span className="text-xs text-muted-foreground">{t('daily_rule_mgr.max_off_label', { count: r.max_off })}</span>}
+                {r.min_coverage !== null && <span className="text-xs text-muted-foreground">{t('daily_rule_mgr.min_coverage_label', { count: r.min_coverage })}</span>}
                 {roles.length > 0 && (
                   <span className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
-                    Munkakör:
+                    {t('daily_rule_mgr.role_label')}
                     {roles.map(role => (
                       <Badge key={role} variant="secondary" className="text-[10px] h-4">{role}</Badge>
                     ))}
                   </span>
                 )}
-                {validity && <span className="text-xs text-muted-foreground">Érvényes: {validity}</span>}
+                {validity && <span className="text-xs text-muted-foreground">{t('daily_rule_mgr.valid_label', { value: validity })}</span>}
                 <div className="ml-auto flex items-center gap-1">
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(r)}>
                     <Pencil className="h-3.5 w-3.5" />
@@ -241,31 +241,29 @@ export function DailyRuleManager({ workspaceId, userId }: Props) {
       <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) resetForm(); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingId ? 'Napi szabály szerkesztése' : 'Napi szabály hozzáadása'}</DialogTitle>
+            <DialogTitle>{editingId ? t('daily_rule_mgr.dialog_edit_title') : t('daily_rule_mgr.dialog_create_title')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            {/* Days of week */}
             <div>
-              <Label>Mely napokra vonatkozik?</Label>
+              <Label>{t('daily_rule_mgr.label_days')}</Label>
               <div className="grid grid-cols-2 gap-2 mt-2">
                 {DOW_ORDER.map(d => (
                   <label key={d} className="flex items-center gap-2 text-sm cursor-pointer rounded-md border p-2 hover:bg-accent/30">
                     <Checkbox checked={selectedDays.includes(d)} onCheckedChange={() => toggleDay(d)} />
-                    <span>{DOW_LABELS[d]}</span>
+                    <span>{t(`coverage_rule_mgr.dow_${d}` as any)}</span>
                   </label>
                 ))}
               </div>
             </div>
 
-            {/* Validity period */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Érvényes ettől (opcionális)</Label>
+                <Label>{t('daily_rule_mgr.label_valid_from')}</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full mt-1 justify-start text-left font-normal", !validFrom && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {validFrom ? format(validFrom, 'yyyy.MM.dd', { locale: hu }) : 'Bármikor'}
+                      {validFrom ? format(validFrom, 'yyyy.MM.dd', { locale: hu }) : t('daily_rule_mgr.pick_any')}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -274,12 +272,12 @@ export function DailyRuleManager({ workspaceId, userId }: Props) {
                 </Popover>
               </div>
               <div>
-                <Label>Érvényes eddig (opcionális)</Label>
+                <Label>{t('daily_rule_mgr.label_valid_until')}</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full mt-1 justify-start text-left font-normal", !validUntil && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {validUntil ? format(validUntil, 'yyyy.MM.dd', { locale: hu }) : 'Korlátlan'}
+                      {validUntil ? format(validUntil, 'yyyy.MM.dd', { locale: hu }) : t('daily_rule_mgr.pick_unlimited')}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -289,22 +287,20 @@ export function DailyRuleManager({ workspaceId, userId }: Props) {
               </div>
             </div>
 
-            {/* Limits */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Max távollévő</Label>
-                <Input className="mt-1" type="number" min="0" value={maxOff} onChange={e => setMaxOff(e.target.value)} placeholder="pl. 3" />
+                <Label>{t('daily_rule_mgr.label_max_off')}</Label>
+                <Input className="mt-1" type="number" min="0" value={maxOff} onChange={e => setMaxOff(e.target.value)} placeholder="3" />
               </div>
               <div>
-                <Label>Min jelenlét</Label>
-                <Input className="mt-1" type="number" min="0" value={minCoverage} onChange={e => setMinCoverage(e.target.value)} placeholder="pl. 5" />
+                <Label>{t('daily_rule_mgr.label_min_coverage')}</Label>
+                <Input className="mt-1" type="number" min="0" value={minCoverage} onChange={e => setMinCoverage(e.target.value)} placeholder="5" />
               </div>
             </div>
 
-            {/* Role filters */}
             <div>
-              <Label>Munkakör szűrő (opcionális)</Label>
-              <p className="text-xs text-muted-foreground mt-0.5">A szabály csak a kiválasztott munkakörökre vonatkozik. Ha üres, mindenkire érvényes.</p>
+              <Label>{t('daily_rule_mgr.label_role_filter')}</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">{t('daily_rule_mgr.role_filter_hint')}</p>
               {selectedRoles.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-2">
                   {selectedRoles.map(role => (
@@ -318,14 +314,14 @@ export function DailyRuleManager({ workspaceId, userId }: Props) {
                 </div>
               )}
               {businessRoles.length === 0 ? (
-                <p className="text-xs text-muted-foreground mt-2 italic">Nincsenek munkakörök. Hozz létre munkaköröket a Beállítások / Munkakörök részben.</p>
+                <p className="text-xs text-muted-foreground mt-2 italic">{t('daily_rule_mgr.no_roles_hint')}</p>
               ) : availableRolesToAdd.length === 0 ? (
-                <p className="text-xs text-muted-foreground mt-2 italic">Minden munkakör hozzáadva.</p>
+                <p className="text-xs text-muted-foreground mt-2 italic">{t('daily_rule_mgr.all_roles_added')}</p>
               ) : (
                 <div className="flex gap-2 mt-2">
                   <Select value={roleToAdd} onValueChange={setRoleToAdd}>
                     <SelectTrigger className="flex-1">
-                      <SelectValue placeholder="Válassz munkakört..." />
+                      <SelectValue placeholder={t('daily_rule_mgr.select_role_placeholder')} />
                     </SelectTrigger>
                     <SelectContent>
                       {availableRolesToAdd.map(r => (
@@ -334,15 +330,15 @@ export function DailyRuleManager({ workspaceId, userId }: Props) {
                     </SelectContent>
                   </Select>
                   <Button size="sm" variant="outline" onClick={addRole} disabled={!roleToAdd}>
-                    <Plus className="h-3.5 w-3.5 mr-1" /> Hozzáadás
+                    <Plus className="h-3.5 w-3.5 mr-1" /> {t('daily_rule_mgr.btn_add_role')}
                   </Button>
                 </div>
               )}
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowForm(false); resetForm(); }}>Mégse</Button>
-            <Button onClick={handleSave}>{editingId ? 'Mentés' : 'Hozzáadás'}</Button>
+            <Button variant="outline" onClick={() => { setShowForm(false); resetForm(); }}>{t('daily_rule_mgr.btn_cancel')}</Button>
+            <Button onClick={handleSave}>{editingId ? t('daily_rule_mgr.btn_save') : t('daily_rule_mgr.btn_add')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

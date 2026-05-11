@@ -11,6 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Plus, Pencil, Trash2, Building2, Archive, ArchiveRestore } from 'lucide-react';
 import { toast } from 'sonner';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props { workspaceId: string; userId: string }
 
@@ -35,7 +36,6 @@ interface Rule {
 interface Office { id: string; name: string; city: string | null }
 interface Skill { id: string; name: string }
 
-const DOW_LABELS = ['Vas', 'Hét', 'Ked', 'Sze', 'Csü', 'Pén', 'Szo'];
 const DOW_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
 function ruleRoles(r: Rule): string[] {
@@ -50,6 +50,7 @@ function ruleSkillIds(r: Rule): string[] {
 }
 
 export function OfficeCoverageRuleManager({ workspaceId, userId }: Props) {
+  const { t } = useI18n();
   const [rules, setRules] = useState<Rule[]>([]);
   const [offices, setOffices] = useState<Office[]>([]);
   const [allPositions, setAllPositions] = useState<string[]>([]);
@@ -121,15 +122,14 @@ export function OfficeCoverageRuleManager({ workspaceId, userId }: Props) {
   };
 
   const save = async () => {
-    if (!officeId) { toast.error('Telephely kötelező'); return; }
-    if (!minHeadcount || parseInt(minHeadcount) < 1) { toast.error('Min. létszám kötelező (legalább 1)'); return; }
+    if (!officeId) { toast.error(t('coverage_rule_mgr.office_required')); return; }
+    if (!minHeadcount || parseInt(minHeadcount) < 1) { toast.error(t('coverage_rule_mgr.headcount_required')); return; }
     if (selectedRoles.length === 0 && selectedSkillIds.length === 0) {
-      toast.error('Adj meg legalább egy pozíciót vagy képességet');
+      toast.error(t('coverage_rule_mgr.role_or_skill_required'));
       return;
     }
-    // Adatintegritás: ha van valid_from és valid_until, az until ne legyen korábbi
     if (validFrom && validUntil && validUntil < validFrom) {
-      toast.error('Az "Érvényes eddig" nem lehet korábbi mint az "Érvényes ettől"');
+      toast.error(t('coverage_rule_mgr.date_range_invalid'));
       return;
     }
 
@@ -159,16 +159,16 @@ export function OfficeCoverageRuleManager({ workspaceId, userId }: Props) {
       ? await (supabase as any).from('enterprise_office_coverage_rules').update(payload).eq('id', editingId)
       : await (supabase as any).from('enterprise_office_coverage_rules').insert(payload);
 
-    if (error) { toast.error(`Mentési hiba: ${error.message}`); return; }
-    toast.success(editingId ? 'Szabály frissítve' : 'Szabály hozzáadva');
+    if (error) { toast.error(t('coverage_rule_mgr.save_failed', { message: error.message })); return; }
+    toast.success(t(editingId ? 'coverage_rule_mgr.updated' : 'coverage_rule_mgr.created'));
     setOpen(false); reset(); load();
   };
 
   const remove = async (id: string) => {
-    if (!confirm('Biztosan véglegesen törlöd? Az archiválás biztonságosabb választás.')) return;
+    if (!confirm(t('coverage_rule_mgr.delete_confirm'))) return;
     const { error } = await (supabase as any).from('enterprise_office_coverage_rules').delete().eq('id', id);
-    if (error) { toast.error('Törlési hiba'); return; }
-    toast.success('Szabály törölve'); load();
+    if (error) { toast.error(t('coverage_rule_mgr.delete_failed')); return; }
+    toast.success(t('coverage_rule_mgr.deleted')); load();
   };
 
   const archive = async (id: string) => {
@@ -176,8 +176,8 @@ export function OfficeCoverageRuleManager({ workspaceId, userId }: Props) {
       .from('enterprise_office_coverage_rules')
       .update({ status: 'archived', archived_at: new Date().toISOString() })
       .eq('id', id);
-    if (error) { toast.error('Archiválás sikertelen'); return; }
-    toast.success('Szabály archiválva'); load();
+    if (error) { toast.error(t('coverage_rule_mgr.archive_failed')); return; }
+    toast.success(t('coverage_rule_mgr.archived')); load();
   };
 
   const restore = async (id: string) => {
@@ -185,8 +185,8 @@ export function OfficeCoverageRuleManager({ workspaceId, userId }: Props) {
       .from('enterprise_office_coverage_rules')
       .update({ status: 'active', archived_at: null })
       .eq('id', id);
-    if (error) { toast.error('Visszaállítás sikertelen'); return; }
-    toast.success('Szabály visszaállítva'); load();
+    if (error) { toast.error(t('coverage_rule_mgr.restore_failed')); return; }
+    toast.success(t('coverage_rule_mgr.restored')); load();
   };
 
   const toggleDay = (d: number) => setDays(p => p.includes(d) ? p.filter(x => x !== d) : [...p, d].sort());
@@ -211,26 +211,26 @@ export function OfficeCoverageRuleManager({ workspaceId, userId }: Props) {
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <h3 className="text-sm font-semibold flex items-center gap-2">
-          <Building2 className="h-4 w-4 text-primary" /> Telephelyi kapacitás-szabályok
+          <Building2 className="h-4 w-4 text-primary" /> {t('coverage_rule_mgr.title')}
         </h3>
         <div className="flex items-center gap-2">
           <Tabs value={filter} onValueChange={(v) => setFilter(v as any)}>
             <TabsList className="h-7">
-              <TabsTrigger value="active" className="text-xs h-6">Aktív</TabsTrigger>
-              <TabsTrigger value="archived" className="text-xs h-6">Archivált</TabsTrigger>
+              <TabsTrigger value="active" className="text-xs h-6">{t('coverage_rule_mgr.tab_active')}</TabsTrigger>
+              <TabsTrigger value="archived" className="text-xs h-6">{t('coverage_rule_mgr.tab_archived')}</TabsTrigger>
             </TabsList>
           </Tabs>
           <Button size="sm" variant="outline" onClick={() => { reset(); setOpen(true); }} disabled={offices.length === 0}>
-            <Plus className="h-3 w-3 mr-1" /> Új szabály
+            <Plus className="h-3 w-3 mr-1" /> {t('coverage_rule_mgr.btn_new')}
           </Button>
         </div>
       </div>
 
       {offices.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Először hozz létre legalább egy telephelyet a Beállítások / Irodák szekcióban.</p>
+        <p className="text-xs text-muted-foreground">{t('coverage_rule_mgr.no_offices_hint')}</p>
       ) : visibleRules.length === 0 ? (
         <p className="text-xs text-muted-foreground">
-          {filter === 'active' ? 'Nincs aktív telephelyi szabály.' : 'Nincs archivált szabály.'}
+          {filter === 'active' ? t('coverage_rule_mgr.empty_active') : t('coverage_rule_mgr.empty_archived')}
         </p>
       ) : (
         <div className="space-y-1">
@@ -250,10 +250,10 @@ export function OfficeCoverageRuleManager({ workspaceId, userId }: Props) {
                     {skillName(sid)}{r.min_skill_level && r.min_skill_level > 1 ? ` (≥${r.min_skill_level})` : ''}
                   </Badge>
                 ))}
-                <span className="text-xs text-muted-foreground">Min: {r.min_headcount} fő</span>
+                <span className="text-xs text-muted-foreground">{t('coverage_rule_mgr.headcount_label', { count: r.min_headcount })}</span>
                 {r.days_of_week && r.days_of_week.length > 0 && (
                   <span className="text-xs text-muted-foreground">
-                    {r.days_of_week.slice().sort((a, b) => DOW_ORDER.indexOf(a) - DOW_ORDER.indexOf(b)).map(d => DOW_LABELS[d]).join(', ')}
+                    {r.days_of_week.slice().sort((a, b) => DOW_ORDER.indexOf(a) - DOW_ORDER.indexOf(b)).map(d => t(`coverage_rule_mgr.dow_${d}` as any)).join(', ')}
                   </span>
                 )}
                 {(r.valid_from || r.valid_until) && (
@@ -262,7 +262,7 @@ export function OfficeCoverageRuleManager({ workspaceId, userId }: Props) {
                     {isExpiringSoon ? ' ⚠' : ''}
                   </span>
                 )}
-                {r.status !== 'active' && <Badge variant="outline" className="text-[10px] bg-muted">Archivált</Badge>}
+                {r.status !== 'active' && <Badge variant="outline" className="text-[10px] bg-muted">{t('coverage_rule_mgr.badge_archived')}</Badge>}
                 <div className="ml-auto flex items-center gap-1">
                   {r.status === 'active' ? (
                     <>
@@ -291,37 +291,37 @@ export function OfficeCoverageRuleManager({ workspaceId, userId }: Props) {
       <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) reset(); }}>
         <DialogContent className="w-[95vw] max-w-4xl">
           <DialogHeader>
-            <DialogTitle>{editingId ? 'Szabály szerkesztése' : 'Új telephelyi szabály'}</DialogTitle>
+            <DialogTitle>{editingId ? t('coverage_rule_mgr.dialog_edit_title') : t('coverage_rule_mgr.dialog_create_title')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 max-h-[82vh] overflow-y-auto pr-2">
             {/* Name */}
             <div>
-              <Label>Szabály neve <span className="text-muted-foreground text-xs font-normal">(opcionális)</span></Label>
-              <Input className="mt-1" value={name} onChange={e => setName(e.target.value)} placeholder="pl. Karácsonyi készenlét, Nyári minimum" maxLength={100} />
+              <Label>{t('coverage_rule_mgr.label_name')} <span className="text-muted-foreground text-xs font-normal">{t('coverage_rule_mgr.label_name_optional')}</span></Label>
+              <Input className="mt-1" value={name} onChange={e => setName(e.target.value)} placeholder={t('coverage_rule_mgr.name_placeholder')} maxLength={100} />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Telephely</Label>
+                <Label>{t('coverage_rule_mgr.label_office')}</Label>
                 <Select value={officeId} onValueChange={setOfficeId}>
-                  <SelectTrigger className="mt-1"><SelectValue placeholder="Válassz..." /></SelectTrigger>
+                  <SelectTrigger className="mt-1"><SelectValue placeholder={t('coverage_rule_mgr.select_placeholder')} /></SelectTrigger>
                   <SelectContent>
                     {offices.map(o => <SelectItem key={o.id} value={o.id}>{o.name}{o.city ? ` (${o.city})` : ''}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label>Min. fő (elvárás)</Label>
+                <Label>{t('coverage_rule_mgr.label_min_headcount')}</Label>
                 <Input className="mt-1" type="number" min="1" value={effectiveMinHeadcount} onChange={e => setMinHeadcount(e.target.value)} />
               </div>
             </div>
 
             <div>
               <Label className="flex items-center justify-between">
-                <span>Pozíciók{selectedRoles.length > 0 && <span className="ml-1 text-primary font-normal">({selectedRoles.length} kiválasztva)</span>}</span>
+                <span>{t('coverage_rule_mgr.label_positions')}{selectedRoles.length > 0 && <span className="ml-1 text-primary font-normal">{t('coverage_rule_mgr.positions_selected', { count: selectedRoles.length })}</span>}</span>
               </Label>
               {allPositions.length === 0 ? (
-                <p className="text-xs text-muted-foreground mt-1">Nincs definiált pozíció. Előbb rendelj pozíciót egy taghoz az Erőforrások fülön.</p>
+                <p className="text-xs text-muted-foreground mt-1">{t('coverage_rule_mgr.no_positions_hint')}</p>
               ) : (
                 <ScrollArea className="mt-1 h-52 border rounded-md p-2">
                   <div className="space-y-1">
@@ -349,7 +349,7 @@ export function OfficeCoverageRuleManager({ workspaceId, userId }: Props) {
             {skills.length > 0 && (
               <div>
                 <Label className="flex items-center justify-between">
-                  <span>Képességek (skill){selectedSkillIds.length > 0 && <span className="ml-1 text-primary font-normal">({selectedSkillIds.length} kiválasztva)</span>}</span>
+                  <span>{t('coverage_rule_mgr.label_skills')}{selectedSkillIds.length > 0 && <span className="ml-1 text-primary font-normal">{t('coverage_rule_mgr.skills_selected', { count: selectedSkillIds.length })}</span>}</span>
                 </Label>
                 <ScrollArea className="mt-1 h-32 border rounded-md p-2">
                   <div className="space-y-1">
@@ -363,7 +363,7 @@ export function OfficeCoverageRuleManager({ workspaceId, userId }: Props) {
                 </ScrollArea>
                 {selectedSkillIds.length > 0 && (
                   <div className="mt-2">
-                    <Label>Min. skill szint (1–5)</Label>
+                    <Label>{t('coverage_rule_mgr.label_min_level_range')}</Label>
                     <Input className="mt-1 w-24" type="number" min="1" max="5" value={minSkillLevel} onChange={e => setMinSkillLevel(e.target.value)} />
                   </div>
                 )}
@@ -371,12 +371,12 @@ export function OfficeCoverageRuleManager({ workspaceId, userId }: Props) {
             )}
 
             <div>
-              <Label>Napok (opcionális — üres = mindennap)</Label>
+              <Label>{t('coverage_rule_mgr.label_days_hint')}</Label>
               <div className="grid grid-cols-7 gap-1 mt-1">
                 {DOW_ORDER.map(d => (
                   <label key={d} className="flex flex-col items-center gap-1 cursor-pointer">
                     <Checkbox checked={days.includes(d)} onCheckedChange={() => toggleDay(d)} />
-                    <span className="text-[10px]">{DOW_LABELS[d]}</span>
+                    <span className="text-[10px]">{t(`coverage_rule_mgr.dow_${d}` as any)}</span>
                   </label>
                 ))}
               </div>
@@ -384,23 +384,23 @@ export function OfficeCoverageRuleManager({ workspaceId, userId }: Props) {
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label>Érvényes ettől</Label>
+                <Label>{t('coverage_rule_mgr.label_valid_from')}</Label>
                 <Input className="mt-1" type="date" value={validFrom} onChange={e => setValidFrom(e.target.value)} />
               </div>
               <div>
-                <Label>Érvényes eddig <span className="text-[10px] text-muted-foreground">(lejárat után automatikus archiválás)</span></Label>
+                <Label>{t('coverage_rule_mgr.label_valid_until')} <span className="text-[10px] text-muted-foreground">{t('coverage_rule_mgr.label_valid_until_note')}</span></Label>
                 <Input className="mt-1" type="date" value={validUntil} onChange={e => setValidUntil(e.target.value)} />
               </div>
             </div>
 
             <div>
-              <Label>Megjegyzés</Label>
-              <Input className="mt-1" value={notes} onChange={e => setNotes(e.target.value)} placeholder="opcionális" />
+              <Label>{t('coverage_rule_mgr.label_notes')}</Label>
+              <Input className="mt-1" value={notes} onChange={e => setNotes(e.target.value)} placeholder={t('coverage_rule_mgr.notes_placeholder')} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setOpen(false); reset(); }}>Mégse</Button>
-            <Button onClick={save}>{editingId ? 'Mentés' : 'Hozzáadás'}</Button>
+            <Button variant="outline" onClick={() => { setOpen(false); reset(); }}>{t('coverage_rule_mgr.btn_cancel')}</Button>
+            <Button onClick={save}>{editingId ? t('coverage_rule_mgr.btn_save') : t('coverage_rule_mgr.btn_add')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

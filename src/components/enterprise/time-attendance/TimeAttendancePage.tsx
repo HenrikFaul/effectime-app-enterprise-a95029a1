@@ -14,6 +14,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { User, Users } from 'lucide-react';
 import { EmployeeMonthView } from './EmployeeMonthView';
 import { AdminOverview } from './AdminOverview';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -21,6 +22,7 @@ interface Props {
 }
 
 export function TimeAttendancePage({ workspaceId, isAdmin }: Props) {
+  const { t } = useI18n();
   const [view, setView] = useState<'me' | 'team'>(isAdmin ? 'team' : 'me');
 
   if (!isAdmin) {
@@ -30,8 +32,8 @@ export function TimeAttendancePage({ workspaceId, isAdmin }: Props) {
   return (
     <Tabs value={view} onValueChange={(v) => setView(v as 'me' | 'team')} className="space-y-4">
       <TabsList className="grid grid-cols-2 w-full max-w-md">
-        <TabsTrigger value="team" className="gap-1.5"><Users className="h-3.5 w-3.5" /> Csapat áttekintés</TabsTrigger>
-        <TabsTrigger value="me" className="gap-1.5"><User className="h-3.5 w-3.5" /> Saját idő</TabsTrigger>
+        <TabsTrigger value="team" className="gap-1.5"><Users className="h-3.5 w-3.5" /> {t('attendance.tab_team')}</TabsTrigger>
+        <TabsTrigger value="me" className="gap-1.5"><User className="h-3.5 w-3.5" /> {t('attendance.tab_me')}</TabsTrigger>
       </TabsList>
       <TabsContent value="team"><AdminOverview workspaceId={workspaceId} /></TabsContent>
       <TabsContent value="me"><EmployeeMonthView workspaceId={workspaceId} /></TabsContent>

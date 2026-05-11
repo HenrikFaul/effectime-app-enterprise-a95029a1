@@ -7,6 +7,7 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { upsertOnCallWindow } from './api';
 import { format, lastDayOfMonth } from 'date-fns';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   open: boolean;
@@ -18,6 +19,7 @@ interface Props {
 }
 
 export function OnCallDialog({ open, onOpenChange, periodId, year, month, onSaved }: Props) {
+  const { t } = useI18n();
   const monthStart = format(new Date(year, month - 1, 1), 'yyyy-MM-dd');
   const monthEnd = format(lastDayOfMonth(new Date(year, month - 1, 1)), 'yyyy-MM-dd');
 
@@ -30,7 +32,7 @@ export function OnCallDialog({ open, onOpenChange, periodId, year, month, onSave
 
   const handleSave = async () => {
     if (new Date(endsAt) <= new Date(startsAt)) {
-      toast.error('A vége nem lehet korábbi a kezdésnél.');
+      toast.error(t('oncall.error_time_order'));
       return;
     }
     setSaving(true);
@@ -43,11 +45,11 @@ export function OnCallDialog({ open, onOpenChange, periodId, year, month, onSave
         is_night: isNight,
         note: note || null,
       });
-      toast.success('Készenlét rögzítve');
+      toast.success(t('oncall.saved'));
       onSaved();
       onOpenChange(false);
     } catch (e: any) {
-      toast.error(e?.message || 'Mentés sikertelen');
+      toast.error(e?.message || t('oncall.save_failed'));
     } finally {
       setSaving(false);
     }
@@ -57,22 +59,19 @@ export function OnCallDialog({ open, onOpenChange, periodId, year, month, onSave
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Készenléti idő rögzítése</DialogTitle>
+          <DialogTitle>{t('oncall.title')}</DialogTitle>
         </DialogHeader>
-        <p className="text-xs text-muted-foreground">
-          Az itt rögzített készenlét automatikusan 0.20-as szorzóval kerül a bér-előkészítésbe.
-          Ha tényleg dolgoztál behívás során, hozz létre külön <em>Készenléti behívás</em> típusú szegmenst arra a napra.
-        </p>
+        <p className="text-xs text-muted-foreground">{t('oncall.description')}</p>
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <Label className="text-xs">Kezdés</Label>
+              <Label className="text-xs">{t('oncall.start')}</Label>
               <Input
                 type="datetime-local" min={`${monthStart}T00:00`} max={`${monthEnd}T23:59`}
                 value={startsAt} onChange={e => setStartsAt(e.target.value)} className="h-8" />
             </div>
             <div>
-              <Label className="text-xs">Vége</Label>
+              <Label className="text-xs">{t('oncall.end')}</Label>
               <Input
                 type="datetime-local" min={`${monthStart}T00:00`} max={`${monthEnd}T23:59`}
                 value={endsAt} onChange={e => setEndsAt(e.target.value)} className="h-8" />
@@ -81,21 +80,21 @@ export function OnCallDialog({ open, onOpenChange, periodId, year, month, onSave
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
               <Switch checked={isWeekend} onCheckedChange={setIsWeekend} />
-              <Label className="text-xs cursor-pointer">Hétvégi</Label>
+              <Label className="text-xs cursor-pointer">{t('oncall.weekend')}</Label>
             </div>
             <div className="flex items-center gap-2">
               <Switch checked={isNight} onCheckedChange={setIsNight} />
-              <Label className="text-xs cursor-pointer">Éjszakai</Label>
+              <Label className="text-xs cursor-pointer">{t('oncall.night')}</Label>
             </div>
           </div>
           <div>
-            <Label className="text-xs">Megjegyzés</Label>
-            <Input value={note} onChange={e => setNote(e.target.value)} className="h-8" placeholder="Pl. szombati ügyelet" />
+            <Label className="text-xs">{t('oncall.note')}</Label>
+            <Input value={note} onChange={e => setNote(e.target.value)} className="h-8" placeholder={t('oncall.note_placeholder')} />
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Mégse</Button>
-          <Button onClick={handleSave} disabled={saving}>Mentés</Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>{t('common.cancel')}</Button>
+          <Button onClick={handleSave} disabled={saving}>{t('common.save')}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

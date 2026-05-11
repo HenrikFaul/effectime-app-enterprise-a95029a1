@@ -13,6 +13,7 @@ import { format } from 'date-fns';
 import { hu } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -26,6 +27,7 @@ interface BlockedDate {
 }
 
 export function BlockedDateManager({ workspaceId, userId }: Props) {
+  const { t } = useI18n();
   const [dates, setDates] = useState<BlockedDate[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -46,7 +48,7 @@ export function BlockedDateManager({ workspaceId, userId }: Props) {
   useEffect(() => { fetchDates(); }, [workspaceId]);
 
   const handleAdd = async () => {
-    if (!date) { toast.error('Válassz dátumot'); return; }
+    if (!date) { toast.error(t('blocked_date_mgr.date_required')); return; }
     const { error } = await supabase.from('enterprise_blocked_dates').insert({
       workspace_id: workspaceId,
       blocked_date: format(date, 'yyyy-MM-dd'),
@@ -54,11 +56,11 @@ export function BlockedDateManager({ workspaceId, userId }: Props) {
       created_by: userId,
     });
     if (error) {
-      if (error.code === '23505') toast.error('Ez a dátum már tiltva van');
-      else toast.error('Hiba');
+      if (error.code === '23505') toast.error(t('blocked_date_mgr.already_blocked'));
+      else toast.error(t('blocked_date_mgr.error'));
       return;
     }
-    toast.success('Tiltott nap hozzáadva');
+    toast.success(t('blocked_date_mgr.added'));
     setShowForm(false);
     setDate(undefined);
     setReason('');
@@ -67,7 +69,7 @@ export function BlockedDateManager({ workspaceId, userId }: Props) {
 
   const handleDelete = async (id: string) => {
     await supabase.from('enterprise_blocked_dates').delete().eq('id', id);
-    toast.success('Tiltott nap törölve');
+    toast.success(t('blocked_date_mgr.deleted'));
     fetchDates();
   };
 
@@ -76,12 +78,12 @@ export function BlockedDateManager({ workspaceId, userId }: Props) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Tiltott napok (nem kérhető szabadság)</h3>
-        <Button size="sm" variant="outline" onClick={() => setShowForm(true)}><Plus className="h-3 w-3 mr-1" /> Hozzáadás</Button>
+        <h3 className="text-sm font-semibold">{t('blocked_date_mgr.title')}</h3>
+        <Button size="sm" variant="outline" onClick={() => setShowForm(true)}><Plus className="h-3 w-3 mr-1" /> {t('blocked_date_mgr.btn_add')}</Button>
       </div>
 
       {dates.length === 0 ? (
-        <p className="text-xs text-muted-foreground">Nincs tiltott nap.</p>
+        <p className="text-xs text-muted-foreground">{t('blocked_date_mgr.empty')}</p>
       ) : (
         <div className="space-y-1">
           {dates.map(d => (
@@ -98,15 +100,15 @@ export function BlockedDateManager({ workspaceId, userId }: Props) {
 
       <Dialog open={showForm} onOpenChange={setShowForm}>
         <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>Tiltott nap hozzáadása</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t('blocked_date_mgr.dialog_title')}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label>Dátum</Label>
+              <Label>{t('blocked_date_mgr.label_date')}</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-full mt-1 justify-start text-left font-normal", !date && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, 'yyyy.MM.dd', { locale: hu }) : 'Válassz dátumot'}
+                    {date ? format(date, 'yyyy.MM.dd', { locale: hu }) : t('blocked_date_mgr.pick_date')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -115,13 +117,13 @@ export function BlockedDateManager({ workspaceId, userId }: Props) {
               </Popover>
             </div>
             <div>
-              <Label>Indoklás (opcionális)</Label>
-              <Textarea className="mt-1" value={reason} onChange={e => setReason(e.target.value)} placeholder="pl. Leltárzárás" rows={2} />
+              <Label>{t('blocked_date_mgr.label_reason')}</Label>
+              <Textarea className="mt-1" value={reason} onChange={e => setReason(e.target.value)} rows={2} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowForm(false)}>Mégse</Button>
-            <Button onClick={handleAdd}>Hozzáadás</Button>
+            <Button variant="outline" onClick={() => setShowForm(false)}>{t('blocked_date_mgr.btn_cancel')}</Button>
+            <Button onClick={handleAdd}>{t('blocked_date_mgr.btn_add')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

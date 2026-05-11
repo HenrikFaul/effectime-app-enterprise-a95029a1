@@ -15,6 +15,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { PositionPickerDialog, type PositionPickerResult } from './positions/PositionPickerDialog';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -53,6 +54,7 @@ interface PositionGroup {
 }
 
 export function BusinessRoleManager({ workspaceId, userId }: Props) {
+  const { t } = useI18n();
   const [groups, setGroups] = useState<PositionGroup[]>([]);
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -85,7 +87,7 @@ export function BusinessRoleManager({ workspaceId, userId }: Props) {
         .select('user_id, display_name')
         .in('user_id', userIds);
       const profileMap = new Map((profiles as any[] || []).map((p: any) => [p.user_id, p.display_name]));
-      membersList.forEach((m) => { m.display_name = profileMap.get(m.user_id) || 'Ismeretlen'; });
+      membersList.forEach((m) => { m.display_name = profileMap.get(m.user_id) || t('approval_inbox.unknown'); });
     }
 
     setMembers(membersList);
@@ -141,23 +143,23 @@ export function BusinessRoleManager({ workspaceId, userId }: Props) {
     const trimmed = newRoleName.trim();
     if (!trimmed) return;
     if (groups.some((g) => g.name.toLowerCase() === trimmed.toLowerCase())) {
-      toast.error('Ez a pozíció már létezik');
+      toast.error(t('business_role_mgr.already_exists'));
       return;
     }
     setGroups((prev) => [...prev, { name: trimmed, members: [], totalPercentage: 0, totalHours: 0 }]);
     setNewRoleName('');
-    toast.success(`"${trimmed}" pozíció létrehozva (rendelj hozzá tagokat)`);
+    toast.success(t('business_role_mgr.created_with_hint', { name: trimmed }));
   };
 
   const handlePickerResult = (result: PositionPickerResult) => {
     const label = result.positionLabel.trim();
     if (!label) return;
     if (groups.some((g) => g.name.toLowerCase() === label.toLowerCase())) {
-      toast.message(`"${label}" már létezik — válassz másikat vagy rendelj hozzá tagokat.`);
+      toast.message(t('business_role_mgr.catalog_already_exists', { name: label }));
       return;
     }
     setGroups((prev) => [...prev, { name: label, members: [], totalPercentage: 0, totalHours: 0 }]);
-    toast.success(`"${label}" pozíció hozzáadva a katalógusból`);
+    toast.success(t('business_role_mgr.added_from_catalog', { name: label }));
   };
 
   const handleAssignMember = async () => {
@@ -172,14 +174,14 @@ export function BusinessRoleManager({ workspaceId, userId }: Props) {
       percentage: pct,
       is_priority: false,
     });
-    if (error) { toast.error('Hiba a hozzárendeléskor: ' + error.message); return; }
+    if (error) { toast.error(t('business_role_mgr.assign_failed', { message: error.message })); return; }
 
     // Ensure business_role column has a value (priority fallback)
     const member = members.find((m) => m.id === selectedMemberId);
     if (member && !member.business_role) {
       await (supabase as any).from('enterprise_memberships').update({ business_role: assignDialog }).eq('id', selectedMemberId);
     }
-    toast.success('Tag hozzárendelve');
+    toast.success(t('business_role_mgr.member_assigned'));
     setAssignDialog(null);
     setSelectedMemberId('');
     setAssignPercentage(100);
@@ -192,10 +194,10 @@ export function BusinessRoleManager({ workspaceId, userId }: Props) {
       .delete()
       .eq('membership_id', membershipId)
       .eq('business_role', role);
-    if (error) { toast.error('Hiba az eltávolításkor'); return; }
+    if (error) { toast.error(t('business_role_mgr.remove_failed')); return; }
     // Also clear business_role column if it matched
     await (supabase as any).from('enterprise_memberships').update({ business_role: null }).eq('id', membershipId).eq('business_role', role);
-    toast.success('Allokáció törölve');
+    toast.success(t('business_role_mgr.allocation_deleted'));
     fetchData();
   };
 
@@ -205,13 +207,13 @@ export function BusinessRoleManager({ workspaceId, userId }: Props) {
       .delete()
       .eq('workspace_id', workspaceId)
       .eq('business_role', roleName);
-    if (error) { toast.error('Hiba a törléskor'); return; }
+    if (error) { toast.error(t('business_role_mgr.delete_failed')); return; }
     await (supabase as any)
       .from('enterprise_memberships')
       .update({ business_role: null })
       .eq('workspace_id', workspaceId)
       .eq('business_role', roleName);
-    toast.success(`"${roleName}" pozíció és allokációi törölve`);
+    toast.success(t('business_role_mgr.role_deleted', { name: roleName }));
     fetchData();
   };
 
@@ -224,37 +226,37 @@ export function BusinessRoleManager({ workspaceId, userId }: Props) {
       <Card>
         <CardHeader className="py-3 px-4">
           <CardTitle className="text-sm flex items-center gap-2">
-            <Briefcase className="h-4 w-4" /> Pozíciók / Szerepkörök kezelése
+            <Briefcase className="h-4 w-4" /> {t('business_role_mgr.title')}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-4 space-y-4">
           <p className="text-xs text-muted-foreground">
-            Minden allokált tag és a hozzárendelt %-os arány itt látszik. A napi órák: <code>napi alap óra × allokáció%</code>.
+            {t('business_role_mgr.description')}
           </p>
 
           <div className="flex flex-col gap-2">
             <div className="flex gap-2">
               <Input
-                placeholder="Új pozíció neve (pl. Senior Developer)"
+                placeholder={t('business_role_mgr.new_role_placeholder')}
                 value={newRoleName}
                 onChange={(e) => setNewRoleName(e.target.value)}
                 className="text-sm"
                 onKeyDown={(e) => e.key === 'Enter' && handleCreateRole()}
               />
               <Button size="sm" onClick={handleCreateRole} disabled={!newRoleName.trim()}>
-                <Plus className="h-4 w-4 mr-1" /> Létrehozás
+                <Plus className="h-4 w-4 mr-1" /> {t('business_role_mgr.btn_create')}
               </Button>
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-[11px] text-muted-foreground">vagy válassz az előre definiált pozíciók közül:</span>
+              <span className="text-[11px] text-muted-foreground">{t('business_role_mgr.catalog_hint')}</span>
               <Button size="sm" variant="outline" onClick={() => setPickerOpen(true)} className="h-7 gap-1">
-                <ListChecks className="h-3.5 w-3.5" /> Katalógus megnyitása
+                <ListChecks className="h-3.5 w-3.5" /> {t('business_role_mgr.btn_catalog')}
               </Button>
             </div>
           </div>
 
           {groups.length === 0 ? (
-            <p className="text-xs text-muted-foreground text-center py-4">Még nincsenek pozíciók létrehozva.</p>
+            <p className="text-xs text-muted-foreground text-center py-4">{t('business_role_mgr.empty')}</p>
           ) : (
             <div className="space-y-3">
               {groups.map((group) => (
@@ -264,9 +266,9 @@ export function BusinessRoleManager({ workspaceId, userId }: Props) {
                       <div className="flex items-center gap-2">
                         <Briefcase className="h-4 w-4 text-primary" />
                         <span className="font-medium text-sm">{group.name}</span>
-                        <Badge variant="secondary" className="text-[10px]">{group.members.length} fő</Badge>
+                        <Badge variant="secondary" className="text-[10px]">{t('business_role_mgr.member_count', { count: group.members.length })}</Badge>
                         <Badge variant="outline" className="text-[10px]">∑ {group.totalPercentage.toFixed(0)}%</Badge>
-                        <Badge variant="outline" className="text-[10px]">{group.totalHours.toFixed(1)} óra/nap</Badge>
+                        <Badge variant="outline" className="text-[10px]">{t('business_role_mgr.hours_per_day', { value: group.totalHours.toFixed(1) })}</Badge>
                       </div>
                       <div className="flex items-center gap-1">
                         <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setAssignDialog(group.name); setSelectedMemberId(''); setAssignPercentage(100); }}>
@@ -288,7 +290,7 @@ export function BusinessRoleManager({ workspaceId, userId }: Props) {
                             </span>
                             <div className="flex items-center gap-2">
                               <Badge variant="outline" className="text-[10px]">{m.percentage.toFixed(0)}%</Badge>
-                              <Badge variant="outline" className="text-[10px]">{m.hours_per_day.toFixed(1)} ó</Badge>
+                              <Badge variant="outline" className="text-[10px]">{t('business_role_mgr.hours_label', { hours: m.hours_per_day.toFixed(1) })}</Badge>
                               <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleRemoveAllocation(m.membership_id, group.name)}>
                                 <Trash2 className="h-3 w-3 text-muted-foreground" />
                               </Button>
@@ -297,7 +299,7 @@ export function BusinessRoleManager({ workspaceId, userId }: Props) {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-xs text-muted-foreground italic ml-6">Még nincs allokált tag.</p>
+                      <p className="text-xs text-muted-foreground italic ml-6">{t('business_role_mgr.no_members')}</p>
                     )}
                   </CardContent>
                 </Card>
@@ -307,7 +309,7 @@ export function BusinessRoleManager({ workspaceId, userId }: Props) {
 
           {members.filter((m) => !groups.some((g) => g.members.some((x) => x.membership_id === m.id))).length > 0 && (
             <div className="mt-4">
-              <p className="text-xs font-medium text-muted-foreground mb-2">Pozíció nélküli tagok:</p>
+              <p className="text-xs font-medium text-muted-foreground mb-2">{t('business_role_mgr.unassigned_members')}</p>
               <div className="flex flex-wrap gap-1">
                 {members
                   .filter((m) => !groups.some((g) => g.members.some((x) => x.membership_id === m.id)))
@@ -323,26 +325,26 @@ export function BusinessRoleManager({ workspaceId, userId }: Props) {
       <Dialog open={!!assignDialog} onOpenChange={(open) => !open && setAssignDialog(null)}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-base">Tag hozzárendelése – {assignDialog}</DialogTitle>
+            <DialogTitle className="text-base">{t('business_role_mgr.assign_dialog_title', { position: assignDialog })}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <div>
-              <label className="text-xs text-muted-foreground">Tag</label>
+              <label className="text-xs text-muted-foreground">{t('business_role_mgr.label_member')}</label>
               <Select value={selectedMemberId} onValueChange={setSelectedMemberId}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Válassz tagot..." />
+                  <SelectValue placeholder={t('business_role_mgr.select_member_placeholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {members.map((m) => (
                     <SelectItem key={m.id} value={m.id}>
-                      {m.display_name} ({m.base_working_hours} ó/nap)
+                      {m.display_name} {t('business_role_mgr.hours_label', { hours: m.base_working_hours })}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <label className="text-xs text-muted-foreground">Allokáció (%)</label>
+              <label className="text-xs text-muted-foreground">{t('business_role_mgr.label_allocation')}</label>
               <Input
                 type="number"
                 min={1}
@@ -354,8 +356,8 @@ export function BusinessRoleManager({ workspaceId, userId }: Props) {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAssignDialog(null)}>Mégse</Button>
-            <Button onClick={handleAssignMember} disabled={!selectedMemberId}>Hozzárendelés</Button>
+            <Button variant="outline" onClick={() => setAssignDialog(null)}>{t('business_role_mgr.btn_cancel')}</Button>
+            <Button onClick={handleAssignMember} disabled={!selectedMemberId}>{t('business_role_mgr.btn_assign')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -17,6 +17,7 @@ import { hu } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { SubstitutePicker } from './SubstitutePicker';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   open: boolean;
@@ -26,14 +27,8 @@ interface Props {
   onCreated: () => void;
 }
 
-const LEAVE_TYPES = [
-  { value: 'vacation', label: 'Szabadság' },
-  { value: 'sick_leave', label: 'Betegszabadság' },
-  { value: 'unpaid_leave', label: 'Fizetés nélküli szabadság' },
-  { value: 'other', label: 'Egyéb' },
-] as const;
-
 export function LeaveRequestDialog({ open, onOpenChange, workspaceId, userId, onCreated }: Props) {
+  const { t } = useI18n();
   const [leaveType, setLeaveType] = useState<string>('vacation');
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
@@ -65,7 +60,7 @@ export function LeaveRequestDialog({ open, onOpenChange, workspaceId, userId, on
     const { error } = await supabase.storage.from('leave-attachments').upload(path, attachment, { upsert: true });
     if (error) {
       console.error('Attachment upload failed:', error);
-      toast.error('A csatolmány feltöltése nem sikerült');
+      toast.error(t('leave_request.error_attachment'));
       return null;
     }
     return path;
@@ -73,17 +68,17 @@ export function LeaveRequestDialog({ open, onOpenChange, workspaceId, userId, on
 
   const handleSubmit = async () => {
     if (!startDate || (!isHalfDay && !endDate)) {
-      toast.error('Kérjük, válaszd ki a dátumot');
+      toast.error(t('leave_request.error_date_required'));
       return;
     }
     const ed = isHalfDay ? startDate : endDate!;
     if (ed < startDate) {
-      toast.error('A záró dátum nem lehet korábbi a kezdő dátumnál');
+      toast.error(t('leave_request.error_end_before_start'));
       return;
     }
 
     if (!validated) { await handleValidate(); return; }
-    if (hasBlockingConflicts) { toast.error('Nem küldhető be: blokkolt ütközések vannak'); return; }
+    if (hasBlockingConflicts) { toast.error(t('leave_request.error_blocking')); return; }
 
     setSubmitting(true);
     const { data: inserted, error } = await supabase.from('leave_requests').insert({
@@ -100,7 +95,7 @@ export function LeaveRequestDialog({ open, onOpenChange, workspaceId, userId, on
     } as any).select('id').single();
 
     if (error || !inserted) {
-      toast.error('Hiba a kérelem beküldésekor');
+      toast.error(t('leave_request.error_submit'));
       console.error(error);
       setSubmitting(false);
       return;
@@ -143,7 +138,7 @@ export function LeaveRequestDialog({ open, onOpenChange, workspaceId, userId, on
         has_attachment: !!attachment,
       },
     });
-    toast.success('Távolléti kérelem beküldve');
+    toast.success(t('leave_request.submitted'));
     resetForm();
     onOpenChange(false);
     onCreated();
@@ -163,29 +158,32 @@ export function LeaveRequestDialog({ open, onOpenChange, workspaceId, userId, on
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Új távolléti kérelem</DialogTitle>
+          <DialogTitle>{t('leave_request.title')}</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
           <div>
-            <Label>Típus</Label>
+            <Label>{t('leave_request.type_label')}</Label>
             <Select value={leaveType} onValueChange={setLeaveType}>
               <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {LEAVE_TYPES.map(t => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                <SelectItem value="vacation">{t('leave_request.types.vacation')}</SelectItem>
+                <SelectItem value="sick_leave">{t('leave_request.types.sick_leave')}</SelectItem>
+                <SelectItem value="unpaid_leave">{t('leave_request.types.unpaid_leave')}</SelectItem>
+                <SelectItem value="other">{t('leave_request.types.other')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="flex items-center gap-2">
             <Checkbox checked={isHalfDay} onCheckedChange={v => { setIsHalfDay(!!v); setValidated(false); setConflicts([]); }} id="halfday-req" />
-            <Label htmlFor="halfday-req" className="cursor-pointer text-sm">Fél nap</Label>
+            <Label htmlFor="halfday-req" className="cursor-pointer text-sm">{t('leave_request.half_day')}</Label>
             {isHalfDay && (
               <Select value={halfDayPeriod} onValueChange={setHalfDayPeriod}>
                 <SelectTrigger className="w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="morning">Délelőtt</SelectItem>
-                  <SelectItem value="afternoon">Délután</SelectItem>
+                  <SelectItem value="morning">{t('leave_request.morning')}</SelectItem>
+                  <SelectItem value="afternoon">{t('leave_request.afternoon')}</SelectItem>
                 </SelectContent>
               </Select>
             )}
@@ -193,12 +191,12 @@ export function LeaveRequestDialog({ open, onOpenChange, workspaceId, userId, on
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>{isHalfDay ? 'Dátum' : 'Kezdő dátum'}</Label>
+              <Label>{isHalfDay ? t('leave_request.date') : t('leave_request.start_date')}</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-full mt-1 justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, 'yyyy.MM.dd', { locale: hu }) : 'Válassz'}
+                    {startDate ? format(startDate, 'yyyy.MM.dd', { locale: hu }) : t('leave_request.pick_date')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
@@ -208,12 +206,12 @@ export function LeaveRequestDialog({ open, onOpenChange, workspaceId, userId, on
             </div>
             {!isHalfDay && (
               <div>
-                <Label>Záró dátum</Label>
+                <Label>{t('leave_request.end_date')}</Label>
                 <Popover>
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full mt-1 justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, 'yyyy.MM.dd', { locale: hu }) : 'Válassz'}
+                      {endDate ? format(endDate, 'yyyy.MM.dd', { locale: hu }) : t('leave_request.pick_date')}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
@@ -225,8 +223,8 @@ export function LeaveRequestDialog({ open, onOpenChange, workspaceId, userId, on
           </div>
 
           <div>
-            <Label>Megjegyzés (opcionális)</Label>
-            <Textarea className="mt-1" value={comment} onChange={(e) => setComment(e.target.value)} placeholder="Indoklás vagy egyéb megjegyzés..." rows={3} />
+            <Label>{t('leave_request.comment_label')}</Label>
+            <Textarea className="mt-1" value={comment} onChange={(e) => setComment(e.target.value)} placeholder={t('leave_request.comment_placeholder')} rows={3} />
           </div>
 
           {/* Helyettesítő-választó */}
@@ -239,7 +237,7 @@ export function LeaveRequestDialog({ open, onOpenChange, workspaceId, userId, on
 
           {/* Csatolmány (orvosi igazolás stb.) */}
           <div>
-            <Label className="text-xs flex items-center gap-1"><Paperclip className="h-3 w-3" /> Csatolmány (opcionális)</Label>
+            <Label className="text-xs flex items-center gap-1"><Paperclip className="h-3 w-3" /> {t('leave_request.attachment_label')}</Label>
             <input
               type="file"
               accept="image/*,.pdf,.doc,.docx"
@@ -256,8 +254,8 @@ export function LeaveRequestDialog({ open, onOpenChange, workspaceId, userId, on
             <div className="flex items-center gap-2">
               <Lock className="h-3.5 w-3.5 text-muted-foreground" />
               <div>
-                <Label htmlFor="private-req" className="text-xs cursor-pointer">Privát kérelem</Label>
-                <p className="text-[10px] text-muted-foreground">Csak jóváhagyók látják az indokot</p>
+                <Label htmlFor="private-req" className="text-xs cursor-pointer">{t('leave_request.private_label')}</Label>
+                <p className="text-[10px] text-muted-foreground">{t('leave_request.private_desc')}</p>
               </div>
             </div>
             <Switch id="private-req" checked={isPrivate} onCheckedChange={setIsPrivate} />
@@ -265,7 +263,7 @@ export function LeaveRequestDialog({ open, onOpenChange, workspaceId, userId, on
 
           {validated && conflicts.length > 0 && (
             <div className="space-y-1 rounded-md border p-3">
-              <p className="text-xs font-semibold mb-1">Ütközések:</p>
+              <p className="text-xs font-semibold mb-1">{t('leave_request.conflicts_title')}</p>
               {conflicts.map((c, i) => (
                 <div key={i} className={cn("flex items-start gap-2 text-xs rounded px-2 py-1", c.severity === 'blocking' ? 'bg-destructive/10 text-destructive' : 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400')}>
                   {c.severity === 'blocking' ? <XCircle className="h-3 w-3 mt-0.5 shrink-0" /> : <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />}
@@ -273,23 +271,23 @@ export function LeaveRequestDialog({ open, onOpenChange, workspaceId, userId, on
                 </div>
               ))}
               {hasBlockingConflicts && (
-                <p className="text-xs text-destructive font-medium mt-1">Blokkolt ütközések miatt a kérelem nem küldhető be.</p>
+                <p className="text-xs text-destructive font-medium mt-1">{t('leave_request.blocking_message')}</p>
               )}
             </div>
           )}
 
           {validated && conflicts.length === 0 && (
-            <p className="text-xs text-green-600 dark:text-green-400">✓ Nincs ütközés, a kérelem beküldhető.</p>
+            <p className="text-xs text-green-600 dark:text-green-400">{t('leave_request.no_conflicts')}</p>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Mégse</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t('common.cancel')}</Button>
           {!validated ? (
-            <Button onClick={handleValidate} disabled={!startDate || (!isHalfDay && !endDate)}>Ellenőrzés</Button>
+            <Button onClick={handleValidate} disabled={!startDate || (!isHalfDay && !endDate)}>{t('leave_request.validate')}</Button>
           ) : (
             <Button onClick={handleSubmit} disabled={submitting || hasBlockingConflicts || !startDate || (!isHalfDay && !endDate)}>
-              {submitting ? 'Küldés...' : 'Kérelem beküldése'}
+              {submitting ? t('leave_request.submitting') : t('leave_request.submit')}
             </Button>
           )}
         </DialogFooter>

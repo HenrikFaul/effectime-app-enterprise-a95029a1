@@ -142,11 +142,11 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
 
   const handleInvite = async () => {
     if (!email.trim() || !email.includes('@')) {
-      toast.error('Érvényes email címet adj meg');
+      toast.error(tt('members.invite_email_invalid'));
       return;
     }
     if (!displayName.trim()) {
-      toast.error('Add meg a tag nevét');
+      toast.error(tt('members.invite_name_required'));
       return;
     }
 
@@ -169,7 +169,7 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
 
       if (invError) {
         if (invError.code === '23505') {
-          toast.error('Ez az email cím már meg van hívva');
+          toast.error(tt('members.invite_already_member'));
         } else {
           throw invError;
         }
@@ -258,9 +258,9 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
 
       if (emailError) {
         console.error('Invitation email failed:', emailError);
-        toast.error('A meghívó létrejött, de az email küldése nem sikerült');
+        toast.error(tt('members.invite_email_failed'));
       } else {
-        toast.success(`Meghívó elküldve: ${normalizedEmail}`);
+        toast.success(tt('members.invite_success', { email: normalizedEmail }));
       }
 
       resetForm();
@@ -268,7 +268,7 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
       onInvited();
     } catch (err: unknown) {
       console.error(err);
-      toast.error('Hiba a meghívó küldésekor');
+      toast.error(tt('members.invite_failed'));
     } finally {
       setLoading(false);
     }
@@ -287,9 +287,9 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
       created_by: invitedBy,
     } as any);
     if (error) {
-      toast.error('Hiba a sablon mentésekor');
+      toast.error(tt('members.template_save_failed'));
     } else {
-      toast.success('Sablon mentve');
+      toast.success(tt('members.template_saved'));
       setShowNewTemplate(false);
       setNewTemplateName('');
       const { data } = await supabase.from('enterprise_member_templates').select('*').eq('workspace_id', workspaceId).order('template_name');
@@ -299,9 +299,9 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
 
   const getRoleLabel = (r: string) => {
     switch (r) {
-      case 'owner': return 'Tulajdonos';
-      case 'resourceAssistant': return 'Erőforrás asszisztens';
-      default: return 'Tag';
+      case 'owner': return tt('members.roles.owner');
+      case 'resourceAssistant': return tt('members.roles.resource_assistant');
+      default: return tt('members.roles.member');
     }
   };
 
@@ -310,14 +310,14 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
       <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <UserPlus className="h-5 w-5" /> Tag meghívása
+            <UserPlus className="h-5 w-5" /> {tt('members.invite_title')}
           </DialogTitle>
         </DialogHeader>
 
         {/* Templates */}
         {templates.length > 0 && (
           <div className="space-y-2">
-            <Label className="text-xs font-medium text-muted-foreground">Gyors kitöltés sablonból</Label>
+            <Label className="text-xs font-medium text-muted-foreground">{tt('members.invite_template_label')}</Label>
             <div className="flex flex-wrap gap-1.5">
               {templates.map(t => (
                 <Button
@@ -339,33 +339,33 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label htmlFor="inv-name">Név *</Label>
+              <Label htmlFor="inv-name">{tt('members.invite_name')} *</Label>
               <Input id="inv-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Kovács János" />
             </div>
             <div>
-              <Label htmlFor="inv-email">Email cím *</Label>
+              <Label htmlFor="inv-email">{tt('members.invite_email')} *</Label>
               <Input id="inv-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="kolléga@cég.hu" />
             </div>
           </div>
 
           <div>
-            <Label>Szerepkör (jogosultság)</Label>
+            <Label>{tt('members.invite_role')}</Label>
             <Select value={role} onValueChange={setRole}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="member">Tag</SelectItem>
-                <SelectItem value="resourceAssistant">Erőforrás asszisztens</SelectItem>
-                <SelectItem value="owner">Tulajdonos</SelectItem>
+                <SelectItem value="member">{tt('members.roles.member')}</SelectItem>
+                <SelectItem value="resourceAssistant">{tt('members.roles.resource_assistant')}</SelectItem>
+                <SelectItem value="owner">{tt('members.roles.owner')}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* Business roles with allocation */}
           <div>
-            <Label>Munkakör(ök) és megosztás</Label>
+            <Label>{tt('members.invite_business_roles')}</Label>
             {businessRoles.length === 0 ? (
               <p className="text-xs text-muted-foreground italic mt-1">
-                Nincsenek munkakörök. Hozz létre munkaköröket a Beállítások / Munkakörök részben.
+                {tt('members.invite_no_positions')}
               </p>
             ) : (
               <div className="mt-2">
@@ -380,11 +380,11 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Iroda / Telephely</Label>
+              <Label>{tt('members.invite_office')}</Label>
               <Select value={officeId || '__none__'} onValueChange={(v) => setOfficeId(v === '__none__' ? '' : v)}>
-                <SelectTrigger><SelectValue placeholder="Válassz..." /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">Nincs megadva</SelectItem>
+                  <SelectItem value="__none__">{tt('members.invite_office_none')}</SelectItem>
                   {offices.map(o => (
                     <SelectItem key={o.id} value={o.id}>{o.name}{o.city ? ` (${o.city})` : ''}</SelectItem>
                   ))}
@@ -392,14 +392,14 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
               </Select>
             </div>
             <div>
-              <Label>Város (lakóhely)</Label>
-              <Input value={city} onChange={e => setCity(e.target.value)} placeholder="pl. Budapest" />
+              <Label>{tt('members.invite_city')}</Label>
+              <Input value={city} onChange={e => setCity(e.target.value)} />
             </div>
           </div>
 
           <div>
-            <Label>Helyszín megjegyzés</Label>
-            <Input value={location} onChange={e => setLocation(e.target.value)} placeholder="pl. Remote / Hybrid" />
+            <Label>{tt('members.invite_location_note')}</Label>
+            <Input value={location} onChange={e => setLocation(e.target.value)} />
           </div>
 
           <Separator />
@@ -528,24 +528,24 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
         <div className="border-t pt-3 mt-2">
           {!showNewTemplate ? (
             <Button size="sm" variant="ghost" className="text-xs" onClick={() => setShowNewTemplate(true)}>
-              + Mentés sablonként
+              {tt('members.invite_save_template')}
             </Button>
           ) : (
             <div className="flex gap-2 items-end">
               <div className="flex-1">
-                <Label className="text-xs">Sablon neve</Label>
-                <Input value={newTemplateName} onChange={e => setNewTemplateName(e.target.value)} placeholder="pl. Backend fejlesztő" className="h-8 text-sm" />
+                <Label className="text-xs">{tt('members.invite_template_name')}</Label>
+                <Input value={newTemplateName} onChange={e => setNewTemplateName(e.target.value)} className="h-8 text-sm" />
               </div>
-              <Button size="sm" onClick={handleSaveTemplate} disabled={!newTemplateName.trim()}>Mentés</Button>
-              <Button size="sm" variant="ghost" onClick={() => setShowNewTemplate(false)}>Mégse</Button>
+              <Button size="sm" onClick={handleSaveTemplate} disabled={!newTemplateName.trim()}>{tt('common.save')}</Button>
+              <Button size="sm" variant="ghost" onClick={() => setShowNewTemplate(false)}>{tt('common.cancel')}</Button>
             </div>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => { resetForm(); onOpenChange(false); }}>Mégse</Button>
+          <Button variant="outline" onClick={() => { resetForm(); onOpenChange(false); }}>{tt('common.cancel')}</Button>
           <Button onClick={handleInvite} disabled={loading || !email.trim() || !displayName.trim()}>
-            {loading ? 'Küldés...' : 'Meghívás'}
+            {loading ? tt('members.invite_sending') : tt('members.invite_submit')}
           </Button>
         </DialogFooter>
       </DialogContent>

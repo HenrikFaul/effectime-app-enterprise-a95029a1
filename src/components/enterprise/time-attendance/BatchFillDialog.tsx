@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { upsertSegment, deleteSegment } from './api';
 import { nightHoursInRange } from './calculations';
 import { AttendanceSegment, AttendanceSegmentType } from './types';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   open: boolean;
@@ -27,19 +28,13 @@ interface Props {
   onSaved: () => void;
 }
 
-const SEGMENT_TYPE_LABELS: Record<AttendanceSegmentType, string> = {
-  regular: 'Normál munkaidő',
-  overtime: 'Túlóra',
-  break: 'Szünet',
-  oncall_intervention: 'Készenléti behívás',
-};
-
 const toLocalDateStr = (d: Date) => format(d, 'yyyy-MM-dd');
 
 export function BatchFillDialog({
   open, onOpenChange, periodId, year, month,
   initialStart, initialEnd, selectedDays, segments, onSaved,
 }: Props) {
+  const { t } = useI18n();
   const monthStart = toLocalDateStr(startOfMonth(new Date(year, month - 1)));
   const monthEnd = toLocalDateStr(endOfMonth(new Date(year, month - 1)));
 
@@ -67,14 +62,12 @@ export function BatchFillDialog({
     setOverwriteExisting(false);
   }, [open, initialStart, initialEnd, monthStart, monthEnd]);
 
-  // Range mode calculations
   const startDay = new Date(startDate);
   const endDay = new Date(endDate);
   const rangeValid = startDate && endDate && startDate <= endDate;
   const rangeDays = rangeValid ? eachDayOfInterval({ start: startDay, end: endDay }) : [];
   const rangeWorkDays = skipWeekend ? rangeDays.filter(d => !dfIsWeekend(d)) : rangeDays;
 
-  // Effective days to fill
   const workDays = isDragMode ? selectedDays : rangeWorkDays;
 
   const existingHits = workDays.filter(d => {
@@ -83,9 +76,9 @@ export function BatchFillDialog({
   }).length;
 
   const apply = async () => {
-    if (!isDragMode && !rangeValid) { toast.error('Érvénytelen időintervallum'); return; }
-    if (workDays.length === 0) { toast.error('Nincs nap az intervallumban'); return; }
-    if (startTime >= endTime) { toast.error('A munkavégzés vége legyen később, mint a kezdés'); return; }
+    if (!isDragMode && !rangeValid) { toast.error(t('batch_fill.error_invalid_range')); return; }
+    if (workDays.length === 0) { toast.error(t('batch_fill.error_no_days')); return; }
+    if (startTime >= endTime) { toast.error(t('batch_fill.error_time_order')); return; }
 
     setBusy(true);
     let ok = 0;
@@ -127,11 +120,14 @@ export function BatchFillDialog({
       }
 
       if (ok > 0) {
-        toast.success(`${ok} nap kitöltve${skipped > 0 ? ` (${skipped} kihagyva, már volt rögzítés)` : ''}${failed > 0 ? ` (${failed} hiba)` : ''}`);
+        let msg = t('batch_fill.success', { ok });
+        if (skipped > 0) msg += ` (${t('batch_fill.all_skipped', { count: skipped }).split(' — ')[0]})`;
+        if (failed > 0) msg += ` (${t('batch_fill.failed_days', { count: failed })})`;
+        toast.success(msg);
       } else if (skipped > 0 && failed === 0) {
-        toast.info(`Minden nap (${skipped}) ki volt hagyva — már volt rögzítés. Kapcsold be a felülírást.`);
+        toast.info(t('batch_fill.all_skipped', { count: skipped }));
       } else if (failed > 0) {
-        toast.error(`${failed} nap mentése sikertelen volt`);
+        toast.error(t('batch_fill.failed_days', { count: failed }));
       }
 
       onSaved();
@@ -150,20 +146,17 @@ export function BatchFillDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Zap className="h-4 w-4 text-amber-500" />
-            Batch kitöltés
+            {t('batch_fill.title')}
           </DialogTitle>
           <DialogDescription>
-            {isDragMode
-              ? 'Töltsd ki a húzással kijelölt napokat ugyanazokkal az időpontokkal.'
-              : 'Töltsd ki egy időszak minden napját ugyanazokkal a kezdő/véget időpontokkal egyetlen kattintással.'}
+            {isDragMode ? t('batch_fill.desc_drag') : t('batch_fill.desc_range')}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-3">
           {isDragMode ? (
-            /* Drag-select mode: list the individually selected days */
             <div className="space-y-1.5">
-              <Label className="text-xs font-medium">Kiválasztott napok</Label>
+              <Label className="text-xs font-medium">{t('batch_fill.selected_days')}</Label>
               <div className="rounded-md border bg-muted/30 p-2 max-h-40 overflow-y-auto space-y-0.5">
                 {selectedDays.map(d => (
                   <div key={toLocalDateStr(d)} className="text-xs px-1 py-0.5">
@@ -173,15 +166,14 @@ export function BatchFillDialog({
               </div>
             </div>
           ) : (
-            /* Range mode: date pickers */
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label className="text-xs">Kezdő dátum</Label>
+                <Label className="text-xs">{t('batch_fill.start_date')}</Label>
                 <Input type="date" value={startDate} onChange={e => setStartDate(e.target.value)}
                   min={monthStart} max={monthEnd} />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">Befejező dátum</Label>
+                <Label className="text-xs">{t('batch_fill.end_date')}</Label>
                 <Input type="date" value={endDate} onChange={e => setEndDate(e.target.value)}
                   min={monthStart} max={monthEnd} />
               </div>
@@ -190,23 +182,23 @@ export function BatchFillDialog({
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs">Munkakezdés</Label>
+              <Label className="text-xs">{t('batch_fill.work_start')}</Label>
               <Input type="time" value={startTime} onChange={e => setStartTime(e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs">Munkavégzés vége</Label>
+              <Label className="text-xs">{t('batch_fill.work_end')}</Label>
               <Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
             </div>
           </div>
 
           {!isDragMode && (
             <div className="space-y-1.5">
-              <Label className="text-xs">Típus</Label>
+              <Label className="text-xs">{t('batch_fill.type')}</Label>
               <Select value={segmentType} onValueChange={v => setSegmentType(v as AttendanceSegmentType)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="regular">{SEGMENT_TYPE_LABELS.regular}</SelectItem>
-                  <SelectItem value="overtime">{SEGMENT_TYPE_LABELS.overtime}</SelectItem>
+                  <SelectItem value="regular">{t('attendance.segment_regular')}</SelectItem>
+                  <SelectItem value="overtime">{t('attendance.segment_overtime')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -215,42 +207,44 @@ export function BatchFillDialog({
           <div className="space-y-2 rounded-md border bg-muted/30 p-2">
             {!isDragMode && (
               <div className="flex items-center justify-between">
-                <Label className="text-xs flex-1">Hétvégék kihagyása</Label>
+                <Label className="text-xs flex-1">{t('batch_fill.skip_weekends')}</Label>
                 <Switch checked={skipWeekend} onCheckedChange={setSkipWeekend} />
               </div>
             )}
             <div className="flex items-center justify-between">
-              <Label className="text-xs flex-1">Éjszakai munka automatikus jelölése (22:00–06:00)</Label>
+              <Label className="text-xs flex-1">{t('batch_fill.auto_night')}</Label>
               <Switch checked={autoNight} onCheckedChange={setAutoNight} />
             </div>
             <div className="flex items-center justify-between">
-              <Label className="text-xs flex-1">Meglévő rögzítések felülírása</Label>
+              <Label className="text-xs flex-1">{t('batch_fill.overwrite')}</Label>
               <Switch checked={overwriteExisting} onCheckedChange={setOverwriteExisting} />
             </div>
           </div>
 
-          {/* Summary */}
           <div className="rounded-md bg-primary/5 border border-primary/20 p-2 text-xs">
             <p>
-              <strong>{workDays.length}</strong> nap lesz kitöltve
+              <strong>{workDays.length}</strong> {t('batch_fill.days_count', { count: workDays.length }).split(' ').slice(1).join(' ')}
               {!isDragMode && skipWeekend && rangeDays.length > rangeWorkDays.length && (
-                <span className="text-muted-foreground"> ({rangeDays.length - rangeWorkDays.length} hétvégi nap kihagyva)</span>
+                <span className="text-muted-foreground"> {t('batch_fill.weekends_skipped', { count: rangeDays.length - rangeWorkDays.length })}</span>
               )}
             </p>
             {existingHits > 0 && (
               <p className={`mt-1 flex items-start gap-1 ${overwriteExisting ? 'text-destructive' : 'text-amber-600'}`}>
                 <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
-                {existingHits} napon már van rögzítés — {overwriteExisting ? 'felül lesznek írva' : 'ki lesznek hagyva'}
+                {overwriteExisting
+                  ? t('batch_fill.existing_overwrite', { count: existingHits })
+                  : t('batch_fill.existing_skip', { count: existingHits })
+                }
               </p>
             )}
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>Mégse</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={busy}>{t('common.cancel')}</Button>
           <Button onClick={apply} disabled={applyDisabled}>
             {busy ? <Loader2 className="h-3 w-3 animate-spin mr-1.5" /> : <Zap className="h-3 w-3 mr-1.5" />}
-            Alkalmaz ({workDays.length} nap)
+            {t('batch_fill.apply', { count: workDays.length })}
           </Button>
         </DialogFooter>
       </DialogContent>

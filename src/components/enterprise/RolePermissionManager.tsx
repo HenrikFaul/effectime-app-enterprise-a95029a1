@@ -22,6 +22,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -34,13 +35,8 @@ const ACCESS_ICONS: Record<AccessLevel, React.ReactNode> = {
   edit: <Pencil className="h-3.5 w-3.5 text-green-500" />,
 };
 
-const ACCESS_LABELS: Record<AccessLevel, string> = {
-  none: 'Nincs hozzáférés',
-  readonly: 'Csak olvasás',
-  edit: 'Szerkesztés',
-};
-
 export function RolePermissionManager({ workspaceId, userRole }: Props) {
+  const { t } = useI18n();
   const { roles, permissions, featureTree, loading, refetch, getAccess } = useEnterprisePermissions(workspaceId);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [showAddRole, setShowAddRole] = useState(false);
@@ -54,6 +50,12 @@ export function RolePermissionManager({ workspaceId, userRole }: Props) {
   const isOwner = userRole === 'owner';
   const canManage = isOwner || userRole === 'resourceAssistant';
 
+  const accessLabels: Record<AccessLevel, string> = {
+    none: t('role_permission_mgr.perm_none'),
+    readonly: t('role_permission_mgr.perm_readonly'),
+    edit: t('role_permission_mgr.perm_edit'),
+  };
+
   const toggleGroup = (groupLabel: string) => {
     setOpenGroups(prev => ({ ...prev, [groupLabel]: !prev[groupLabel] }));
   };
@@ -63,7 +65,7 @@ export function RolePermissionManager({ workspaceId, userRole }: Props) {
     if (!newRoleName.trim() || !key) return;
 
     if (roles.some(r => r.role_key === key)) {
-      toast.error('Ez a szerepkör azonosító már létezik');
+      toast.error(t('role_permission_mgr.role_exists'));
       return;
     }
 
@@ -79,7 +81,7 @@ export function RolePermissionManager({ workspaceId, userRole }: Props) {
     } as any);
 
     if (error) {
-      toast.error('Hiba a szerepkör létrehozásakor');
+      toast.error(t('role_permission_mgr.create_failed'));
       return;
     }
 
@@ -93,7 +95,7 @@ export function RolePermissionManager({ workspaceId, userRole }: Props) {
 
     await supabase.from('enterprise_role_permissions').insert(defaultPerms as any[]);
 
-    toast.success('Szerepkör létrehozva');
+    toast.success(t('role_permission_mgr.created'));
     setNewRoleName('');
     setNewRoleKey('');
     setNewRoleDesc('');
@@ -105,7 +107,7 @@ export function RolePermissionManager({ workspaceId, userRole }: Props) {
     if (!deletingRole) return;
     await supabase.from('enterprise_role_permissions').delete().eq('workspace_id', workspaceId).eq('role_key', deletingRole.role_key);
     await supabase.from('enterprise_role_definitions').delete().eq('id', deletingRole.id);
-    toast.success('Szerepkör törölve');
+    toast.success(t('role_permission_mgr.deleted'));
     setDeletingRole(null);
     if (selectedRole === deletingRole.role_key) setSelectedRole(null);
     refetch();
@@ -137,7 +139,7 @@ export function RolePermissionManager({ workspaceId, userRole }: Props) {
           <span className="text-sm">{featureLabel}</span>
         </div>
         {isOwnerRole ? (
-          <Badge variant="default" className="text-[10px]">Teljes hozzáférés</Badge>
+          <Badge variant="default" className="text-[10px]">{t('role_permission_mgr.full_access_badge')}</Badge>
         ) : canManage ? (
           <Select
             value={level}
@@ -148,13 +150,13 @@ export function RolePermissionManager({ workspaceId, userRole }: Props) {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="none">{ACCESS_LABELS.none}</SelectItem>
-              <SelectItem value="readonly">{ACCESS_LABELS.readonly}</SelectItem>
-              <SelectItem value="edit">{ACCESS_LABELS.edit}</SelectItem>
+              <SelectItem value="none">{accessLabels.none}</SelectItem>
+              <SelectItem value="readonly">{accessLabels.readonly}</SelectItem>
+              <SelectItem value="edit">{accessLabels.edit}</SelectItem>
             </SelectContent>
           </Select>
         ) : (
-          <Badge variant="outline" className="text-[10px]">{ACCESS_LABELS[level]}</Badge>
+          <Badge variant="outline" className="text-[10px]">{accessLabels[level]}</Badge>
         )}
       </div>
     );
@@ -170,15 +172,10 @@ export function RolePermissionManager({ workspaceId, userRole }: Props) {
     <Card>
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
-          <Shield className="h-4 w-4" /> Jogosultság konfiguráció
+          <Shield className="h-4 w-4" />
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-xs text-muted-foreground">
-          Szerepkörök és hozzáférési szintek kezelése. Minden tag az alapértelmezett „Tag" jogosultsággal jön létre, amit a tulajdonos módosíthat.
-        </p>
-
-        {/* Role list */}
         <div className="space-y-1.5">
           {roles.map(role => (
             <div
@@ -191,7 +188,7 @@ export function RolePermissionManager({ workspaceId, userRole }: Props) {
               <div className="flex items-center gap-2">
                 <Shield className="h-4 w-4 text-primary" />
                 <span className="text-sm font-medium">{role.display_name}</span>
-                {role.is_system && <Badge variant="outline" className="text-[9px] h-4">Rendszer</Badge>}
+                {role.is_system && <Badge variant="outline" className="text-[9px] h-4">{t('role_permission_mgr.system_badge')}</Badge>}
                 {role.description && <span className="text-xs text-muted-foreground hidden sm:inline">— {role.description}</span>}
               </div>
               <div className="flex items-center gap-1">
@@ -208,18 +205,16 @@ export function RolePermissionManager({ workspaceId, userRole }: Props) {
           ))}
         </div>
 
-        {/* Add new role */}
         {canManage && !showAddRole && (
           <Button variant="outline" size="sm" onClick={() => setShowAddRole(true)} className="w-full">
-            <Plus className="h-3.5 w-3.5 mr-1" /> Új szerepkör létrehozása
+            <Plus className="h-3.5 w-3.5 mr-1" />
           </Button>
         )}
 
         {showAddRole && (
           <div className="border rounded-md p-3 space-y-2 bg-muted/30">
-            <p className="text-xs font-medium">Új szerepkör</p>
+            <p className="text-xs font-medium">{t('role_permission_mgr.new_role_heading')}</p>
             <Input
-              placeholder="Megjelenítési név (pl. Csoportvezető)"
               value={newRoleName}
               onChange={e => {
                 setNewRoleName(e.target.value);
@@ -228,32 +223,29 @@ export function RolePermissionManager({ workspaceId, userRole }: Props) {
               className="h-8 text-sm"
             />
             <Input
-              placeholder="Azonosító kulcs (pl. team_lead)"
               value={newRoleKey}
               onChange={e => setNewRoleKey(e.target.value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''))}
               className="h-8 text-sm"
             />
             <Textarea
-              placeholder="Leírás (opcionális)"
               value={newRoleDesc}
               onChange={e => setNewRoleDesc(e.target.value)}
               className="text-sm"
               rows={2}
             />
             <div className="flex gap-2">
-              <Button size="sm" onClick={handleAddRole} disabled={!newRoleName.trim()}>Létrehozás</Button>
-              <Button size="sm" variant="ghost" onClick={() => { setShowAddRole(false); setNewRoleName(''); setNewRoleKey(''); setNewRoleDesc(''); }}>Mégse</Button>
+              <Button size="sm" onClick={handleAddRole} disabled={!newRoleName.trim()}>{t('role_permission_mgr.btn_create')}</Button>
+              <Button size="sm" variant="ghost" onClick={() => { setShowAddRole(false); setNewRoleName(''); setNewRoleKey(''); setNewRoleDesc(''); }}>{t('role_permission_mgr.btn_cancel')}</Button>
             </div>
           </div>
         )}
 
-        {/* Permission matrix for selected role */}
         {activeRole && (
           <div className="border rounded-md p-3 space-y-3">
             <div className="flex items-center gap-2 mb-1">
               <Shield className="h-4 w-4 text-primary" />
               <span className="text-sm font-semibold">{activeRole.display_name}</span>
-              {activeRole.is_system && <Badge variant="outline" className="text-[9px]">Rendszer</Badge>}
+              {activeRole.is_system && <Badge variant="outline" className="text-[9px]">{t('role_permission_mgr.system_badge')}</Badge>}
             </div>
 
             <div className="space-y-1">
@@ -272,7 +264,6 @@ export function RolePermissionManager({ workspaceId, userRole }: Props) {
                 ))
               ) : (
                 <>
-                  {/* Fallback: legacy flat groups */}
                   {FEATURE_GROUPS.map(group => {
                     const isOpen = !!openGroups[group.label];
                     return (
@@ -298,18 +289,17 @@ export function RolePermissionManager({ workspaceId, userRole }: Props) {
           </div>
         )}
 
-        {/* Delete confirmation */}
         <AlertDialog open={!!deletingRole} onOpenChange={open => !open && setDeletingRole(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Szerepkör törlése</AlertDialogTitle>
+              <AlertDialogTitle>{t('role_permission_mgr.delete_dialog_title')}</AlertDialogTitle>
               <AlertDialogDescription>
-                Biztosan törölni szeretnéd a „{deletingRole?.display_name}" szerepkört? A hozzá tartozó összes jogosultság is törlődik.
+                {deletingRole?.display_name}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Mégse</AlertDialogCancel>
-              <AlertDialogAction onClick={handleDeleteRole}>Törlés</AlertDialogAction>
+              <AlertDialogCancel>{t('role_permission_mgr.btn_cancel')}</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteRole}>{t('role_permission_mgr.btn_delete')}</AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>

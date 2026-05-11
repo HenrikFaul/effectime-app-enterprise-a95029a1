@@ -1,35 +1,35 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Trash2, ArrowDown, Clock, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, ArrowDown, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
 }
 
-const ROLE_OPTIONS = [
-  { value: 'resourceAssistant', label: 'Erőforrás asszisztens' },
-  { value: 'owner', label: 'Tulajdonos' },
-];
-
 export function ApprovalChainManager({ workspaceId }: Props) {
+  const { t } = useI18n();
   const [chains, setChains] = useState<any[]>([]);
   const [escalation, setEscalation] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // Escalation form
   const [escHours, setEscHours] = useState('48');
   const [escRole, setEscRole] = useState('owner');
   const [escNotify, setEscNotify] = useState(true);
   const [escActive, setEscActive] = useState(true);
+
+  const roleOptions = [
+    { value: 'resourceAssistant', label: t('approval_chain_mgr.role_resource_assistant') },
+    { value: 'owner', label: t('approval_chain_mgr.role_owner') },
+  ];
 
   const fetchData = async () => {
     setLoading(true);
@@ -58,8 +58,8 @@ export function ApprovalChainManager({ workspaceId }: Props) {
       step_order: nextOrder,
       approver_role: 'resourceAssistant' as any,
     });
-    if (error) { toast.error('Hiba'); return; }
-    toast.success('Jóváhagyási lépés hozzáadva');
+    if (error) { toast.error(t('approval_chain_mgr.step_add_failed')); return; }
+    toast.success(t('approval_chain_mgr.step_added'));
     fetchData();
   };
 
@@ -70,7 +70,7 @@ export function ApprovalChainManager({ workspaceId }: Props) {
 
   const deleteStep = async (id: string) => {
     await supabase.from('enterprise_approval_chains').delete().eq('id', id);
-    toast.success('Lépés törölve');
+    toast.success(t('approval_chain_mgr.step_deleted'));
     fetchData();
   };
 
@@ -88,7 +88,7 @@ export function ApprovalChainManager({ workspaceId }: Props) {
     } else {
       await supabase.from('enterprise_escalation_rules').insert(payload);
     }
-    toast.success('Eszkaláció beállítások mentve');
+    toast.success(t('approval_chain_mgr.escalation_saved'));
     fetchData();
   };
 
@@ -96,25 +96,24 @@ export function ApprovalChainManager({ workspaceId }: Props) {
 
   return (
     <div className="space-y-6">
-      {/* Approval chain */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold">Jóváhagyási lánc</h3>
-          <Button size="sm" variant="outline" onClick={addStep}><Plus className="h-3 w-3 mr-1" /> Lépés</Button>
+          <h3 className="text-sm font-semibold">{t('approval_chain_mgr.title')}</h3>
+          <Button size="sm" variant="outline" onClick={addStep}><Plus className="h-3 w-3 mr-1" /></Button>
         </div>
 
         {chains.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Nincs jóváhagyási lánc — az alapértelmezett egylépcsős jóváhagyás érvényes (owner vagy resourceAssistant).</p>
+          <p className="text-xs text-muted-foreground">{t('approval_chain_mgr.empty')}</p>
         ) : (
           <div className="space-y-2">
             {chains.map((c, i) => (
               <div key={c.id}>
                 <div className="flex items-center gap-2 p-2 rounded-md border text-sm">
-                  <Badge variant="outline" className="text-xs shrink-0">{c.step_order}. lépés</Badge>
+                  <Badge variant="outline" className="text-xs shrink-0">{c.step_order}.</Badge>
                   <Select value={c.approver_role} onValueChange={(v) => updateStep(c.id, v)}>
                     <SelectTrigger className="h-7 text-xs w-[180px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {ROLE_OPTIONS.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                      {roleOptions.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
                     </SelectContent>
                   </Select>
                   <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto" onClick={() => deleteStep(c.id)}>
@@ -132,37 +131,36 @@ export function ApprovalChainManager({ workspaceId }: Props) {
 
       <Separator />
 
-      {/* Escalation rules */}
       <div className="space-y-3">
         <h3 className="text-sm font-semibold flex items-center gap-1">
-          <AlertTriangle className="h-4 w-4" /> Eszkaláció
+          <AlertTriangle className="h-4 w-4" />
         </h3>
 
         <div className="space-y-3 p-3 rounded-md border">
           <div className="flex items-center justify-between">
-            <Label className="text-xs">Aktív</Label>
+            <Label className="text-xs">{t('approval_chain_mgr.label_active')}</Label>
             <Switch checked={escActive} onCheckedChange={setEscActive} />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs">Eszkaláció ennyi óra után</Label>
+              <Label className="text-xs">{t('approval_chain_mgr.label_escalation_hours')}</Label>
               <Input className="mt-1 h-8 text-xs" type="number" min="1" value={escHours} onChange={e => setEscHours(e.target.value)} />
             </div>
             <div>
-              <Label className="text-xs">Eszkaláció célszerepkör</Label>
+              <Label className="text-xs">{t('approval_chain_mgr.label_escalation_role')}</Label>
               <Select value={escRole} onValueChange={setEscRole}>
                 <SelectTrigger className="mt-1 h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {ROLE_OPTIONS.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                  {roleOptions.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="flex items-center justify-between">
-            <Label className="text-xs">Tulajdonos értesítése</Label>
+            <Label className="text-xs">{t('approval_chain_mgr.label_notify_owner')}</Label>
             <Switch checked={escNotify} onCheckedChange={setEscNotify} />
           </div>
-          <Button size="sm" onClick={saveEscalation} className="w-full text-xs">Mentés</Button>
+          <Button size="sm" onClick={saveEscalation} className="w-full text-xs">{t('approval_chain_mgr.btn_save')}</Button>
         </div>
       </div>
     </div>
