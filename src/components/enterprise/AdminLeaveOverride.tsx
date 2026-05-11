@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { validateLeaveRequest, ConflictResult } from '@/lib/conflictEngine';
+import { formatConflict } from '@/lib/conflictEngineI18n';
 import { logAuditEvent } from '@/lib/auditLog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -54,9 +55,18 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, adminUserI
 
   const handleValidate = async () => {
     if (!startDate || !endDate || !selectedUserId) return;
-    const results = await validateLeaveRequest(workspaceId, selectedUserId, startDate, endDate);
-    setConflicts(results);
-    setValidated(true);
+    try {
+      const results = await validateLeaveRequest(workspaceId, selectedUserId, startDate, endDate);
+      setConflicts(results);
+      setValidated(true);
+    } catch (err) {
+      // Engine threw because validation data could not be loaded — surface as
+      // a blocking conflict so the admin cannot bypass-approve a request whose
+      // constraints were never evaluated.
+      toast.error(t('leave_request.error_validation_failed'));
+      setConflicts([{ code: 'VALIDATION_ERROR', severity: 'blocking', message: String(err) }]);
+      setValidated(true);
+    }
   };
 
   const hasBlockingConflicts = conflicts.some(c => c.severity === 'blocking');
@@ -222,7 +232,7 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, adminUserI
               {conflicts.map((c, i) => (
                 <div key={i} className={cn("flex items-start gap-2 text-xs rounded px-2 py-1", c.severity === 'blocking' ? 'bg-destructive/10 text-destructive' : 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400')}>
                   {c.severity === 'blocking' ? <XCircle className="h-3 w-3 mt-0.5 shrink-0" /> : <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />}
-                  <span>{c.message}</span>
+                  <span>{formatConflict(c, t)}</span>
                 </div>
               ))}
               {autoApprove && hasBlockingConflicts && (

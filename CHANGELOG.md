@@ -1,3 +1,33 @@
+## 2026-05-11 — v3.7.6 Critical follow-ups from v3.7.5 audit: correct onConflict key, full conflict-engine localization, hardcoded HU sweep
+
+### Fixed — Runtime correctness and localization gaps surfaced after v3.7.5
+
+**1. `api.ts` — `upsertSiteAssignment` onConflict mismatch (Critical hot-fix on v3.7.5)**
+v3.7.5 introduced an atomic upsert keyed on `(workspace_id, membership_id, shift_date)`, but the actual UNIQUE constraint on `enterprise_shift_assignments` is `uq_shift_user_date (workspace_id, user_id, shift_date)`. Supabase would have rejected the upsert at runtime with "no unique constraint matching ON CONFLICT specification." Corrected the `onConflict` key to `'workspace_id,user_id,shift_date'`.
+
+**2. `conflictEngine` — full localization of all conflict messages (Major UX)**
+Every conflict message returned by `validateLeaveRequest` was previously hardcoded Hungarian. Czech, Slovak, Polish, and English users saw Hungarian error toasts when a leave request triggered any rule. Refactored the engine to emit structured `{ code, params }`, added a new `formatConflict(c, t)` helper in `src/lib/conflictEngineI18n.ts`, and added the `conflict.*` namespace to all 5 locales (11 keys × 5 languages). The Hungarian `message` field is preserved on the engine output for backward compatibility with any other consumers (logs, debug).
+
+**3. `AdminLeaveOverride.tsx` — unhandled validateLeaveRequest throw (Major)**
+v3.7.5 made `validateLeaveRequest` throw on fetch error, and `LeaveRequestDialog` was updated. `AdminLeaveOverride` had the same call pattern but was not updated — an unhandled rejection would have surfaced. Now wraps the call in try/catch and emits a blocking VALIDATION_ERROR conflict, mirroring the dialog.
+
+**4. `WorkspaceDashboard.tsx` — hardcoded HU report/widget names + toasts (Major)**
+The `WorkspaceSettings` sub-component had hardcoded Hungarian strings for: 4 default calendar widget names ("Csapat elérhetőségi összefoglaló" etc.), 2 default custom report names, 5 report-template dropdown labels, and 4 toast messages. All extracted to a new `workspace_settings.*` namespace across all 5 locales (14 keys × 5 languages). **Important:** the default widget/report names are now seeded from the active locale rather than always being Hungarian, but workspaces that previously saved settings still see the persisted Hungarian strings (no DB migration).
+
+**5. New characterization tests for `formatConflict` (32 tests)**
+Added `src/test/conflictEngineI18n.test.ts` with locale-parameterised tests verifying:
+- Every conflict code renders without leaking the translation key (`conflict.*`)
+- Scoped vs unscoped MAX_OFF picks the correct key
+- `VALIDATION_ERROR` falls through to the system error string (not translated)
+- Unknown codes fall back to the engine's HU message
+- All 5 locales define all 11 required `conflict.*` keys
+
+**Files touched (12):** `src/lib/conflictEngine.ts`, `src/lib/conflictEngineI18n.ts` (new), `src/components/enterprise/LeaveRequestDialog.tsx`, `src/components/enterprise/AdminLeaveOverride.tsx`, `src/components/enterprise/WorkspaceDashboard.tsx`, `src/components/enterprise/time-attendance/api.ts`, `src/i18n/resources/{en,hu,cs,sk,pl}.ts`, `src/test/conflictEngineI18n.test.ts` (new)
+
+**Test result:** 133/133 tests pass (101 → 133, +32 new). 0 TypeScript errors. Production build clean.
+
+---
+
 ## 2026-05-11 — v3.7.5 System audit: conflict-engine bugs, i18n completeness, atomic site-assignment
 
 ### Fixed — Four production bugs identified by full-system audit

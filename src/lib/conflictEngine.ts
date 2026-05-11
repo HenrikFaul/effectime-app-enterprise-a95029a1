@@ -1,11 +1,31 @@
 import { supabase } from '@/integrations/supabase/client';
 import { format, eachDayOfInterval, getDay } from 'date-fns';
 
+export type ConflictCode =
+  | 'BLOCKED_DATE'
+  | 'HOLIDAY_OVERLAP'
+  | 'MAX_OFF_EXCEEDED'
+  | 'MAX_OFF_WARNING'
+  | 'OFFICE_COVERAGE_BREACH'
+  | 'OFFICE_COVERAGE_WARNING'
+  | 'SELF_OVERLAP'
+  | 'VALIDATION_ERROR';
+
 export interface ConflictResult {
-  code: string;
+  code: ConflictCode | string;
   severity: 'warning' | 'blocking';
+  /**
+   * Hungarian fallback message — kept for backward compatibility with existing
+   * consumers and toasts. UI components should prefer `formatConflict(c, t)`
+   * from `@/lib/conflictEngineI18n` to render a locale-aware message.
+   */
   message: string;
   date?: string;
+  /**
+   * Structured parameters for locale-aware rendering. The keys depend on
+   * `code`; see `formatConflict` for the mapping.
+   */
+  params?: Record<string, string | number>;
 }
 
 /**
@@ -98,6 +118,7 @@ export async function validateLeaveRequest(
       severity: 'blocking',
       message: `${bd.blocked_date} tiltott nap${bd.reason ? `: ${bd.reason}` : ''}`,
       date: bd.blocked_date,
+      params: { date: bd.blocked_date, reason: bd.reason ?? '' },
     });
   }
 
@@ -111,6 +132,7 @@ export async function validateLeaveRequest(
         severity: 'warning',
         message: `${dateStr} ünnepnap (${h?.name || 'ismeretlen'}) — szabadságot igényelni felesleges lehet`,
         date: dateStr,
+        params: { date: dateStr, name: h?.name ?? '' },
       });
     }
   }
@@ -164,12 +186,14 @@ export async function validateLeaveRequest(
         return true;
       }).length;
 
+      const roleLabel = ruleRoleLabel(rule).trim();
       if (offCount >= rule.max_off) {
         conflicts.push({
           code: 'MAX_OFF_EXCEEDED',
           severity: 'blocking',
           message: `${dateStr}: max ${rule.max_off} fő lehet távol, jelenleg ${offCount} fő már távol van${ruleRoleLabel(rule)}`,
           date: dateStr,
+          params: { date: dateStr, max: rule.max_off, current: offCount, roleLabel },
         });
       } else if (offCount >= rule.max_off - 1) {
         conflicts.push({
@@ -177,6 +201,7 @@ export async function validateLeaveRequest(
           severity: 'warning',
           message: `${dateStr}: majdnem eléri a max távollévők számát (${offCount + 1}/${rule.max_off})${ruleRoleLabel(rule)}`,
           date: dateStr,
+          params: { date: dateStr, current: offCount + 1, max: rule.max_off, roleLabel },
         });
       }
     }
@@ -230,6 +255,7 @@ export async function validateLeaveRequest(
           severity: 'blocking',
           message: `${dateStr}: telephely lefedettség sérülne (${roleLabel}) — min ${rule.min_headcount} fő szükséges, csak ${presentIfApproved} maradna`,
           date: dateStr,
+          params: { date: dateStr, roleLabel, min: rule.min_headcount, remaining: presentIfApproved },
         });
       } else if (presentIfApproved === rule.min_headcount) {
         conflicts.push({
@@ -237,6 +263,7 @@ export async function validateLeaveRequest(
           severity: 'warning',
           message: `${dateStr}: telephely lefedettség éppen a minimumon (${roleLabel}: ${presentIfApproved}/${rule.min_headcount})`,
           date: dateStr,
+          params: { date: dateStr, roleLabel, current: presentIfApproved, min: rule.min_headcount },
         });
       }
     }
@@ -255,6 +282,7 @@ export async function validateLeaveRequest(
       code: 'SELF_OVERLAP',
       severity: 'warning',
       message: `Már van függőben lévő vagy jóváhagyott kérelmed ebben az időszakban`,
+      params: {},
     });
   }
 
