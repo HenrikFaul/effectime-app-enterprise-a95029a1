@@ -39,6 +39,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
   const [oncallOpen, setOncallOpen] = useState(false);
   const [batchOpen, setBatchOpen] = useState(false);
   const [batchInitialRange, setBatchInitialRange] = useState<{ start: Date | null; end: Date | null }>({ start: null, end: null });
+  const [batchSelectedDays, setBatchSelectedDays] = useState<Date[] | null>(null);
 
   // Edit-mode gate: the calendar is read-only by default; user must click the
   // pencil to enter edit mode, then save to commit + exit. The server-side
@@ -187,10 +188,10 @@ export function EmployeeMonthView({ workspaceId }: Props) {
       return;
     }
 
-    // Drag across multiple days → open batch dialog with range
-    const start = new Date(hovered[0]);
-    const end = new Date(hovered[hovered.length - 1]);
-    setBatchInitialRange({ start, end });
+    // Drag across multiple days → open batch dialog with the exact selected days
+    const selectedDates = hovered.map(d => new Date(d));
+    setBatchSelectedDays(selectedDates);
+    setBatchInitialRange({ start: selectedDates[0], end: selectedDates[selectedDates.length - 1] });
     setBatchOpen(true);
   }, [resetDrag]);
 
@@ -233,6 +234,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
               {canEdit && (
                 <>
                   <Button size="sm" variant="outline" onClick={() => {
+                    setBatchSelectedDays(null);
                     setBatchInitialRange({ start: null, end: null });
                     setBatchOpen(true);
                   }} title="Időszak kitöltése egyetlen művelettel">
@@ -379,6 +381,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
           month={month}
           initialStart={batchInitialRange.start}
           initialEnd={batchInitialRange.end}
+          selectedDays={batchSelectedDays ?? undefined}
           segments={segments}
           onSaved={reload}
         />
