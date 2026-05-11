@@ -1531,6 +1531,73 @@ export type Database = {
           },
         ]
       }
+      enterprise_calendar_sync_log: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          direction: string
+          error_message: string | null
+          events_processed: number | null
+          id: string
+          integration_id: string | null
+          provider: string
+          status: string
+          user_id: string | null
+          workspace_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          direction: string
+          error_message?: string | null
+          events_processed?: number | null
+          id?: string
+          integration_id?: string | null
+          provider: string
+          status: string
+          user_id?: string | null
+          workspace_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          direction?: string
+          error_message?: string | null
+          events_processed?: number | null
+          id?: string
+          integration_id?: string | null
+          provider?: string
+          status?: string
+          user_id?: string | null
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_calendar_sync_log_integration_id_fkey"
+            columns: ["integration_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_user_calendar_integrations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_calendar_sync_log_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_org_pulse_membership"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "enterprise_calendar_sync_log_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enterprise_capacity_snapshots: {
         Row: {
           available_fte: number | null
@@ -5081,6 +5148,87 @@ export type Database = {
           },
           {
             foreignKeyName: "enterprise_ui_section_states_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_user_calendar_integrations: {
+        Row: {
+          access_token: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          last_sync_at: string | null
+          last_sync_error: string | null
+          last_sync_status: string | null
+          provider: string
+          provider_user_email: string | null
+          provider_user_id: string | null
+          refresh_token: string | null
+          scopes: string | null
+          sync_events_in: boolean
+          sync_events_out: boolean
+          tenant_id: string | null
+          token_expires_at: string | null
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          access_token?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          provider: string
+          provider_user_email?: string | null
+          provider_user_id?: string | null
+          refresh_token?: string | null
+          scopes?: string | null
+          sync_events_in?: boolean
+          sync_events_out?: boolean
+          tenant_id?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          access_token?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          last_sync_at?: string | null
+          last_sync_error?: string | null
+          last_sync_status?: string | null
+          provider?: string
+          provider_user_email?: string | null
+          provider_user_id?: string | null
+          refresh_token?: string | null
+          scopes?: string | null
+          sync_events_in?: boolean
+          sync_events_out?: boolean
+          tenant_id?: string | null
+          token_expires_at?: string | null
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_user_calendar_integrations_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_org_pulse_membership"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "enterprise_user_calendar_integrations_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "enterprise_workspaces"
