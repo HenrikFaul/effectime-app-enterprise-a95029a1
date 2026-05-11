@@ -1,3 +1,51 @@
+## 2026-05-11 — v3.7.2 Localization sweep: top nav, header, settings sections, HR workflow inbox, attendance buttons
+
+### Added — Full localization of remaining hardcoded UI strings across all 5 locales
+
+Following the v3.7.x localization mandate, this release replaces the last large group of hardcoded Hungarian/English strings in the high-traffic workspace shell so Czech/Slovak/Polish users no longer see Hungarian labels in primary navigation, header, time-tracking, processes, or settings.
+
+**New locale namespaces (added to en, hu, cs, sk, pl in lockstep):**
+
+- `ws_nav` — top-level tab labels (`my_portal`, `members`, `organization`, `calendar`, `time_attendance`, `requests`, `workflows`, `resources`, `reports`, `reports_audit`, `settings`), sidebar (`navigation_label`, `workspace_label`, `back_to_workspaces`, `back`), header buttons (`profile_btn`, `invite_btn`, `sign_out_btn`, `command_center`, `org_pulse`, `refresh`, `unknown_user`), and calendar sub-tabs (`cal_main`, `cal_timeline`, `cal_coverage`, `cal_annual`).
+- `settings_sections` — all 16 SettingsSection titles on the Beállítások / Settings tab (`permissions`, `offices`, `quota_admin`, `integrations`, `ical`, `localization`, `recovery_mode`, `integration_health`, `help_system`, `allowances`, `workspace_general`, `branding`, `import_export`, `calendar_filters`, `ui_section_states`, `layout_setting`).
+- `hr_workflow` — HR workflow inbox: tab labels (`tab_inbox`, `tab_templates`), category meta (medical_exam → custom), status meta (open/in_progress/completed/cancelled), priority meta (low/normal/high/urgent), filter/empty/loading/dialog labels, toast strings, and the "Start workflow" call-to-action.
+- `attendance_view` — Employee month view: edit/submit buttons (`btn_edit_short`, `btn_submit_short`, `btn_save_changes`, `btn_record_oncall`), `editing_open_badge`, `info_edit_help`, `returned_label`, month-nav aria-labels (`prev_month`, `next_month`), tooltips, submit warnings/toasts.
+
+**Component updates:**
+
+- `WorkspaceDashboard.tsx` — top-nav array now references `i18nKey` and resolves via `t()`; header buttons (`Profilom`, `Meghívás`, `Kilépés`), back-button aria-label, calendar sub-tabs, and all 16 SettingsSection titles localized.
+- `WorkspaceSidebar.tsx` — sidebar nav items, back button, "Workspace" / "Navigáció" labels localized.
+- `WorkflowsModule.tsx` — `HR folyamatok` / `HR sablonok` tabs.
+- `HRWorkflowInbox.tsx` — full sweep: `CATEGORY_LABELS` replaced with a `CATEGORY_I18N_KEY` lookup, `STATUS_META` / `PRIORITY_META` reduced to CSS-only metadata, all toasts, dialog labels, filter dropdown, action buttons.
+- `EmployeeMonthView.tsx` — Szerkesztés / Benyújtás / Módosítások mentése / Készenlét rögzítése buttons, "Szerkesztésre megnyitva" badge, info banner, "Javításra visszaküldve" prefix, month-navigation aria-labels, loader, submit warnings/toasts. Status badge now uses `t(\`attendance.status_${status}\` as any)` instead of hardcoded `STATUS_LABELS`.
+- `CommandCenterButton.tsx` / `OrgPulseButton.tsx` — `Parancsközpont` / `Org Pulse` button text + aria-label, `Frissítés` refresh links via `ws_nav.refresh`.
+- `AdminOverview.tsx` / `EmployeeDashboard.tsx` — STATUS_LABELS consumers patched to resolve status labels via `t('attendance.status_*')`.
+
+**Removed:**
+
+- Dead `STATUS_LABELS` export from `time-attendance/types.ts` (no remaining consumers).
+- Stale Hungarian `STATUS_LABELS` import lines in EmployeeDashboard and AdminOverview.
+
+**Files touched (15):**
+
+- `src/i18n/resources/{en,hu,cs,sk,pl}.ts`
+- `src/components/enterprise/WorkspaceDashboard.tsx`
+- `src/components/shell/WorkspaceSidebar.tsx`
+- `src/components/enterprise/workflows/WorkflowsModule.tsx`
+- `src/components/enterprise/workflows/HRWorkflowInbox.tsx`
+- `src/components/enterprise/CommandCenterButton.tsx`
+- `src/components/enterprise/OrgPulseButton.tsx`
+- `src/components/enterprise/time-attendance/EmployeeMonthView.tsx`
+- `src/components/enterprise/time-attendance/AdminOverview.tsx`
+- `src/components/enterprise/time-attendance/types.ts`
+- `src/components/enterprise/self-service/EmployeeDashboard.tsx`
+
+**Compatibility:** Purely textual UI changes. No DB, no RPC, no schema, no behavior changes. TypeScript clean. Existing translation override workflow (workspace-level CSV) continues to function — new keys fall back to English when an override is missing.
+
+**Remaining for next round:** `CreateWorkspaceDialog.tsx` (Demo workspace seed text), Naptár sidebar widget admin panel, Riport konfiguráció templates, Munkaterület beállítások meta panel, and lower-priority screens (ICalSubscription, BrandingManager, NotificationPreferences, etc.) flagged in the audit but not user-facing on the home screen.
+
+---
+
 ## 2026-05-11 — v3.7.1 Time Attendance: explicit edit mode + drag-select batch fill
 
 ### Added — Member-side calendar UX upgrade

@@ -17,7 +17,7 @@ import {
   listWorkspacePeriods, transitionPeriod, fetchPayrollExport, recordPayrollExport,
 } from './api';
 import { generateCSV, generateExcelXML, downloadFile } from '../import-export/utils/file-parser';
-import { STATUS_LABELS, STATUS_BADGE_VARIANT, type AdminPeriodRow } from './types';
+import { STATUS_BADGE_VARIANT, type AdminPeriodRow } from './types';
 import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
@@ -235,7 +235,7 @@ export function AdminOverview({ workspaceId }: Props) {
                       <td className="px-2 py-1.5">
                         {r.status ? (
                           <Badge variant={STATUS_BADGE_VARIANT[r.status]} className="text-[10px]">
-                            {STATUS_LABELS[r.status]}
+                            {t(`attendance.status_${r.status}` as any)}
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="text-[10px] text-muted-foreground">{t('attendance.status_missing')}</Badge>

@@ -35,12 +35,12 @@ export function WorkflowsModule({ workspaceId, isAdmin, userId }: Props) {
             <TabsList className="flex flex-wrap h-auto gap-1">
               <TabsTrigger value="hr-inbox" className="gap-1">
                 <Inbox className="h-4 w-4" />
-                HR folyamatok
+                {t('hr_workflow.tab_inbox')}
               </TabsTrigger>
               {isAdmin && (
                 <TabsTrigger value="hr-templates" className="gap-1">
                   <Stethoscope className="h-4 w-4" />
-                  HR sablonok
+                  {t('hr_workflow.tab_templates')}
                 </TabsTrigger>
               )}
               <TabsTrigger value="onboarding-templates" className="gap-1">

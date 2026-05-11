@@ -23,7 +23,7 @@ import { DayEditorDialog } from './DayEditorDialog';
 import { BatchFillDialog } from './BatchFillDialog';
 import {
   AttendancePeriod, AttendanceSegment, OnCallWindow,
-  STATUS_LABELS, STATUS_BADGE_VARIANT,
+  STATUS_BADGE_VARIANT,
 } from './types';
 import { TotalsSummary } from './TotalsSummary';
 import { OnCallDialog } from './OnCallDialog';
@@ -151,16 +151,16 @@ export function EmployeeMonthView({ workspaceId }: Props) {
     if (!period) return;
     const issues = collectSubmissionWarnings(period, segments);
     if (issues.length > 0) {
-      const proceed = confirm(`Figyelmeztetések:\n\n${issues.join('\n')}\n\nMégis benyújtod?`);
+      const proceed = confirm(t('attendance_view.submit_warning_confirm', { issues: issues.join('\n') }));
       if (!proceed) return;
     }
     try {
       await transitionPeriod(period.id, 'submitted');
-      toast.success('Időszak benyújtva jóváhagyásra');
+      toast.success(t('attendance_view.submit_success'));
       setEditMode(false);
       reload();
     } catch (e: any) {
-      toast.error(e?.message || 'Benyújtás sikertelen');
+      toast.error(e?.message || t('attendance_view.submit_failed'));
     }
   };
 
@@ -243,7 +243,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
   // ─── Render ────────────────────────────────────────────────────────────────
 
   if (loading) {
-    return <div className="flex items-center justify-center p-8 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin mr-2" /> Betöltés...</div>;
+    return <div className="flex items-center justify-center p-8 text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin mr-2" /> {t('attendance_view.loading')}</div>;
   }
 
   return (
@@ -252,21 +252,21 @@ export function EmployeeMonthView({ workspaceId }: Props) {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="ghost" onClick={handlePrevMonth} aria-label="Előző hónap"><ChevronLeft className="h-4 w-4" /></Button>
+            <Button size="sm" variant="ghost" onClick={handlePrevMonth} aria-label={t('attendance_view.prev_month')}><ChevronLeft className="h-4 w-4" /></Button>
             <CardTitle className="text-base tabular-nums">
               {format(new Date(year, month - 1, 1), 'yyyy. MMMM', { locale: hu })}
             </CardTitle>
-            <Button size="sm" variant="ghost" onClick={handleNextMonth} aria-label="Következő hónap"><ChevronRight className="h-4 w-4" /></Button>
+            <Button size="sm" variant="ghost" onClick={handleNextMonth} aria-label={t('attendance_view.next_month')}><ChevronRight className="h-4 w-4" /></Button>
             {period && (
               <Badge variant={STATUS_BADGE_VARIANT[period.status]} className="ml-2">
-                {STATUS_LABELS[period.status]}
+                {t(`attendance.status_${period.status}` as any)}
                 {period.status === 'locked' && <Lock className="h-3 w-3 ml-1" />}
               </Badge>
             )}
             {canEdit && (
               <Badge variant="default" className="ml-1 gap-1 bg-amber-500 hover:bg-amber-500/90 text-amber-50">
                 <Pencil className="h-3 w-3" />
-                Szerkesztésre megnyitva
+                {t('attendance_view.editing_open_badge')}
               </Badge>
             )}
 
@@ -304,8 +304,8 @@ export function EmployeeMonthView({ workspaceId }: Props) {
               </DropdownMenu>
 
               {!serverReadOnly && !editMode && (
-                <Button size="sm" variant="default" onClick={() => setEditMode(true)} title="Időnyilvántartás szerkesztése">
-                  <Pencil className="h-3 w-3 mr-1" /> Szerkesztés
+                <Button size="sm" variant="default" onClick={() => setEditMode(true)} title={t('attendance_view.tooltip_edit')}>
+                  <Pencil className="h-3 w-3 mr-1" /> {t('attendance_view.btn_edit_short')}
                 </Button>
               )}
               {canEdit && (
@@ -314,20 +314,20 @@ export function EmployeeMonthView({ workspaceId }: Props) {
                     setBatchSelectedDays(null);
                     setBatchInitialRange({ start: null, end: null });
                     setBatchOpen(true);
-                  }} title="Időszak kitöltése egyetlen művelettel">
-                    <Zap className="h-3 w-3 mr-1 text-amber-500" /> Batch kitöltés
+                  }} title={t('attendance_view.tooltip_batch')}>
+                    <Zap className="h-3 w-3 mr-1 text-amber-500" /> {t('attendance.batch_fill_btn')}
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setOncallOpen(true)}>
-                    <Phone className="h-3 w-3 mr-1" /> Készenlét rögzítése
+                    <Phone className="h-3 w-3 mr-1" /> {t('attendance_view.btn_record_oncall')}
                   </Button>
-                  <Button size="sm" variant="default" onClick={() => setEditMode(false)} title="Módosítások mentése és a szerkesztés bezárása">
-                    <Save className="h-3 w-3 mr-1" /> Módosítások mentése
+                  <Button size="sm" variant="default" onClick={() => setEditMode(false)} title={t('attendance_view.tooltip_save_changes')}>
+                    <Save className="h-3 w-3 mr-1" /> {t('attendance_view.btn_save_changes')}
                   </Button>
                 </>
               )}
               {!serverReadOnly && !editMode && period && segments.length > 0 && (
                 <Button size="sm" onClick={handleSubmit}>
-                  <Send className="h-3 w-3 mr-1" /> Benyújtás
+                  <Send className="h-3 w-3 mr-1" /> {t('attendance_view.btn_submit_short')}
                 </Button>
               )}
             </div>
@@ -337,14 +337,14 @@ export function EmployeeMonthView({ workspaceId }: Props) {
           {period?.status === 'returned' && period.return_reason && (
             <div className="mt-2 p-2 rounded-md bg-destructive/10 border border-destructive/30 text-xs text-destructive flex items-start gap-2">
               <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
-              <div><strong>Javításra visszaküldve:</strong> {period.return_reason}</div>
+              <div><strong>{t('attendance_view.returned_label')}</strong> {period.return_reason}</div>
             </div>
           )}
           {canEdit && (
             <div className="mt-2 p-2 rounded-md bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900 text-xs flex items-start gap-2">
               <Info className="h-3 w-3 mt-0.5 shrink-0 text-amber-700 dark:text-amber-400" />
               <div className="text-amber-800 dark:text-amber-200">
-                A naptár szerkesztésre meg van nyitva. Egy napra kattintva napi szerkesztő nyílik. Több napon át húzva (egér/érintő) batch kitöltés indul. A „Módosítások mentése" gombra kattintva zárod a szerkesztést.
+                {t('attendance_view.info_edit_help')}
               </div>
             </div>
           )}

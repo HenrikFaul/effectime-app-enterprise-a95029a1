@@ -81,10 +81,10 @@ export function CommandCenterButton({ workspaceId, onOpenTab, recoveryMode }: Pr
           variant="outline"
           size="sm"
           className="relative gap-1.5"
-          aria-label="Parancsközpont"
+          aria-label={t('ws_nav.command_center')}
         >
           <Activity className={`h-4 w-4 ${recoveryMode ? 'text-destructive' : 'text-primary'}`} />
-          <span className="hidden sm:inline">Parancsközpont</span>
+          <span className="hidden sm:inline">{t('ws_nav.command_center')}</span>
           {totalCount > 0 && (
             <Badge
               variant="destructive"
@@ -141,7 +141,7 @@ export function CommandCenterButton({ workspaceId, onOpenTab, recoveryMode }: Pr
               onClick={refresh}
               className="text-[11px] text-muted-foreground hover:text-foreground"
             >
-              {t('common.refresh') || 'Frissítés'}
+              {t('ws_nav.refresh')}
             </button>
           </div>
         </div>

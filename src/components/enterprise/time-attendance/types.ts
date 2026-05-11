@@ -143,15 +143,6 @@ export interface PayrollExportRow {
   locked_at: string | null;
 }
 
-export const STATUS_LABELS: Record<AttendancePeriodStatus, string> = {
-  draft: 'Vázlat',
-  submitted: 'Benyújtva',
-  returned: 'Javításra visszaküldve',
-  approved: 'Jóváhagyva',
-  locked: 'Bérszámfejtésre zárva',
-  exported: 'Exportálva',
-};
-
 export const STATUS_BADGE_VARIANT: Record<AttendancePeriodStatus, 'outline' | 'default' | 'secondary' | 'destructive'> = {
   draft: 'outline',
   submitted: 'secondary',

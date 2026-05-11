@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { format, isPast, isWithinInterval, addDays } from 'date-fns';
 import { hu } from 'date-fns/locale';
-import { AttendancePeriodTotals, STATUS_LABELS, STATUS_BADGE_VARIANT, AttendancePeriodStatus } from '../time-attendance/types';
+import { AttendancePeriodTotals, STATUS_BADGE_VARIANT, AttendancePeriodStatus } from '../time-attendance/types';
 import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
@@ -182,7 +182,7 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
 
   const totals = attendance?.totals;
   const monthLabel = format(new Date(year, month - 1), 'MMMM', { locale: hu });
-  const statusLabel = attendance ? STATUS_LABELS[attendance.status] : t('attendance.status_no_period');
+  const statusLabel = attendance ? t(`attendance.status_${attendance.status}` as any) : t('attendance.status_no_period');
   const statusVariant = attendance ? STATUS_BADGE_VARIANT[attendance.status] : 'outline';
 
   const pendingRequests = requests.filter(r => r.status === 'pending').length;
