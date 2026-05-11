@@ -785,6 +785,7 @@ function InvitationList({ workspaceId, isAdmin }: { workspaceId: string; isAdmin
 
 // ===== Workspace Settings =====
 function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPermissionConfig = true, canViewLayoutSetting = false }: { workspace: Workspace; userRole?: string; userId: string; onRefresh: () => void; canViewPermissionConfig?: boolean; canViewLayoutSetting?: boolean }) {
+  const { t } = useI18n();
   const [name, setName] = useState(workspace.name);
   const [description, setDescription] = useState(workspace.description || '');
   const [saving, setSaving] = useState(false);

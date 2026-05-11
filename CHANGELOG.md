@@ -1,3 +1,15 @@
+## 2026-05-11 — v3.7.4 Fix: ReferenceError "t is not defined" in WorkspaceSettings
+
+### Fixed — Workspace settings tab failed to render with `ReferenceError: t is not defined`
+
+The `WorkspaceSettings` helper component (`src/components/enterprise/WorkspaceDashboard.tsx:787`) was switched to localized section titles in v3.7.2 (`t('settings_sections.*')`) but the component itself never called `useI18n()` — it relied on the outer `WorkspaceDashboard`'s `t`, which is out of scope inside a separate function declaration. After minification this crashed every render of the Settings tab.
+
+**Fix:** Added `const { t } = useI18n();` at the top of `WorkspaceSettings` (line 788). Build hash changed (`C9A064Tf` → `fi7qugw_`), confirming the regression is gone.
+
+**Files touched (1):** `src/components/enterprise/WorkspaceDashboard.tsx`
+
+---
+
 ## 2026-05-11 — v3.7.3 Language selector on public pages; full i18n for Landing, Auth, ResetPassword
 
 ### Added — Language selector visible on all public pages before login; auto-detects visitor locale
