@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useI18n } from '@/i18n/I18nProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -11,30 +12,31 @@ interface Props { workspaceId: string; userId: string }
 
 interface SectionDef { key: string; label: string; group: string }
 
-// A cégszinten konfigurálható szekciók katalógusa.
-// Új szekció hozzáadásához: regisztráld itt + használd a useWorkspaceSectionState hookot.
-const SECTIONS: SectionDef[] = [
-  { group: 'Beállítások', key: 'settings.workspace_general', label: 'Általános workspace beállítások' },
-  { group: 'Beállítások', key: 'settings.branding', label: 'Branding (logó, szín, white-label)' },
-  { group: 'Beállítások', key: 'settings.allowances', label: 'Kvóta-poolok (Allowances)' },
-  { group: 'Beállítások', key: 'settings.csv_import', label: 'CSV import' },
-  { group: 'Beállítások', key: 'settings.integrations', label: 'Integrációk (Jira, Azure DevOps)' },
-  { group: 'Beállítások', key: 'settings.ical', label: 'iCal feed' },
-  { group: 'Beállítások', key: 'settings.quota_admin', label: 'Kvóta admin (Owner)' },
-  { group: 'Kérelmek', key: 'requests.quota_balance', label: 'Saját egyenleg' },
-  { group: 'Kérelmek', key: 'requests.substitute_inbox', label: 'Helyettesítési felkérések' },
-  { group: 'Naptár', key: 'calendar.annual_grid', label: 'Éves naptár-nézet' },
-];
-
-const STATE_LABELS: Record<SectionState, string> = {
-  default: 'Alapértelmezett (szoftver beállítása)',
-  opened: 'Mindig nyitott',
-  collapsed: 'Mindig zárt',
-};
-
 export function UiSectionStateManager({ workspaceId, userId }: Props) {
+  const { t } = useI18n();
   const [states, setStates] = useState<Record<string, SectionState>>({});
   const [loading, setLoading] = useState(true);
+
+  // A cégszinten konfigurálható szekciók katalógusa.
+  // Új szekció hozzáadásához: regisztráld itt + használd a useWorkspaceSectionState hookot.
+  const SECTIONS: SectionDef[] = [
+    { group: t('ui_section_mgr.group_settings'), key: 'settings.workspace_general', label: t('ui_section_mgr.section_ws_general') },
+    { group: t('ui_section_mgr.group_settings'), key: 'settings.branding', label: t('ui_section_mgr.section_branding') },
+    { group: t('ui_section_mgr.group_settings'), key: 'settings.allowances', label: t('ui_section_mgr.section_allowances') },
+    { group: t('ui_section_mgr.group_settings'), key: 'settings.csv_import', label: t('ui_section_mgr.section_csv_import') },
+    { group: t('ui_section_mgr.group_settings'), key: 'settings.integrations', label: t('ui_section_mgr.section_integrations') },
+    { group: t('ui_section_mgr.group_settings'), key: 'settings.ical', label: t('ui_section_mgr.section_ical') },
+    { group: t('ui_section_mgr.group_settings'), key: 'settings.quota_admin', label: t('ui_section_mgr.section_quota_admin') },
+    { group: t('ui_section_mgr.group_requests'), key: 'requests.quota_balance', label: t('ui_section_mgr.section_quota_balance') },
+    { group: t('ui_section_mgr.group_requests'), key: 'requests.substitute_inbox', label: t('ui_section_mgr.section_substitute_inbox') },
+    { group: t('ui_section_mgr.group_calendar'), key: 'calendar.annual_grid', label: t('ui_section_mgr.section_annual_grid') },
+  ];
+
+  const STATE_LABELS: Record<SectionState, string> = {
+    default: t('ui_section_mgr.state_default'),
+    opened: t('ui_section_mgr.state_opened'),
+    collapsed: t('ui_section_mgr.state_collapsed'),
+  };
 
   const load = async () => {
     setLoading(true);
@@ -54,10 +56,10 @@ export function UiSectionStateManager({ workspaceId, userId }: Props) {
     setStates(p => ({ ...p, [key]: state }));
     const error = await setWorkspaceSectionState(workspaceId, key, state, userId);
     if (error) {
-      toast.error(`Mentési hiba: ${error.message}`);
+      toast.error(t('ui_section_mgr.save_error', { msg: error.message }));
       load();
     } else {
-      toast.success('Mentve');
+      toast.success(t('ui_section_mgr.saved'));
     }
   };
 
@@ -72,11 +74,10 @@ export function UiSectionStateManager({ workspaceId, userId }: Props) {
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center gap-2">
-          <LayoutPanelLeft className="h-4 w-4 text-primary" /> Menü szekciók alapállapota
+          <LayoutPanelLeft className="h-4 w-4 text-primary" /> {t('ui_section_mgr.card_title')}
         </CardTitle>
         <p className="text-[11px] text-muted-foreground">
-          Cégszintű (workspace) beállítás: melyik szekció legyen nyitva vagy zárva alapértelmezetten ennek a munkaterületnek a tagjai számára.
-          Az "Alapértelmezett" érték a szoftver gyári beállítását követi.
+          {t('ui_section_mgr.description')} {t('ui_section_mgr.description_note')}
         </p>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -92,7 +93,7 @@ export function UiSectionStateManager({ workspaceId, userId }: Props) {
                       <p className="text-sm">{s.label}</p>
                       <p className="text-[10px] text-muted-foreground truncate">{s.key}</p>
                     </div>
-                    {cur !== 'default' && <Badge variant="secondary" className="text-[10px]">Felülírva</Badge>}
+                    {cur !== 'default' && <Badge variant="secondary" className="text-[10px]">{t('ui_section_mgr.overridden_badge')}</Badge>}
                     <Select value={cur} onValueChange={v => change(s.key, v as SectionState)}>
                       <SelectTrigger className="w-56 h-8 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>

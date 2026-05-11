@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useI18n } from '@/i18n/I18nProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -7,7 +8,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { ArrowLeft, Pencil, Download, RefreshCw, AlertCircle, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts';
-import { DATA_SOURCE_LABELS } from './reportTemplates';
+import { getDataSourceLabels } from './reportTemplates';
 import type { SavedReport } from './ReportLibrary';
 
 const normalizeGroupBy = (value: unknown): string[] =>
@@ -23,6 +24,8 @@ interface Props {
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--muted-foreground))', 'hsl(var(--destructive))', 'hsl(var(--ring))'];
 
 export function ReportRunner({ report, workspaceId, onBack, onEdit }: Props) {
+  const { t } = useI18n();
+  const DATA_SOURCE_LABELS = getDataSourceLabels(t);
   const [rows, setRows] = useState<Record<string, any>[]>([]);
   const [columns, setColumns] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,7 +49,7 @@ export function ReportRunner({ report, workspaceId, onBack, onEdit }: Props) {
       setColumns(data?.columns || []);
     } catch (e: any) {
       console.error('Report run error:', e);
-      setError(e.message || 'Hiba a riport futtatása közben.');
+      setError(e.message || t('report_library.run_error'));
     } finally {
       setLoading(false);
     }
@@ -59,15 +62,15 @@ export function ReportRunner({ report, workspaceId, onBack, onEdit }: Props) {
     const cfg = report.config;
     const groupBy = normalizeGroupBy((cfg as any)?.group_by);
     const parts: string[] = [];
-    parts.push(`Forrás: ${DATA_SOURCE_LABELS[report.data_source] || report.data_source}.`);
-    if (groupBy.length) parts.push(`Csoportosítva: ${groupBy.join(', ')}.`);
-    if (cfg.aggregations?.length) parts.push(`Mutatók: ${cfg.aggregations.map(a => a.alias || `${a.fn}(${a.field})`).join(', ')}.`);
-    if (cfg.filters?.length) parts.push(`Szűrők: ${cfg.filters.length} aktív.`);
+    parts.push(t('report_library.summary_source', { source: DATA_SOURCE_LABELS[report.data_source] || report.data_source }));
+    if (groupBy.length) parts.push(t('report_library.summary_group_by', { fields: groupBy.join(', ') }));
+    if (cfg.aggregations?.length) parts.push(t('report_library.summary_metrics', { metrics: cfg.aggregations.map(a => a.alias || `${a.fn}(${a.field})`).join(', ') }));
+    if (cfg.filters?.length) parts.push(t('report_library.summary_filters', { count: cfg.filters.length }));
     return parts.join(' ');
-  }, [report]);
+  }, [report, t]);
 
   const handleExportCsv = () => {
-    if (rows.length === 0) { toast.info('Nincs exportálható adat.'); return; }
+    if (rows.length === 0) { toast.info(t('report_library.no_export_data')); return; }
     const cols = columns.length > 0 ? columns : Object.keys(rows[0]);
     const escape = (v: any) => {
       const s = v === null || v === undefined ? '' : String(v);
@@ -84,7 +87,7 @@ export function ReportRunner({ report, workspaceId, onBack, onEdit }: Props) {
   };
 
   const renderChart = () => {
-    if (rows.length === 0) return <p className="text-sm text-muted-foreground py-8 text-center">Nincs megjeleníthető adat.</p>;
+    if (rows.length === 0) return <p className="text-sm text-muted-foreground py-8 text-center">{t('report_library.no_chart_data')}</p>;
     const cols = columns.length > 0 ? columns : Object.keys(rows[0]);
 
     if (report.chart_type === 'kpi') {
@@ -92,7 +95,7 @@ export function ReportRunner({ report, workspaceId, onBack, onEdit }: Props) {
       return (
         <div className="text-center py-10">
           <p className="text-5xl font-bold text-primary">{String(value)}</p>
-          <p className="text-sm text-muted-foreground mt-2">{cols[0] || 'Eredmény'}</p>
+          <p className="text-sm text-muted-foreground mt-2">{cols[0] || t('report_library.kpi_default_label')}</p>
         </div>
       );
     }
@@ -253,7 +256,7 @@ export function ReportRunner({ report, workspaceId, onBack, onEdit }: Props) {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2 min-w-0">
           <Button size="sm" variant="ghost" onClick={onBack}>
-            <ArrowLeft className="h-4 w-4 mr-1" /> Vissza
+            <ArrowLeft className="h-4 w-4 mr-1" /> {t('report_library.btn_back')}
           </Button>
           <div className="min-w-0">
             <h3 className="text-base font-semibold truncate">{report.name}</h3>
@@ -262,9 +265,9 @@ export function ReportRunner({ report, workspaceId, onBack, onEdit }: Props) {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Badge variant="outline" className="text-[10px]">{DATA_SOURCE_LABELS[report.data_source]}</Badge>
-          <Button size="sm" variant="outline" onClick={runReport}><RefreshCw className="h-3.5 w-3.5 mr-1" /> Frissítés</Button>
+          <Button size="sm" variant="outline" onClick={runReport}><RefreshCw className="h-3.5 w-3.5 mr-1" /> {t('report_library.btn_refresh')}</Button>
           <Button size="sm" variant="outline" onClick={handleExportCsv}><Download className="h-3.5 w-3.5 mr-1" /> CSV</Button>
-          {onEdit && <Button size="sm" variant="outline" onClick={onEdit}><Pencil className="h-3.5 w-3.5 mr-1" /> Szerkesztés</Button>}
+          {onEdit && <Button size="sm" variant="outline" onClick={onEdit}><Pencil className="h-3.5 w-3.5 mr-1" /> {t('report_library.btn_edit')}</Button>}
         </div>
       </div>
 
@@ -275,7 +278,7 @@ export function ReportRunner({ report, workspaceId, onBack, onEdit }: Props) {
 
       <Card>
         <CardHeader className="py-3 pb-2">
-          <CardTitle className="text-sm">Eredmény ({rows.length} sor)</CardTitle>
+          <CardTitle className="text-sm">{t('report_library.result_title', { count: rows.length })}</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
@@ -297,7 +300,7 @@ export function ReportRunner({ report, workspaceId, onBack, onEdit }: Props) {
       <Sheet open={!!drillRow} onOpenChange={(o) => !o && setDrillRow(null)}>
         <SheetContent className="w-full sm:max-w-md overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>Részletek</SheetTitle>
+            <SheetTitle>{t('report_library.drill_title')}</SheetTitle>
           </SheetHeader>
           {drillRow && (
             <div className="mt-4 space-y-2">

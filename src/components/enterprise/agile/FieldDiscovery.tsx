@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useI18n } from '@/i18n/I18nProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +17,7 @@ interface FieldRow {
 }
 
 export function FieldDiscovery({ integration }: { integration: IntegrationMini }) {
+  const { t } = useI18n();
   const [fields, setFields] = useState<FieldRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState('');
@@ -39,8 +41,8 @@ export function FieldDiscovery({ integration }: { integration: IntegrationMini }
         body: { action: 'discover_fields', integration_id: integration.id },
       });
       if (error) throw error;
-      if (!(data as any)?.ok) throw new Error((data as any)?.error ?? 'Hibás válasz');
-      toast.success(`${(data as any).count} mező felfedezve`);
+      if (!(data as any)?.ok) throw new Error((data as any)?.error ?? t('field_discovery.bad_response'));
+      toast.success(t('field_discovery.fields_discovered', { count: (data as any).count } as any));
       await load();
     } catch (e: any) {
       toast.error('Hiba: ' + (e?.message ?? String(e)));
@@ -57,31 +59,31 @@ export function FieldDiscovery({ integration }: { integration: IntegrationMini }
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center gap-2">
-          <Database className="h-4 w-4 text-primary" /> Mezők (custom field discovery)
+          <Database className="h-4 w-4 text-primary" /> {t('field_discovery.card_title')}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex gap-2">
-          <Input placeholder="Szűrés név/ID alapján…" className="h-8 text-xs" value={filter} onChange={(e) => setFilter(e.target.value)} />
+          <Input placeholder={t('field_discovery.filter_placeholder')} className="h-8 text-xs" value={filter} onChange={(e) => setFilter(e.target.value)} />
           <Button size="sm" onClick={discover} disabled={loading} className="gap-1">
             {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-            Felfedezés
+            {t('field_discovery.btn_discover')}
           </Button>
         </div>
         <div className="border rounded-md overflow-hidden max-h-[480px] overflow-y-auto">
           <table className="w-full text-xs">
             <thead className="bg-muted/50 sticky top-0">
               <tr>
-                <th className="text-left p-2">Név</th>
+                <th className="text-left p-2">{t('field_discovery.col_name')}</th>
                 <th className="text-left p-2">Field ID</th>
-                <th className="text-left p-2">Típus</th>
+                <th className="text-left p-2">{t('field_discovery.col_type')}</th>
                 <th className="text-left p-2">Custom</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
                 <tr><td colSpan={4} className="p-4 text-center text-muted-foreground">
-                  Még nincs mező. Nyomj „Felfedezés"-t.
+                  {t('field_discovery.no_fields_hint')}
                 </td></tr>
               )}
               {filtered.map((f) => (

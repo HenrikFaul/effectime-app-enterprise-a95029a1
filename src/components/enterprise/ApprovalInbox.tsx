@@ -137,7 +137,7 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
           recipientUserId: req.user_id,
           idempotencyKey: `leave-decision-${requestId}-${decision}`,
           templateData: {
-            employeeName: reqUserAuth?.display_name || 'Kolléga', decision,
+            employeeName: reqUserAuth?.display_name || t('common.colleague'), decision,
             startDate: format(new Date(req.start_date), 'yyyy.MM.dd', { locale: hu }),
             endDate: format(new Date(req.end_date), 'yyyy.MM.dd', { locale: hu }),
             leaveType: TYPE_MAP[req.leave_type] || req.leave_type, reviewerName, reviewComment,

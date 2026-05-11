@@ -3,10 +3,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CalendarOff } from 'lucide-react';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props { workspaceId: string; }
 
 export function OutTodayWidget({ workspaceId }: Props) {
+  const { t } = useI18n();
   const [items, setItems] = useState<any[]>([]);
 
   useEffect(() => {
@@ -32,7 +34,7 @@ export function OutTodayWidget({ workspaceId }: Props) {
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center gap-2">
           <CalendarOff className="h-4 w-4 text-primary" />
-          Ma távol ({items.length})
+          {t('out_today_widget.title', { count: items.length })}
         </CardTitle>
       </CardHeader>
       <CardContent>

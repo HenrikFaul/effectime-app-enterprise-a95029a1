@@ -3,6 +3,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Code, AlertTriangle } from 'lucide-react';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   value: string;
@@ -25,29 +26,30 @@ const ALLOWED_TABLES = [
   'enterprise_role_definitions',
 ];
 
-const EXAMPLE = `-- Csak SELECT lekérdezések. A workspace_id automatikusan szűrve van.
--- Engedélyezett táblák: ${ALLOWED_TABLES.slice(0, 4).join(', ')}, ...
+const EXAMPLE = `-- Only SELECT queries. workspace_id is filtered automatically.
+-- Allowed tables: ${ALLOWED_TABLES.slice(0, 4).join(', ')}, ...
 
 SELECT
   business_role,
-  COUNT(*) AS letszam,
-  SUM(percentage) AS osszes_kapacitas
+  COUNT(*) AS headcount,
+  SUM(percentage) AS total_capacity
 FROM enterprise_member_role_allocations
 GROUP BY business_role
-ORDER BY letszam DESC;`;
+ORDER BY headcount DESC;`;
 
 export function SqlMode({ value, onChange }: Props) {
+  const { t } = useI18n();
   return (
     <div className="space-y-3">
       <Alert>
         <AlertTriangle className="h-4 w-4" />
-        <AlertTitle className="text-sm">SQL haladó mód</AlertTitle>
+        <AlertTitle className="text-sm">{t('sql_mode.title')}</AlertTitle>
         <AlertDescription className="text-xs space-y-1">
-          <p>Csak <strong>SELECT</strong> parancsok engedélyezettek. A munkaterületre vonatkozó szűrés (workspace_id) automatikusan érvényesül.</p>
-          <p>Engedélyezett táblák:</p>
+          <p>{t('sql_mode.desc_p1')}</p>
+          <p>{t('sql_mode.allowed_tables_label')}</p>
           <div className="flex flex-wrap gap-1 mt-1">
-            {ALLOWED_TABLES.map(t => (
-              <code key={t} className="text-[10px] px-1.5 py-0.5 bg-muted rounded">{t}</code>
+            {ALLOWED_TABLES.map(table => (
+              <code key={table} className="text-[10px] px-1.5 py-0.5 bg-muted rounded">{table}</code>
             ))}
           </div>
         </AlertDescription>
@@ -55,11 +57,11 @@ export function SqlMode({ value, onChange }: Props) {
 
       <Card>
         <CardHeader className="py-3 pb-2">
-          <CardTitle className="text-sm flex items-center gap-2"><Code className="h-4 w-4" /> SQL lekérdezés</CardTitle>
-          <CardDescription className="text-xs">Írd meg a saját SELECT lekérdezésedet — futtatáskor a backend ellenőrzi és kiegészíti.</CardDescription>
+          <CardTitle className="text-sm flex items-center gap-2"><Code className="h-4 w-4" /> {t('sql_mode.card_title')}</CardTitle>
+          <CardDescription className="text-xs">{t('sql_mode.card_description')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <Label className="text-xs">SQL</Label>
+          <Label className="text-xs">{t('sql_mode.label_sql')}</Label>
           <Textarea
             value={value || EXAMPLE}
             onChange={e => onChange(e.target.value)}

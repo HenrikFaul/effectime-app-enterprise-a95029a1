@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useI18n } from '@/i18n/I18nProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -63,6 +64,7 @@ function workdaysBetween(startISO: string, endISO: string): number {
 }
 
 export function UtilizationHeatmap({ workspaceId }: Props) {
+  const { t } = useI18n();
   const [weeks, setWeeks] = useState(12);
   const [includeTentative, setIncludeTentative] = useState(false);
   const [includeLeaves, setIncludeLeaves] = useState(true);
@@ -236,10 +238,10 @@ export function UtilizationHeatmap({ workspaceId }: Props) {
     <Card>
       <CardHeader className="py-3 px-4 flex-row items-center justify-between space-y-0 flex-wrap gap-2">
         <CardTitle className="text-sm flex items-center gap-2">
-          <Activity className="h-4 w-4 text-primary" /> Kihasználtsági hőtérkép
+          <Activity className="h-4 w-4 text-primary" /> {t('util_heatmap.card_title')}
           {overloadedCount > 0 && (
             <Badge variant="destructive" className="text-[10px] gap-1 ml-2">
-              <AlertTriangle className="h-3 w-3" /> {overloadedCount} túlterhelés
+              <AlertTriangle className="h-3 w-3" /> {t('util_heatmap.overloaded_count', { count: overloadedCount })}
             </Badge>
           )}
         </CardTitle>
@@ -251,9 +253,9 @@ export function UtilizationHeatmap({ workspaceId }: Props) {
           <Select value={groupBy} onValueChange={v => setGroupBy(v as any)}>
             <SelectTrigger className="h-7 w-[120px] text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="member">Tagonként</SelectItem>
-              <SelectItem value="role">Pozíciónként</SelectItem>
-              <SelectItem value="team">Csapatonként</SelectItem>
+              <SelectItem value="member">{t('util_heatmap.by_member')}</SelectItem>
+              <SelectItem value="role">{t('util_heatmap.by_role')}</SelectItem>
+              <SelectItem value="team">{t('util_heatmap.by_team')}</SelectItem>
             </SelectContent>
           </Select>
           <div className="flex items-center gap-1">
@@ -262,7 +264,7 @@ export function UtilizationHeatmap({ workspaceId }: Props) {
           </div>
           <div className="flex items-center gap-1">
             <Switch id="ht-lv" checked={includeLeaves} onCheckedChange={setIncludeLeaves} />
-            <Label htmlFor="ht-lv" className="text-[11px] cursor-pointer">Szabadság</Label>
+            <Label htmlFor="ht-lv" className="text-[11px] cursor-pointer">{t('util_heatmap.leave_label')}</Label>
           </div>
         </div>
       </CardHeader>
@@ -270,13 +272,13 @@ export function UtilizationHeatmap({ workspaceId }: Props) {
         {loading ? (
           <div className="flex justify-center py-6"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
         ) : rows.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-4 text-center">Nincs adat a választott nézethez.</p>
+          <p className="text-xs text-muted-foreground py-4 text-center">{t('util_heatmap.no_data')}</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-xs border-separate border-spacing-0">
               <thead>
                 <tr>
-                  <th className="text-left font-medium px-2 py-1 bg-muted/30 sticky left-0 z-10 min-w-[160px]">{groupBy === 'member' ? 'Tag' : groupBy === 'role' ? 'Pozíció' : 'Csapat'}</th>
+                  <th className="text-left font-medium px-2 py-1 bg-muted/30 sticky left-0 z-10 min-w-[160px]">{groupBy === 'member' ? t('util_heatmap.col_member') : groupBy === 'role' ? t('util_heatmap.col_role') : t('util_heatmap.col_team')}</th>
                   {buckets.map(b => (
                     <th key={b.start} className="text-center font-medium px-1 py-1 bg-muted/30 min-w-[44px]">{b.label}</th>
                   ))}
@@ -306,11 +308,11 @@ export function UtilizationHeatmap({ workspaceId }: Props) {
               </tbody>
             </table>
             <div className="flex items-center gap-3 mt-3 text-[10px] text-muted-foreground flex-wrap">
-              <LegendSwatch color={heatColor(0)} label="0% (üres)" />
+              <LegendSwatch color={heatColor(0)} label={t('util_heatmap.legend_empty')} />
               <LegendSwatch color={heatColor(40)} label="40%" />
-              <LegendSwatch color={heatColor(75)} label="75% (egészséges)" />
-              <LegendSwatch color={heatColor(95)} label="95% (telített)" />
-              <LegendSwatch color={heatColor(120)} label=">100% (túlterhelt)" />
+              <LegendSwatch color={heatColor(75)} label={t('util_heatmap.legend_healthy')} />
+              <LegendSwatch color={heatColor(95)} label={t('util_heatmap.legend_saturated')} />
+              <LegendSwatch color={heatColor(120)} label={t('util_heatmap.legend_overloaded')} />
             </div>
           </div>
         )}

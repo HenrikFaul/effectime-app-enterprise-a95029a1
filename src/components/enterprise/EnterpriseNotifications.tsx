@@ -7,6 +7,7 @@ import { Eye, Trash2, Bell } from 'lucide-react';
 import { format } from 'date-fns';
 import { hu } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -26,6 +27,7 @@ const EVENT_ICONS: Record<string, string> = {
 };
 
 export function EnterpriseNotifications({ workspaceId, userId }: Props) {
+  const { t } = useI18n();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -72,7 +74,7 @@ export function EnterpriseNotifications({ workspaceId, userId }: Props) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Bell className="h-4 w-4" />
-          <span className="text-sm font-semibold">Értesítések</span>
+          <span className="text-sm font-semibold">{t('enterprise_notifications.title')}</span>
           {unreadCount > 0 && <Badge variant="destructive" className="text-xs h-5">{unreadCount}</Badge>}
         </div>
         {unreadCount > 0 && (
@@ -81,7 +83,7 @@ export function EnterpriseNotifications({ workspaceId, userId }: Props) {
       </div>
 
       {notifications.length === 0 ? (
-        <Card><CardContent className="text-center py-8 text-muted-foreground text-sm">Nincs értesítés.</CardContent></Card>
+        <Card><CardContent className="text-center py-8 text-muted-foreground text-sm">{t('enterprise_notifications.empty')}</CardContent></Card>
       ) : (
         <ScrollArea className="h-[350px]">
           <div className="space-y-1">

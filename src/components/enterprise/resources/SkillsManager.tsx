@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useI18n } from '@/i18n/I18nProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,6 +22,7 @@ interface MemberSkill { id: string; membership_id: string; skill_id: string; lev
 const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#84cc16', '#8b5cf6'];
 
 export function SkillsManager({ workspaceId, isAdmin }: Props) {
+  const { t } = useI18n();
   const [skills, setSkills] = useState<Skill[]>([]);
   const [members, setMembers] = useState<Membership[]>([]);
   const [memberSkills, setMemberSkills] = useState<MemberSkill[]>([]);
@@ -39,9 +41,9 @@ export function SkillsManager({ workspaceId, isAdmin }: Props) {
     const mems = (memRes.data as any[]) || [];
     const userIds = mems.map((m: any) => m.user_id);
     const { data: profs } = userIds.length ? await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds) : { data: [] };
-    const nameMap = new Map((profs as any[] || []).map(p => [p.user_id, p.display_name || 'Ismeretlen']));
+    const nameMap = new Map((profs as any[] || []).map(p => [p.user_id, p.display_name || t('skills_mgr.unknown')]));
     setSkills((skRes.data as Skill[]) || []);
-    setMembers(mems.map((m: any) => ({ id: m.id, user_id: m.user_id, display_name: nameMap.get(m.user_id) || 'Ismeretlen' })));
+    setMembers(mems.map((m: any) => ({ id: m.id, user_id: m.user_id, display_name: nameMap.get(m.user_id) || t('skills_mgr.unknown') })));
     setMemberSkills((msRes.data as MemberSkill[]) || []);
     setLoading(false);
   };
@@ -53,17 +55,17 @@ export function SkillsManager({ workspaceId, isAdmin }: Props) {
     const { error } = await (supabase as any).from('enterprise_skills').insert({
       workspace_id: workspaceId, name: newName.trim(), category: newCategory.trim() || null, color: newColor,
     });
-    if (error) { toast.error('Mentés sikertelen: ' + error.message); return; }
+    if (error) { toast.error(t('skills_mgr.save_error') + error.message); return; }
     setNewName(''); setNewCategory('');
-    toast.success('Készség hozzáadva');
+    toast.success(t('skills_mgr.add_success'));
     load();
   };
 
   const deleteSkill = async (id: string) => {
-    if (!confirm('Biztosan törlöd? Minden hozzá tartozó tag-szintű hozzárendelés is törlődik.')) return;
+    if (!confirm(t('skills_mgr.delete_confirm'))) return;
     const { error } = await (supabase as any).from('enterprise_skills').delete().eq('id', id);
-    if (error) { toast.error('Törlés sikertelen'); return; }
-    toast.success('Készség törölve'); load();
+    if (error) { toast.error(t('skills_mgr.delete_error')); return; }
+    toast.success(t('skills_mgr.delete_success')); load();
   };
 
   const setLevel = async (membershipId: string, skillId: string, level: number) => {
@@ -90,34 +92,34 @@ export function SkillsManager({ workspaceId, isAdmin }: Props) {
     <div className="space-y-4">
       <Card>
         <CardHeader className="py-3 px-4">
-          <CardTitle className="text-sm flex items-center gap-2"><Tag className="h-4 w-4 text-primary" /> Készségek katalógusa</CardTitle>
+          <CardTitle className="text-sm flex items-center gap-2"><Tag className="h-4 w-4 text-primary" /> {t('skills_mgr.title')}</CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-4 space-y-3">
           {isAdmin && (
             <div className="flex items-end gap-2 flex-wrap bg-muted/30 p-2 rounded">
               <div className="flex-1 min-w-[150px]">
-                <Label className="text-[11px]">Név *</Label>
-                <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="React, Figma, Senior..." className="h-8 text-sm" />
+                <Label className="text-[11px]">{t('skills_mgr.name_label')}</Label>
+                <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder={t('skills_mgr.name_placeholder')} className="h-8 text-sm" />
               </div>
               <div className="min-w-[120px]">
-                <Label className="text-[11px]">Kategória</Label>
-                <Input value={newCategory} onChange={e => setNewCategory(e.target.value)} placeholder="frontend / design / soft" className="h-8 text-sm" />
+                <Label className="text-[11px]">{t('skills_mgr.category_label')}</Label>
+                <Input value={newCategory} onChange={e => setNewCategory(e.target.value)} placeholder={t('skills_mgr.category_placeholder')} className="h-8 text-sm" />
               </div>
               <div>
-                <Label className="text-[11px]">Szín</Label>
+                <Label className="text-[11px]">{t('skills_mgr.color_label')}</Label>
                 <div className="flex gap-1 mt-1">
                   {COLORS.map(c => (
                     <button key={c} type="button" onClick={() => setNewColor(c)} className={`h-6 w-6 rounded-full border-2 ${newColor === c ? 'border-foreground' : 'border-transparent'}`} style={{ background: c }} />
                   ))}
                 </div>
               </div>
-              <Button size="sm" onClick={addSkill} disabled={!newName.trim()}><Plus className="h-3.5 w-3.5 mr-1" /> Hozzáad</Button>
+              <Button size="sm" onClick={addSkill} disabled={!newName.trim()}><Plus className="h-3.5 w-3.5 mr-1" /> {t('skills_mgr.add_btn')}</Button>
             </div>
           )}
           {loading ? (
             <div className="flex justify-center py-4"><div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
           ) : skills.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic text-center py-3">Még nincs készség. Adj hozzá pár tag-et a fenti űrlapon.</p>
+            <p className="text-xs text-muted-foreground italic text-center py-3">{t('skills_mgr.empty_skills')}</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {skills.map(s => (
@@ -139,13 +141,13 @@ export function SkillsManager({ workspaceId, isAdmin }: Props) {
 
       <Card>
         <CardHeader className="py-3 px-4">
-          <CardTitle className="text-sm flex items-center gap-2"><Users className="h-4 w-4 text-primary" /> Tagok készségmátrixa</CardTitle>
+          <CardTitle className="text-sm flex items-center gap-2"><Users className="h-4 w-4 text-primary" /> {t('skills_mgr.matrix_title')}</CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-4">
           {loading ? (
             <div className="flex justify-center py-4"><div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
           ) : skills.length === 0 || members.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic text-center py-3">Adj hozzá készségeket és tagokat a mátrix kitöltéséhez.</p>
+            <p className="text-xs text-muted-foreground italic text-center py-3">{t('skills_mgr.empty_matrix_hint')}</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs border-separate border-spacing-0">

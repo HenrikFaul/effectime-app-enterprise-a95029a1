@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface AppShellProps {
   children: ReactNode;
@@ -39,12 +40,13 @@ export function AppShell({ children, sidebar, topbar, mainClassName }: AppShellP
 
 /** Skip link for keyboard users — drop into the shell once near the top. */
 export function SkipToContent() {
+  const { t } = useI18n();
   return (
     <a
       href="#main-content"
       className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground focus:shadow-lg"
     >
-      Ugrás a fő tartalomhoz
+      {t('landing.skip_to_main')}
     </a>
   );
 }

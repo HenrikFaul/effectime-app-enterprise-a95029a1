@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useI18n } from '@/i18n/I18nProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -37,6 +38,7 @@ interface CapacityRow {
 }
 
 export function CapacityFit({ integration, workspaceId }: { integration: IntegrationMini; workspaceId: string }) {
+  const { t } = useI18n();
   const [sprintName, setSprintName] = useState('');
   const [sprintHours, setSprintHours] = useState(80); // default 2-week sprint
   const [vacationImpactDays, setVacationImpactDays] = useState(0);
@@ -87,11 +89,11 @@ export function CapacityFit({ integration, workspaceId }: { integration: Integra
         body: { action: 'search_issues', integration_id: integration.id, params: { query, max: 200 } },
       });
       if (error) throw error;
-      if (!(data as any)?.ok) throw new Error((data as any)?.error ?? 'Hibás válasz');
+      if (!(data as any)?.ok) throw new Error((data as any)?.error ?? t('capacity_fit.bad_response'));
       setIssues((data as any).issues ?? []);
-      toast.success(`${(data as any).count} aktív ticket`);
+      toast.success(t('capacity_fit.active_tickets', { count: (data as any).count }));
     } catch (e: any) {
-      toast.error('Hiba: ' + (e?.message ?? String(e)));
+      toast.error(t('capacity_fit.load_error') + (e?.message ?? String(e)));
     } finally {
       setLoading(false);
     }
@@ -137,7 +139,7 @@ export function CapacityFit({ integration, workspaceId }: { integration: Integra
       if (!matched) unassigned += v;
     }
     if (unassigned > 0) {
-      out.push({ display_name: 'Nincs egyezés / külső', email: null, capacity_hours: 0, planned_hours: unassigned, variance: -unassigned, risk_level: 'High', fit_score: 0 });
+      out.push({ display_name: t('capacity_fit.no_match_label'), email: null, capacity_hours: 0, planned_hours: unassigned, variance: -unassigned, risk_level: 'High', fit_score: 0 });
     }
     return out.sort((a, b) => a.variance - b.variance);
   }, [issues, members, sprintHours, vacationImpactDays]);
@@ -158,39 +160,39 @@ export function CapacityFit({ integration, workspaceId }: { integration: Integra
       <CardContent className="space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
           <div>
-            <Label className="text-xs">Sprint név (opcionális)</Label>
+            <Label className="text-xs">{t('capacity_fit.sprint_name_label')}</Label>
             <Input className="h-8 text-xs" value={sprintName} onChange={(e) => setSprintName(e.target.value)} placeholder="pl. Sprint 24" />
           </div>
           <div>
-            <Label className="text-xs">Sprint kapacitás / fő (óra)</Label>
+            <Label className="text-xs">{t('capacity_fit.sprint_hours_label')}</Label>
             <Input className="h-8 text-xs" type="number" value={sprintHours} onChange={(e) => setSprintHours(Number(e.target.value) || 0)} />
           </div>
           <div>
-            <Label className="text-xs">What-if: szabadság nap/fő</Label>
+            <Label className="text-xs">{t('capacity_fit.what_if_label')}</Label>
             <Input className="h-8 text-xs" type="number" value={vacationImpactDays} onChange={(e) => setVacationImpactDays(Number(e.target.value) || 0)} />
           </div>
           <div className="flex items-end">
             <Button size="sm" onClick={loadIssues} disabled={loading} className="gap-1 w-full">
               {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-              Sprint adatok lekérése
+              {t('capacity_fit.fetch_btn')}
             </Button>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-2">
           <div className="rounded-md border p-2 text-center">
-            <p className="text-[10px] uppercase text-muted-foreground">Összes kapacitás</p>
+            <p className="text-[10px] uppercase text-muted-foreground">{t('capacity_fit.total_capacity_label')}</p>
             <p className="text-lg font-semibold">{totals.cap}h</p>
           </div>
           <div className="rounded-md border p-2 text-center">
-            <p className="text-[10px] uppercase text-muted-foreground">Tervezett</p>
+            <p className="text-[10px] uppercase text-muted-foreground">{t('capacity_fit.planned_label')}</p>
             <p className="text-lg font-semibold">{totals.plan}h</p>
           </div>
           <div className={cn(
             'rounded-md border p-2 text-center',
             totals.variance < 0 ? 'bg-destructive/10' : 'bg-emerald-500/10',
           )}>
-            <p className="text-[10px] uppercase text-muted-foreground">Eltérés</p>
+            <p className="text-[10px] uppercase text-muted-foreground">{t('capacity_fit.variance_label')}</p>
             <p className={cn('text-lg font-semibold', totals.variance < 0 ? 'text-destructive' : 'text-emerald-600')}>
               {totals.variance > 0 ? '+' : ''}{totals.variance}h
             </p>
@@ -201,12 +203,12 @@ export function CapacityFit({ integration, workspaceId }: { integration: Integra
           <table className="w-full text-xs">
             <thead className="bg-muted/50">
               <tr>
-                <th className="text-left p-2">Tag</th>
-                <th className="text-left p-2">Kapacitás</th>
-                <th className="text-left p-2">Tervezett</th>
-                <th className="text-left p-2">Eltérés</th>
-                <th className="text-left p-2">Státusz</th>
-                <th className="text-left p-2">Fit</th>
+                <th className="text-left p-2">{t('capacity_fit.col_member')}</th>
+                <th className="text-left p-2">{t('capacity_fit.col_capacity')}</th>
+                <th className="text-left p-2">{t('capacity_fit.col_planned')}</th>
+                <th className="text-left p-2">{t('capacity_fit.variance_label')}</th>
+                <th className="text-left p-2">{t('capacity_fit.col_status')}</th>
+                <th className="text-left p-2">{t('capacity_fit.col_fit')}</th>
               </tr>
             </thead>
             <tbody>
@@ -222,11 +224,11 @@ export function CapacityFit({ integration, workspaceId }: { integration: Integra
                       {r.variance > 0 ? '+' : ''}{r.variance}h
                     </td>
                     <td className="p-2">
-                      {r.risk_level === 'High' && <Badge variant="destructive" className="text-[10px]">Risk: High</Badge>}
-                      {r.risk_level === 'Medium' && <Badge variant="outline" className="text-[10px]">Risk: Medium</Badge>}
-                      {r.risk_level === 'Low' && <Badge variant="secondary" className="text-[10px]">Risk: Low</Badge>}
-                      {overload && <Badge variant="destructive" className="text-[10px] ml-1">Overload</Badge>}
-                      {!overload && underload && <Badge variant="outline" className="text-[10px] ml-1">Underload</Badge>}
+                      {r.risk_level === 'High' && <Badge variant="destructive" className="text-[10px]">{t('capacity_fit.risk_high')}</Badge>}
+                      {r.risk_level === 'Medium' && <Badge variant="outline" className="text-[10px]">{t('capacity_fit.risk_medium')}</Badge>}
+                      {r.risk_level === 'Low' && <Badge variant="secondary" className="text-[10px]">{t('capacity_fit.risk_low')}</Badge>}
+                      {overload && <Badge variant="destructive" className="text-[10px] ml-1">{t('capacity_fit.overload_badge')}</Badge>}
+                      {!overload && underload && <Badge variant="outline" className="text-[10px] ml-1">{t('capacity_fit.underload_badge')}</Badge>}
                     </td>
                     <td className="p-2 font-medium">{r.fit_score}%</td>
                   </tr>
@@ -234,7 +236,7 @@ export function CapacityFit({ integration, workspaceId }: { integration: Integra
               })}
               {rows.length === 0 && (
                 <tr><td colSpan={6} className="p-4 text-center text-muted-foreground">
-                  Nyomd meg a „Sprint adatok lekérése" gombot.
+                  {t('capacity_fit.no_sprint_hint')}
                 </td></tr>
               )}
             </tbody>

@@ -326,10 +326,10 @@ export function OrgChart({ workspaceId, isAdmin, onNavigateTab, userId }: Props)
               variant="outline"
               className="gap-1"
               onClick={() => setFullscreenOpen(true)}
-              title="Megnyitás nagyobb nézetben"
+              title={t('org_chart_panel.open_full_view_title')}
             >
               <Maximize2 className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Teljes nézet</span>
+              <span className="hidden sm:inline">{t('org_chart_panel.full_view_label')}</span>
             </Button>
           )}
 
@@ -513,6 +513,7 @@ interface CardProps {
 }
 
 function PersonCard({ node, dim, canToggle, collapsed, onToggle }: CardProps) {
+  const t = useT();
   const grad = paletteFor(node.user_id);
   const init = initials(node.display_name);
 
@@ -572,7 +573,7 @@ function PersonCard({ node, dim, canToggle, collapsed, onToggle }: CardProps) {
             type="button"
             onClick={onToggle}
             className="text-muted-foreground hover:text-primary rounded-md p-0.5 hover:bg-accent transition-colors"
-            aria-label={collapsed ? 'Kibontás' : 'Összecsukás'}
+            aria-label={collapsed ? t('org_chart_panel.expand_aria') : t('org_chart_panel.collapse_aria')}
           >
             {collapsed ? (
               <ChevronRight className="h-4 w-4" />

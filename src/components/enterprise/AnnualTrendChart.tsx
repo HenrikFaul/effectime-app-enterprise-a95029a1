@@ -4,14 +4,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { eachDayOfInterval, parseISO } from 'date-fns';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Máj', 'Jún', 'Júl', 'Aug', 'Szep', 'Okt', 'Nov', 'Dec'];
-
 export function AnnualTrendChart({ workspaceId }: Props) {
+  const { t } = useI18n();
+  const MONTHS = [
+    t('common.month_jan_short'), t('common.month_feb_short'), t('common.month_mar_short'),
+    t('common.month_apr_short'), t('common.month_may_short'), t('common.month_jun_short'),
+    t('common.month_jul_short'), t('common.month_aug_short'), t('common.month_sep_short'),
+    t('common.month_oct_short'), t('common.month_nov_short'), t('common.month_dec_short'),
+  ];
   const [year] = useState(new Date().getFullYear());
   const [daysPerMonth, setDaysPerMonth] = useState<number[]>(Array(12).fill(0));
   const [loading, setLoading] = useState(true);
@@ -40,15 +46,15 @@ export function AnnualTrendChart({ workspaceId }: Props) {
     load();
   }, [workspaceId, year]);
 
-  const data = useMemo(() => MONTHS.map((m, idx) => ({ month: m, days: daysPerMonth[idx] })), [daysPerMonth]);
+  const data = useMemo(() => MONTHS.map((m, idx) => ({ month: m, days: daysPerMonth[idx] })), [daysPerMonth, MONTHS]);
   const total = daysPerMonth.reduce((a, b) => a + b, 0);
 
   return (
     <Card>
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center justify-between">
-          <span>Éves távolléti trend</span>
-          <Badge variant="outline" className="text-[10px]">{year} · {total} nap</Badge>
+          <span>{t('annual_trend.title')}</span>
+          <Badge variant="outline" className="text-[10px]">{year} · {total} {t('annual_trend.days_unit')}</Badge>
         </CardTitle>
       </CardHeader>
       <CardContent>

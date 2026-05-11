@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { ChevronDown, ChevronUp, Filter, X, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { CalendarFilterConfig, CalendarFilterId, FILTER_LABELS } from '@/hooks/useCalendarFilterConfig';
+import { useI18n } from '@/i18n/I18nProvider';
 
 export interface FilterOption { value: string; label: string }
 
@@ -36,6 +37,7 @@ interface Props {
 }
 
 export function CalendarFilterBar({ config, values, options, onChange }: Props) {
+  const { t } = useI18n();
   const [panelOpen, setPanelOpen] = useState(true);
   const [expandedFilters, setExpandedFilters] = useState<Set<CalendarFilterId>>(new Set());
   const [searchTerms, setSearchTerms] = useState<Partial<Record<CalendarFilterId, string>>>({});
@@ -81,7 +83,7 @@ export function CalendarFilterBar({ config, values, options, onChange }: Props) 
       <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
         <div className="flex items-center gap-2 text-sm font-semibold">
           <Filter className="h-4 w-4 text-primary" />
-          <span>Szűrők</span>
+          <span>{t('calendar_filter.title')}</span>
           {activeCount > 0 && (
             <Badge className="h-5 px-1.5 text-[10px] bg-purple-600 hover:bg-purple-600 text-white">
               {activeCount}
@@ -97,7 +99,7 @@ export function CalendarFilterBar({ config, values, options, onChange }: Props) 
               onClick={clearAll}
             >
               <X className="h-3 w-3 mr-1" />
-              Törlés
+              {t('calendar_filter.clear_filter')}
             </Button>
           )}
           <Button
@@ -106,7 +108,7 @@ export function CalendarFilterBar({ config, values, options, onChange }: Props) 
             className="h-6 text-[10px] text-muted-foreground"
             onClick={() => setPanelOpen(v => !v)}
           >
-            {panelOpen ? 'Elrejt' : 'Megjelenít'}
+            {panelOpen ? t('calendar_filter.hide') : t('calendar_filter.show')}
           </Button>
         </div>
       </div>
@@ -167,14 +169,14 @@ export function CalendarFilterBar({ config, values, options, onChange }: Props) 
                         <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
                         <Input
                           className="h-7 pl-7 text-xs"
-                          placeholder="Keresés..."
+                          placeholder={t('common.search')}
                           value={search}
                           onChange={e => setSearch(c.id, e.target.value)}
                         />
                       </div>
                     )}
                     {opts.length === 0 ? (
-                      <p className="text-xs text-muted-foreground py-1">Nincs elérhető opció</p>
+                      <p className="text-xs text-muted-foreground py-1">{t('calendar_filter.no_options')}</p>
                     ) : (
                       <div className="space-y-0.5 max-h-48 overflow-y-auto">
                         {filtered.map(o => (
@@ -198,7 +200,7 @@ export function CalendarFilterBar({ config, values, options, onChange }: Props) 
                         className="mt-1.5 text-[10px] text-muted-foreground hover:text-destructive transition-colors"
                         onClick={() => clearOne(c.id)}
                       >
-                        Szűrő törlése
+                        {t('calendar_filter.clear_filter')}
                       </button>
                     )}
                   </div>

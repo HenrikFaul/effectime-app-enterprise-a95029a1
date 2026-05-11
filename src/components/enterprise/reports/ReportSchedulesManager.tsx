@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useI18n } from '@/i18n/I18nProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -32,9 +33,9 @@ interface Props {
   reports: SavedReport[];
 }
 
-const DOW = ['Vasárnap', 'Hétfő', 'Kedd', 'Szerda', 'Csütörtök', 'Péntek', 'Szombat'];
-
 export function ReportSchedulesManager({ workspaceId, userId, reports }: Props) {
+  const { t } = useI18n();
+  const DOW = t('export_center.dow').split(',');
   const [schedules, setSchedules] = useState<Schedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
@@ -64,7 +65,7 @@ export function ReportSchedulesManager({ workspaceId, userId, reports }: Props) 
   const addRecipient = () => {
     const email = recipientInput.trim().toLowerCase();
     if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      toast.error('Érvénytelen email cím');
+      toast.error(t('report_schedules.toast_invalid_email'));
       return;
     }
     if ((form.recipients || []).includes(email)) return;
@@ -77,8 +78,8 @@ export function ReportSchedulesManager({ workspaceId, userId, reports }: Props) 
   };
 
   const handleSave = async () => {
-    if (!reportId) return toast.error('Válassz egy riportot');
-    if (!form.recipients?.length) return toast.error('Adj meg legalább egy címzettet');
+    if (!reportId) return toast.error(t('report_schedules.toast_no_report'));
+    if (!form.recipients?.length) return toast.error(t('report_schedules.toast_no_recipients'));
 
     const payload = {
       workspace_id: workspaceId,
@@ -97,9 +98,9 @@ export function ReportSchedulesManager({ workspaceId, userId, reports }: Props) 
       .insert(payload);
 
     if (error) {
-      toast.error('Mentés sikertelen: ' + error.message);
+      toast.error(t('report_schedules.toast_save_error', { msg: error.message }));
     } else {
-      toast.success('Ütemezés létrehozva');
+      toast.success(t('report_schedules.toast_saved'));
       setOpen(false);
       setForm({ frequency: 'weekly', day_of_week: 1, hour_of_day: 8, recipients: [], is_active: true });
       setReportId('');
@@ -113,13 +114,13 @@ export function ReportSchedulesManager({ workspaceId, userId, reports }: Props) 
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Biztosan törlöd ezt az ütemezést?')) return;
+    if (!confirm(t('report_schedules.confirm_delete'))) return;
     await (supabase as any).from('enterprise_report_schedules').delete().eq('id', id);
-    toast.success('Ütemezés törölve');
+    toast.success(t('report_schedules.toast_deleted'));
     fetchSchedules();
   };
 
-  const reportName = (id: string) => reports.find(r => r.id === id)?.name || '— ismeretlen —';
+  const reportName = (id: string) => reports.find(r => r.id === id)?.name || t('report_schedules.unknown_report');
 
   return (
     <Card>
@@ -127,50 +128,50 @@ export function ReportSchedulesManager({ workspaceId, userId, reports }: Props) 
         <div>
           <CardTitle className="flex items-center gap-2 text-base">
             <CalendarClock className="h-4 w-4 text-primary" />
-            Ütemezett email riportok
+            {t('report_schedules.title')}
           </CardTitle>
-          <CardDescription>Automatikus riportküldés napi, heti vagy havi gyakorisággal</CardDescription>
+          <CardDescription>{t('report_schedules.description')}</CardDescription>
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogTrigger asChild>
-            <Button size="sm"><Plus className="h-4 w-4 mr-1" /> Új ütemezés</Button>
+            <Button size="sm"><Plus className="h-4 w-4 mr-1" /> {t('report_schedules.btn_new')}</Button>
           </DialogTrigger>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Új ütemezett riport</DialogTitle>
+              <DialogTitle>{t('report_schedules.dialog_title')}</DialogTitle>
             </DialogHeader>
             <div className="space-y-3">
               <div>
-                <Label>Riport</Label>
+                <Label>{t('report_schedules.label_report')}</Label>
                 <Select value={reportId} onValueChange={setReportId}>
-                  <SelectTrigger><SelectValue placeholder="Válassz egy mentett riportot" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t('report_schedules.placeholder_report')} /></SelectTrigger>
                   <SelectContent>
-                    {reports.length === 0 && <SelectItem value="__none__" disabled>Nincs mentett riport</SelectItem>}
+                    {reports.length === 0 && <SelectItem value="__none__" disabled>{t('report_schedules.no_saved_reports')}</SelectItem>}
                     {reports.map(r => <SelectItem key={r.id} value={r.id}>{r.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <Label>Gyakoriság</Label>
+                  <Label>{t('report_schedules.label_frequency')}</Label>
                   <Select value={form.frequency} onValueChange={(v: any) => setForm({ ...form, frequency: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="daily">Napi</SelectItem>
-                      <SelectItem value="weekly">Heti</SelectItem>
-                      <SelectItem value="monthly">Havi</SelectItem>
+                      <SelectItem value="daily">{t('report_schedules.freq_daily')}</SelectItem>
+                      <SelectItem value="weekly">{t('report_schedules.freq_weekly')}</SelectItem>
+                      <SelectItem value="monthly">{t('report_schedules.freq_monthly')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label>Óra (UTC)</Label>
+                  <Label>{t('report_schedules.label_hour')}</Label>
                   <Input type="number" min={0} max={23} value={form.hour_of_day}
                     onChange={(e) => setForm({ ...form, hour_of_day: parseInt(e.target.value) || 8 })} />
                 </div>
               </div>
               {form.frequency === 'weekly' && (
                 <div>
-                  <Label>Nap</Label>
+                  <Label>{t('report_schedules.label_dow')}</Label>
                   <Select value={String(form.day_of_week ?? 1)} onValueChange={(v) => setForm({ ...form, day_of_week: parseInt(v) })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -181,13 +182,13 @@ export function ReportSchedulesManager({ workspaceId, userId, reports }: Props) 
               )}
               {form.frequency === 'monthly' && (
                 <div>
-                  <Label>Hónap napja (1–28)</Label>
+                  <Label>{t('report_schedules.label_dom')}</Label>
                   <Input type="number" min={1} max={28} value={form.day_of_month ?? 1}
                     onChange={(e) => setForm({ ...form, day_of_month: parseInt(e.target.value) || 1 })} />
                 </div>
               )}
               <div>
-                <Label>Címzettek</Label>
+                <Label>{t('report_schedules.label_recipients')}</Label>
                 <div className="flex gap-2">
                   <Input placeholder="email@cim.hu" value={recipientInput}
                     onChange={(e) => setRecipientInput(e.target.value)}
@@ -207,8 +208,8 @@ export function ReportSchedulesManager({ workspaceId, userId, reports }: Props) 
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setOpen(false)}>Mégsem</Button>
-              <Button onClick={handleSave}>Mentés</Button>
+              <Button variant="outline" onClick={() => setOpen(false)}>{t('report_schedules.btn_cancel')}</Button>
+              <Button onClick={handleSave}>{t('report_schedules.btn_save')}</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -217,7 +218,7 @@ export function ReportSchedulesManager({ workspaceId, userId, reports }: Props) 
         {loading ? (
           <div className="flex items-center justify-center py-6"><Loader2 className="h-4 w-4 animate-spin text-muted-foreground" /></div>
         ) : schedules.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-4">Még nincs ütemezett riport.</p>
+          <p className="text-sm text-muted-foreground text-center py-4">{t('report_schedules.empty')}</p>
         ) : (
           <div className="space-y-2">
             {schedules.map(s => (
@@ -225,15 +226,15 @@ export function ReportSchedulesManager({ workspaceId, userId, reports }: Props) 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <p className="font-medium text-sm truncate">{reportName(s.report_id)}</p>
-                    {!s.is_active && <Badge variant="outline" className="text-[10px]">Szünetelve</Badge>}
-                    {s.last_run_status === 'error' && <Badge variant="destructive" className="text-[10px] gap-1"><AlertCircle className="h-3 w-3" /> Hiba</Badge>}
+                    {!s.is_active && <Badge variant="outline" className="text-[10px]">{t('report_schedules.badge_paused')}</Badge>}
+                    {s.last_run_status === 'error' && <Badge variant="destructive" className="text-[10px] gap-1"><AlertCircle className="h-3 w-3" /> {t('report_schedules.badge_error')}</Badge>}
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {s.frequency === 'daily' && `Naponta ${s.hour_of_day}:00 UTC`}
-                    {s.frequency === 'weekly' && `${DOW[s.day_of_week ?? 1]} ${s.hour_of_day}:00 UTC`}
-                    {s.frequency === 'monthly' && `Minden hónap ${s.day_of_month}. ${s.hour_of_day}:00 UTC`}
-                    {' · '}<Mail className="inline h-3 w-3" /> {s.recipients.length} címzett
-                    {s.last_run_at && ` · Utolsó futás: ${new Date(s.last_run_at).toLocaleDateString('hu-HU')}`}
+                    {s.frequency === 'daily' && t('report_schedules.schedule_daily', { hour: s.hour_of_day })}
+                    {s.frequency === 'weekly' && t('report_schedules.schedule_weekly', { day: DOW[s.day_of_week ?? 1], hour: s.hour_of_day })}
+                    {s.frequency === 'monthly' && t('report_schedules.schedule_monthly', { dom: s.day_of_month, hour: s.hour_of_day })}
+                    {' · '}<Mail className="inline h-3 w-3" /> {t('report_schedules.recipients_count', { count: s.recipients.length })}
+                    {s.last_run_at && ' ' + t('report_schedules.last_run', { date: new Date(s.last_run_at).toLocaleDateString() })}
                   </p>
                   {s.last_run_error && <p className="text-[10px] text-destructive mt-1 truncate">⚠️ {s.last_run_error}</p>}
                 </div>

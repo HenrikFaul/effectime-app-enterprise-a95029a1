@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, RefreshCw, ExternalLink, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { JiraIssueEditor } from './JiraIssueEditor';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface IntegrationMini {
   id: string;
@@ -27,6 +28,7 @@ interface Issue {
 }
 
 export function BacklogBrowser({ integration }: { integration: IntegrationMini }) {
+  const { t } = useI18n();
   const [query, setQuery] = useState('');
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(false);
@@ -39,14 +41,14 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
 
   const presets = integration.provider === 'jira'
     ? [
-      { label: 'Aktív sprint', q: `project = ${integration.project_key ?? 'PROJ'} AND sprint in openSprints() ORDER BY priority DESC, updated DESC` },
-      { label: 'Saját ticketek', q: `project = ${integration.project_key ?? 'PROJ'} AND assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC` },
-      { label: 'Határidőn túli', q: `project = ${integration.project_key ?? 'PROJ'} AND due <= now() AND statusCategory != Done ORDER BY due ASC` },
+      { label: t('agile_boards.query_label_active_sprint'), q: `project = ${integration.project_key ?? 'PROJ'} AND sprint in openSprints() ORDER BY priority DESC, updated DESC` },
+      { label: t('agile_boards.query_label_my_tickets'), q: `project = ${integration.project_key ?? 'PROJ'} AND assignee = currentUser() AND statusCategory != Done ORDER BY updated DESC` },
+      { label: t('agile_boards.query_label_overdue'), q: `project = ${integration.project_key ?? 'PROJ'} AND due <= now() AND statusCategory != Done ORDER BY due ASC` },
     ]
     : [
-      { label: 'Aktív iteration', q: `SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '${integration.project_key ?? 'Project'}' AND [System.State] <> 'Closed' ORDER BY [System.ChangedDate] DESC` },
-      { label: 'Saját ticketek', q: `SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '${integration.project_key ?? 'Project'}' AND [System.AssignedTo] = @Me AND [System.State] <> 'Closed'` },
-      { label: 'Határidőn túli', q: `SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '${integration.project_key ?? 'Project'}' AND [Microsoft.VSTS.Scheduling.DueDate] < @Today AND [System.State] <> 'Closed'` },
+      { label: t('agile_boards.query_label_active_iteration'), q: `SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '${integration.project_key ?? 'Project'}' AND [System.State] <> 'Closed' ORDER BY [System.ChangedDate] DESC` },
+      { label: t('agile_boards.query_label_my_tickets'), q: `SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '${integration.project_key ?? 'Project'}' AND [System.AssignedTo] = @Me AND [System.State] <> 'Closed'` },
+      { label: t('agile_boards.query_label_overdue'), q: `SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '${integration.project_key ?? 'Project'}' AND [Microsoft.VSTS.Scheduling.DueDate] < @Today AND [System.State] <> 'Closed'` },
     ];
 
   const loadFromCache = async () => {
@@ -70,17 +72,17 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
         body: { action: 'search_issues', integration_id: integration.id, params: { query, max: 100 } },
       });
       if (error) throw error;
-      if (!(data as any)?.ok) throw new Error((data as any)?.error ?? 'Hibás válasz');
+      if (!(data as any)?.ok) throw new Error((data as any)?.error ?? t('agile_boards.error_bad_response'));
       const remote = (data as any).issues ?? [];
       if (remote.length > 0) {
         setIssues(remote);
-        toast.success(`${(data as any).count} ticket betöltve`);
+        toast.success(t('backlog_browser.tickets_loaded', { count: (data as any).count }));
       } else {
         await loadFromCache();
-        toast.message('Nincs friss találat, cache-ből töltöttük a legutóbbi adatokat.');
+        toast.message(t('agile_boards.no_fresh_results'));
       }
     } catch (e: any) {
-      toast.error('Lekérdezés sikertelen: ' + (e?.message ?? String(e)));
+      toast.error(t('agile_boards.query_failed', { msg: e?.message ?? String(e) }));
     } finally {
       setLoading(false);
     }
@@ -89,7 +91,7 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm">Backlog böngésző</CardTitle>
+        <CardTitle className="text-sm">{t('backlog_browser.title')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex gap-2">
@@ -101,7 +103,7 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
           />
           <Button size="sm" onClick={search} disabled={loading} className="gap-1">
             {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-            Keresés
+            {t('backlog_browser.search')}
           </Button>
         </div>
         <div className="flex flex-wrap gap-1.5">
@@ -118,17 +120,17 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
             </Button>
           ))}
           <Button type="button" variant="ghost" size="sm" className="h-7 text-[10px]" onClick={loadFromCache}>
-            Cache betöltése
+            {t('backlog_browser.load_cache')}
           </Button>
         </div>
         <p className="text-[10px] text-muted-foreground">
-          Üres lekérdezés = utoljára frissített ticketek a {integration.project_key ?? 'projekt'} kontextusában.
-          A találatok elmentődnek a helyi cache-be (enterprise_agile_issues).
+          {t('backlog_browser.empty_query_hint', { project: integration.project_key ?? 'projekt' })}{' '}
+          {t('backlog_browser.cache_note')}
         </p>
 
         {integration.provider === 'jira' && (
           <p className="text-[10px] text-muted-foreground">
-            Tipp: kattints egy ticket címére vagy a ceruza ikonra a részletek megnyitásához és szerkesztéséhez. A mentés azonnal továbbítódik a Jira-ba.
+            {t('backlog_browser.tip')}
           </p>
         )}
 
@@ -145,10 +147,10 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
             <thead className="bg-muted/50">
               <tr>
                 <th className="text-left p-2">Kulcs</th>
-                <th className="text-left p-2">Cím</th>
-                <th className="text-left p-2">Típus</th>
-                <th className="text-left p-2">Státusz</th>
-                <th className="text-left p-2">Felelős</th>
+                <th className="text-left p-2">{t('backlog_browser.col_title')}</th>
+                <th className="text-left p-2">{t('backlog_browser.col_type')}</th>
+                <th className="text-left p-2">{t('backlog_browser.col_status')}</th>
+                <th className="text-left p-2">{t('backlog_browser.col_assignee')}</th>
                 <th className="text-left p-2">SP</th>
                 <th className="text-left p-2"></th>
               </tr>
@@ -183,13 +185,13 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
                         type="button"
                         onClick={() => setEditorKey(i.external_key)}
                         className="text-muted-foreground hover:text-primary"
-                        title="Szerkesztés Effectime-ban"
+                        title={t('agile_boards.edit_in_effectime')}
                       >
                         <Pencil className="h-3 w-3" />
                       </button>
                     )}
                     {i.url && (
-                      <a href={i.url} target="_blank" rel="noreferrer" className="text-primary hover:underline" title="Megnyitás a Jira-ban">
+                      <a href={i.url} target="_blank" rel="noreferrer" className="text-primary hover:underline" title={t('backlog_browser.open_in_jira')}>
                         <ExternalLink className="h-3 w-3 inline" />
                       </a>
                     )}

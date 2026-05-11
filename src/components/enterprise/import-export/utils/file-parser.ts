@@ -136,8 +136,8 @@ export async function parseUploadedFile(file: File): Promise<ParsedFile> {
 
   if (fileName.endsWith('.xlsx')) {
     throw new Error(
-      'A natív .xlsx (Open XML zip) formátum jelenleg nem támogatott importnál. ' +
-      'Excelben mentsd a fájlt CSV vagy XML Spreadsheet (.xls) formátumban, vagy használd a letöltött sablont.'
+      'Native .xlsx (Open XML zip) format is not supported for import. ' +
+      'Please save the file as CSV or XML Spreadsheet (.xls) in Excel, or use the downloaded template.'
     );
   }
 

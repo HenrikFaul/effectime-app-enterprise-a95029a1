@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useI18n } from '@/i18n/I18nProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,6 +27,7 @@ function todayISO() { return new Date().toISOString().slice(0, 10); }
 function plusDays(iso: string, n: number) { const d = new Date(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
 
 export function ScenarioPlanner({ workspaceId, userId, isAdmin }: Props) {
+  const { t } = useI18n();
   const [scenarios, setScenarios] = useState<Scenario[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -51,11 +53,11 @@ export function ScenarioPlanner({ workspaceId, userId, isAdmin }: Props) {
     const mems = (memRes.data as any[]) || [];
     const userIds = mems.map((m: any) => m.user_id);
     const { data: profs } = userIds.length ? await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds) : { data: [] };
-    const nameMap = new Map((profs as any[] || []).map(p => [p.user_id, p.display_name || 'Ismeretlen']));
+    const nameMap = new Map((profs as any[] || []).map(p => [p.user_id, p.display_name || t('scenario_planner.unknown')]));
     setScenarios((scRes.data as Scenario[]) || []);
     setProjects((prRes.data as Project[]) || []);
     setMembers(mems.map((m: any) => ({
-      id: m.id, user_id: m.user_id, display_name: nameMap.get(m.user_id) || 'Ismeretlen',
+      id: m.id, user_id: m.user_id, display_name: nameMap.get(m.user_id) || t('scenario_planner.unknown'),
       weekly_capacity_hours: Number(m.weekly_capacity_hours ?? 40),
       base_working_hours: Number(m.base_working_hours ?? 8),
     })));
@@ -83,19 +85,19 @@ export function ScenarioPlanner({ workspaceId, userId, isAdmin }: Props) {
     const { data, error } = await (supabase as any).from('enterprise_scenarios').insert({
       workspace_id: workspaceId, name: newName.trim(), description: newDesc.trim() || null, created_by: userId,
     }).select('*').single();
-    if (error) { toast.error('Létrehozás sikertelen: ' + error.message); return; }
-    toast.success('Forgatókönyv létrehozva');
+    if (error) { toast.error(t('scenario_planner.create_error') + error.message); return; }
+    toast.success(t('scenario_planner.create_success'));
     setNewName(''); setNewDesc(''); setCreateOpen(false);
     setScenarios([data as Scenario, ...scenarios]);
     setActiveId((data as Scenario).id);
   };
 
   const deleteScenario = async (id: string) => {
-    if (!confirm('Biztosan törlöd ezt a forgatókönyvet?')) return;
+    if (!confirm(t('scenario_planner.delete_confirm'))) return;
     await (supabase as any).from('enterprise_scenarios').delete().eq('id', id);
     setScenarios(scenarios.filter(s => s.id !== id));
     if (activeId === id) setActiveId(null);
-    toast.success('Forgatókönyv törölve');
+    toast.success(t('scenario_planner.delete_success'));
   };
 
   const addAssignment = () => {
@@ -129,9 +131,9 @@ export function ScenarioPlanner({ workspaceId, userId, isAdmin }: Props) {
         end_date: a.end_date, notes: a.notes || null,
       }));
       const { error } = await (supabase as any).from('enterprise_scenario_assignments').insert(rows);
-      if (error) { toast.error('Mentés sikertelen: ' + error.message); return; }
+      if (error) { toast.error(t('scenario_planner.save_error') + error.message); return; }
     }
-    toast.success('Forgatókönyv mentve');
+    toast.success(t('scenario_planner.save_success'));
   };
 
   // Conflict / overload analysis: combine confirmed + scenario assignments per member, look for >100% week
@@ -172,16 +174,16 @@ export function ScenarioPlanner({ workspaceId, userId, isAdmin }: Props) {
     <div className="space-y-4">
       <Card>
         <CardHeader className="py-3 px-4 flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-sm flex items-center gap-2"><FlaskConical className="h-4 w-4 text-primary" /> Forgatókönyvek</CardTitle>
+          <CardTitle className="text-sm flex items-center gap-2"><FlaskConical className="h-4 w-4 text-primary" /> {t('scenario_planner.card_title')}</CardTitle>
           {isAdmin && (
-            <Button size="sm" onClick={() => setCreateOpen(true)}><Plus className="h-3.5 w-3.5 mr-1" /> Új forgatókönyv</Button>
+            <Button size="sm" onClick={() => setCreateOpen(true)}><Plus className="h-3.5 w-3.5 mr-1" /> {t('scenario_planner.btn_new')}</Button>
           )}
         </CardHeader>
         <CardContent className="px-4 pb-4">
           {loading ? (
             <div className="flex justify-center py-4"><div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
           ) : scenarios.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic text-center py-3">Még nincs forgatókönyv. Hozz létre egyet a "mi van, ha..." tervezéshez.</p>
+            <p className="text-xs text-muted-foreground italic text-center py-3">{t('scenario_planner.empty')}</p>
           ) : (
             <div className="flex flex-wrap gap-2">
               {scenarios.map(s => (
@@ -208,20 +210,20 @@ export function ScenarioPlanner({ workspaceId, userId, isAdmin }: Props) {
         <Card>
           <CardHeader className="py-3 px-4 flex-row items-center justify-between space-y-0 flex-wrap gap-2">
             <CardTitle className="text-sm flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" /> Tentative allokációk
+              <TrendingUp className="h-4 w-4" /> {t('scenario_planner.tentative_alloc_title')}
               <Badge variant="secondary" className="text-[10px]">FTE: {totalScenarioFte.toFixed(2)}</Badge>
-              {conflicts.length > 0 && <Badge variant="destructive" className="text-[10px] gap-1"><AlertTriangle className="h-3 w-3" /> {conflicts.length} ütközés</Badge>}
+              {conflicts.length > 0 && <Badge variant="destructive" className="text-[10px] gap-1"><AlertTriangle className="h-3 w-3" /> {t('scenario_planner.conflicts_badge', { count: conflicts.length })}</Badge>}
             </CardTitle>
             {isAdmin && (
               <div className="flex gap-1">
-                <Button size="sm" variant="outline" onClick={addAssignment}><Plus className="h-3.5 w-3.5 mr-1" /> Hozzáad</Button>
-                <Button size="sm" onClick={saveAsgs}>Mentés</Button>
+                <Button size="sm" variant="outline" onClick={addAssignment}><Plus className="h-3.5 w-3.5 mr-1" /> {t('scenario_planner.btn_add_assignment')}</Button>
+                <Button size="sm" onClick={saveAsgs}>{t('scenario_planner.btn_save_asgs')}</Button>
               </div>
             )}
           </CardHeader>
           <CardContent className="px-4 pb-4 space-y-3">
             {scenarioAsgs.length === 0 ? (
-              <p className="text-xs text-muted-foreground italic text-center py-3">Adj hozzá tentative allokációt, ha modellezni szeretnéd egy új projekt vagy átszervezés hatását.</p>
+              <p className="text-xs text-muted-foreground italic text-center py-3">{t('scenario_planner.no_assignments')}</p>
             ) : (
               <div className="space-y-2">
                 {scenarioAsgs.map((a, idx) => (
@@ -234,7 +236,7 @@ export function ScenarioPlanner({ workspaceId, userId, isAdmin }: Props) {
                       <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                       <SelectContent>{members.map(m => <SelectItem key={m.id} value={m.id}>{m.display_name}</SelectItem>)}</SelectContent>
                     </Select>
-                    <Input value={a.business_role} onChange={e => updateAsg(idx, { business_role: e.target.value })} placeholder="Pozíció" className="h-8 text-xs" disabled={!isAdmin} />
+                    <Input value={a.business_role} onChange={e => updateAsg(idx, { business_role: e.target.value })} placeholder={t('scenario_planner.role_placeholder')} className="h-8 text-xs" disabled={!isAdmin} />
                     <div className="flex items-center gap-1">
                       <Input type="number" min={0} max={100} step={5} value={a.allocated_percentage} onChange={e => updateAsg(idx, { allocated_percentage: parseFloat(e.target.value) || 0 })} className="h-8 text-xs" disabled={!isAdmin} />
                       <span className="text-xs">%</span>
@@ -251,7 +253,7 @@ export function ScenarioPlanner({ workspaceId, userId, isAdmin }: Props) {
 
             {conflicts.length > 0 && (
               <div className="border border-destructive/30 bg-destructive/5 rounded p-2 space-y-1">
-                <div className="text-xs font-medium text-destructive flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> Túlterhelés a forgatókönyvben</div>
+                <div className="text-xs font-medium text-destructive flex items-center gap-1"><AlertTriangle className="h-3 w-3" /> {t('scenario_planner.overload_warning')}</div>
                 <ul className="text-[11px] space-y-0.5 max-h-40 overflow-y-auto">
                   {conflicts.map((c, i) => (
                     <li key={i}>{c.member} · {c.project} · {c.week.slice(5)} → {c.pct.toFixed(0)}% {'(>100%)'}</li>
@@ -265,20 +267,20 @@ export function ScenarioPlanner({ workspaceId, userId, isAdmin }: Props) {
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-md">
-          <DialogHeader><DialogTitle>Új forgatókönyv</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>{t('scenario_planner.btn_new')}</DialogTitle></DialogHeader>
           <div className="space-y-3">
             <div>
-              <Label className="text-xs">Név *</Label>
-              <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder="Pl. Q3 új projekt + 2 fő" className="h-9" />
+              <Label className="text-xs">{t('common.name')} *</Label>
+              <Input value={newName} onChange={e => setNewName(e.target.value)} placeholder={t('scenario_planner.name_placeholder')} className="h-9" />
             </div>
             <div>
-              <Label className="text-xs">Leírás</Label>
-              <Textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} rows={3} placeholder="Mit modellezel ezzel a forgatókönyvvel?" />
+              <Label className="text-xs">{t('common.description')}</Label>
+              <Textarea value={newDesc} onChange={e => setNewDesc(e.target.value)} rows={3} placeholder={t('scenario_planner.desc_placeholder')} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)}>Mégse</Button>
-            <Button onClick={createScenario} disabled={!newName.trim()}>Létrehozás</Button>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>{t('common.cancel')}</Button>
+            <Button onClick={createScenario} disabled={!newName.trim()}>{t('common.create')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

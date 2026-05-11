@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { format, subDays, eachDayOfInterval, differenceInHours } from 'date-fns';
 import { hu } from 'date-fns/locale';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -18,14 +19,15 @@ const STATUS_COLORS: Record<string, string> = {
   cancelled: '#94a3b8',
 };
 
-const TYPE_LABELS: Record<string, string> = {
-  vacation: 'Szabadság',
-  sick_leave: 'Betegszabadság',
-  unpaid_leave: 'Fizetés nélküli',
-  other: 'Egyéb',
-};
-
 export function ReportingDashboard({ workspaceId }: Props) {
+  const { t } = useI18n();
+
+  const TYPE_LABELS: Record<string, string> = {
+    vacation: t('attendance.leave_type_vacation'),
+    sick_leave: t('attendance.leave_type_sick_leave'),
+    unpaid_leave: t('attendance.leave_type_unpaid_leave'),
+    other: t('attendance.leave_type_other'),
+  };
   const [requests, setRequests] = useState<any[]>([]);
   const [members, setMembers] = useState<any[]>([]);
   const [dailyRules, setDailyRules] = useState<any[]>([]);
@@ -101,7 +103,7 @@ export function ReportingDashboard({ workspaceId }: Props) {
     const teamCounts: Record<string, { approved: number; pending: number; total: number }> = {};
     for (const r of requests) {
       const m = memberMap.get(r.user_id);
-      const team = m?.team || 'Nincs csapat';
+      const team = m?.team || t('reporting.no_team_label');
       if (!teamCounts[team]) teamCounts[team] = { approved: 0, pending: 0, total: 0 };
       teamCounts[team].total++;
       if (r.status === 'approved') teamCounts[team].approved++;
@@ -116,7 +118,7 @@ export function ReportingDashboard({ workspaceId }: Props) {
     const roleCounts: Record<string, number> = {};
     for (const r of requests.filter(r => r.status === 'approved')) {
       const m = memberMap.get(r.user_id);
-      const role = m?.business_role || 'Nincs pozíció';
+      const role = m?.business_role || t('reporting.no_role_label');
       roleCounts[role] = (roleCounts[role] || 0) + 1;
     }
     return Object.entries(roleCounts).map(([name, count]) => ({ name, count }));
@@ -124,10 +126,10 @@ export function ReportingDashboard({ workspaceId }: Props) {
 
   // Status pie
   const statusData = [
-    { name: 'Jóváhagyva', value: approved, color: STATUS_COLORS.approved },
-    { name: 'Elutasítva', value: rejected, color: STATUS_COLORS.rejected },
-    { name: 'Függőben', value: pending, color: STATUS_COLORS.pending },
-    { name: 'Visszavonva', value: requests.filter(r => r.status === 'cancelled').length, color: STATUS_COLORS.cancelled },
+    { name: t('reporting.status_approved'), value: approved, color: STATUS_COLORS.approved },
+    { name: t('reporting.status_rejected'), value: rejected, color: STATUS_COLORS.rejected },
+    { name: t('reporting.status_pending'), value: pending, color: STATUS_COLORS.pending },
+    { name: t('reporting.status_cancelled'), value: requests.filter(r => r.status === 'cancelled').length, color: STATUS_COLORS.cancelled },
   ].filter(d => d.value > 0);
 
   // Type breakdown
@@ -154,14 +156,14 @@ export function ReportingDashboard({ workspaceId }: Props) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold">Riportok</h3>
+        <h3 className="text-sm font-semibold">{t('ws_nav.section_reports')}</h3>
         <Select value={period} onValueChange={setPeriod}>
           <SelectTrigger className="w-[140px] h-8 text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="7">Utolsó 7 nap</SelectItem>
-            <SelectItem value="30">Utolsó 30 nap</SelectItem>
-            <SelectItem value="90">Utolsó 90 nap</SelectItem>
-            <SelectItem value="180">Utolsó 180 nap</SelectItem>
+            <SelectItem value="7">{t('reporting.period_7days')}</SelectItem>
+            <SelectItem value="30">{t('reporting.period_30days')}</SelectItem>
+            <SelectItem value="90">{t('reporting.period_90days')}</SelectItem>
+            <SelectItem value="180">{t('reporting.period_180days')}</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -170,19 +172,19 @@ export function ReportingDashboard({ workspaceId }: Props) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <Card><CardContent className="py-3 text-center">
           <p className="text-2xl font-bold">{total}</p>
-          <p className="text-xs text-muted-foreground">Összes kérelem</p>
+          <p className="text-xs text-muted-foreground">{t('reporting.total_requests')}</p>
         </CardContent></Card>
         <Card><CardContent className="py-3 text-center">
           <p className="text-2xl font-bold text-green-600">{approved}</p>
-          <p className="text-xs text-muted-foreground">Jóváhagyva</p>
+          <p className="text-xs text-muted-foreground">{t('reporting.approved_label')}</p>
         </CardContent></Card>
         <Card><CardContent className="py-3 text-center">
           <p className="text-2xl font-bold text-yellow-600">{pending}</p>
-          <p className="text-xs text-muted-foreground">Függőben</p>
+          <p className="text-xs text-muted-foreground">{t('reporting.pending_label')}</p>
         </CardContent></Card>
         <Card><CardContent className="py-3 text-center">
           <p className="text-2xl font-bold">{approvalRate}%</p>
-          <p className="text-xs text-muted-foreground">Jóváhagyási arány</p>
+          <p className="text-xs text-muted-foreground">{t('reporting.approval_rate_label')}</p>
         </CardContent></Card>
       </div>
 
@@ -190,26 +192,26 @@ export function ReportingDashboard({ workspaceId }: Props) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         <Card><CardContent className="py-3 text-center">
           <p className="text-2xl font-bold">{avgApprovalTime !== null ? `${avgApprovalTime}h` : '–'}</p>
-          <p className="text-xs text-muted-foreground">Átl. jóváhagyási idő</p>
+          <p className="text-xs text-muted-foreground">{t('reporting.avg_approval_time_label')}</p>
         </CardContent></Card>
         <Card><CardContent className="py-3 text-center">
           <p className="text-2xl font-bold text-red-600">{coverageBreaches.count}</p>
-          <p className="text-xs text-muted-foreground">Szabályszegések</p>
+          <p className="text-xs text-muted-foreground">{t('reporting.rule_breaches_label')}</p>
         </CardContent></Card>
         <Card><CardContent className="py-3 text-center">
           <p className="text-2xl font-bold text-orange-600">{coverageBreaches.shortStaffedDays}</p>
-          <p className="text-xs text-muted-foreground">Alullétszám napok</p>
+          <p className="text-xs text-muted-foreground">{t('reporting.understaffed_days_label')}</p>
         </CardContent></Card>
         <Card><CardContent className="py-3 text-center">
           <p className="text-2xl font-bold text-violet-600">{halfDayCount}</p>
-          <p className="text-xs text-muted-foreground">Fél napos kérelem</p>
+          <p className="text-xs text-muted-foreground">{t('reporting.half_day_requests_label')}</p>
         </CardContent></Card>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
         {statusData.length > 0 && (
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Státusz eloszlás</CardTitle></CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">{t('reporting.status_distribution_title')}</CardTitle></CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={200}>
                 <PieChart>
@@ -225,7 +227,7 @@ export function ReportingDashboard({ workspaceId }: Props) {
 
         {typeData.length > 0 && (
           <Card>
-            <CardHeader className="pb-2"><CardTitle className="text-sm">Típus szerint</CardTitle></CardHeader>
+            <CardHeader className="pb-2"><CardTitle className="text-sm">{t('reporting.by_type_title')}</CardTitle></CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={typeData}>
@@ -243,15 +245,15 @@ export function ReportingDashboard({ workspaceId }: Props) {
       {/* Team breakdown */}
       {teamBreakdown.length > 0 && (
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Csapat szerinti bontás</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">{t('reporting.by_team_title')}</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
               <BarChart data={teamBreakdown}>
                 <XAxis dataKey="name" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
                 <Tooltip />
-                <Bar dataKey="approved" stackId="a" fill="#22c55e" name="Jóváhagyva" radius={[0, 0, 0, 0]} />
-                <Bar dataKey="pending" stackId="a" fill="#f59e0b" name="Függőben" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="approved" stackId="a" fill="#22c55e" name={t('reporting.approved_legend')} radius={[0, 0, 0, 0]} />
+                <Bar dataKey="pending" stackId="a" fill="#f59e0b" name={t('reporting.pending_legend')} radius={[4, 4, 0, 0]} />
                 <Legend wrapperStyle={{ fontSize: 11 }} />
               </BarChart>
             </ResponsiveContainer>
@@ -262,14 +264,14 @@ export function ReportingDashboard({ workspaceId }: Props) {
       {/* Role breakdown */}
       {roleBreakdown.length > 0 && (
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Pozíció szerinti jóváhagyott távollét</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">{t('reporting.by_role_approved_title')}</CardTitle></CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={roleBreakdown} layout="vertical">
                 <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
                 <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={120} />
                 <Tooltip />
-                <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} name="Jóváhagyott napok" />
+                <Bar dataKey="count" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} name={t('reporting.approved_days_bar')} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -278,14 +280,14 @@ export function ReportingDashboard({ workspaceId }: Props) {
 
       {/* Daily off chart */}
       <Card>
-        <CardHeader className="pb-2"><CardTitle className="text-sm">Napi távollévők száma (jóváhagyott)</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-sm">{t('reporting.daily_absent_title')}</CardTitle></CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={180}>
             <BarChart data={dailyData}>
               <XAxis dataKey="date" tick={{ fontSize: 9 }} interval={Math.max(0, Math.floor(dailyData.length / 10))} />
               <YAxis tick={{ fontSize: 10 }} allowDecimals={false} />
               <Tooltip />
-              <Bar dataKey="off" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} name="Távollévők" />
+              <Bar dataKey="off" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} name={t('reporting.absent_employees_bar')} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>

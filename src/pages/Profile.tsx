@@ -12,8 +12,10 @@ import { ChangePasswordCard } from '@/components/ChangePasswordCard';
 import { DeleteAccountCard } from '@/components/DeleteAccountCard';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
+import { useI18n } from '@/i18n/I18nProvider';
 
 const Profile = () => {
+  const { t } = useI18n();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState('');
@@ -41,9 +43,9 @@ const Profile = () => {
       .eq('user_id', user.id);
 
     if (error) {
-      toast.error('Hiba a mentés során.');
+      toast.error(t('profile.save_error'));
     } else {
-      toast.success('Profil frissítve!');
+      toast.success(t('profile.save_success'));
     }
     setSaving(false);
   };
@@ -56,7 +58,7 @@ const Profile = () => {
             <Button variant="ghost" size="icon" onClick={() => navigate('/app')} className="rounded-xl">
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <h1 className="font-display text-lg sm:text-xl font-bold">Profilom</h1>
+            <h1 className="font-display text-lg sm:text-xl font-bold">{t('profile.page_title')}</h1>
           </div>
           <ProfileMenu />
         </div>
@@ -74,7 +76,7 @@ const Profile = () => {
                 <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
                   <User className="h-5 w-5 text-primary" />
                 </div>
-                Profil adatok
+                {t('profile.card_title')}
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -84,11 +86,11 @@ const Profile = () => {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Megjelenített név</Label>
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('profile.display_name_label')}</Label>
                 <Input value={displayName} onChange={e => setDisplayName(e.target.value)} className="rounded-xl h-11" />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">E-mail</Label>
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('profile.email_label')}</Label>
                 <Input value={user?.email || ''} disabled className="rounded-xl h-11" />
               </div>
               <Button
@@ -97,7 +99,7 @@ const Profile = () => {
                 disabled={saving}
               >
                 <Save className="mr-2 h-4 w-4" />
-                {saving ? 'Mentés...' : 'Mentés'}
+                {saving ? t('profile.saving') : t('profile.save')}
               </Button>
             </CardContent>
           </Card>

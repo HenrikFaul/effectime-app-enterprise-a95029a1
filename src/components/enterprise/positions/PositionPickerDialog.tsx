@@ -209,7 +209,7 @@ export function PositionPickerDialog({ open, onOpenChange, workspaceId, onPick }
 
         {usingGlobalCatalog && !loading ? (
           <div className="rounded-md border border-primary/20 bg-primary/5 px-2 py-1.5 text-[11px] text-muted-foreground">
-            Globális katalógusból olvasunk — a workspace specifikus listát admin szerkesztheti a People → Pozíciók nézetben.
+            {t('positions.global_catalog_note')}
           </div>
         ) : null}
 

@@ -210,7 +210,7 @@ export default function Enterprise() {
       nextParams.delete('ws');
 
       if (error || data?.error) {
-        toast.error(data?.error || 'Nem sikerült elfogadni a meghívót.');
+        toast.error(data?.error || t('enterprise_page.accept_invite_error'));
         setSearchParams(nextParams, { replace: true });
         setAcceptingInvite(false);
         return;
@@ -226,7 +226,7 @@ export default function Enterprise() {
       }
 
       setSearchParams(nextParams, { replace: true });
-      toast.success(data?.already_member ? 'Már tagja vagy ennek a munkaterületnek.' : 'A meghívót elfogadtuk, beléptél a munkaterületbe.');
+      toast.success(data?.already_member ? t('enterprise_page.already_member') : t('enterprise_page.invite_accepted'));
       setAcceptingInvite(false);
     };
 
@@ -250,7 +250,7 @@ export default function Enterprise() {
       .delete()
       .eq('id', workspaceToDelete.id);
     if (error) {
-      toast.error('A munkaterület törlése nem sikerült: ' + error.message);
+      toast.error(t('enterprise_page.delete_error') + ': ' + error.message);
       setDeleting(false);
       return;
     }
@@ -258,7 +258,7 @@ export default function Enterprise() {
     if (localStorage.getItem(ACTIVE_WORKSPACE_KEY) === workspaceToDelete.id) {
       localStorage.removeItem(ACTIVE_WORKSPACE_KEY);
     }
-    toast.success(`„${workspaceToDelete.name}" munkaterület és minden hozzá tartozó adat törölve.`);
+    toast.success(t('enterprise_page.delete_success', { name: workspaceToDelete.name }));
     setWorkspaceToDelete(null);
     setDeleting(false);
     await fetchWorkspaces();
@@ -274,9 +274,9 @@ export default function Enterprise() {
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'owner': return 'Tulajdonos';
-      case 'resourceAssistant': return 'Erőforrás asszisztens';
-      default: return 'Tag';
+      case 'owner': return t('enterprise_page.role_owner');
+      case 'resourceAssistant': return t('enterprise_page.role_resource_assistant');
+      default: return t('enterprise_page.role_member');
     }
   };
 
@@ -316,8 +316,8 @@ export default function Enterprise() {
                 <span className="sr-only">Effectime</span>
               </span>
             }
-            description="Válassz munkaterületet vagy hozz létre újat. A teljes szervezet erőforrásai egy helyen."
-            crumbs={[{ label: 'Effectime' }, { label: 'Munkaterületek' }]}
+            description={t('enterprise_page.picker_description')}
+            crumbs={[{ label: 'Effectime' }, { label: t('enterprise_page.workspaces_crumb') }]}
             actions={
               <>
                 <HelpButton />
@@ -331,10 +331,10 @@ export default function Enterprise() {
                   size="sm"
                   variant="outline"
                   className="gap-1.5"
-                  title="Demo workspace alapértelmezett entitások konfigurálása"
+                  title={t('enterprise_page.demo_config_title')}
                 >
                   <SlidersHorizontal className="h-4 w-4" />
-                  <span className="hidden md:inline">Demo konfig</span>
+                  <span className="hidden md:inline">{t('enterprise_page.demo_config_label')}</span>
                 </Button>
                 <Button onClick={signOut} size="sm" variant="ghost" className="gap-1.5 text-muted-foreground hover:text-destructive">
                   <LogOut className="h-4 w-4" />
@@ -357,13 +357,13 @@ export default function Enterprise() {
                   <Building2 className="h-8 w-8 text-primary" />
                 </div>
                 <div className="max-w-md">
-                  <h2 className="text-xl font-semibold mb-2">Még nincs munkaterületed</h2>
+                  <h2 className="text-xl font-semibold mb-2">{t('enterprise_page.no_workspaces_title')}</h2>
                   <p className="text-muted-foreground mb-6">
-                    Hozz létre egy munkaterületet a csapatod távolléteinek és erőforrásainak kezeléséhez.
+                    {t('enterprise_page.no_workspaces_description')}
                   </p>
                 </div>
                 <Button onClick={() => setShowCreate(true)} size="lg" className="gap-2">
-                  <Plus className="h-4 w-4" /> Munkaterület létrehozása
+                  <Plus className="h-4 w-4" /> {t('enterprise_page.create_workspace_button')}
                 </Button>
               </CardContent>
             </Card>
@@ -375,7 +375,7 @@ export default function Enterprise() {
                   <Input
                     value={filter}
                     onChange={(e) => setFilter(e.target.value)}
-                    placeholder="Munkaterület keresése…"
+                    placeholder={t('enterprise_page.search_placeholder')}
                     className="pl-9"
                   />
                 </div>
@@ -391,7 +391,7 @@ export default function Enterprise() {
                       onClick={() => setSelectedWorkspaceId(ws.id)}
                       tabIndex={0}
                       role="button"
-                      aria-label={`Belépés: ${ws.name}`}
+                      aria-label={t('enterprise_page.enter_workspace_aria', { name: ws.name })}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
@@ -416,7 +416,7 @@ export default function Enterprise() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
-                                aria-label={`„${ws.name}" törlése`}
+                                aria-label={t('enterprise_page.delete_workspace_aria', { name: ws.name })}
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setWorkspaceToDelete(ws);
@@ -474,21 +474,18 @@ export default function Enterprise() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Munkaterület végleges törlése</AlertDialogTitle>
+            <AlertDialogTitle>{t('enterprise_page.delete_dialog_title')}</AlertDialogTitle>
             <AlertDialogDescription className="space-y-2">
               <span className="block">
-                Biztosan törölni szeretnéd a(z) <strong>„{workspaceToDelete?.name}"</strong>{' '}
-                munkaterületet?
+                {t('enterprise_page.delete_dialog_confirm', { name: workspaceToDelete?.name ?? '' })}
               </span>
               <span className="block text-destructive">
-                Ez a művelet visszavonhatatlan. A munkaterülethez tartozó <strong>összes adat</strong>{' '}
-                — tagok, meghívások, szabályok, projektek, szabadságkérelmek, integrációk,
-                jelentések, audit napló — véglegesen törlődik.
+                {t('enterprise_page.delete_dialog_warning')}
               </span>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={deleting}>Mégse</AlertDialogCancel>
+            <AlertDialogCancel disabled={deleting}>{t('enterprise_page.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={(e) => {
                 e.preventDefault();
@@ -499,11 +496,11 @@ export default function Enterprise() {
             >
               {deleting ? (
                 <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Törlés…
+                  <Loader2 className="h-4 w-4 animate-spin" /> {t('enterprise_page.deleting')}
                 </>
               ) : (
                 <>
-                  <Trash2 className="h-4 w-4" /> Igen, töröljük
+                  <Trash2 className="h-4 w-4" /> {t('enterprise_page.delete_confirm_button')}
                 </>
               )}
             </AlertDialogAction>

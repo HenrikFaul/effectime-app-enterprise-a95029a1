@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, useCallback, useRef, type DragEvent } from 'react';
+import { useI18n } from '@/i18n/I18nProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -80,6 +81,7 @@ function ruleSkillIds(r: CoverageRule): string[] {
 type ViewMode = 'weekly' | 'monthly';
 
 export function CoveragePlannerView({ workspaceId, userId }: Props) {
+  const { t } = useI18n();
   const [viewMode, setViewMode] = useState<ViewMode>('weekly');
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
@@ -149,7 +151,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
       if (userIds.length > 0) {
         const { data: profs } = await (supabase as any).from('profiles').select('user_id,display_name').in('user_id', userIds);
         if (loadId !== loadIdRef.current) return;
-        (profs || []).forEach((p: any) => { nameMap[p.user_id] = p.display_name || 'Felhasználó'; });
+        (profs || []).forEach((p: any) => { nameMap[p.user_id] = p.display_name || t('coverage_planner.user_fallback'); });
       }
       const skillsByMembership = new Map<string, { skill_id: string; level: number }[]>();
       ((mskRes.data || []) as any[]).forEach((s: any) => {
@@ -161,7 +163,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
       const memInputs: MemberInput[] = memRows.map(m => ({
         membership_id: m.id,
         user_id: m.user_id,
-        display_name: nameMap[m.user_id] || 'Felhasználó',
+        display_name: nameMap[m.user_id] || t('coverage_planner.user_fallback'),
         business_role: m.business_role,
         weekly_capacity_hours: Number(m.weekly_capacity_hours) || 40,
         base_working_hours: Number(m.base_working_hours) || 8,
@@ -247,7 +249,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
       created_by: userId,
     };
     const { error } = await (supabase as any).from('enterprise_shift_assignments').insert(payload);
-    if (error) { toast.error(`Beosztás sikertelen: ${error.message}`); return; }
+    if (error) { toast.error(t('coverage_planner.assign_error', { msg: error.message })); return; }
     toast.success(`${member.display_name} beosztva (${iso})`);
     load();
   };
@@ -283,19 +285,19 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
     }));
     const { error } = await (supabase as any).from('enterprise_shift_assignments').insert(payload);
     if (error) {
-      toast.error(`Mentés sikertelen: ${error.message}`);
+      toast.error(t('coverage_planner.save_error', { msg: error.message }));
       return;
     }
     setDraftAssignments([]);
     setPendingSuggestion(false);
-    toast.success('Javasolt beosztások megerősítve');
+    toast.success(t('coverage_planner.confirm_success'));
     load();
   }, [drawerCell, draftAssignments, workspaceId, userId, load]);
 
   const unassign = async (shiftId: string) => {
     const { error } = await (supabase as any).from('enterprise_shift_assignments').delete().eq('id', shiftId);
-    if (error) { toast.error('Törlés sikertelen'); return; }
-    toast.success('Beosztás törölve');
+    if (error) { toast.error(t('coverage_planner.delete_failed')); return; }
+    toast.success(t('coverage_planner.schedule_deleted'));
     load();
   };
 
@@ -358,7 +360,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
     const filledCount = activeAssignedForDrawer.length;
     const totalNeeded = drawerCell.rule.min_headcount;
     if (filledCount >= totalNeeded) {
-      toast.message('A minimum létszám már teljesült.');
+      toast.message(t('coverage_planner.min_met'));
       return;
     }
 
@@ -399,7 +401,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
     }
 
     if (picks.length === 0) {
-      toast.error('Nincs javasolható, elérhető tag erre a napra.');
+      toast.error(t('coverage_planner.no_available_member'));
       return;
     }
     setDraftAssignments(picks);
@@ -486,7 +488,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
             <ChevronRight className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="sm" className="h-8" onClick={today}>
-            Ezen a {viewMode === 'weekly' ? 'héten' : 'hónapban'}
+            {t(viewMode === 'weekly' ? 'coverage_planner.this_week' : 'coverage_planner.this_month')}
           </Button>
         </div>
 
@@ -494,10 +496,10 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
 
       {/* Legend */}
       <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-        <LegendChip className="bg-rose-100 text-rose-700 border-rose-300" label="Alulosztva (elvárás/van)" />
-        <LegendChip className="bg-emerald-100 text-emerald-700 border-emerald-300" label="Pontosan elég" />
-        <LegendChip className="bg-amber-100 text-amber-700 border-amber-300" label="Túlosztva" />
-        <LegendChip className="bg-zinc-100 text-zinc-500 border-zinc-300" label="Nem alkalmazható" />
+        <LegendChip className="bg-rose-100 text-rose-700 border-rose-300" label={t('coverage_planner.legend_understaffed')} />
+        <LegendChip className="bg-emerald-100 text-emerald-700 border-emerald-300" label={t('coverage_planner.legend_sufficient')} />
+        <LegendChip className="bg-amber-100 text-amber-700 border-amber-300" label={t('coverage_planner.legend_overstaffed')} />
+        <LegendChip className="bg-zinc-100 text-zinc-500 border-zinc-300" label={t('coverage_planner.legend_na')} />
       </div>
 
       {/* Matrix */}
@@ -508,7 +510,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
           </div>
         ) : offices.length === 0 ? (
           <div className="p-8 text-center text-sm text-muted-foreground">
-            Először hozz létre legalább egy telephelyet a Beállításokban.
+            {t('coverage_planner.no_office_hint')}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -516,7 +518,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
               {/* Header */}
               <div className="grid border-b bg-muted/30" style={{ gridTemplateColumns: gridCols }}>
                 <div className="px-3 py-2 text-xs font-semibold text-muted-foreground border-r">
-                  Telephely / Igény
+                  {t('coverage_planner.office_demand_col')}
                 </div>
                 {days.map(d => (
                   <div key={d.toISOString()} className={cn(
@@ -547,8 +549,8 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
                           type="button"
                           onClick={(e) => { e.stopPropagation(); setBatchDialogOffice(office); }}
                           className="ml-1 h-7 w-7 rounded-md flex items-center justify-center bg-gradient-to-br from-violet-500/20 to-fuchsia-500/20 hover:from-violet-500/40 hover:to-fuchsia-500/40 border border-violet-400/40 text-violet-600 dark:text-violet-300 transition-all hover:scale-110 hover:shadow-lg hover:shadow-violet-500/20 group"
-                          title="Intelligens beosztás varázsló"
-                          aria-label="Intelligens beosztás varázsló"
+                          title={t('coverage_planner.smart_schedule_title')}
+                          aria-label={t('coverage_planner.smart_schedule_title')}
                         >
                           <Wand2 className="h-3.5 w-3.5 group-hover:rotate-12 transition-transform" />
                         </button>
@@ -671,7 +673,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
             const officeName = drawerCell.office.name;
             const ruleDisplay = (drawerCell.rule.name && drawerCell.rule.name.trim())
               ? drawerCell.rule.name
-              : 'Szabály';
+              : t('coverage_planner.rule_label');
 
             return (
             <>
@@ -680,7 +682,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
                 <SheetDescription className="text-base font-medium text-muted-foreground">
                   {ruleDisplay}
                   <span className="block text-xs mt-0.5">
-                    {format(drawerCell.date, 'yyyy. MMMM d. (EEEE)', { locale: hu })} — Min. {drawerCell.rule.min_headcount} fő
+                    {t('coverage_planner.drawer_date_header', { date: format(drawerCell.date, 'yyyy. MMMM d. (EEEE)', { locale: hu }), count: drawerCell.rule.min_headcount })}
                   </span>
                 </SheetDescription>
               </SheetHeader>
@@ -691,7 +693,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
                 <div className="space-y-1.5">
                   {slots.map((slot) => {
                     const filled = slotFill.get(slot.idx);
-                    const slotRoleLabel = slot.role || (slot.skillId ? skillName(slot.skillId) : 'Bármely');
+                    const slotRoleLabel = slot.role || (slot.skillId ? skillName(slot.skillId) : t('coverage_planner.any_role'));
                     if (!filled) {
                       return (
                         <SlotDropZone
@@ -720,12 +722,12 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
                       >
                         <div className="flex-1">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="font-medium">{member?.display_name || 'Felhasználó'}</span>
+                            <span className="font-medium">{member?.display_name || t('coverage_planner.user_fallback')}</span>
                             <span className="text-[10px] uppercase tracking-wider opacity-70">{slotRoleLabel}</span>
                           </div>
                           {!isMatch && memberRole && (
                             <div className="text-[10px] opacity-80 mt-0.5">
-                              Tényleges pozíciója: <strong>{memberRole}</strong>
+                              {t('coverage_planner.actual_position_label', { role: memberRole })}
                             </div>
                           )}
                         </div>
@@ -746,7 +748,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
                         const member = a.kind === 'shift' ? a.member : a.draft.member;
                         return (
                           <div key={i} className="flex items-center gap-2 p-2 rounded border text-sm bg-amber-100/60 dark:bg-amber-900/30 border-amber-300/70">
-                            <div className="flex-1 font-medium">{member?.display_name || 'Felhasználó'}</div>
+                            <div className="flex-1 font-medium">{member?.display_name || t('coverage_planner.user_fallback')}</div>
                             {a.kind === 'shift' && (
                               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => unassign(a.shift.id)}>
                                 <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -777,9 +779,9 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
               </div>
 
               <div className="mt-4 space-y-2">
-                <div className="text-xs font-semibold text-muted-foreground uppercase">Elérhető jelöltek</div>
+                <div className="text-xs font-semibold text-muted-foreground uppercase">{t('coverage_planner.available_candidates_title')}</div>
                 {availableCandidates.length === 0 ? (
-                  <div className="text-xs text-muted-foreground italic">Nincs elérhető tag (sem ehhez a telephelyhez engedélyezett, sem szabad).</div>
+                  <div className="text-xs text-muted-foreground italic">{t('coverage_planner.no_available_candidates')}</div>
                 ) : (
                   availableCandidates.map(c => {
                     return (
@@ -853,6 +855,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
 }
 
 function SlotDropZone({ slotRoleLabel, onDrop }: { slotRoleLabel: string; onDrop: (memberId: string) => void }) {
+  const { t } = useI18n();
   const [over, setOver] = useState(false);
   return (
     <div
@@ -870,7 +873,7 @@ function SlotDropZone({ slotRoleLabel, onDrop }: { slotRoleLabel: string; onDrop
       )}
     >
       <span className="font-medium">{slotRoleLabel}</span>
-      <span className="text-[10px] uppercase tracking-wider opacity-60">Üres — húzz ide tagot</span>
+      <span className="text-[10px] uppercase tracking-wider opacity-60">{t('coverage_planner.empty_slot_hint')}</span>
     </div>
   );
 }

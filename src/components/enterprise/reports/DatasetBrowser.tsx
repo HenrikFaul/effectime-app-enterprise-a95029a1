@@ -4,10 +4,11 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Search, Sparkles } from 'lucide-react';
 import { useState, useMemo } from 'react';
+import { useI18n } from '@/i18n/I18nProvider';
 import {
-  SEMANTIC_DATASETS,
-  REPORT_TEMPLATES,
-  DATA_SOURCE_LABELS,
+  getSemanticDatasets,
+  getReportTemplates,
+  getDataSourceLabels,
   type SemanticDataset,
   type ReportDataSource,
   type ReportTemplate,
@@ -35,17 +36,22 @@ export function DatasetBrowser({
   onSelectDataSource,
   layout = 'vertical',
 }: Props) {
+  const { t } = useI18n();
   const [search, setSearch] = useState('');
+
+  const SEMANTIC_DATASETS = useMemo(() => getSemanticDatasets(t), [t]);
+  const REPORT_TEMPLATES = useMemo(() => getReportTemplates(t), [t]);
+  const DATA_SOURCE_LABELS = useMemo(() => getDataSourceLabels(t), [t]);
 
   const filteredTemplates = useMemo(() => {
     let list = REPORT_TEMPLATES;
-    if (selectedDataset) list = list.filter(t => t.dataset_label === selectedDataset);
+    if (selectedDataset) list = list.filter(tpl => tpl.dataset_label === selectedDataset);
     if (search.trim()) {
       const q = search.toLowerCase();
-      list = list.filter(t => t.name.toLowerCase().includes(q) || t.description.toLowerCase().includes(q));
+      list = list.filter(tpl => tpl.name.toLowerCase().includes(q) || tpl.description.toLowerCase().includes(q));
     }
     return list;
-  }, [selectedDataset, search]);
+  }, [selectedDataset, search, REPORT_TEMPLATES]);
 
   const dataSources = useMemo(() => {
     if (selectedDataset) {
@@ -53,11 +59,11 @@ export function DatasetBrowser({
       return ds?.sources || [];
     }
     return Object.keys(DATA_SOURCE_LABELS) as ReportDataSource[];
-  }, [selectedDataset]);
+  }, [selectedDataset, SEMANTIC_DATASETS, DATA_SOURCE_LABELS]);
 
   const datasetsBlock = (
     <div>
-      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Üzleti adatkészlet</h4>
+      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">{t('report_builder.datasets_heading')}</h4>
       <div className={layout === 'horizontal' ? 'flex flex-wrap gap-1.5' : 'space-y-1'}>
         <button
           onClick={() => onSelectDataset(null)}
@@ -65,7 +71,7 @@ export function DatasetBrowser({
             layout === 'horizontal' ? '' : 'w-full text-left'
           } ${!selectedDataset ? 'border-primary bg-primary/10' : 'border-transparent hover:bg-accent/40'}`}
         >
-          🌐 Összes
+          🌐 {t('report_builder.all_datasets')}
         </button>
         {SEMANTIC_DATASETS.map(d => (
           <button
@@ -86,7 +92,7 @@ export function DatasetBrowser({
 
   const sourcesBlock = onSelectDataSource && (
     <div>
-      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Adatforrás</h4>
+      <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">{t('report_builder.source_label')}</h4>
       <div className={layout === 'horizontal' ? 'flex flex-wrap gap-1.5' : 'space-y-1'}>
         {dataSources.map(ds => (
           <button
@@ -106,7 +112,7 @@ export function DatasetBrowser({
   const templatesHeader = (
     <div className="flex items-center justify-between mb-2">
       <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1">
-        <Sparkles className="h-3 w-3" /> Sablonok
+        <Sparkles className="h-3 w-3" /> {t('report_library.tab_templates')}
       </h4>
       <Badge variant="outline" className="text-[10px]">{filteredTemplates.length}</Badge>
     </div>
@@ -118,7 +124,7 @@ export function DatasetBrowser({
       <Input
         value={search}
         onChange={e => setSearch(e.target.value)}
-        placeholder="Keresés…"
+        placeholder={t('report_library.search_placeholder')}
         className="h-7 text-xs pl-7"
       />
     </div>
@@ -135,13 +141,13 @@ export function DatasetBrowser({
           <ScrollArea className="max-h-44">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pr-2">
               {filteredTemplates.length === 0 && (
-                <p className="text-[11px] text-muted-foreground italic px-1 py-2 col-span-full">Nincs találat.</p>
+                <p className="text-[11px] text-muted-foreground italic px-1 py-2 col-span-full">{t('report_library.no_results')}</p>
               )}
-              {filteredTemplates.map(t => (
-                <Card key={t.id} className="hover:border-primary/40 transition-colors cursor-pointer" onClick={() => onUseTemplate(t)}>
+              {filteredTemplates.map(tpl => (
+                <Card key={tpl.id} className="hover:border-primary/40 transition-colors cursor-pointer" onClick={() => onUseTemplate(tpl)}>
                   <CardContent className="p-2">
-                    <p className="text-xs font-medium leading-tight">{t.name}</p>
-                    <p className="text-[10px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">{t.description}</p>
+                    <p className="text-xs font-medium leading-tight">{tpl.name}</p>
+                    <p className="text-[10px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">{tpl.description}</p>
                   </CardContent>
                 </Card>
               ))}
@@ -162,13 +168,13 @@ export function DatasetBrowser({
         <ScrollArea className="flex-1 -mr-2 pr-2">
           <div className="space-y-1.5">
             {filteredTemplates.length === 0 && (
-              <p className="text-[11px] text-muted-foreground italic px-1 py-2">Nincs találat.</p>
+              <p className="text-[11px] text-muted-foreground italic px-1 py-2">{t('report_library.no_results')}</p>
             )}
-            {filteredTemplates.map(t => (
-              <Card key={t.id} className="hover:border-primary/40 transition-colors cursor-pointer" onClick={() => onUseTemplate(t)}>
+            {filteredTemplates.map(tpl => (
+              <Card key={tpl.id} className="hover:border-primary/40 transition-colors cursor-pointer" onClick={() => onUseTemplate(tpl)}>
                 <CardContent className="p-2">
-                  <p className="text-xs font-medium leading-tight">{t.name}</p>
-                  <p className="text-[10px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">{t.description}</p>
+                  <p className="text-xs font-medium leading-tight">{tpl.name}</p>
+                  <p className="text-[10px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">{tpl.description}</p>
                 </CardContent>
               </Card>
             ))}

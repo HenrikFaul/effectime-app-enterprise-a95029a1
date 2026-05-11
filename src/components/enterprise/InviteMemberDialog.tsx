@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 import { FileUser, UserPlus, Building2, ListChecks } from 'lucide-react';
 import { RoleAllocationEditor, Allocation } from './RoleAllocationEditor';
 import { PositionPickerDialog, type PositionPickerResult } from './positions/PositionPickerDialog';
-import { useT } from '@/i18n/I18nProvider';
+import { useT, useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   open: boolean;
@@ -40,6 +40,7 @@ interface MemberTemplate {
 
 export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy, onInvited }: Props) {
   const tt = useT();
+  const { t } = useI18n();
   const [email, setEmail] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [role, setRole] = useState<string>('member');
@@ -196,7 +197,7 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
         prefillData.position_skills = pickedPosition.skillIds;
       }
 
-      let workspaceName = 'Enterprise munkaterület';
+      let workspaceName = t('invitations.workspace_name_fallback');
 
       if (invData) {
         try {

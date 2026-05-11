@@ -96,7 +96,7 @@ export async function validateLeaveRequest(
   ].filter(Boolean);
 
   if (fetchErrors.length > 0) {
-    throw new Error(`Validáció sikertelen — adatbetöltési hiba: ${fetchErrors.join('; ')}`);
+    throw new Error(`Validation failed — data fetch error: ${fetchErrors.join('; ')}`);
   }
 
   const holidays = (holidaysRes.data as any[]) || [];
@@ -130,7 +130,7 @@ export async function validateLeaveRequest(
       conflicts.push({
         code: 'HOLIDAY_OVERLAP',
         severity: 'warning',
-        message: `${dateStr} ünnepnap (${h?.name || 'ismeretlen'}) — szabadságot igényelni felesleges lehet`,
+        message: `${dateStr} public holiday (${h?.name || 'unknown'}) — requesting leave may be unnecessary`,
         date: dateStr,
         params: { date: dateStr, name: h?.name ?? '' },
       });

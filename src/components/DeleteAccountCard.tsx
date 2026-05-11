@@ -12,20 +12,22 @@ import {
 } from '@/components/ui/dialog';
 import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-
-const DELETION_REASONS = [
-  { value: 'not_useful', label: 'Nem találom hasznosnak az alkalmazást' },
-  { value: 'too_complicated', label: 'Túl bonyolult a használata' },
-  { value: 'privacy', label: 'Adatvédelmi okokból' },
-  { value: 'alternative', label: 'Másik alkalmazásra váltok' },
-  { value: 'temporary', label: 'Csak ideiglenesen használtam' },
-  { value: 'bugs', label: 'Túl sok hibát tapasztaltam' },
-  { value: 'other', label: 'Egyéb' },
-];
+import { useI18n } from '@/i18n/I18nProvider';
 
 export function DeleteAccountCard() {
+  const { t } = useI18n();
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+
+  const DELETION_REASONS = [
+    { value: 'not_useful', label: t('delete_account.reason_not_useful') },
+    { value: 'too_complicated', label: t('delete_account.reason_too_complicated') },
+    { value: 'privacy', label: t('delete_account.reason_privacy') },
+    { value: 'alternative', label: t('delete_account.reason_alternative') },
+    { value: 'temporary', label: t('delete_account.reason_temporary') },
+    { value: 'bugs', label: t('delete_account.reason_bugs') },
+    { value: 'other', label: t('delete_account.reason_other') },
+  ];
   const [step, setStep] = useState<'closed' | 'reason' | 'confirm'>('closed');
   const [selectedReason, setSelectedReason] = useState('');
   const [customReason, setCustomReason] = useState('');
@@ -33,7 +35,7 @@ export function DeleteAccountCard() {
 
   const reasonLabel = DELETION_REASONS.find(r => r.value === selectedReason)?.label;
   const finalReason = selectedReason === 'other'
-    ? `Egyéb: ${customReason}`
+    ? `${t('delete_account.reason_other')}: ${customReason}`
     : reasonLabel || '';
   const canProceed = selectedReason && (selectedReason !== 'other' || customReason.trim().length > 0);
 
@@ -62,7 +64,7 @@ export function DeleteAccountCard() {
       return;
     } catch (err) {
       console.error('Delete account error:', err);
-      toast.error('Hiba történt a fiók törlésekor. Kérjük, próbáld újra.');
+      toast.error(t('delete_account.error_deleting'));
       setDeleting(false);
       handleClose();
     }
@@ -76,12 +78,12 @@ export function DeleteAccountCard() {
             <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-destructive/8">
               <Trash2 className="h-4 w-4 text-destructive/75" />
             </div>
-            Fiók törlése
+            {t('delete_account.title')}
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4 pt-0">
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Ez egy végleges művelet. Csak akkor használd, ha biztos vagy benne, hogy a fiókodat és a hozzá tartozó adatokat is törölni szeretnéd.
+            {t('delete_account.description')}
           </p>
           <div className="flex justify-end">
             <Button
@@ -90,7 +92,7 @@ export function DeleteAccountCard() {
               onClick={() => setStep('reason')}
             >
               <Trash2 className="mr-2 h-4 w-4" />
-              Fiók törlése
+              {t('delete_account.title')}
             </Button>
           </div>
         </CardContent>
@@ -101,21 +103,21 @@ export function DeleteAccountCard() {
           <DialogHeader>
             <DialogTitle className="font-display text-destructive flex items-center gap-2">
               <Trash2 className="h-5 w-5" />
-              Miért szeretnéd törölni a fiókodat?
+              {t('delete_account.reason_dialog_title')}
             </DialogTitle>
             <DialogDescription className="text-sm">
-              Kérjük, válaszd ki a törlés okát, mielőtt továbblépnél.
+              {t('delete_account.reason_dialog_description')}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
             <div className="space-y-2">
               <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Törlés oka
+                {t('delete_account.reason_label')}
               </Label>
               <Select value={selectedReason} onValueChange={setSelectedReason}>
                 <SelectTrigger className="rounded-xl h-11">
-                  <SelectValue placeholder="Válassz egy okot..." />
+                  <SelectValue placeholder={t('delete_account.reason_placeholder')} />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
                   {DELETION_REASONS.map(r => (
@@ -130,12 +132,12 @@ export function DeleteAccountCard() {
             {selectedReason === 'other' && (
               <div className="space-y-2">
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Kérjük, írd le az okot
+                  {t('delete_account.custom_reason_label')}
                 </Label>
                 <Textarea
                   value={customReason}
                   onChange={e => setCustomReason(e.target.value)}
-                  placeholder="Írd le, miért szeretnéd törölni a fiókodat..."
+                  placeholder={t('delete_account.custom_reason_placeholder')}
                   className="rounded-xl resize-none"
                   rows={3}
                 />
@@ -145,7 +147,7 @@ export function DeleteAccountCard() {
 
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" className="rounded-xl" onClick={handleClose}>
-              Mégsem
+              {t('delete_account.cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -153,7 +155,7 @@ export function DeleteAccountCard() {
               disabled={!canProceed}
               onClick={() => setStep('confirm')}
             >
-              Tovább
+              {t('delete_account.next')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -163,27 +165,27 @@ export function DeleteAccountCard() {
         <DialogContent className="rounded-2xl max-w-md">
           <DialogHeader>
             <DialogTitle className="font-display text-destructive">
-              Biztosan törölni szeretnéd a fiókodat?
+              {t('delete_account.confirm_title')}
             </DialogTitle>
             <DialogDescription asChild>
               <div className="text-sm leading-relaxed space-y-3 pt-2">
-                <p>Sajnáljuk, hogy így döntöttél! 😔</p>
-                <p>A törlés végleges és nem visszavonható. Az alábbi adatok véglegesen törlődnek a rendszerből:</p>
+                <p>{t('delete_account.confirm_sorry')}</p>
+                <p>{t('delete_account.confirm_warning')}</p>
                 <ul className="list-disc pl-5 space-y-1">
-                  <li>A profilod és minden személyes adatod</li>
-                  <li>Az összes leadott szavazatod</li>
-                  <li>Az általad létrehozott eseménynaptárak és azok összes adata</li>
-                  <li>Barátlistád és kedvenceid</li>
-                  <li>Személyes elérhetőségi naptárad</li>
+                  <li>{t('delete_account.confirm_item_profile')}</li>
+                  <li>{t('delete_account.confirm_item_votes')}</li>
+                  <li>{t('delete_account.confirm_item_calendars')}</li>
+                  <li>{t('delete_account.confirm_item_friends')}</li>
+                  <li>{t('delete_account.confirm_item_availability')}</li>
                 </ul>
-                <p>Ha a jövőben újra regisztrálsz ugyanazzal az e-mail címmel, egy teljesen új fiók jön létre, a korábbi adataid nem állíthatók vissza.</p>
-                <p className="font-medium text-foreground">Törlés oka: {finalReason}</p>
+                <p>{t('delete_account.confirm_re_register')}</p>
+                <p className="font-medium text-foreground">{t('delete_account.confirm_reason_label')}: {finalReason}</p>
               </div>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" className="rounded-xl" disabled={deleting} onClick={handleClose}>
-              Mégsem
+              {t('delete_account.cancel')}
             </Button>
             <Button
               variant="destructive"
@@ -191,7 +193,7 @@ export function DeleteAccountCard() {
               disabled={deleting}
               onClick={handleDelete}
             >
-              {deleting ? 'Törlés folyamatban...' : 'Véglegesen törlöm'}
+              {deleting ? t('delete_account.deleting') : t('delete_account.confirm_delete')}
             </Button>
           </DialogFooter>
         </DialogContent>

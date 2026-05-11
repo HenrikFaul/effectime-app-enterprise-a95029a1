@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useI18n } from '@/i18n/I18nProvider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,7 +10,7 @@ import { toast } from 'sonner';
 import { ReportBuilder } from './ReportBuilder';
 import { ReportRunner } from './ReportRunner';
 import { ReportSchedulesManager } from './ReportSchedulesManager';
-import { REPORT_TEMPLATES, DATA_SOURCE_LABELS, type ReportDataSource, type ReportChartType, type ReportConfig } from './reportTemplates';
+import { getReportTemplates, getDataSourceLabels, type ReportDataSource, type ReportChartType, type ReportConfig } from './reportTemplates';
 
 export interface SavedReport {
   id: string;
@@ -36,6 +37,9 @@ interface Props {
 }
 
 export function ReportLibrary({ workspaceId, userId }: Props) {
+  const { t } = useI18n();
+  const REPORT_TEMPLATES = getReportTemplates(t);
+  const DATA_SOURCE_LABELS = getDataSourceLabels(t);
   const [reports, setReports] = useState<SavedReport[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<'mine' | 'shared' | 'templates' | 'pinned' | 'schedules'>('mine');
@@ -52,7 +56,7 @@ export function ReportLibrary({ workspaceId, userId }: Props) {
       .order('updated_at', { ascending: false });
     if (error) {
       console.error('Fetch reports error:', error);
-      toast.error('Nem sikerült betölteni a riportokat');
+      toast.error(t('report_library.load_error'));
     } else {
       setReports((data as SavedReport[]) || []);
     }
@@ -62,16 +66,16 @@ export function ReportLibrary({ workspaceId, userId }: Props) {
   useEffect(() => { fetchReports(); }, [workspaceId]);
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Biztosan törlöd ezt a riportot?')) return;
+    if (!confirm(t('report_library.confirm_delete'))) return;
     const { error } = await (supabase as any).from('enterprise_reports').delete().eq('id', id);
-    if (error) toast.error('Törlés sikertelen');
-    else { toast.success('Riport törölve'); fetchReports(); }
+    if (error) toast.error(t('report_library.delete_failed'));
+    else { toast.success(t('report_library.deleted')); fetchReports(); }
   };
 
   const handlePin = async (r: SavedReport) => {
     const { error } = await (supabase as any).from('enterprise_reports').update({ is_pinned: !r.is_pinned }).eq('id', r.id);
-    if (error) toast.error('Művelet sikertelen');
-    else { toast.success(r.is_pinned ? 'Levéve a dashboardról' : 'Kitűzve a dashboardra'); fetchReports(); }
+    if (error) toast.error(t('report_library.action_failed'));
+    else { toast.success(r.is_pinned ? t('report_library.unpinned') : t('report_library.pinned')); fetchReports(); }
   };
 
   const openBuilder = (report?: SavedReport) => {
@@ -117,22 +121,22 @@ export function ReportLibrary({ workspaceId, userId }: Props) {
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
           <h3 className="text-base font-semibold flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" /> Riport tár
+            <Sparkles className="h-4 w-4 text-primary" /> {t('report_library.title')}
           </h3>
-          <p className="text-xs text-muted-foreground">Készíts saját riportokat az adataidból, vagy használj előre elkészített sablont.</p>
+          <p className="text-xs text-muted-foreground">{t('report_library.description')}</p>
         </div>
         <Button size="sm" onClick={() => openBuilder()}>
-          <Plus className="h-4 w-4 mr-1" /> Új egyedi riport
+          <Plus className="h-4 w-4 mr-1" /> {t('report_library.btn_new_report')}
         </Button>
       </div>
 
       <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
         <TabsList className="flex w-full justify-start overflow-x-auto">
-          <TabsTrigger value="mine" className="gap-1"><FileText className="h-3.5 w-3.5" /> Saját ({myReports.length})</TabsTrigger>
-          <TabsTrigger value="shared" className="gap-1"><Layers className="h-3.5 w-3.5" /> Megosztott ({sharedReports.length})</TabsTrigger>
-          <TabsTrigger value="pinned" className="gap-1"><Pin className="h-3.5 w-3.5" /> Kitűzött ({pinnedReports.length})</TabsTrigger>
-          <TabsTrigger value="templates" className="gap-1"><Sparkles className="h-3.5 w-3.5" /> Sablonok ({REPORT_TEMPLATES.length})</TabsTrigger>
-          <TabsTrigger value="schedules" className="gap-1"><CalendarClock className="h-3.5 w-3.5" /> Ütemezések</TabsTrigger>
+          <TabsTrigger value="mine" className="gap-1"><FileText className="h-3.5 w-3.5" /> {t('report_library.tab_mine')} ({myReports.length})</TabsTrigger>
+          <TabsTrigger value="shared" className="gap-1"><Layers className="h-3.5 w-3.5" /> {t('report_library.tab_shared')} ({sharedReports.length})</TabsTrigger>
+          <TabsTrigger value="pinned" className="gap-1"><Pin className="h-3.5 w-3.5" /> {t('report_library.tab_pinned')} ({pinnedReports.length})</TabsTrigger>
+          <TabsTrigger value="templates" className="gap-1"><Sparkles className="h-3.5 w-3.5" /> {t('report_library.tab_templates')} ({REPORT_TEMPLATES.length})</TabsTrigger>
+          <TabsTrigger value="schedules" className="gap-1"><CalendarClock className="h-3.5 w-3.5" /> {t('report_library.tab_schedules')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="mine" className="mt-3">
@@ -146,14 +150,14 @@ export function ReportLibrary({ workspaceId, userId }: Props) {
         </TabsContent>
         <TabsContent value="templates" className="mt-3">
           <div className="grid gap-3 sm:grid-cols-2">
-            {REPORT_TEMPLATES.map(t => (
-              <Card key={t.id} className="hover:border-primary/40 transition-colors">
+            {REPORT_TEMPLATES.map(tmpl => (
+              <Card key={tmpl.id} className="hover:border-primary/40 transition-colors">
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="text-sm">{t.name}</CardTitle>
-                    <Badge variant="outline" className="text-[10px]">{DATA_SOURCE_LABELS[t.data_source]}</Badge>
+                    <CardTitle className="text-sm">{tmpl.name}</CardTitle>
+                    <Badge variant="outline" className="text-[10px]">{DATA_SOURCE_LABELS[tmpl.data_source]}</Badge>
                   </div>
-                  <CardDescription className="text-xs">{t.description}</CardDescription>
+                  <CardDescription className="text-xs">{tmpl.description}</CardDescription>
                 </CardHeader>
                 <CardContent className="pt-0 flex gap-2">
                   <Button
@@ -161,12 +165,12 @@ export function ReportLibrary({ workspaceId, userId }: Props) {
                     variant="outline"
                     className="flex-1"
                     onClick={() => setRunningReport({
-                      id: 'template-' + t.id,
-                      name: t.name,
-                      description: t.description,
-                      data_source: t.data_source,
-                      config: t.config,
-                      chart_type: t.chart_type,
+                      id: 'template-' + tmpl.id,
+                      name: tmpl.name,
+                      description: tmpl.description,
+                      data_source: tmpl.data_source,
+                      config: tmpl.config,
+                      chart_type: tmpl.chart_type,
                       is_template: true,
                       is_shared: false,
                       is_pinned: false,
@@ -176,18 +180,18 @@ export function ReportLibrary({ workspaceId, userId }: Props) {
                       updated_at: '',
                     })}
                   >
-                    <Play className="h-3.5 w-3.5 mr-1" /> Futtatás
+                    <Play className="h-3.5 w-3.5 mr-1" /> {t('report_library.btn_run')}
                   </Button>
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={() => openBuilder({
                       id: '',
-                      name: t.name + ' (másolat)',
-                      description: t.description,
-                      data_source: t.data_source,
-                      config: t.config,
-                      chart_type: t.chart_type,
+                      name: tmpl.name + t('report_library.template_copy_suffix'),
+                      description: tmpl.description,
+                      data_source: tmpl.data_source,
+                      config: tmpl.config,
+                      chart_type: tmpl.chart_type,
                       is_template: false,
                       is_shared: false,
                       is_pinned: false,
@@ -197,7 +201,7 @@ export function ReportLibrary({ workspaceId, userId }: Props) {
                       updated_at: '',
                     })}
                   >
-                    <Pencil className="h-3.5 w-3.5 mr-1" /> Sablonból
+                    <Pencil className="h-3.5 w-3.5 mr-1" /> {t('report_library.btn_from_template')}
                   </Button>
                 </CardContent>
               </Card>
@@ -221,11 +225,13 @@ function ReportGrid({ reports, loading, onRun, onEdit, onDelete, onPin, canManag
   onPin: (r: SavedReport) => void;
   canManage?: boolean;
 }) {
+  const { t } = useI18n();
+  const DATA_SOURCE_LABELS = getDataSourceLabels(t);
   if (loading) return <div className="flex justify-center py-8"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
   if (reports.length === 0) {
     return (
       <Card><CardContent className="text-center py-10 text-muted-foreground text-sm">
-        Még nincs riport ebben a kategóriában.
+        {t('report_library.empty_category')}
       </CardContent></Card>
     );
   }
@@ -247,17 +253,17 @@ function ReportGrid({ reports, loading, onRun, onEdit, onDelete, onPin, canManag
           </CardHeader>
           <CardContent className="pt-0 flex flex-wrap gap-1.5">
             <Button size="sm" variant="outline" className="flex-1 min-w-0" onClick={() => onRun(r)}>
-              <Play className="h-3.5 w-3.5 mr-1" /> Futtatás
+              <Play className="h-3.5 w-3.5 mr-1" /> {t('report_library.btn_run')}
             </Button>
             {canManage && (
               <>
-                <Button size="sm" variant="ghost" onClick={() => onEdit(r)} title="Szerkesztés">
+                <Button size="sm" variant="ghost" onClick={() => onEdit(r)} title={t('report_library.btn_edit')}>
                   <Pencil className="h-3.5 w-3.5" />
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => onPin(r)} title={r.is_pinned ? 'Levesz' : 'Kitűz'}>
+                <Button size="sm" variant="ghost" onClick={() => onPin(r)} title={r.is_pinned ? t('report_library.btn_unpin') : t('report_library.btn_pin')}>
                   {r.is_pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
                 </Button>
-                <Button size="sm" variant="ghost" onClick={() => onDelete(r.id)} title="Törlés">
+                <Button size="sm" variant="ghost" onClick={() => onDelete(r.id)} title={t('report_library.btn_delete')}>
                   <Trash2 className="h-3.5 w-3.5 text-destructive" />
                 </Button>
               </>

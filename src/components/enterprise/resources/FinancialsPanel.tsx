@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useI18n } from '@/i18n/I18nProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +29,7 @@ function workdaysBetween(startISO: string, endISO: string): number {
 }
 
 export function FinancialsPanel({ workspaceId, isAdmin }: Props) {
+  const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [members, setMembers] = useState<Membership[]>([]);
   const [memberRates, setMemberRates] = useState<MemberRate[]>([]);
@@ -48,9 +50,9 @@ export function FinancialsPanel({ workspaceId, isAdmin }: Props) {
     const mems = (memRes.data as any[]) || [];
     const userIds = mems.map((m: any) => m.user_id);
     const { data: profs } = userIds.length ? await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds) : { data: [] };
-    const nameMap = new Map((profs as any[] || []).map(p => [p.user_id, p.display_name || 'Ismeretlen']));
+    const nameMap = new Map((profs as any[] || []).map(p => [p.user_id, p.display_name || t('resources.unknown_member')]));
     setMembers(mems.map((m: any) => ({
-      id: m.id, user_id: m.user_id, display_name: nameMap.get(m.user_id) || 'Ismeretlen',
+      id: m.id, user_id: m.user_id, display_name: nameMap.get(m.user_id) || t('resources.unknown_member'),
       base_working_hours: Number(m.base_working_hours ?? 8),
       weekly_capacity_hours: Number(m.weekly_capacity_hours ?? 40),
     })));
@@ -78,8 +80,8 @@ export function FinancialsPanel({ workspaceId, isAdmin }: Props) {
     const { error } = await (supabase as any).from('enterprise_member_rates').insert({
       workspace_id: workspaceId, membership_id: membershipId, cost_rate: cost, currency, effective_from: new Date().toISOString().slice(0, 10),
     });
-    if (error) { toast.error('Mentés sikertelen'); return; }
-    toast.success('Óradíj rögzítve');
+    if (error) { toast.error(t('resources.save_failed')); return; }
+    toast.success(t('resources.rate_saved'));
     load();
   };
 
@@ -90,7 +92,7 @@ export function FinancialsPanel({ workspaceId, isAdmin }: Props) {
     } else {
       await (supabase as any).from('enterprise_project_rates').insert({ workspace_id: workspaceId, project_id: projectId, business_role: role, bill_rate: bill, currency });
     }
-    toast.success('Bill rate mentve'); load();
+    toast.success(t('resources.bill_rate_saved')); load();
   };
 
   // Project profitability calculation
@@ -134,7 +136,7 @@ export function FinancialsPanel({ workspaceId, isAdmin }: Props) {
     <div className="space-y-4">
       <Card>
         <CardHeader className="py-3 px-4">
-          <CardTitle className="text-sm flex items-center gap-2"><Wallet className="h-4 w-4 text-primary" /> Pénzügyi áttekintés</CardTitle>
+          <CardTitle className="text-sm flex items-center gap-2"><Wallet className="h-4 w-4 text-primary" /> {t('resources.title_financials')}</CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-4">
           {loading ? (
@@ -142,21 +144,21 @@ export function FinancialsPanel({ workspaceId, isAdmin }: Props) {
           ) : (
             <>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3">
-                <Tile label="Bevétel" value={grandTotals.revenue.toFixed(0)} unit="" tone="success" icon={<TrendingUp className="h-3 w-3" />} />
-                <Tile label="Költség" value={grandTotals.cost.toFixed(0)} unit="" tone="warn" icon={<TrendingDown className="h-3 w-3" />} />
-                <Tile label="Margin" value={grandTotals.margin.toFixed(0)} unit="" tone={grandTotals.margin >= 0 ? 'success' : 'destructive'} icon={<DollarSign className="h-3 w-3" />} />
-                <Tile label="Tervezett óra" value={grandTotals.hours.toFixed(0)} unit="h" tone="default" icon={<Users className="h-3 w-3" />} />
+                <Tile label={t('resources.label_revenue')} value={grandTotals.revenue.toFixed(0)} unit="" tone="success" icon={<TrendingUp className="h-3 w-3" />} />
+                <Tile label={t('resources.label_cost')} value={grandTotals.cost.toFixed(0)} unit="" tone="warn" icon={<TrendingDown className="h-3 w-3" />} />
+                <Tile label={t('resources.label_margin')} value={grandTotals.margin.toFixed(0)} unit="" tone={grandTotals.margin >= 0 ? 'success' : 'destructive'} icon={<DollarSign className="h-3 w-3" />} />
+                <Tile label={t('resources.label_planned_hours')} value={grandTotals.hours.toFixed(0)} unit="h" tone="default" icon={<Users className="h-3 w-3" />} />
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-xs">
                   <thead className="bg-muted/30">
                     <tr>
-                      <th className="text-left px-2 py-1">Projekt</th>
-                      <th className="text-right px-2 py-1">Óra</th>
-                      <th className="text-right px-2 py-1">Bevétel</th>
-                      <th className="text-right px-2 py-1">Költség</th>
-                      <th className="text-right px-2 py-1">Margin</th>
-                      <th className="text-right px-2 py-1">Margin %</th>
+                      <th className="text-left px-2 py-1">{t('resources.col_project')}</th>
+                      <th className="text-right px-2 py-1">{t('resources.col_hours')}</th>
+                      <th className="text-right px-2 py-1">{t('resources.col_revenue')}</th>
+                      <th className="text-right px-2 py-1">{t('resources.col_cost')}</th>
+                      <th className="text-right px-2 py-1">{t('resources.col_margin')}</th>
+                      <th className="text-right px-2 py-1">{t('resources.col_margin_pct')}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -185,11 +187,11 @@ export function FinancialsPanel({ workspaceId, isAdmin }: Props) {
 
       <Card>
         <CardHeader className="py-3 px-4">
-          <CardTitle className="text-sm flex items-center gap-2"><Users className="h-4 w-4 text-primary" /> Tagok óradíja (cost rate)</CardTitle>
+          <CardTitle className="text-sm flex items-center gap-2"><Users className="h-4 w-4 text-primary" /> {t('resources.members_cost_rate')}</CardTitle>
         </CardHeader>
         <CardContent className="px-4 pb-4">
           {loading ? null : members.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic text-center py-3">Nincs aktív tag.</p>
+            <p className="text-xs text-muted-foreground italic text-center py-3">{t('resources.no_active_members')}</p>
           ) : (
             <div className="space-y-1.5">
               {members.map(m => {
@@ -205,7 +207,7 @@ export function FinancialsPanel({ workspaceId, isAdmin }: Props) {
 
       <Card>
         <CardHeader className="py-3 px-4 flex-row items-center justify-between space-y-0">
-          <CardTitle className="text-sm flex items-center gap-2"><DollarSign className="h-4 w-4 text-primary" /> Projekt bill rate-ek</CardTitle>
+          <CardTitle className="text-sm flex items-center gap-2"><DollarSign className="h-4 w-4 text-primary" /> {t('resources.project_bill_rates')}</CardTitle>
           {projects.length > 0 && (
             <Select value={activeProjectId || ''} onValueChange={setActiveProjectId}>
               <SelectTrigger className="h-8 w-[200px] text-xs"><SelectValue /></SelectTrigger>
@@ -215,9 +217,9 @@ export function FinancialsPanel({ workspaceId, isAdmin }: Props) {
         </CardHeader>
         <CardContent className="px-4 pb-4">
           {!activeProject ? (
-            <p className="text-xs text-muted-foreground italic text-center py-3">Válassz projektet.</p>
+            <p className="text-xs text-muted-foreground italic text-center py-3">{t('resources.select_project')}</p>
           ) : activeProjectRoles.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic text-center py-3">Ehhez a projekthez még nincs allokált pozíció. Először a Projektek fülön rendelj hozzá tagot egy pozícióhoz.</p>
+            <p className="text-xs text-muted-foreground italic text-center py-3">{t('resources.no_roles')}</p>
           ) : (
             <div className="space-y-1.5">
               {activeProjectRoles.map(role => {
@@ -235,6 +237,7 @@ export function FinancialsPanel({ workspaceId, isAdmin }: Props) {
 }
 
 function CostRateRow({ member, current, onSave, disabled }: { member: Membership; current: MemberRate | undefined; onSave: (cost: number, cur: string) => void; disabled?: boolean }) {
+  const { t } = useI18n();
   const [val, setVal] = useState(current?.cost_rate ?? 0);
   const [cur, setCur] = useState(current?.currency ?? 'EUR');
   useEffect(() => { setVal(current?.cost_rate ?? 0); setCur(current?.currency ?? 'EUR'); }, [current]);
@@ -246,12 +249,13 @@ function CostRateRow({ member, current, onSave, disabled }: { member: Membership
         <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
         <SelectContent>{CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
       </Select>
-      {!disabled && <Button size="sm" variant="outline" className="h-8" onClick={() => onSave(val, cur)}>Mentés</Button>}
+      {!disabled && <Button size="sm" variant="outline" className="h-8" onClick={() => onSave(val, cur)}>{t('resources.btn_save')}</Button>}
     </div>
   );
 }
 
 function BillRateRow({ role, current, onSave, disabled }: { role: string; current: ProjectRate | undefined; onSave: (bill: number, cur: string) => void; disabled?: boolean }) {
+  const { t } = useI18n();
   const [val, setVal] = useState(current?.bill_rate ?? 0);
   const [cur, setCur] = useState(current?.currency ?? 'EUR');
   useEffect(() => { setVal(current?.bill_rate ?? 0); setCur(current?.currency ?? 'EUR'); }, [current]);
@@ -263,7 +267,7 @@ function BillRateRow({ role, current, onSave, disabled }: { role: string; curren
         <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
         <SelectContent>{CURRENCIES.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent>
       </Select>
-      {!disabled && <Button size="sm" variant="outline" className="h-8" onClick={() => onSave(val, cur)}>Mentés</Button>}
+      {!disabled && <Button size="sm" variant="outline" className="h-8" onClick={() => onSave(val, cur)}>{t('resources.btn_save')}</Button>}
     </div>
   );
 }

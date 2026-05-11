@@ -17,6 +17,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useI18n } from '@/i18n/I18nProvider';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -106,24 +107,18 @@ interface JiraIssue {
   external_updated_at: string | null;
 }
 
-const GOAL_STATUS_LABELS: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
-  open: { label: 'Nyitott', variant: 'outline' },
-  in_progress: { label: 'Folyamatban', variant: 'secondary' },
-  achieved: { label: 'Elérve', variant: 'default' },
-  dropped: { label: 'Elejtve', variant: 'destructive' },
-};
-
-const ACCESS_STATUS_LABELS: Record<string, string> = {
-  pending: 'Függő',
-  approved: 'Jóváhagyva',
-  provisioning: 'Provisioning',
-  granted: 'Megadva',
-  rejected: 'Elutasítva',
-  revoked: 'Visszavonva',
-  cancelled: 'Visszavont',
-};
 
 export function MemberExtendedDetails({ workspaceId, member, isAdmin, onNavigateTab }: Props) {
+  const { t } = useI18n();
+  const ACCESS_STATUS_LABELS: Record<string, string> = {
+    pending: t('leave_request.status_pending'),
+    approved: t('leave_request.status_approved'),
+    provisioning: 'Provisioning',
+    granted: 'Granted',
+    rejected: t('leave_request.status_rejected'),
+    revoked: 'Revoked',
+    cancelled: t('leave_request.status_cancelled'),
+  };
   const [skills, setSkills] = useState<SkillRow[]>([]);
   const [onboarding, setOnboarding] = useState<OnboardingInstance[]>([]);
   const [access, setAccess] = useState<AccessRow[]>([]);
@@ -356,15 +351,15 @@ export function MemberExtendedDetails({ workspaceId, member, isAdmin, onNavigate
       {/* ─── Skills ─────────────────────────────────────────────────────── */}
       <SectionCard
         icon={<Star className="h-4 w-4 text-primary" />}
-        title="Készségek"
+        title={t('member_extended.section_skills')}
         action={onNavigateTab && (
           <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" onClick={() => onNavigateTab('resources')}>
-            Készségek menü <ArrowRight className="h-3 w-3" />
+            {t('member_extended.nav_skills')} <ArrowRight className="h-3 w-3" />
           </Button>
         )}
       >
         {skills.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Még nincs rögzített készség ehhez a taghoz.</p>
+          <p className="text-xs text-muted-foreground">{t('member_extended.no_skills')}</p>
         ) : (
           <div className="flex flex-wrap gap-1.5">
             {skills.map((s) => (
@@ -380,15 +375,15 @@ export function MemberExtendedDetails({ workspaceId, member, isAdmin, onNavigate
       {/* ─── Onboarding ─────────────────────────────────────────────────── */}
       <SectionCard
         icon={<BookOpen className="h-4 w-4 text-primary" />}
-        title="Onboarding"
+        title={t('member_extended.section_onboarding')}
         action={onNavigateTab && (
           <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" onClick={() => onNavigateTab('workflows')}>
-            Folyamatok menü <ArrowRight className="h-3 w-3" />
+            {t('member_extended.nav_workflows')} <ArrowRight className="h-3 w-3" />
           </Button>
         )}
       >
         {onboarding.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Nincs hozzárendelt onboarding folyamat.</p>
+          <p className="text-xs text-muted-foreground">{t('member_extended.no_onboarding')}</p>
         ) : (
           <div className="space-y-2">
             {onboarding.map((o) => {
@@ -396,21 +391,20 @@ export function MemberExtendedDetails({ workspaceId, member, isAdmin, onNavigate
               return (
                 <div key={o.id} className="rounded-md border p-2.5 space-y-1.5">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="text-sm font-medium truncate">{o.template_name || 'Onboarding'}</div>
+                    <div className="text-sm font-medium truncate">{o.template_name || t('member_extended.onboarding_fallback')}</div>
                     <Badge variant={o.status === 'completed' ? 'default' : o.status === 'cancelled' ? 'outline' : 'secondary'} className="text-[10px]">
-                      {o.status === 'completed' ? 'Kész' : o.status === 'cancelled' ? 'Megszakítva' : 'Folyamatban'}
+                      {o.status === 'completed' ? t('member_extended.onboarding_done') : o.status === 'cancelled' ? t('member_extended.onboarding_cancelled') : t('member_extended.onboarding_in_progress')}
                     </Badge>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span>{o.done_steps} / {o.total_steps} lépés</span>
+                    <span>{t('member_extended.steps_progress', { done: o.done_steps, total: o.total_steps })}</span>
                     <div className="h-1.5 flex-1 rounded-full bg-muted overflow-hidden">
                       <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
                     </div>
                     <span className="tabular-nums">{pct}%</span>
                   </div>
                   <div className="text-[10px] text-muted-foreground">
-                    Indítás: {format(new Date(o.started_at), 'yyyy.MM.dd.')}
-                    {o.due_at ? ` · Határidő: ${format(new Date(o.due_at), 'yyyy.MM.dd.')}` : ''}
+                    {t('member_extended.started_prefix', { date: format(new Date(o.started_at), 'yyyy.MM.dd.') })}{o.due_at ? t('member_extended.due_infix', { date: format(new Date(o.due_at), 'yyyy.MM.dd.') }) : ''}
                   </div>
                 </div>
               );
@@ -422,15 +416,15 @@ export function MemberExtendedDetails({ workspaceId, member, isAdmin, onNavigate
       {/* ─── Access requests ────────────────────────────────────────────── */}
       <SectionCard
         icon={<KeyRound className="h-4 w-4 text-primary" />}
-        title="Hozzáférések"
+        title={t('member_extended.section_access')}
         action={onNavigateTab && (
           <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" onClick={() => onNavigateTab('workflows')}>
-            Hozzáférések menü <ArrowRight className="h-3 w-3" />
+            {t('member_extended.nav_access')} <ArrowRight className="h-3 w-3" />
           </Button>
         )}
       >
         {access.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Nincs benyújtott hozzáférés-kérelem.</p>
+          <p className="text-xs text-muted-foreground">{t('member_extended.no_access')}</p>
         ) : (
           <div className="space-y-1.5">
             {access.slice(0, 12).map((a) => {
@@ -451,7 +445,7 @@ export function MemberExtendedDetails({ workspaceId, member, isAdmin, onNavigate
               );
             })}
             {access.length > 12 && (
-              <p className="text-[10px] text-muted-foreground">+ {access.length - 12} további kérelem</p>
+              <p className="text-[10px] text-muted-foreground">{t('member_extended.more_access', { count: access.length - 12 })}</p>
             )}
           </div>
         )}
@@ -470,15 +464,15 @@ export function MemberExtendedDetails({ workspaceId, member, isAdmin, onNavigate
       {/* ─── Jira tickets ───────────────────────────────────────────────── */}
       <SectionCard
         icon={<GitMerge className="h-4 w-4 text-primary" />}
-        title="Hozzá rendelt Jira jegyek"
+        title={t('member_extended.section_jira')}
         action={onNavigateTab && (
           <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" onClick={() => onNavigateTab('resources')}>
-            Agile menü <ArrowRight className="h-3 w-3" />
+            {t('member_extended.nav_agile')} <ArrowRight className="h-3 w-3" />
           </Button>
         )}
       >
         {issues.length === 0 ? (
-          <p className="text-xs text-muted-foreground">Nincs hozzá rendelt jegy.</p>
+          <p className="text-xs text-muted-foreground">{t('member_extended.no_jira')}</p>
         ) : (
           <div className="space-y-1.5">
             {issues.slice(0, 15).map((i) => (
@@ -504,8 +498,8 @@ export function MemberExtendedDetails({ workspaceId, member, isAdmin, onNavigate
                     target="_blank"
                     rel="noreferrer"
                     className="text-muted-foreground hover:text-primary shrink-0 inline-flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
-                    title="Megnyitás külső rendszerben"
-                    aria-label="Megnyitás külső rendszerben"
+                    title={t('member_extended.open_external')}
+                    aria-label={t('member_extended.open_external')}
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
@@ -513,7 +507,7 @@ export function MemberExtendedDetails({ workspaceId, member, isAdmin, onNavigate
               </div>
             ))}
             {issues.length > 15 && (
-              <p className="text-[10px] text-muted-foreground">+ {issues.length - 15} további jegy</p>
+              <p className="text-[10px] text-muted-foreground">{t('member_extended.more_jira', { count: issues.length - 15 })}</p>
             )}
           </div>
         )}
@@ -522,7 +516,7 @@ export function MemberExtendedDetails({ workspaceId, member, isAdmin, onNavigate
       {/* ─── Performance chart ──────────────────────────────────────────── */}
       <SectionCard
         icon={<TrendingUp className="h-4 w-4 text-primary" />}
-        title="Teljesítmény (12 hónap)"
+        title={t('member_extended.section_performance')}
         action={
           <div className="flex items-center gap-2">
             <ChartTypeToggle
@@ -533,13 +527,13 @@ export function MemberExtendedDetails({ workspaceId, member, isAdmin, onNavigate
               }}
             />
             <Badge variant="outline" className="text-[10px] tabular-nums">
-              {totalCompletedPoints} SP · {totalCompletedIssues} jegy
+              {t('member_extended.perf_badge', { points: totalCompletedPoints, count: totalCompletedIssues })}
             </Badge>
           </div>
         }
       >
         {totalCompletedIssues === 0 ? (
-          <p className="text-xs text-muted-foreground">Még nincs lezárt jegy story-pointtal.</p>
+          <p className="text-xs text-muted-foreground">{t('member_extended.no_closed_jira')}</p>
         ) : (
           <div className="h-44 w-full">
             <ResponsiveContainer width="100%" height="100%">
@@ -557,7 +551,7 @@ export function MemberExtendedDetails({ workspaceId, member, isAdmin, onNavigate
                     }}
                     formatter={(v: any, name: string) => [
                       String(v),
-                      name === 'points' ? 'Story points' : 'Lezárt jegyek',
+                      name === 'points' ? t('member_extended.chart_points_label') : t('member_extended.chart_count_label'),
                     ]}
                   />
                   <Bar dataKey="points" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
@@ -586,7 +580,7 @@ export function MemberExtendedDetails({ workspaceId, member, isAdmin, onNavigate
                     }}
                     formatter={(v: any, name: string) => [
                       String(v),
-                      name === 'points' ? 'Story points' : 'Lezárt jegyek',
+                      name === 'points' ? t('member_extended.chart_points_label') : t('member_extended.chart_count_label'),
                     ]}
                   />
                   <Area
@@ -620,16 +614,17 @@ export function MemberExtendedDetails({ workspaceId, member, isAdmin, onNavigate
 // ───── helpers ───────────────────────────────────────────────────────────────
 
 function ChartTypeToggle({ value, onChange }: { value: 'bar' | 'area'; onChange: (v: 'bar' | 'area') => void }) {
+  const { t } = useI18n();
   return (
-    <div className="inline-flex items-center rounded-md border bg-muted/40 p-0.5" role="group" aria-label="Diagram típusa">
+    <div className="inline-flex items-center rounded-md border bg-muted/40 p-0.5" role="group" aria-label={t('member_extended.chart_type_aria')}>
       <button
         type="button"
         onClick={() => onChange('bar')}
         className={`inline-flex h-6 w-6 items-center justify-center rounded-sm transition-colors ${
           value === 'bar' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
         }`}
-        title="Oszlopdiagram"
-        aria-label="Oszlopdiagram"
+        title={t('member_extended.chart_bar_title')}
+        aria-label={t('member_extended.chart_bar_title')}
         aria-pressed={value === 'bar'}
       >
         <BarChart3 className="h-3.5 w-3.5" />
@@ -640,8 +635,8 @@ function ChartTypeToggle({ value, onChange }: { value: 'bar' | 'area'; onChange:
         className={`inline-flex h-6 w-6 items-center justify-center rounded-sm transition-colors ${
           value === 'area' ? 'bg-background text-primary shadow-sm' : 'text-muted-foreground hover:text-foreground'
         }`}
-        title="Vonal-/területdiagram"
-        aria-label="Vonal-/területdiagram"
+        title={t('member_extended.chart_area_title')}
+        aria-label={t('member_extended.chart_area_title')}
         aria-pressed={value === 'area'}
       >
         <LineChartIcon className="h-3.5 w-3.5" />
@@ -694,6 +689,13 @@ function GoalsSection({
   isAdmin: boolean;
   onChange: (next: GoalRow[]) => void;
 }) {
+  const { t } = useI18n();
+  const GOAL_STATUS_LABELS: Record<string, { label: string; variant: 'default' | 'secondary' | 'outline' | 'destructive' }> = {
+    open: { label: t('member_extended.goal_status_open'), variant: 'outline' },
+    in_progress: { label: t('member_extended.goal_status_in_progress'), variant: 'secondary' },
+    achieved: { label: t('member_extended.goal_status_achieved'), variant: 'default' },
+    dropped: { label: t('member_extended.goal_status_dropped'), variant: 'destructive' },
+  };
   const [adding, setAdding] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -701,9 +703,9 @@ function GoalsSection({
   const [saving, setSaving] = useState(false);
 
   const submit = async () => {
-    const t = title.trim();
-    if (!t) {
-      toast.error('Adj meg egy címet.');
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle) {
+      toast.error(t('member_extended.toast_title_required'));
       return;
     }
     setSaving(true);
@@ -712,7 +714,7 @@ function GoalsSection({
       .insert({
         workspace_id: workspaceId,
         member_id: memberId,
-        title: t,
+        title: trimmedTitle,
         description: description.trim() || null,
         target_date: targetDate || null,
         status: 'open',
@@ -721,7 +723,7 @@ function GoalsSection({
       .single();
     setSaving(false);
     if (error || !data) {
-      toast.error(error?.message ?? 'Nem sikerült menteni a célt.');
+      toast.error(error?.message ?? t('member_extended.toast_save_error'));
       return;
     }
     onChange([data as GoalRow, ...goals]);
@@ -729,7 +731,7 @@ function GoalsSection({
     setDescription('');
     setTargetDate('');
     setAdding(false);
-    toast.success('Cél hozzáadva.');
+    toast.success(t('member_extended.toast_goal_added'));
   };
 
   const updateStatus = async (goal: GoalRow, status: string) => {
@@ -741,7 +743,7 @@ function GoalsSection({
       .update(patch)
       .eq('id', goal.id);
     if (error) {
-      toast.error('Státusz frissítés sikertelen.');
+      toast.error(t('member_extended.toast_status_error'));
       return;
     }
     onChange(goals.map((g) => (g.id === goal.id ? { ...g, ...patch } : g)));
@@ -750,45 +752,44 @@ function GoalsSection({
   return (
     <SectionCard
       icon={<Target className="h-4 w-4 text-primary" />}
-      title="Meghatározott célok"
+      title={t('member_extended.section_goals')}
       action={
         isAdmin && !tableMissing ? (
           <Button size="sm" variant="ghost" className="h-7 text-xs gap-1" onClick={() => setAdding((v) => !v)}>
-            <Plus className="h-3 w-3" /> {adding ? 'Mégse' : 'Új cél'}
+            <Plus className="h-3 w-3" /> {adding ? t('member_extended.goal_cancel') : t('member_extended.goal_new')}
           </Button>
         ) : null
       }
     >
       {tableMissing ? (
         <p className="text-xs text-muted-foreground">
-          A célok modul még nincs telepítve. Futtasd le a legújabb adatbázis-migrációt
-          (<code className="font-mono">enterprise_member_goals</code>) az engedélyezéséhez.
+          {t('member_extended.goals_missing')}
         </p>
       ) : (
         <>
           {adding && (
             <div className="rounded-md border p-3 space-y-2 mb-3">
               <div>
-                <Label className="text-xs">Cím *</Label>
+                <Label className="text-xs">{t('member_extended.label_goal_title')}</Label>
                 <Input
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  placeholder="Pl. Q3 review – mentor szerep"
+                  placeholder={t('member_extended.goal_title_placeholder')}
                   className="h-8 text-sm"
                 />
               </div>
               <div>
-                <Label className="text-xs">Leírás</Label>
+                <Label className="text-xs">{t('member_extended.label_goal_desc')}</Label>
                 <Textarea
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   rows={2}
-                  placeholder="One-to-one beszélgetésen rögzített cél / megállapodás…"
+                  placeholder={t('member_extended.goal_desc_placeholder')}
                   className="text-sm"
                 />
               </div>
               <div>
-                <Label className="text-xs">Határidő</Label>
+                <Label className="text-xs">{t('member_extended.label_goal_due')}</Label>
                 <Input
                   type="date"
                   value={targetDate}
@@ -797,16 +798,16 @@ function GoalsSection({
                 />
               </div>
               <div className="flex justify-end gap-2 pt-1">
-                <Button size="sm" variant="ghost" onClick={() => setAdding(false)} disabled={saving}>Mégse</Button>
+                <Button size="sm" variant="ghost" onClick={() => setAdding(false)} disabled={saving}>{t('member_extended.goal_cancel')}</Button>
                 <Button size="sm" onClick={submit} disabled={saving}>
-                  {saving ? 'Mentés…' : 'Mentés'}
+                  {saving ? t('member_extended.btn_saving') : t('member_extended.btn_save')}
                 </Button>
               </div>
             </div>
           )}
 
           {goals.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Még nincsenek meghatározott célok ennél a tagnál.</p>
+            <p className="text-xs text-muted-foreground">{t('member_extended.no_goals')}</p>
           ) : (
             <div className="space-y-2">
               {goals.map((g) => {
@@ -827,22 +828,22 @@ function GoalsSection({
                     </div>
                     <div className="text-[10px] text-muted-foreground flex items-center gap-2">
                       <span>{format(new Date(g.created_at), 'yyyy.MM.dd.')}</span>
-                      {g.target_date && <span>· Határidő: {format(new Date(g.target_date), 'yyyy.MM.dd.')}</span>}
-                      {g.achieved_at && <span>· Elérve: {format(new Date(g.achieved_at), 'yyyy.MM.dd.')}</span>}
+                      {g.target_date && <span>{t('member_extended.goal_due', { date: format(new Date(g.target_date), 'yyyy.MM.dd.') })}</span>}
+                      {g.achieved_at && <span>{t('member_extended.goal_achieved', { date: format(new Date(g.achieved_at), 'yyyy.MM.dd.') })}</span>}
                     </div>
                     {isAdmin && (
                       <div className="flex flex-wrap gap-1 pt-1">
                         {g.status !== 'in_progress' && (
-                          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => updateStatus(g, 'in_progress')}>Folyamatban</Button>
+                          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => updateStatus(g, 'in_progress')}>{t('member_extended.btn_set_in_progress')}</Button>
                         )}
                         {g.status !== 'achieved' && (
-                          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => updateStatus(g, 'achieved')}>Elért</Button>
+                          <Button size="sm" variant="outline" className="h-6 text-[10px] px-2" onClick={() => updateStatus(g, 'achieved')}>{t('member_extended.btn_set_achieved')}</Button>
                         )}
                         {g.status !== 'open' && (
-                          <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2" onClick={() => updateStatus(g, 'open')}>Visszanyit</Button>
+                          <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2" onClick={() => updateStatus(g, 'open')}>{t('member_extended.btn_set_open')}</Button>
                         )}
                         {g.status !== 'dropped' && (
-                          <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2 text-destructive" onClick={() => updateStatus(g, 'dropped')}>Elejt</Button>
+                          <Button size="sm" variant="ghost" className="h-6 text-[10px] px-2 text-destructive" onClick={() => updateStatus(g, 'dropped')}>{t('member_extended.btn_set_dropped')}</Button>
                         )}
                       </div>
                     )}

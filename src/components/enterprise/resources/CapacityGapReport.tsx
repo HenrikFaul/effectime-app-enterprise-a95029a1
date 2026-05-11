@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useI18n } from '@/i18n/I18nProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -44,6 +45,7 @@ function todayISO() { return new Date().toISOString().slice(0, 10); }
 function plusDays(iso: string, n: number) { const d = new Date(iso); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
 
 export function CapacityGapReport({ workspaceId }: Props) {
+  const { t } = useI18n();
   const { user } = useAuth();
   const [from, setFrom] = useState(todayISO());
   const [to, setTo] = useState(plusDays(todayISO(), 90));
@@ -61,12 +63,12 @@ export function CapacityGapReport({ workspaceId }: Props) {
       workspaceId,
       userId: user.id,
       kind: 'capacity_gap',
-      name: `Hiány ${from} → ${to}`,
+      name: t('capacity_gap_report.widget_name', { from, to }),
       config: { from, to, include_leaves: includeLeaves, top_n: 5 },
     });
     setPinning(false);
-    if (error) toast.error('Kitűzés sikertelen: ' + error);
-    else toast.success('Hiány-widget kitűzve a Riportok dashboardra');
+    if (error) toast.error(t('capacity_gap_report.pin_error', { msg: error }));
+    else toast.success(t('capacity_gap_report.pin_success'));
   };
 
   const load = async () => {
@@ -146,47 +148,47 @@ export function CapacityGapReport({ workspaceId }: Props) {
     <Card>
       <CardHeader className="py-3 px-4 flex-row items-center justify-between space-y-0">
         <CardTitle className="text-sm flex items-center gap-2">
-          <TrendingDown className="h-4 w-4" /> Hiányzó kapacitás riport
+          <TrendingDown className="h-4 w-4" /> {t('capacity_gap_report.card_title')}
         </CardTitle>
         <Button size="sm" variant="outline" onClick={handlePin} disabled={pinning || !user} className="gap-1">
-          <Pin className="h-3.5 w-3.5" /> Kitűz a Riportokra
+          <Pin className="h-3.5 w-3.5" /> {t('capacity_gap_report.btn_pin')}
         </Button>
       </CardHeader>
       <CardContent className="px-4 pb-4 space-y-3">
         <p className="text-xs text-muted-foreground">
-          Összesíti az aktív projektek erőforrásigényeit pozíciónként és összehasonlítja a cégszintű kapacitással. A pozitív rés azt jelzi, hogy új tagokat kell felvenni.
+          {t('capacity_gap_report.description')}
         </p>
 
         <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto_auto] items-end">
           <div>
-            <Label className="text-xs">Időszak kezdete</Label>
+            <Label className="text-xs">{t('capacity_gap_report.label_period_from')}</Label>
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-9" />
           </div>
           <div>
-            <Label className="text-xs">Időszak vége</Label>
+            <Label className="text-xs">{t('capacity_gap_report.label_period_to')}</Label>
             <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-9" />
           </div>
           <div className="flex items-center gap-2 h-9">
             <Switch id="gap-leaves" checked={includeLeaves} onCheckedChange={setIncludeLeaves} />
-            <Label htmlFor="gap-leaves" className="text-xs cursor-pointer">Szabadságokkal</Label>
+            <Label htmlFor="gap-leaves" className="text-xs cursor-pointer">{t('capacity_gap_report.label_incl_leaves')}</Label>
           </div>
           <Button size="sm" variant="outline" onClick={load} disabled={loading}>
-            <RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} /> Frissítés
+            <RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? 'animate-spin' : ''}`} /> {t('capacity_gap_report.btn_refresh')}
           </Button>
         </div>
 
         {/* Summary tiles */}
         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
           <div className="border rounded-md p-2 bg-muted/30">
-            <div className="text-[10px] uppercase text-muted-foreground">Összes hiány</div>
+            <div className="text-[10px] uppercase text-muted-foreground">{t('capacity_gap_report.total_gap_label')}</div>
             <div className="text-lg font-semibold text-destructive">{totalGap.toFixed(0)}%</div>
           </div>
           <div className="border rounded-md p-2 bg-muted/30">
             <div className="text-[10px] uppercase text-muted-foreground">FTE-ben kifejezve</div>
-            <div className="text-lg font-semibold">{fteEquivalent.toFixed(1)} fő</div>
+            <div className="text-lg font-semibold">{t('capacity_gap_report.fte_unit', { fte: fteEquivalent.toFixed(1) })}</div>
           </div>
           <div className="border rounded-md p-2 bg-muted/30">
-            <div className="text-[10px] uppercase text-muted-foreground">Hiányos pozíciók</div>
+            <div className="text-[10px] uppercase text-muted-foreground">{t('capacity_gap_report.understaffed_roles_label')}</div>
             <div className="text-lg font-semibold">{gaps.filter((g) => g.gap > 0).length}</div>
           </div>
         </div>
@@ -194,7 +196,7 @@ export function CapacityGapReport({ workspaceId }: Props) {
         {loading ? (
           <div className="flex justify-center py-6"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
         ) : gaps.length === 0 ? (
-          <p className="text-xs text-muted-foreground py-4 text-center">Nincs aktív projekt erőforrásigény az időszakra.</p>
+          <p className="text-xs text-muted-foreground py-4 text-center">{t('capacity_gap_report.no_data')}</p>
         ) : (
           <div className="space-y-2">
             {gaps.map((g) => {
@@ -208,20 +210,20 @@ export function CapacityGapReport({ workspaceId }: Props) {
                       <span className="font-medium text-sm">{g.business_role}</span>
                     </div>
                     <div className="flex items-center gap-2 text-xs">
-                      <span className="text-muted-foreground">Igény: <strong className="text-foreground">{g.required.toFixed(0)}%</strong></span>
-                      <span className="text-muted-foreground">Cégszintű: <strong className="text-foreground">{g.available.toFixed(0)}%</strong></span>
+                      <span className="text-muted-foreground">{t('capacity_gap_report.demand_label')} <strong className="text-foreground">{g.required.toFixed(0)}%</strong></span>
+                      <span className="text-muted-foreground">{t('capacity_gap_report.company_label')} <strong className="text-foreground">{g.available.toFixed(0)}%</strong></span>
                       {isShortfall && (
                         <Badge variant="destructive" className="gap-1 text-[10px]">
-                          <AlertTriangle className="h-3 w-3" /> Hiány: {g.gap.toFixed(0)}% (~{(g.gap / 100).toFixed(1)} FTE)
+                          <AlertTriangle className="h-3 w-3" /> {t('capacity_gap_report.gap_badge', { gap: g.gap.toFixed(0), fte: (g.gap / 100).toFixed(1) })}
                         </Badge>
                       )}
                       {isExact && (
                         <Badge className="bg-emerald-600 gap-1 text-[10px]">
-                          <CheckCircle2 className="h-3 w-3" /> Pont elég
+                          <CheckCircle2 className="h-3 w-3" /> {t('capacity_gap_report.ok_badge')}
                         </Badge>
                       )}
                       {g.gap < -0.5 && (
-                        <Badge variant="secondary" className="text-[10px]">Tartalék: {Math.abs(g.gap).toFixed(0)}%</Badge>
+                        <Badge variant="secondary" className="text-[10px]">{t('capacity_gap_report.surplus_badge', { pct: Math.abs(g.gap).toFixed(0) })}</Badge>
                       )}
                     </div>
                   </div>
@@ -236,7 +238,7 @@ export function CapacityGapReport({ workspaceId }: Props) {
                   )}
                   {isShortfall && (
                     <div className="text-[11px] text-destructive mt-2">
-                      💡 Az időszakban (<strong>{from} → {to}</strong>) <strong>{(g.gap / 100).toFixed(1)} fő</strong> teljes munkaidős <strong>{g.business_role}</strong> erőforrás felvétele javasolt.
+                      {t('capacity_gap_report.recommendation', { from, to, fte: (g.gap / 100).toFixed(1), role: g.business_role })}
                     </div>
                   )}
                 </div>

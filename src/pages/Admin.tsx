@@ -7,8 +7,10 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, LayoutDashboard, Users } from 'lucide-react';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 import AdminUsers from '@/components/admin/AdminUsers';
+import { useI18n } from '@/i18n/I18nProvider';
 
 const Admin = () => {
+  const { t } = useI18n();
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
@@ -63,11 +65,11 @@ const Admin = () => {
           <TabsList className="grid w-full max-w-sm grid-cols-2 rounded-xl h-12">
             <TabsTrigger value="dashboard" className="rounded-lg gap-1.5 text-xs sm:text-sm">
               <LayoutDashboard className="h-4 w-4" />
-              <span className="hidden sm:inline">Áttekintés</span>
+              <span className="hidden sm:inline">{t('admin.tab_overview')}</span>
             </TabsTrigger>
             <TabsTrigger value="users" className="rounded-lg gap-1.5 text-xs sm:text-sm">
               <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">Felhasználók</span>
+              <span className="hidden sm:inline">{t('admin.users_title')}</span>
             </TabsTrigger>
           </TabsList>
 

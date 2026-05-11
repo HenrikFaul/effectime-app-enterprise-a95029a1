@@ -6,10 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, XCircle, UserCheck } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props { workspaceId: string; userId: string; }
 
 export function SubstituteInbox({ workspaceId, userId }: Props) {
+  const { t } = useI18n();
   const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -38,8 +40,8 @@ export function SubstituteInbox({ workspaceId, userId }: Props) {
       .from('leave_request_substitutes')
       .update({ status, responded_at: new Date().toISOString() } as any)
       .eq('id', id);
-    if (error) { toast.error('Hiba'); return; }
-    toast.success(status === 'confirmed' ? 'Helyettesítés megerősítve' : 'Helyettesítés elutasítva');
+    if (error) { toast.error(t('substitute.error_generic')); return; }
+    toast.success(status === 'confirmed' ? t('substitute.confirmed') : t('substitute.declined'));
     load();
   };
 
@@ -51,7 +53,7 @@ export function SubstituteInbox({ workspaceId, userId }: Props) {
       <CardHeader className="pb-3">
         <CardTitle className="text-sm flex items-center gap-2">
           <UserCheck className="h-4 w-4 text-primary" />
-          Helyettesítési kérések ({items.length})
+          {t('substitute.inbox_title', { count: items.length })}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
@@ -66,10 +68,10 @@ export function SubstituteInbox({ workspaceId, userId }: Props) {
             </div>
             <div className="flex gap-1">
               <Button size="sm" variant="outline" className="h-7" onClick={() => respond(s.id, 'declined')}>
-                <XCircle className="h-3 w-3 mr-1" /> Elutasít
+                <XCircle className="h-3 w-3 mr-1" /> {t('substitute.btn_decline')}
               </Button>
               <Button size="sm" className="h-7" onClick={() => respond(s.id, 'confirmed')}>
-                <CheckCircle2 className="h-3 w-3 mr-1" /> Megerősít
+                <CheckCircle2 className="h-3 w-3 mr-1" /> {t('substitute.btn_confirm')}
               </Button>
             </div>
           </div>

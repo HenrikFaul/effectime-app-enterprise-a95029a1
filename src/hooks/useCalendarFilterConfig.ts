@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { useI18n } from '@/i18n/I18nProvider';
 
 export type CalendarFilterId =
   | 'office'
@@ -21,19 +22,41 @@ export interface CalendarFilterConfig {
   order: number;
 }
 
-export const FILTER_LABELS: Record<CalendarFilterId, string> = {
-  office: 'Telephely / Iroda',
-  team: 'Csapat',
-  business_role: 'Pozíció',
-  leave_type: 'Szabadság típusa',
-  status: 'Státusz',
-  skill: 'Képesség / Skill',
-  location: 'Helyszín (város)',
-  site_priority: 'Telephely prioritás',
-  utilization: 'Kihasználtság',
-  assignment_state: 'Beosztási állapot',
-  capacity_band: 'Kapacitás-sáv',
+/** @deprecated Use `useFilterLabels()` for localized labels. */
+export const FILTER_LABEL_KEYS: Record<CalendarFilterId, string> = {
+  office: 'calendar_filter_config.label_office',
+  team: 'calendar_filter_config.label_team',
+  business_role: 'calendar_filter_config.label_business_role',
+  leave_type: 'calendar_filter_config.label_leave_type',
+  status: 'calendar_filter_config.label_status',
+  skill: 'calendar_filter_config.label_skill',
+  location: 'calendar_filter_config.label_location',
+  site_priority: 'calendar_filter_config.label_site_priority',
+  utilization: 'calendar_filter_config.label_utilization',
+  assignment_state: 'calendar_filter_config.label_assignment_state',
+  capacity_band: 'calendar_filter_config.label_capacity_band',
 };
+
+/** Returns a translated label map for all calendar filter IDs. */
+export function useFilterLabels(): Record<CalendarFilterId, string> {
+  const { t } = useI18n();
+  return {
+    office: t('calendar_filter_config.label_office'),
+    team: t('calendar_filter_config.label_team'),
+    business_role: t('calendar_filter_config.label_business_role'),
+    leave_type: t('calendar_filter_config.label_leave_type'),
+    status: t('calendar_filter_config.label_status'),
+    skill: t('calendar_filter_config.label_skill'),
+    location: t('calendar_filter_config.label_location'),
+    site_priority: t('calendar_filter_config.label_site_priority'),
+    utilization: t('calendar_filter_config.label_utilization'),
+    assignment_state: t('calendar_filter_config.label_assignment_state'),
+    capacity_band: t('calendar_filter_config.label_capacity_band'),
+  };
+}
+
+/** @deprecated Use `useFilterLabels()` hook for localized labels. Kept for type-compatibility. */
+export const FILTER_LABELS = FILTER_LABEL_KEYS as Record<CalendarFilterId, string>;
 
 const DEFAULT_CONFIG: CalendarFilterConfig[] = [
   { id: 'office', enabled: true, order: 1 },
@@ -50,6 +73,7 @@ const DEFAULT_CONFIG: CalendarFilterConfig[] = [
 ];
 
 export function useCalendarFilterConfig(workspaceId: string) {
+  const { t } = useI18n();
   const [config, setConfig] = useState<CalendarFilterConfig[]>(DEFAULT_CONFIG);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -89,11 +113,11 @@ export function useCalendarFilterConfig(workspaceId: string) {
       );
     setSaving(false);
     if (error) {
-      toast.error(`Mentési hiba: ${error.message}`);
+      toast.error(`${t('calendar_filter_config.save_error')}: ${error.message}`);
       return false;
     }
     setConfig(normalized);
-    toast.success('Szűrő-beállítások mentve');
+    toast.success(t('calendar_filter_config.save_success'));
     return true;
   }, [workspaceId]);
 

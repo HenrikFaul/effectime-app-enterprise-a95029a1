@@ -16,6 +16,7 @@ import {
   ChevronUp,
 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addDays, isWeekend } from "date-fns";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface SummaryCard {
   key: string;
@@ -33,6 +34,7 @@ interface Props {
 }
 
 export function CoverageConflictSummary({ workspaceId, currentMonth, onNavigate }: Props) {
+  const { t } = useI18n();
   const [pendingCount, setPendingCount] = useState(0);
   const [blockedDatesInRange, setBlockedDatesInRange] = useState(0);
   const [companyLeaveDatesInRange, setCompanyLeaveDatesInRange] = useState(0);
@@ -164,51 +166,51 @@ export function CoverageConflictSummary({ workspaceId, currentMonth, onNavigate 
   const cards: SummaryCard[] = [
     {
       key: "pending",
-      label: "Függő jóváhagyás",
+      label: t('coverage_conflict.pending_label'),
       count: pendingCount,
       severity: pendingCount > 0 ? "warning" : "info",
       icon: <Clock className="h-4 w-4" />,
-      emptyLabel: "Nincs függő kérelem",
+      emptyLabel: t('coverage_conflict.no_pending'),
     },
     {
       key: "urgent",
-      label: "Sürgős (7 napon belüli)",
+      label: t('coverage_conflict.urgent_label'),
       count: upcomingAttention,
       severity: upcomingAttention > 0 ? "blocking" : "info",
       icon: <AlertTriangle className="h-4 w-4" />,
-      emptyLabel: "Nincs sürgős kérelem",
+      emptyLabel: t('coverage_conflict.no_urgent'),
     },
     {
       key: "maxoff",
-      label: "Kapacitás túllépés",
+      label: t('coverage_conflict.maxoff_label'),
       count: maxOffBreaches,
       severity: maxOffBreaches > 0 ? "blocking" : "info",
       icon: <TrendingDown className="h-4 w-4" />,
-      emptyLabel: "Nincs kapacitás túllépés",
+      emptyLabel: t('coverage_conflict.no_maxoff'),
     },
     {
       key: "coverage",
-      label: "Lefedettségi kockázat",
+      label: t('coverage_conflict.coverage_label'),
       count: coverageBreaches,
       severity: coverageBreaches > 0 ? "warning" : "info",
       icon: <ShieldAlert className="h-4 w-4" />,
-      emptyLabel: "Nincs lefedettségi probléma",
+      emptyLabel: t('coverage_conflict.no_coverage_issues'),
     },
     {
       key: "blocked",
-      label: "Tiltott nap (hónap)",
+      label: t('coverage_conflict.blocked_label'),
       count: blockedDatesInRange,
       severity: "info",
       icon: <Ban className="h-4 w-4" />,
-      emptyLabel: "Nincs tiltott nap",
+      emptyLabel: t('coverage_conflict.no_blocked'),
     },
     {
       key: "holidays",
-      label: "Ünnepnap (hónap)",
+      label: t('coverage_conflict.holidays_label'),
       count: companyLeaveDatesInRange,
       severity: "info",
       icon: <CalendarOff className="h-4 w-4" />,
-      emptyLabel: "Nincs ünnepnap",
+      emptyLabel: t('coverage_conflict.no_holidays'),
     },
   ];
 
@@ -252,7 +254,7 @@ export function CoverageConflictSummary({ workspaceId, currentMonth, onNavigate 
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm flex items-center gap-2">
             <ShieldAlert className="h-4 w-4 text-primary" />
-            Lefedettség & Konfliktusok
+            {t('coverage_conflict.title')}
             {hasIssues && (
               <Badge variant="destructive" className="text-[10px] h-4 px-1.5">
                 {pendingCount + maxOffBreaches + coverageBreaches + upcomingAttention}

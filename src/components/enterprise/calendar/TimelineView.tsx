@@ -12,6 +12,7 @@ import { CalendarFilterBar, EMPTY_FILTERS, FilterValues } from './CalendarFilter
 import { useCalendarFilterConfig } from '@/hooks/useCalendarFilterConfig';
 import type { FilterOption } from './CalendarFilterBar';
 import type { CalendarFilterId } from '@/hooks/useCalendarFilterConfig';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -58,6 +59,7 @@ const LEAVE_TYPE_TINT: Record<string, string> = {
 };
 
 export function TimelineView({ workspaceId, onFilteredUsersChange }: Props) {
+  const { t } = useI18n();
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [leaves, setLeaves] = useState<LeaveCell[]>([]);
@@ -124,7 +126,7 @@ export function TimelineView({ workspaceId, onFilteredUsersChange }: Props) {
         const { data: profs } = await (supabase as any)
           .from('profiles').select('user_id,display_name').in('user_id', userIds);
         if (loadId !== loadIdRef.current) return;
-        (profs || []).forEach((p: any) => { nameMap[p.user_id] = p.display_name || 'Felhasználó'; });
+        (profs || []).forEach((p: any) => { nameMap[p.user_id] = p.display_name || t('timeline_view.user_fallback'); });
       }
 
       // Build skill map: membership_id -> skill_ids[]
@@ -143,7 +145,7 @@ export function TimelineView({ workspaceId, onFilteredUsersChange }: Props) {
         office_id: m.office_id,
         city: m.city || null,
         skill_ids: skillsByMembership.get(m.id) || [],
-        display_name: nameMap[m.user_id] || 'Felhasználó',
+        display_name: nameMap[m.user_id] || t('timeline_view.user_fallback'),
       })));
       setLeaves((leaveRes.data || []) as LeaveCell[]);
       setHolidays((holRes.data || []) as Holiday[]);
@@ -152,7 +154,7 @@ export function TimelineView({ workspaceId, onFilteredUsersChange }: Props) {
       setSkills((skillRes.data || []) as any[]);
     } catch (err: any) {
       if (loadId !== loadIdRef.current) return;
-      setLoadError(err?.message || 'Betöltési hiba');
+      setLoadError(err?.message || t('timeline_view.load_error'));
     } finally {
       if (loadId === loadIdRef.current) setLoading(false);
     }
@@ -177,35 +179,35 @@ export function TimelineView({ workspaceId, onFilteredUsersChange }: Props) {
       business_role: roles.map(r => ({ value: r, label: r })),
       leave_type: leaveTypes.map(l => ({ value: l.id, label: l.name })),
       status: [
-        { value: 'approved', label: 'Jóváhagyott' },
-        { value: 'pending', label: 'Függőben' },
-        { value: 'rejected', label: 'Elutasított' },
-        { value: 'cancelled', label: 'Visszavont' },
+        { value: 'approved', label: t('timeline_view.status_approved') },
+        { value: 'pending', label: t('timeline_view.status_pending') },
+        { value: 'rejected', label: t('timeline_view.status_rejected') },
+        { value: 'cancelled', label: t('timeline_view.status_cancelled') },
       ],
       skill: skills.map(s => ({ value: s.id, label: s.name })),
       location: cities.map(c => ({ value: c, label: c })),
       site_priority: [
-        { value: '1', label: '1 — Elsődleges' },
-        { value: '2', label: '2 — Másodlagos' },
-        { value: '3', label: '3 — Tartalék' },
+        { value: '1', label: t('timeline_view.priority_primary') },
+        { value: '2', label: t('timeline_view.priority_secondary') },
+        { value: '3', label: t('timeline_view.priority_reserve') },
       ],
       utilization: [
-        { value: 'under', label: 'Alulterhelt (<60%)' },
-        { value: 'optimal', label: 'Optimális (60–90%)' },
-        { value: 'over', label: 'Túlterhelt (>90%)' },
+        { value: 'under', label: t('timeline_view.util_under') },
+        { value: 'optimal', label: t('timeline_view.util_optimal') },
+        { value: 'over', label: t('timeline_view.util_over') },
       ],
       assignment_state: [
-        { value: 'unassigned', label: 'Nincs beosztva' },
-        { value: 'assigned', label: 'Beosztva' },
-        { value: 'on_leave', label: 'Szabadságon' },
+        { value: 'unassigned', label: t('timeline_view.assign_unassigned') },
+        { value: 'assigned', label: t('timeline_view.assign_assigned') },
+        { value: 'on_leave', label: t('timeline_view.worktime_on_leave') },
       ],
       capacity_band: [
-        { value: 'full', label: 'Teljes munkaidő (40h)' },
-        { value: 'part', label: 'Részmunkaidő (<40h)' },
-        { value: 'extra', label: 'Túlóra-kompatibilis (>40h)' },
+        { value: 'full', label: t('timeline_view.worktime_full') },
+        { value: 'part', label: t('timeline_view.worktime_part') },
+        { value: 'extra', label: t('timeline_view.worktime_extra') },
       ],
     };
-  }, [members, offices, leaveTypes, skills]);
+  }, [members, offices, leaveTypes, skills, t]);
 
   // Apply filters
   const visibleMembers = useMemo(() => {
@@ -308,11 +310,11 @@ export function TimelineView({ workspaceId, onFilteredUsersChange }: Props) {
 
       {/* Legend */}
       <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-        <LegendItem className="bg-emerald-200/70 dark:bg-emerald-900/40" label="Szabadság" />
-        <LegendItem className="bg-rose-200/70 dark:bg-rose-900/40" label="Beteg" />
-        <LegendItem className="bg-amber-200/70 dark:bg-amber-900/40" label="Fizetés nélküli" />
-        <LegendItem className="bg-blue-100 dark:bg-blue-950/40 ring-1 ring-blue-300" label="Ünnepnap" />
-        <LegendItem className="bg-zinc-100 dark:bg-zinc-800/60" label="Hétvége" />
+        <LegendItem className="bg-emerald-200/70 dark:bg-emerald-900/40" label={t('timeline_view.legend_vacation')} />
+        <LegendItem className="bg-rose-200/70 dark:bg-rose-900/40" label={t('timeline_view.legend_sick')} />
+        <LegendItem className="bg-amber-200/70 dark:bg-amber-900/40" label={t('timeline_view.legend_unpaid')} />
+        <LegendItem className="bg-blue-100 dark:bg-blue-950/40 ring-1 ring-blue-300" label={t('timeline_view.legend_holiday')} />
+        <LegendItem className="bg-zinc-100 dark:bg-zinc-800/60" label={t('timeline_view.legend_weekend')} />
       </div>
 
       {/* Grid */}
@@ -324,16 +326,16 @@ export function TimelineView({ workspaceId, onFilteredUsersChange }: Props) {
         ) : loadError ? (
           <div className="p-8 text-center text-sm text-destructive flex flex-col items-center gap-2">
             <AlertCircle className="h-5 w-5" />
-            <span>Betöltési hiba: {loadError}</span>
-            <Button size="sm" variant="outline" onClick={load}>Újra</Button>
+            <span>{t('timeline_view.load_error_msg', { msg: loadError })}</span>
+            <Button size="sm" variant="outline" onClick={load}>{t('timeline_view.retry_btn')}</Button>
           </div>
         ) : members.length === 0 ? (
           <div className="p-8 text-center text-sm text-muted-foreground">
-            Nincsenek aktív tagok ebben a munkaterületen.
+            {t('timeline_view.no_active_members')}
           </div>
         ) : visibleMembers.length === 0 ? (
           <div className="p-8 text-center text-sm text-muted-foreground">
-            Nincs a szűrőknek megfelelő tag.
+            {t('timeline_view.no_matching_members')}
           </div>
         ) : (
           <div className="overflow-auto" style={{ maxHeight: 600 }}>

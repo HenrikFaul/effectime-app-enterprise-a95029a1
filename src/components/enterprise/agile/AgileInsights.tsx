@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { BarChart3 } from 'lucide-react';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   integrationId: string;
@@ -25,6 +26,7 @@ interface AgileIssueLite {
 const DONE_STATES = ['done', 'closed', 'resolved', 'kész'];
 
 export function AgileInsights({ integrationId }: Props) {
+  const { t } = useI18n();
   const [loading, setLoading] = useState(true);
   const [issues, setIssues] = useState<AgileIssueLite[]>([]);
 
@@ -58,10 +60,10 @@ export function AgileInsights({ integrationId }: Props) {
         if (issue.due_date && issue.due_date < nowIso) overdue += 1;
       }
 
-      const sprint = issue.sprint_name?.trim() || 'Sprint nélkül';
+      const sprint = issue.sprint_name?.trim() || t('agile_insights.no_sprint');
       sprintCounts.set(sprint, (sprintCounts.get(sprint) ?? 0) + 1);
 
-      const person = (issue.assignee_name?.trim() || issue.assignee_email?.trim() || 'Nincs hozzárendelve');
+      const person = (issue.assignee_name?.trim() || issue.assignee_email?.trim() || t('agile_insights.unassigned'));
       const hours = Number(issue.remaining_hours ?? issue.original_estimate_hours ?? (issue.story_points ?? 0) * 4);
       assigneeHours.set(person, (assigneeHours.get(person) ?? 0) + hours);
       totalRemaining += hours;
@@ -97,17 +99,17 @@ export function AgileInsights({ integrationId }: Props) {
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm flex items-center gap-2"><BarChart3 className="h-4 w-4 text-primary" /> Agile riport (cache alapján)</CardTitle>
+        <CardTitle className="text-sm flex items-center gap-2"><BarChart3 className="h-4 w-4 text-primary" /> {t('agile_insights.card_title')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3 text-xs">
         <div className="grid grid-cols-3 gap-2">
           <Metric title="Nyitott ticket" value={metrics.open} />
-          <Metric title="Határidőn túli" value={metrics.overdue} tone="danger" />
-          <Metric title="Hátralévő becslés" value={`${metrics.totalRemaining}h`} />
+          <Metric title={t('agile_insights.overdue_label')} value={metrics.overdue} tone="danger" />
+          <Metric title={t('agile_insights.remaining_estimate_label')} value={`${metrics.totalRemaining}h`} />
         </div>
 
         <div className="rounded-md border p-2">
-          <div className="font-medium mb-1">Sprint terhelés</div>
+          <div className="font-medium mb-1">{t('agile_insights.sprint_load_title')}</div>
           <div className="flex flex-wrap gap-1.5">
             {metrics.topSprints.length === 0 && <span className="text-muted-foreground">Nincs adat.</span>}
             {metrics.topSprints.map(([name, count]) => (
@@ -117,7 +119,7 @@ export function AgileInsights({ integrationId }: Props) {
         </div>
 
         <div className="rounded-md border p-2">
-          <div className="font-medium mb-1">Erőforrás allokáció (óra)</div>
+          <div className="font-medium mb-1">{t('agile_insights.resource_alloc_title')}</div>
           <div className="space-y-1.5">
             {metrics.topLoad.length === 0 && <div className="text-muted-foreground">Nincs adat.</div>}
             {metrics.topLoad.map(([name, hours]) => (

@@ -19,6 +19,7 @@ import {
 } from 'date-fns';
 import { hu } from 'date-fns/locale';
 import { CoverageConflictSummary } from './CoverageConflictSummary';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface LeaveRequest {
   id: string;
@@ -38,17 +39,10 @@ interface BlockedDate { id: string; blocked_date: string; reason: string | null;
 interface DailyRule { id: string; day_of_week: number | null; rule_date: string | null; max_off: number | null; min_coverage: number | null; team_filter: string | null; role_filter: string | null; }
 interface Member { user_id: string; team: string | null; role: string; business_role: string | null; }
 
-const LEAVE_TYPE_COLORS: Record<string, { bg: string; border: string; text: string; label: string }> = {
-  vacation: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', border: 'border-emerald-300 dark:border-emerald-700', text: 'text-emerald-700 dark:text-emerald-300', label: 'Szabadság' },
-  sick_leave: { bg: 'bg-rose-100 dark:bg-rose-900/30', border: 'border-rose-300 dark:border-rose-700', text: 'text-rose-700 dark:text-rose-300', label: 'Betegszabadság' },
-  unpaid_leave: { bg: 'bg-amber-100 dark:bg-amber-900/30', border: 'border-amber-300 dark:border-amber-700', text: 'text-amber-700 dark:text-amber-300', label: 'Fizetés nélküli' },
-  other: { bg: 'bg-violet-100 dark:bg-violet-900/30', border: 'border-violet-300 dark:border-violet-700', text: 'text-violet-700 dark:text-violet-300', label: 'Egyéb' },
-};
-
 const STATUS_STYLES: Record<string, { dot: string; label: string }> = {
-  approved: { dot: 'bg-emerald-500', label: 'Jóváhagyott' },
-  pending: { dot: 'bg-amber-500', label: 'Függőben' },
-  rejected: { dot: 'bg-rose-500', label: 'Elutasított' },
+  approved: { dot: 'bg-emerald-500', label: 'Approved' },
+  pending: { dot: 'bg-amber-500', label: 'Pending' },
+  rejected: { dot: 'bg-rose-500', label: 'Rejected' },
 };
 
 const WEEKDAY_LABELS = ['H', 'K', 'Sz', 'Cs', 'P', 'Sz', 'V'];
@@ -63,6 +57,21 @@ interface Props {
 }
 
 export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true, showCoverage = true, showRequests = true, showConflicts = true }: Props) {
+  const { t } = useI18n();
+
+  const LEAVE_TYPE_COLORS: Record<string, { bg: string; border: string; text: string; label: string }> = {
+    vacation: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', border: 'border-emerald-300 dark:border-emerald-700', text: 'text-emerald-700 dark:text-emerald-300', label: t('leave_calendar.type_vacation') },
+    sick_leave: { bg: 'bg-rose-100 dark:bg-rose-900/30', border: 'border-rose-300 dark:border-rose-700', text: 'text-rose-700 dark:text-rose-300', label: t('leave_calendar.type_sick_leave') },
+    unpaid_leave: { bg: 'bg-amber-100 dark:bg-amber-900/30', border: 'border-amber-300 dark:border-amber-700', text: 'text-amber-700 dark:text-amber-300', label: t('leave_calendar.type_unpaid_leave') },
+    other: { bg: 'bg-violet-100 dark:bg-violet-900/30', border: 'border-violet-300 dark:border-violet-700', text: 'text-violet-700 dark:text-violet-300', label: t('leave_calendar.type_other') },
+  };
+
+  const STATUS_CONFIG: Record<string, { label: string }> = {
+    approved: { label: t('leave_calendar.status_approved') },
+    pending: { label: t('leave_calendar.status_pending') },
+    rejected: { label: t('leave_calendar.status_rejected') },
+  };
+
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
@@ -148,9 +157,9 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
 
   const blockedMap = useMemo(() => {
     const map = new Map<string, string>();
-    blockedDates.forEach(b => map.set(b.blocked_date, b.reason || 'Zárt nap'));
+    blockedDates.forEach(b => map.set(b.blocked_date, b.reason || t('leave_calendar.blocked_date_default')));
     return map;
-  }, [blockedDates]);
+  }, [blockedDates, t]);
 
   // Get ALL leaves for a day (for calendar dots - shows all statuses)
   const getAllLeavesForDay = useCallback((date: Date) => {
@@ -189,13 +198,13 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
 
       if (rule.max_off !== null && teamOff >= rule.max_off) {
         capacityRisk = true;
-        riskDetails.push(`${rule.role_filter || rule.team_filter || 'Összes'}: max ${rule.max_off} távollét túllépve (${teamOff})`);
+        riskDetails.push(t('leave_calendar.coverage_exceeded', { scope: rule.role_filter || rule.team_filter || t('leave_calendar.all_scope'), max: rule.max_off, current: teamOff }));
       }
       if (rule.min_coverage !== null) {
         const available = teamMembers.length - teamOff;
         if (available < rule.min_coverage) {
           coverageRisk = true;
-          riskDetails.push(`${rule.role_filter || rule.team_filter || 'Összes'}: min ${rule.min_coverage} fő szükséges, elérhető: ${available}`);
+          riskDetails.push(t('leave_calendar.coverage_min_required', { scope: rule.role_filter || rule.team_filter || t('leave_calendar.all_scope'), min: rule.min_coverage, available }));
         }
       }
     }
@@ -286,12 +295,12 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
           <CardHeader className="pb-2 px-3 pt-3">
             <CardTitle className="text-xs font-semibold flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
               <CalendarDays className="h-3.5 w-3.5" />
-              Szabadságnapok — {format(selectedDay, 'MMM d.', { locale: hu })}
+              {t('leave_calendar.panel_leave_days', { date: format(selectedDay, 'MMM d.', { locale: hu }) })}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-3 space-y-2">
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span className="flex items-center gap-1"><Users className="h-3 w-3" /> Létszám</span>
+              <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {t('leave_calendar.col_headcount')}</span>
               <span className="font-medium text-foreground">{risk.totalMembers - risk.offCount} / {risk.totalMembers}</span>
             </div>
             {getDayDetails(selectedDay).holiday && (
@@ -305,7 +314,7 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
               </Badge>
             )}
             {dayApproved.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Nincs jóváhagyott távollét ezen a napon.</p>
+              <p className="text-xs text-muted-foreground">{t('leave_calendar.no_approved_today')}</p>
             ) : (
               <div className="space-y-1">
                 {dayApproved.map(l => (
@@ -328,12 +337,12 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
         <CardHeader className="pb-2 px-3 pt-3">
           <CardTitle className="text-xs font-semibold flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
             <CalendarDays className="h-3.5 w-3.5" />
-            Szabadságnapok — {format(currentMonth, 'MMMM', { locale: hu })}
+            {t('leave_calendar.panel_leave_month', { month: format(currentMonth, 'MMMM', { locale: hu }) })}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-3 pb-3">
           {monthApprovedByDay.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Nincs jóváhagyott szabadság ebben a hónapban.</p>
+            <p className="text-xs text-muted-foreground">{t('leave_calendar.no_approved_month')}</p>
           ) : (
             <div className="space-y-1 max-h-48 overflow-y-auto">
               {monthApprovedByDay.map(d => (
@@ -343,7 +352,7 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
                   className="w-full flex items-center justify-between rounded-md px-2 py-1.5 text-xs hover:bg-accent/50 transition-colors text-left"
                 >
                   <span className="font-medium">{format(parseISO(d.date), 'MMM d. (EEE)', { locale: hu })}</span>
-                  <Badge variant="secondary" className="text-[10px] h-4 min-w-[24px] justify-center">{d.count} fő</Badge>
+                  <Badge variant="secondary" className="text-[10px] h-4 min-w-[24px] justify-center">{t('leave_calendar.persons_unit', { count: d.count })}</Badge>
                 </button>
               ))}
             </div>
@@ -368,7 +377,7 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
           </CardHeader>
           <CardContent className="px-3 pb-3">
             {!hasRisk ? (
-              <p className="text-xs text-muted-foreground">Nincs szabálykonfliktus ezen a napon.</p>
+              <p className="text-xs text-muted-foreground">{t('leave_calendar.no_conflict_today')}</p>
             ) : (
               <div className="space-y-1.5">
                 {risk.riskDetails.map((detail, i) => (
@@ -394,7 +403,7 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
         </CardHeader>
         <CardContent className="px-3 pb-3">
           {monthConflicts.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Nincs szabálykonfliktus ebben a hónapban.</p>
+            <p className="text-xs text-muted-foreground">{t('leave_calendar.no_conflict_month')}</p>
           ) : (
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {monthConflicts.map(c => (
@@ -430,12 +439,12 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
           <CardHeader className="pb-2 px-3 pt-3">
             <CardTitle className="text-xs font-semibold flex items-center gap-1.5 text-primary">
               <Users className="h-3.5 w-3.5" />
-              Igények — {format(selectedDay, 'MMM d.', { locale: hu })} ({dayPending.length})
+              {t('leave_calendar.panel_requests_today', { date: format(selectedDay, 'MMM d.', { locale: hu }), count: dayPending.length })}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-3">
             {dayPending.length === 0 ? (
-              <p className="text-xs text-muted-foreground">Nincs függőben lévő igény ezen a napon.</p>
+              <p className="text-xs text-muted-foreground">{t('leave_calendar.no_pending_today')}</p>
             ) : (
               <div className="space-y-1.5 max-h-64 overflow-y-auto">
                 {dayPending.map(l => {
@@ -457,7 +466,7 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
                           size="icon"
                           className="h-6 w-6 flex-shrink-0"
                           onClick={(e) => { e.stopPropagation(); onNavigateTab('requests'); }}
-                          title="Ugrás a kérelmekhez"
+                          title={t('leave_calendar.go_to_requests_title')}
                         >
                           <ArrowUpRight className="h-3.5 w-3.5" />
                         </Button>
@@ -478,12 +487,12 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
         <CardHeader className="pb-2 px-3 pt-3">
           <CardTitle className="text-xs font-semibold flex items-center gap-1.5 text-primary">
             <Users className="h-3.5 w-3.5" />
-            Igények — {format(currentMonth, 'MMMM', { locale: hu })}
+            {t('leave_calendar.panel_requests_month', { month: format(currentMonth, 'MMMM', { locale: hu }) })}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-3 pb-3">
           {monthPendingByDay.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Nincs függőben lévő igény ebben a hónapban.</p>
+            <p className="text-xs text-muted-foreground">{t('leave_calendar.no_pending_month')}</p>
           ) : (
             <div className="space-y-1 max-h-64 overflow-y-auto">
               {monthPendingByDay.map(({ date, count }) => (
@@ -525,7 +534,7 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
         {selectedDay && (
           <Button variant="outline" size="sm" className="text-xs ml-auto" onClick={() => setSelectedDay(null)}>
             <X className="h-3 w-3 mr-1" />
-            Kijelölés törlése
+            {t('leave_calendar.clear_selection')}
           </Button>
         )}
       </div>
@@ -606,7 +615,7 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
                               <div
                                 key={i}
                                 className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full ${statusStyle?.dot || 'bg-muted-foreground'}`}
-                                title={`${l.display_name} - ${LEAVE_TYPE_COLORS[l.leave_type]?.label || l.leave_type} (${statusStyle?.label || l.status})`}
+                                title={`${l.display_name} - ${LEAVE_TYPE_COLORS[l.leave_type]?.label || l.leave_type} (${STATUS_CONFIG[l.status]?.label || statusStyle?.label || l.status})`}
                               />
                             );
                           })}
@@ -634,24 +643,24 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
             <Card>
               <CardContent className="py-2.5 px-4">
                 <div className="flex flex-wrap gap-x-4 gap-y-1.5 text-[11px]">
-                  <span className="font-semibold text-muted-foreground">Jelmagyarázat:</span>
+                  <span className="font-semibold text-muted-foreground">{t('leave_calendar.legend_label')}</span>
                   {Object.entries(STATUS_STYLES).map(([key, style]) => (
                     <span key={key} className="inline-flex items-center gap-1">
                       <span className={`h-2 w-2 rounded-full ${style.dot}`} />
-                      {style.label}
+                      {STATUS_CONFIG[key]?.label || style.label}
                     </span>
                   ))}
                   <span className="inline-flex items-center gap-1">
                     <span className="h-2 w-4 rounded bg-sky-200 dark:bg-sky-800 border border-sky-300 dark:border-sky-700" />
-                    Ünnepnap
+                    {t('leave_calendar.legend_holiday')}
                   </span>
                   <span className="inline-flex items-center gap-1">
                     <span className="h-2 w-4 rounded bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700" />
-                    Zárt nap
+                    {t('leave_calendar.legend_blocked')}
                   </span>
                   <span className="inline-flex items-center gap-1">
                     <span className="h-2 w-4 rounded bg-muted/60 border border-border" />
-                    Hétvége
+                    {t('leave_calendar.legend_weekend')}
                   </span>
                 </div>
               </CardContent>

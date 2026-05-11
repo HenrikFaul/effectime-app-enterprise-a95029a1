@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useI18n } from '@/i18n/I18nProvider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -18,6 +19,7 @@ interface Branding {
 }
 
 export function BrandingManager({ workspaceId }: Props) {
+  const { t } = useI18n();
   const [b, setB] = useState<Branding | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -40,7 +42,7 @@ export function BrandingManager({ workspaceId }: Props) {
     const ext = file.name.split('.').pop() || 'png';
     const path = `${workspaceId}/${kind}-${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from('workspace-branding').upload(path, file, { upsert: true });
-    if (error) { toast.error('Feltöltési hiba'); return; }
+    if (error) { toast.error(t('branding.upload_error')); return; }
     const { data } = supabase.storage.from('workspace-branding').getPublicUrl(path);
     const url = data.publicUrl;
     if (b) {
@@ -50,7 +52,7 @@ export function BrandingManager({ workspaceId }: Props) {
         { favicon_url: url };
       await (supabase as any).from('enterprise_workspaces').update(updates).eq('id', workspaceId);
       setB({ ...b, ...updates });
-      toast.success('Feltöltve');
+      toast.success(t('branding.upload_success'));
     }
   };
 
@@ -68,7 +70,7 @@ export function BrandingManager({ workspaceId }: Props) {
     if (!b) return;
     setSaving(true);
     const { error } = await (supabase as any).from('enterprise_workspaces').update({ brand_color: b.brand_color, white_label: b.white_label }).eq('id', workspaceId);
-    if (error) toast.error('Mentési hiba'); else toast.success('Brand mentve');
+    if (error) toast.error(t('branding.save_error')); else toast.success(t('branding.save_success'));
     setSaving(false);
   };
 
@@ -84,7 +86,7 @@ export function BrandingManager({ workspaceId }: Props) {
             <Trash2 className="h-3 w-3 text-destructive" />
           </Button>
         </div>
-      ) : <p className="text-[10px] text-muted-foreground">Nincs feltöltve</p>}
+      ) : <p className="text-[10px] text-muted-foreground">{t('branding.not_uploaded')}</p>}
       <input
         ref={refEl}
         type="file"
@@ -93,7 +95,7 @@ export function BrandingManager({ workspaceId }: Props) {
         onChange={e => { const f = e.target.files?.[0]; if (f) upload(f, kind); }}
       />
       <Button variant="outline" size="sm" className="w-full text-xs" onClick={() => refEl.current?.click()}>
-        <Upload className="h-3 w-3 mr-1" /> Feltöltés
+        <Upload className="h-3 w-3 mr-1" /> {t('branding.btn_upload')}
       </Button>
     </div>
   );
@@ -101,13 +103,13 @@ export function BrandingManager({ workspaceId }: Props) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <LogoSlot label="Logó (világos téma)" url={b.brand_logo_light_url} kind="light" refEl={lightRef} />
-        <LogoSlot label="Logó (sötét téma)" url={b.brand_logo_dark_url} kind="dark" refEl={darkRef} />
-        <LogoSlot label="Favicon" url={b.favicon_url} kind="favicon" refEl={favRef} />
+        <LogoSlot label={t('branding.logo_light')} url={b.brand_logo_light_url} kind="light" refEl={lightRef} />
+        <LogoSlot label={t('branding.logo_dark')} url={b.brand_logo_dark_url} kind="dark" refEl={darkRef} />
+        <LogoSlot label={t('branding.favicon_label')} url={b.favicon_url} kind="favicon" refEl={favRef} />
       </div>
 
       <div>
-        <Label className="text-xs">Brand szín (accent)</Label>
+        <Label className="text-xs">{t('branding.color_label')}</Label>
         <div className="flex items-center gap-2 mt-1">
           <input type="color" value={b.brand_color || '#3b82f6'} onChange={e => setB({ ...b, brand_color: e.target.value })} className="h-9 w-12 rounded border cursor-pointer" />
           <Input value={b.brand_color || ''} onChange={e => setB({ ...b, brand_color: e.target.value })} placeholder="#3b82f6" className="w-32 text-xs" />
@@ -116,14 +118,14 @@ export function BrandingManager({ workspaceId }: Props) {
 
       <div className="flex items-start justify-between rounded-md border p-3 gap-3">
         <div className="flex-1">
-          <Label className="text-sm cursor-pointer">White-label mód</Label>
-          <p className="text-[11px] text-muted-foreground mt-0.5">Eltávolítja a SyncFolk brandinget az e-mailekből és iCal feedekből.</p>
+          <Label className="text-sm cursor-pointer">{t('branding.white_label_mode')}</Label>
+          <p className="text-[11px] text-muted-foreground mt-0.5">{t('branding.white_label_desc')}</p>
         </div>
         <Switch checked={b.white_label} onCheckedChange={v => setB({ ...b, white_label: v })} />
       </div>
 
       <Button onClick={save} disabled={saving}>
-        <Save className="h-3 w-3 mr-1" /> {saving ? 'Mentés...' : 'Brand mentése'}
+        <Save className="h-3 w-3 mr-1" /> {saving ? t('branding.btn_saving') : t('branding.btn_save_brand')}
       </Button>
     </div>
   );

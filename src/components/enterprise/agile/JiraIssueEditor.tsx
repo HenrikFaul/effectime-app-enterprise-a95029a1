@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { useI18n } from '@/i18n/I18nProvider';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
@@ -79,6 +80,7 @@ interface Props {
 const PRIORITIES = ['Highest', 'High', 'Medium', 'Low', 'Lowest'];
 
 export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onSaved }: Props) {
+  const { t } = useI18n();
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -107,7 +109,7 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
       });
       if (error) throw error;
       const payload = data as { ok?: boolean; error?: string; issue?: IssueDetail; transitions?: Transition[] };
-      if (!payload?.ok) throw new Error(payload?.error ?? 'Hibás válasz');
+      if (!payload?.ok) throw new Error(payload?.error ?? t('jira_editor.bad_response'));
       const det = payload.issue!;
       setIssue(det);
       setTransitions(payload.transitions ?? []);
@@ -122,7 +124,7 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       setLoadError(msg);
-      toast.error('Ticket betöltés sikertelen: ' + msg);
+      toast.error(t('jira_editor.toast_load_error', { msg }));
     } finally {
       setLoading(false);
     }
@@ -142,7 +144,7 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
   // Search assignable users (debounced)
   useEffect(() => {
     if (!open || !issueKey) return;
-    const t = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       const { data } = await supabase.functions.invoke('jira-devops-proxy', {
         body: {
           action: 'search_assignable_users',
@@ -153,7 +155,7 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
       const payload = data as { ok?: boolean; users?: AssignableUser[] };
       setUsers(payload?.users ?? []);
     }, 300);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [open, issueKey, integration.id, userQuery]);
 
   const handleSave = async () => {
@@ -180,7 +182,7 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
       // No-op short-circuit
       const editableKeys = Object.keys(params).filter((k) => k !== 'key');
       if (editableKeys.length === 0) {
-        toast.message('Nincs módosítás.');
+        toast.message(t('jira_editor.toast_no_changes'));
         setSaving(false);
         return;
       }
@@ -190,14 +192,14 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
       });
       if (error) throw error;
       const payload = data as { ok?: boolean; error?: string };
-      if (!payload?.ok) throw new Error(payload?.error ?? 'Hibás válasz');
-      toast.success(`${issueKey} frissítve a Jira-ban`);
+      if (!payload?.ok) throw new Error(payload?.error ?? t('jira_editor.bad_response'));
+      toast.success(t('jira_editor.toast_saved', { key: issueKey }));
       onSaved?.();
       // Reload to show the post-save state (especially status after transition)
       await load();
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      toast.error('Mentés sikertelen: ' + msg);
+      toast.error(t('jira_editor.toast_save_error', { msg }));
     } finally {
       setSaving(false);
     }
@@ -218,42 +220,42 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
                 rel="noreferrer"
                 className="text-xs text-primary hover:underline inline-flex items-center gap-1 ml-auto"
               >
-                <ExternalLink className="h-3 w-3" /> Megnyitás Jira-ban
+                <ExternalLink className="h-3 w-3" /> {t('jira_editor.open_in_jira')}
               </a>
             )}
           </DialogTitle>
         </DialogHeader>
         <p id="issue-editor-desc" className="sr-only">
-          Jira ticket szerkesztése. Mentés után az adatok a Jira-ban is frissülnek.
+          {t('jira_editor.sr_desc')}
         </p>
 
         {loading && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-6 w-6 animate-spin text-primary" />
-            <span className="ml-2 text-sm text-muted-foreground">Ticket betöltése…</span>
+            <span className="ml-2 text-sm text-muted-foreground">{t('jira_editor.loading')}</span>
           </div>
         )}
 
         {!loading && loadError && (
           <div className="py-10 text-center space-y-3">
-            <p className="text-sm text-destructive font-medium">Nem sikerült betölteni a ticketet.</p>
+            <p className="text-sm text-destructive font-medium">{t('jira_editor.load_failed')}</p>
             <p className="text-xs text-muted-foreground max-w-sm mx-auto break-words">{loadError}</p>
             <Button variant="outline" size="sm" onClick={load} className="gap-1">
-              <RefreshCw className="h-3 w-3" /> Újrapróbál
+              <RefreshCw className="h-3 w-3" /> {t('jira_editor.btn_retry')}
             </Button>
           </div>
         )}
 
         {!loading && !loadError && !issue && issueKey && (
           <div className="py-10 text-center text-muted-foreground text-sm">
-            Nincs adat — a ticket nem található vagy üres a válasz.
+            {t('jira_editor.no_data')}
           </div>
         )}
 
         {!loading && issue && (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="ji-summary">Cím</Label>
+              <Label htmlFor="ji-summary">{t('jira_editor.label_summary')}</Label>
               <Input
                 id="ji-summary"
                 value={summary}
@@ -263,23 +265,23 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
             </div>
 
             <div>
-              <Label htmlFor="ji-desc">Leírás</Label>
+              <Label htmlFor="ji-desc">{t('jira_editor.label_description')}</Label>
               <Textarea
                 id="ji-desc"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={6}
                 className="text-sm font-mono"
-                placeholder="Részletes leírás..."
+                placeholder={t('jira_editor.placeholder_desc')}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Prioritás</Label>
+                <Label>{t('jira_editor.label_priority')}</Label>
                 <Select value={priority} onValueChange={setPriority}>
                   <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder="Válassz prioritást" />
+                    <SelectValue placeholder={t('jira_editor.placeholder_priority')} />
                   </SelectTrigger>
                   <SelectContent>
                     {PRIORITIES.map((p) => (
@@ -290,7 +292,7 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
               </div>
 
               <div>
-                <Label htmlFor="ji-due">Határidő (YYYY-MM-DD)</Label>
+                <Label htmlFor="ji-due">{t('jira_editor.label_due')}</Label>
                 <Input
                   id="ji-due"
                   type="date"
@@ -301,7 +303,7 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
               </div>
 
               <div>
-                <Label htmlFor="ji-sp">Story Points</Label>
+                <Label htmlFor="ji-sp">{t('jira_editor.label_story_points')}</Label>
                 <Input
                   id="ji-sp"
                   type="number"
@@ -313,7 +315,7 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
               </div>
 
               <div>
-                <Label htmlFor="ji-labels">Címkék (vesszővel)</Label>
+                <Label htmlFor="ji-labels">{t('jira_editor.label_labels')}</Label>
                 <Input
                   id="ji-labels"
                   value={labelsStr}
@@ -325,9 +327,9 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
             </div>
 
             <div>
-              <Label>Felelős</Label>
+              <Label>{t('jira_editor.label_assignee')}</Label>
               <Input
-                placeholder="Keresés név vagy email alapján..."
+                placeholder={t('jira_editor.placeholder_search_user')}
                 value={userQuery}
                 onChange={(e) => setUserQuery(e.target.value)}
                 className="h-8 text-sm mb-1"
@@ -337,10 +339,10 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
                 onValueChange={(v) => setAssigneeAccountId(v === '__none__' ? '' : v)}
               >
                 <SelectTrigger className="h-8 text-sm">
-                  <SelectValue placeholder={issue.assignee_name ?? 'Nincs hozzárendelve'} />
+                  <SelectValue placeholder={issue.assignee_name ?? t('jira_editor.placeholder_assignee')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="__none__">— Hozzárendelés törlése —</SelectItem>
+                  <SelectItem value="__none__">{t('jira_editor.opt_unassign')}</SelectItem>
                   {users.map((u) => (
                     <SelectItem key={u.account_id} value={u.account_id}>
                       {u.display_name} {u.email ? `(${u.email})` : ''}
@@ -352,16 +354,16 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
 
             {transitions.length > 0 && (
               <div>
-                <Label>Státusz váltás</Label>
+                <Label>{t('jira_editor.label_status')}</Label>
                 <Select
                   value={transitionId || '__keep__'}
                   onValueChange={(v) => setTransitionId(v === '__keep__' ? '' : v)}
                 >
                   <SelectTrigger className="h-8 text-sm">
-                    <SelectValue placeholder="Tartja a jelenlegit" />
+                    <SelectValue placeholder={t('jira_editor.placeholder_keep_status')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__keep__">Tartja: {issue.status ?? '—'}</SelectItem>
+                    <SelectItem value="__keep__">{t('jira_editor.keep_status', { status: issue.status ?? '—' })}</SelectItem>
                     {transitions.map((t) => (
                       <SelectItem key={t.id} value={t.id}>
                         → {t.to_status ?? t.name} ({t.name})
@@ -374,27 +376,27 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
 
             <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground border-t pt-3">
               <div>
-                <div className="font-medium text-foreground/70">Bejelentő</div>
+                <div className="font-medium text-foreground/70">{t('jira_editor.meta_reporter')}</div>
                 {issue.reporter_name ?? issue.reporter_email ?? '—'}
               </div>
               <div>
-                <div className="font-medium text-foreground/70">Sprint</div>
+                <div className="font-medium text-foreground/70">{t('jira_editor.meta_sprint')}</div>
                 {issue.sprint_name ?? '—'}
               </div>
               <div>
-                <div className="font-medium text-foreground/70">Szülő ticket</div>
+                <div className="font-medium text-foreground/70">{t('jira_editor.meta_parent')}</div>
                 {issue.parent_key ?? '—'}
               </div>
               <div>
-                <div className="font-medium text-foreground/70">Komponensek</div>
+                <div className="font-medium text-foreground/70">{t('jira_editor.meta_components')}</div>
                 {issue.components?.length ? issue.components.join(', ') : '—'}
               </div>
               <div>
-                <div className="font-medium text-foreground/70">Létrehozva</div>
+                <div className="font-medium text-foreground/70">{t('jira_editor.meta_created')}</div>
                 {issue.created ? new Date(issue.created).toLocaleString('hu-HU') : '—'}
               </div>
               <div>
-                <div className="font-medium text-foreground/70">Utolsó módosítás</div>
+                <div className="font-medium text-foreground/70">{t('jira_editor.meta_updated')}</div>
                 {issue.updated ? new Date(issue.updated).toLocaleString('hu-HU') : '—'}
               </div>
             </div>
@@ -403,14 +405,14 @@ export function JiraIssueEditor({ open, onOpenChange, integration, issueKey, onS
 
         <DialogFooter className="gap-2">
           <Button variant="outline" onClick={load} disabled={loading || saving} className="gap-1">
-            <RefreshCw className="h-3.5 w-3.5" /> Újratöltés
+            <RefreshCw className="h-3.5 w-3.5" /> {t('jira_editor.btn_reload')}
           </Button>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-            Bezárás
+            {t('jira_editor.btn_close')}
           </Button>
           <Button onClick={handleSave} disabled={loading || saving || !issue} className="gap-1">
             {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-            Mentés a Jira-ba
+            {t('jira_editor.btn_save')}
           </Button>
         </DialogFooter>
       </DialogContent>

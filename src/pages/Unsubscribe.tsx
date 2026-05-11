@@ -3,8 +3,10 @@ import { useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useI18n } from '@/i18n/I18nProvider';
 
 export default function Unsubscribe() {
+  const { t } = useI18n();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
   const [status, setStatus] = useState<'loading' | 'valid' | 'already' | 'invalid' | 'done' | 'error'>('loading');
@@ -39,20 +41,20 @@ export default function Unsubscribe() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="max-w-md w-full">
         <CardContent className="py-8 text-center space-y-4">
-          {status === 'loading' && <p className="text-muted-foreground">Betöltés...</p>}
+          {status === 'loading' && <p className="text-muted-foreground">{t('unsubscribe.loading')}</p>}
           {status === 'valid' && (
             <>
-              <h2 className="text-xl font-bold">Leiratkozás</h2>
-              <p className="text-muted-foreground text-sm">Biztosan le szeretnél iratkozni az email értesítésekről?</p>
+              <h2 className="text-xl font-bold">{t('unsubscribe.page_title')}</h2>
+              <p className="text-muted-foreground text-sm">{t('unsubscribe.confirm_description')}</p>
               <Button onClick={handleUnsubscribe} disabled={processing}>
-                {processing ? 'Feldolgozás...' : 'Leiratkozás megerősítése'}
+                {processing ? t('unsubscribe.processing') : t('unsubscribe.confirm_btn')}
               </Button>
             </>
           )}
-          {status === 'done' && <p className="text-primary font-medium">Sikeresen leiratkoztál. ✅</p>}
-          {status === 'already' && <p className="text-muted-foreground">Már korábban leiratkoztál.</p>}
-          {status === 'invalid' && <p className="text-destructive">Érvénytelen vagy lejárt token.</p>}
-          {status === 'error' && <p className="text-destructive">Hiba történt. Kérjük próbáld újra később.</p>}
+          {status === 'done' && <p className="text-primary font-medium">{t('unsubscribe.done')}</p>}
+          {status === 'already' && <p className="text-muted-foreground">{t('unsubscribe.already')}</p>}
+          {status === 'invalid' && <p className="text-destructive">{t('unsubscribe.invalid')}</p>}
+          {status === 'error' && <p className="text-destructive">{t('unsubscribe.error')}</p>}
         </CardContent>
       </Card>
     </div>

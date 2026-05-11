@@ -17,6 +17,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { useI18n } from '@/i18n/I18nProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -135,6 +136,7 @@ export function OrgChartPremiumView({
   containerHeight = '520px',
   onOpenMemberProfile,
 }: ViewProps) {
+  const { t } = useI18n();
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [drawer, setDrawer] = useState<DrawerPayload | null>(null);
   const [orgUnits, setOrgUnits] = useState<OrgUnitMap>({});
@@ -324,7 +326,7 @@ export function OrgChartPremiumView({
             className="h-7 w-7 rounded-lg flex items-center justify-center
                        text-muted-foreground hover:text-foreground hover:bg-accent
                        disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            title="Kicsinyítés (−)"
+            title={t('org_chart.zoom_out')}
           >
             <Minus className="h-3.5 w-3.5" />
           </button>
@@ -335,7 +337,7 @@ export function OrgChartPremiumView({
             className="h-7 min-w-[52px] rounded-lg px-2 text-[11px] font-semibold
                        text-muted-foreground hover:text-foreground hover:bg-accent
                        transition-colors tabular-nums"
-            title="Visszaállítás 100%-ra"
+            title={t('org_chart.reset_zoom')}
           >
             {Math.round(scale * 100)}%
           </button>
@@ -347,7 +349,7 @@ export function OrgChartPremiumView({
             className="h-7 w-7 rounded-lg flex items-center justify-center
                        text-muted-foreground hover:text-foreground hover:bg-accent
                        disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-            title="Nagyítás (+)"
+            title={t('org_chart.zoom_in')}
           >
             <Plus className="h-3.5 w-3.5" />
           </button>
@@ -360,7 +362,7 @@ export function OrgChartPremiumView({
             className="h-7 w-7 rounded-lg flex items-center justify-center
                        text-muted-foreground hover:text-foreground hover:bg-accent
                        transition-colors"
-            title="Nézet visszaállítása"
+            title={t('org_chart.reset_view')}
           >
             <RotateCcw className="h-3 w-3" />
           </button>
@@ -369,7 +371,7 @@ export function OrgChartPremiumView({
         {/* ── Hint label (fades after first interaction) ── */}
         <div className="absolute top-3 left-1/2 -translate-x-1/2 z-10 pointer-events-none">
           <span className="text-[10px] text-muted-foreground/40 select-none">
-            Húzd a diagramot • görgővel nagyíts
+            {t('org_chart.drag_hint')}
           </span>
         </div>
       </div>
@@ -515,6 +517,7 @@ function PremiumCard({
   onToggle,
   onSelect,
 }: CardProps) {
+  const { t } = useI18n();
   const [c1, c2] = paletteFor(node.user_id);
   const init = initials(node.display_name);
 
@@ -536,7 +539,7 @@ function PremiumCard({
       tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && onSelect()}
       aria-pressed={isSelected}
-      aria-label={`${node.display_name} megnyitása`}
+      aria-label={t('org_chart.open_node', { name: node.display_name })}
     >
       {/* coloured accent bar */}
       <div
@@ -611,7 +614,7 @@ function PremiumCard({
             onClick={(e) => { e.stopPropagation(); onToggle(); }}
             className="flex-shrink-0 rounded-full p-0.5 transition-colors hover:bg-accent"
             style={{ color: 'hsl(var(--muted-foreground))' }}
-            aria-label={isCollapsed ? 'Kibontás' : 'Összecsukás'}
+            aria-label={isCollapsed ? t('org_chart.expand') : t('org_chart.collapse')}
           >
             {isCollapsed ? (
               <ChevronDown className="h-3.5 w-3.5" />
@@ -667,6 +670,7 @@ function DrawerHeader({
   onClose: () => void;
   onOpenMemberProfile?: () => void;
 }) {
+  const { t } = useI18n();
   const [c1, c2] = paletteFor(node.user_id);
   const init = initials(node.display_name);
 
@@ -720,7 +724,7 @@ function DrawerHeader({
             onClick={onOpenMemberProfile}
           >
             <IdCard className="h-3.5 w-3.5" />
-            Adatlap megnyitása
+            {t('org_chart.open_profile')}
           </Button>
         </div>
       )}
@@ -737,6 +741,7 @@ function DrawerBody({
   allNodes: PremiumNode[];
   onSwitchTo: (node: PremiumNode) => void;
 }) {
+  const { t } = useI18n();
   const { node, managerName, orgUnitName, skillCount } = data;
   const managerNode = node.manager_id ? allNodes.find((n) => n.id === node.manager_id) ?? null : null;
 
@@ -745,25 +750,25 @@ function DrawerBody({
       {/* basic info section */}
       <section className="space-y-2.5">
         {orgUnitName && (
-          <DrawerField icon={<Building2 className="h-3.5 w-3.5" />} label="Szervezeti egység" value={orgUnitName} />
+          <DrawerField icon={<Building2 className="h-3.5 w-3.5" />} label={t('org_chart.label_org_unit')} value={orgUnitName} />
         )}
         {node.team && (
-          <DrawerField icon={<Users className="h-3.5 w-3.5" />} label="Csapat" value={node.team} />
+          <DrawerField icon={<Users className="h-3.5 w-3.5" />} label={t('org_chart.label_team')} value={node.team} />
         )}
         {node.role && (
-          <DrawerField icon={<Briefcase className="h-3.5 w-3.5" />} label="Szerepkör" value={node.role} />
+          <DrawerField icon={<Briefcase className="h-3.5 w-3.5" />} label={t('org_chart.label_role')} value={node.role} />
         )}
         {managerNode ? (
           <DrawerLinkRow
             icon={<Star className="h-3.5 w-3.5" />}
-            label="Vezető"
+            label={t('org_chart.label_manager')}
             node={managerNode}
             onClick={() => onSwitchTo(managerNode)}
           />
         ) : (
           <DrawerField
             icon={<Star className="h-3.5 w-3.5" />}
-            label="Vezető"
+            label={t('org_chart.label_manager')}
             value={managerName ?? '—'}
           />
         )}
@@ -775,11 +780,13 @@ function DrawerBody({
       <section className="space-y-2.5">
         <DrawerField
           icon={<Users className="h-3.5 w-3.5" />}
-          label="Közvetlen beosztottak"
+          label={t('org_chart.label_direct_reports')}
           value={
             node.children.length > 0
-              ? `${node.children.length} közvetlen${node.reportsCount > node.children.length ? ` (összesen ${node.reportsCount})` : ''}`
-              : 'Nincs'
+              ? node.reportsCount > node.children.length
+                ? t('org_chart.direct_count_total', { count: node.children.length, total: node.reportsCount })
+                : t('org_chart.direct_count', { count: node.children.length })
+              : t('org_chart.label_none')
           }
         />
       </section>
@@ -796,7 +803,7 @@ function DrawerBody({
           ))}
           {node.children.length > 6 && (
             <p className="text-[10px] text-center py-1" style={{ color: 'hsl(var(--muted-foreground))' }}>
-              + {node.children.length - 6} további
+              {t('org_chart.more_nodes', { count: node.children.length - 6 })}
             </p>
           )}
         </div>
@@ -809,21 +816,21 @@ function DrawerBody({
         {(node.city || node.location) && (
           <DrawerField
             icon={<MapPin className="h-3.5 w-3.5" />}
-            label="Helyszín"
+            label={t('org_chart.label_location')}
             value={node.city || node.location || '—'}
           />
         )}
         {skillCount > 0 && (
           <DrawerField
             icon={<Star className="h-3.5 w-3.5" />}
-            label="Készségek"
-            value={`${skillCount} bejegyzett készség`}
+            label={t('org_chart.label_skills')}
+            value={t('org_chart.skills_count', { count: skillCount })}
           />
         )}
         {node.joined_at && (
           <DrawerField
             icon={<CalendarDays className="h-3.5 w-3.5" />}
-            label="Csatlakozott"
+            label={t('org_chart.label_joined')}
             value={new Date(node.joined_at).toLocaleDateString('hu-HU', {
               year: 'numeric',
               month: 'long',
@@ -861,6 +868,7 @@ function DrawerField({
 }
 
 function MiniPersonRow({ node, onClick }: { node: PremiumNode; onClick?: () => void }) {
+  const { t } = useI18n();
   const [c1, c2] = paletteFor(node.user_id);
   const init = initials(node.display_name);
   const interactive = typeof onClick === 'function';
@@ -877,7 +885,7 @@ function MiniPersonRow({ node, onClick }: { node: PremiumNode; onClick?: () => v
           : '',
       ].join(' ')}
       style={{ background: 'hsl(var(--muted) / 0.4)' }}
-      aria-label={interactive ? `${node.display_name} kiválasztása` : undefined}
+      aria-label={interactive ? t('org_chart.select_node', { name: node.display_name }) : undefined}
     >
       {node.avatar_url ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -921,6 +929,7 @@ function DrawerLinkRow({
   node: PremiumNode;
   onClick: () => void;
 }) {
+  const { t } = useI18n();
   const [c1, c2] = paletteFor(node.user_id);
   const init = initials(node.display_name);
   return (
@@ -929,7 +938,7 @@ function DrawerLinkRow({
       onClick={onClick}
       onMouseDown={(e) => e.stopPropagation()}
       className="flex w-full items-start gap-2.5 rounded-md text-left transition-colors hover:bg-accent/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 px-1 py-1 -mx-1"
-      aria-label={`${node.display_name} kiválasztása`}
+      aria-label={t('org_chart.select_node', { name: node.display_name })}
     >
       <span className="flex-shrink-0 mt-0.5" style={{ color: 'hsl(var(--muted-foreground))' }}>
         {icon}

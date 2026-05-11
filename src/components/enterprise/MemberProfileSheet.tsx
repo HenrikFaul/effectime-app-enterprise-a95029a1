@@ -63,6 +63,7 @@ interface PeerAllocation {
 }
 
 export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, allMembers, isAdmin = false, onMemberUpdated, showEmail = false, onNavigateTab }: Props) {
+  const t = useT();
   const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -110,7 +111,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
         .map(p => {
           const peerMember = allMembers.find(m => m.id === p.membership_id);
           return peerMember
-            ? { display_name: peerMember.display_name || 'Ismeretlen', percentage: Number(p.percentage), user_id: peerMember.user_id }
+            ? { display_name: peerMember.display_name || t('member_profile.unknown'), percentage: Number(p.percentage), user_id: peerMember.user_id }
             : null;
         })
         .filter((x): x is { display_name: string; percentage: number; user_id: string } => x !== null)
@@ -232,7 +233,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
       .eq('id', member.id);
 
     if (error) {
-      toast.error('Hiba a mentéskor');
+      toast.error(t('member_profile.save_error'));
       return;
     }
 
@@ -242,7 +243,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
         .upsert({ user_id: member.user_id, display_name: normalizedDisplayName }, { onConflict: 'user_id' });
 
       if (profileError) {
-        toast.error('A név mentése nem sikerült. A többi tagadat mentve lett.');
+        toast.error(t('member_profile.save_name_error'));
       }
     }
 
@@ -258,12 +259,12 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
       const { error: allocErr } = await (supabase as any).from('enterprise_member_role_allocations').insert(rows);
       if (allocErr) {
         console.error('Allocation save error:', allocErr);
-        toast.error('Munkakör-megosztás mentési hiba');
+        toast.error(t('member_profile.save_role_error'));
         return;
       }
     }
 
-    toast.success('Tag adatai frissítve');
+    toast.success(t('member_profile.save_success'));
     setEditing(false);
     onMemberUpdated?.();
   };
@@ -272,18 +273,18 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
 
   const getRoleLabel = (role: string) => {
     switch (role) {
-      case 'owner': return 'Tulajdonos';
-      case 'resourceAssistant': return 'Erőforrás asszisztens';
-      default: return 'Tag';
+      case 'owner': return t('members.roles.owner');
+      case 'resourceAssistant': return t('members.roles.resource_assistant');
+      default: return t('members.roles.member');
     }
   };
 
   const getLeaveTypeLabel = (type: string) => {
     switch (type) {
-      case 'vacation': return 'Szabadság';
-      case 'sick_leave': return 'Betegszabadság';
-      case 'unpaid_leave': return 'Fizetés nélküli';
-      default: return 'Egyéb';
+      case 'vacation': return t('leave_request.type_vacation');
+      case 'sick_leave': return t('leave_request.type_sick_leave');
+      case 'unpaid_leave': return t('leave_request.type_unpaid_leave');
+      default: return t('leave_request.type_other');
     }
   };
 
@@ -307,7 +308,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
               <User className="h-5 w-5 text-primary" />
             </div>
             <div className="flex-1">
-              <p className="text-base font-semibold">{member.display_name || 'Ismeretlen'}</p>
+              <p className="text-base font-semibold">{member.display_name || t('member_profile.unknown')}</p>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 <Badge variant="outline" className="text-[10px]">{getRoleLabel(member.role)}</Badge>
                 {priorityRole && (
@@ -319,7 +320,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
             </div>
             {isAdmin && !editing && (
               <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
-                <Edit2 className="h-3.5 w-3.5 mr-1" /> Szerkesztés
+                <Edit2 className="h-3.5 w-3.5 mr-1" /> {t('member_profile.edit_btn')}
               </Button>
             )}
           </SheetTitle>
@@ -329,7 +330,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
         <div className="px-6 pt-3 pb-2 border-b">
           <div
             role="tablist"
-            aria-label="Adatlap nézet"
+            aria-label={t('member_profile.tab_list_label')}
             className="inline-flex items-center gap-1 rounded-lg border bg-muted/40 p-0.5"
           >
             <button
@@ -344,7 +345,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <FileText className="h-3.5 w-3.5" /> Alapadatok
+              <FileText className="h-3.5 w-3.5" /> {t('member_profile.tab_basic')}
             </button>
             <button
               role="tab"
@@ -358,7 +359,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
-              <LayoutGrid className="h-3.5 w-3.5" /> Bővebb adatok
+              <LayoutGrid className="h-3.5 w-3.5" /> {t('member_profile.tab_extended')}
             </button>
           </div>
         </div>
@@ -369,17 +370,17 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
             {/* Basic Info / Edit */}
             <Card>
               <CardHeader className="py-3 px-4">
-                <CardTitle className="text-sm flex items-center gap-2"><Briefcase className="h-4 w-4" /> Alapadatok</CardTitle>
+                <CardTitle className="text-sm flex items-center gap-2"><Briefcase className="h-4 w-4" /> {t('member_profile.basic_card_title')}</CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-3 space-y-2 text-sm">
                 {editing ? (
                   <div className="space-y-3">
                     <div>
-                      <Label className="text-xs">Név</Label>
-                      <Input value={editForm.display_name} onChange={e => setEditForm(f => ({ ...f, display_name: e.target.value }))} placeholder="Tag neve" className="h-8 text-sm" />
+                      <Label className="text-xs">{t('common.name')}</Label>
+                      <Input value={editForm.display_name} onChange={e => setEditForm(f => ({ ...f, display_name: e.target.value }))} placeholder={t('member_profile.name_placeholder')} className="h-8 text-sm" />
                     </div>
                     <div>
-                      <Label className="text-xs">Munkakör(ök) és megosztás</Label>
+                      <Label className="text-xs">{t('member_profile.roles_label')}</Label>
                       <div className="mt-1.5">
                         <RoleAllocationEditor
                           allocations={allocations}
@@ -389,16 +390,16 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
                       </div>
                     </div>
                     <div>
-                      <Label className="text-xs text-muted-foreground">Csapat (automatikus)</Label>
-                      <p className="text-sm mt-1">{memberTeamNames.length > 0 ? memberTeamNames.join(', ') : <span className="text-muted-foreground italic">Nincs (a pozíciók alapján számolódik)</span>}</p>
+                      <Label className="text-xs text-muted-foreground">{t('member_profile.team_label')}</Label>
+                      <p className="text-sm mt-1">{memberTeamNames.length > 0 ? memberTeamNames.join(', ') : <span className="text-muted-foreground italic">{t('member_profile.team_auto_desc')}</span>}</p>
                     </div>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <Label className="text-xs">Iroda</Label>
+                        <Label className="text-xs">{t('member_profile.office_label')}</Label>
                         <Select value={editForm.office_id || '__none__'} onValueChange={v => setEditForm(f => ({ ...f, office_id: v === '__none__' ? '' : v }))}>
-                          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Válassz..." /></SelectTrigger>
+                          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder={t('member_profile.office_placeholder')} /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="__none__">Nincs megadva</SelectItem>
+                            <SelectItem value="__none__">{t('member_profile.office_none')}</SelectItem>
                             {offices.map(o => (
                               <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
                             ))}
@@ -406,16 +407,16 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
                         </Select>
                       </div>
                       <div>
-                        <Label className="text-xs">Város</Label>
-                        <Input value={editForm.city} onChange={e => setEditForm(f => ({ ...f, city: e.target.value }))} placeholder="Budapest" className="h-8 text-sm" />
+                        <Label className="text-xs">{t('member_profile.city_label')}</Label>
+                        <Input value={editForm.city} onChange={e => setEditForm(f => ({ ...f, city: e.target.value }))} placeholder={t('member_profile.city_placeholder')} className="h-8 text-sm" />
                       </div>
                     </div>
                     <div>
-                      <Label className="text-xs">Helyszín megjegyzés</Label>
-                      <Input value={editForm.location} onChange={e => setEditForm(f => ({ ...f, location: e.target.value }))} placeholder="Remote / Hybrid" className="h-8 text-sm" />
+                      <Label className="text-xs">{t('member_profile.location_note_label')}</Label>
+                      <Input value={editForm.location} onChange={e => setEditForm(f => ({ ...f, location: e.target.value }))} placeholder={t('member_profile.location_note_placeholder')} className="h-8 text-sm" />
                     </div>
                     <div>
-                      <Label className="text-xs">Napi alap munkaóra</Label>
+                      <Label className="text-xs">{t('member_profile.base_hours_label')}</Label>
                       <div className="flex items-center gap-2 mt-1">
                         <Input
                           type="number"
@@ -426,18 +427,18 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
                           onChange={e => setEditForm(f => ({ ...f, base_working_hours: Math.max(0, Math.min(24, Number(e.target.value) || 0)) }))}
                           className="h-8 text-sm w-24"
                         />
-                        <span className="text-xs text-muted-foreground">óra/nap (pl. 8 = teljes munkaidő, 4 = félnapos)</span>
+                        <span className="text-xs text-muted-foreground">{t('member_profile.base_hours_helper')}</span>
                       </div>
                     </div>
                     <div className="flex gap-2 justify-end pt-1">
-                      <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>Mégse</Button>
-                      <Button size="sm" onClick={handleSave}><Save className="h-3.5 w-3.5 mr-1" /> Mentés</Button>
+                      <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>{t('common.cancel')}</Button>
+                      <Button size="sm" onClick={handleSave}><Save className="h-3.5 w-3.5 mr-1" /> {t('common.save')}</Button>
                     </div>
                   </div>
                 ) : (
                   <>
                     <div className="flex justify-between items-start gap-2">
-                      <span className="text-muted-foreground shrink-0">Munkakör(ök)</span>
+                      <span className="text-muted-foreground shrink-0">{t('member_profile.display_roles_label')}</span>
                       <span className="text-right flex flex-wrap gap-1 justify-end">
                         {sortedAllocations.length === 0 ? '–' : sortedAllocations.map(a => (
                           <Badge
@@ -451,23 +452,23 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
                         ))}
                       </span>
                     </div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Csapat</span><span>{memberTeamNames.length > 0 ? memberTeamNames.join(', ') : '–'}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Iroda</span>
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t('member_profile.display_team_label')}</span><span>{memberTeamNames.length > 0 ? memberTeamNames.join(', ') : '–'}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t('member_profile.display_office_label')}</span>
                       <span className="flex items-center gap-1">
                         {officeName ? <><Building2 className="h-3 w-3" />{officeName}</> : '–'}
                       </span>
                     </div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Város</span>
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t('member_profile.display_city_label')}</span>
                       <span className="flex items-center gap-1">
                         {(member as any).city ? <><MapPin className="h-3 w-3" />{(member as any).city}</> : '–'}
                       </span>
                     </div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Helyszín</span><span>{member.location || '–'}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">Napi alap munkaóra</span><span className="font-medium">{Number((member as any).base_working_hours ?? 8)} óra</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t('member_profile.display_location_label')}</span><span>{member.location || '–'}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t('member_profile.display_base_hours_label')}</span><span className="font-medium">{Number((member as any).base_working_hours ?? 8)} {t('member_profile.display_hours_unit')}</span></div>
                     {userEmail && (
-                      <div className="flex justify-between"><span className="text-muted-foreground">Email</span><span className="text-sm">{userEmail}</span></div>
+                      <div className="flex justify-between"><span className="text-muted-foreground">{t('member_profile.display_email_label')}</span><span className="text-sm">{userEmail}</span></div>
                     )}
-                    <div className="flex justify-between"><span className="text-muted-foreground">Csatlakozás</span><span>{member.joined_at ? format(new Date(member.joined_at), 'yyyy. MM. dd.') : '–'}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t('member_profile.display_joined_label')}</span><span>{member.joined_at ? format(new Date(member.joined_at), 'yyyy. MM. dd.') : '–'}</span></div>
                   </>
                 )}
               </CardContent>
@@ -485,19 +486,19 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
               <Card>
                 <CardContent className="p-3 text-center">
                   <p className="text-2xl font-bold text-primary">{totalApprovedDays}</p>
-                  <p className="text-[10px] text-muted-foreground">Jóváhagyott nap</p>
+                  <p className="text-[10px] text-muted-foreground">{t('member_profile.kpi_approved')}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-3 text-center">
                   <p className="text-2xl font-bold text-muted-foreground">{pendingLeaves.length}</p>
-                  <p className="text-[10px] text-muted-foreground">Függő kérelem</p>
+                  <p className="text-[10px] text-muted-foreground">{t('member_profile.kpi_pending')}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="p-3 text-center">
                   <p className="text-2xl font-bold text-destructive">{sickDays}</p>
-                  <p className="text-[10px] text-muted-foreground">Betegszab. nap</p>
+                  <p className="text-[10px] text-muted-foreground">{t('member_profile.kpi_sick')}</p>
                 </CardContent>
               </Card>
             </div>
@@ -508,7 +509,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
                 <CardHeader className="py-3 px-4">
                   <CardTitle className="text-sm flex items-center gap-2">
                     <Users className="h-4 w-4" />
-                    Pozíciónkénti kollégák
+                    {t('member_profile.peers_title')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-3 space-y-3">
@@ -522,10 +523,10 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
                             <span className="text-sm font-medium">{a.business_role}</span>
                             <Badge variant="outline" className="text-[9px]">{a.percentage.toFixed(0)}%</Badge>
                           </div>
-                          <Badge variant="outline" className="text-[10px]">{peers.length} kolléga</Badge>
+                          <Badge variant="outline" className="text-[10px]">{peers.length} {t('member_profile.peers_badge')}</Badge>
                         </div>
                         {peers.length === 0 ? (
-                          <p className="text-xs text-muted-foreground italic">Nincs más személy ebben a pozícióban.</p>
+                          <p className="text-xs text-muted-foreground italic">{t('member_profile.peers_empty')}</p>
                         ) : (
                           <div className="space-y-1">
                             {peers.map(p => (
@@ -541,7 +542,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
                   })}
                   <p className="text-[10px] text-muted-foreground flex items-center gap-1 pt-1">
                     <AlertTriangle className="h-3 w-3" />
-                    Szabadságütközés ezen személyekkel lehetséges
+                    {t('member_profile.conflict_warning')}
                   </p>
                 </CardContent>
               </Card>
@@ -551,14 +552,14 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
             <Card>
               <CardHeader className="py-3 px-4">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-primary" /> Közelgő jóváhagyott szabadságok
+                  <Calendar className="h-4 w-4 text-primary" /> {t('member_profile.upcoming_title')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-3">
                 {loading ? (
                   <div className="flex justify-center py-4"><div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>
                 ) : upcomingLeaves.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">Nincs közelgő szabadság.</p>
+                  <p className="text-xs text-muted-foreground">{t('member_profile.upcoming_empty')}</p>
                 ) : (
                   <div className="space-y-1.5">
                     {upcomingLeaves.map(r => (
@@ -578,7 +579,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
               <Card>
                 <CardHeader className="py-3 px-4">
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-muted-foreground" /> Függő kérelmek
+                    <Clock className="h-4 w-4 text-muted-foreground" /> {t('member_profile.pending_title')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-3">
@@ -599,12 +600,12 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
             <Card>
               <CardHeader className="py-3 px-4">
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" /> Korábbi szabadságok
+                  <Calendar className="h-4 w-4 text-muted-foreground" /> {t('member_profile.past_title')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="px-4 pb-3">
                 {pastLeaves.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">Nincs korábbi szabadság.</p>
+                  <p className="text-xs text-muted-foreground">{t('member_profile.past_empty')}</p>
                 ) : (
                   <div className="space-y-1.5">
                     {pastLeaves.slice(0, 10).map(r => (
@@ -614,7 +615,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
                         <Badge variant="outline" className="text-[9px] ml-auto">{getLeaveTypeLabel(r.leave_type)}</Badge>
                       </div>
                     ))}
-                    {pastLeaves.length > 10 && <p className="text-[10px] text-muted-foreground">+{pastLeaves.length - 10} további</p>}
+                    {pastLeaves.length > 10 && <p className="text-[10px] text-muted-foreground">{t('member_profile.past_more', { count: pastLeaves.length - 10 })}</p>}
                   </div>
                 )}
               </CardContent>
@@ -625,7 +626,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
               <Card>
                 <CardHeader className="py-3 px-4">
                   <CardTitle className="text-sm flex items-center gap-2">
-                    <XCircle className="h-4 w-4 text-destructive" /> Elutasított kérelmek
+                    <XCircle className="h-4 w-4 text-destructive" /> {t('member_profile.rejected_title')}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="px-4 pb-3">

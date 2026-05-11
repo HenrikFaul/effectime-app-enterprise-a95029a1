@@ -110,7 +110,7 @@ export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = t
         action: 'leave_request.withdrawn',
         target_id: id,
         target_type: 'leave_request',
-        metadata: { reason: 'Jóváhagyott szabadság lemondva a kérelmező által' },
+        metadata: { reason: 'Approved leave withdrawn by requester' },
       });
       toast.success(t('approval_inbox.withdrawn'));
       fetchRequests();

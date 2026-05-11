@@ -67,27 +67,27 @@ function validateField(field: FieldDefinition, rawValue: string): { error: Error
   const value = (rawValue ?? '').trim();
 
   if (field.required && !value) {
-    return { error: 'REQUIRED_EMPTY', cleaned: null, message: `Kötelező mező üres: ${field.label}` };
+    return { error: 'REQUIRED_EMPTY', cleaned: null, message: `Required field is empty: ${field.label}` };
   }
   if (!value) return { error: null, cleaned: null };
 
   switch (field.type) {
     case 'email':
-      if (!EMAIL_RE.test(value)) return { error: 'INVALID_EMAIL', cleaned: null, message: `'${value}' nem érvényes email cím` };
+      if (!EMAIL_RE.test(value)) return { error: 'INVALID_EMAIL', cleaned: null, message: `'${value}' is not a valid email address` };
       return { error: null, cleaned: value.toLowerCase() };
     case 'date': {
       const d = normalizeDate(value);
-      if (!d) return { error: 'INVALID_DATE', cleaned: null, message: `'${value}' nem érvényes dátum (várt: YYYY-MM-DD)` };
+      if (!d) return { error: 'INVALID_DATE', cleaned: null, message: `'${value}' is not a valid date (expected: YYYY-MM-DD)` };
       return { error: null, cleaned: d };
     }
     case 'boolean': {
       const b = normalizeBoolean(value);
-      if (b === null) return { error: 'INVALID_BOOLEAN', cleaned: null, message: `'${value}' nem érvényes logikai érték (várt: true/false vagy igen/nem)` };
+      if (b === null) return { error: 'INVALID_BOOLEAN', cleaned: null, message: `'${value}' is not a valid boolean (expected: true/false or yes/no)` };
       return { error: null, cleaned: b };
     }
     case 'number': {
       const n = Number(value);
-      if (Number.isNaN(n)) return { error: 'INVALID_NUMBER', cleaned: null, message: `'${value}' nem érvényes szám` };
+      if (Number.isNaN(n)) return { error: 'INVALID_NUMBER', cleaned: null, message: `'${value}' is not a valid number` };
       return { error: null, cleaned: n };
     }
     case 'enum': {
@@ -100,7 +100,7 @@ function validateField(field: FieldDefinition, rawValue: string): { error: Error
           if (v.toLowerCase() === value.toLowerCase()) { machineValue = k; break; }
         }
       }
-      if (!machineValue) return { error: 'INVALID_ENUM', cleaned: null, message: `'${value}' nem érvényes. Érvényes: ${allowed.join(', ')}` };
+      if (!machineValue) return { error: 'INVALID_ENUM', cleaned: null, message: `'${value}' is not valid. Allowed values: ${allowed.join(', ')}` };
       return { error: null, cleaned: machineValue };
     }
     case 'uuid':
@@ -147,7 +147,7 @@ export function validateRows(
     // Cross-field business rules
     if (entity.key === 'leave' && cleanedRow.start_date && cleanedRow.end_date) {
       if (cleanedRow.end_date < cleanedRow.start_date) {
-        const e: RowError = { rowIndex, field: 'end_date', value: cleanedRow.end_date, code: 'BUSINESS_RULE', message: 'A záró dátum nem lehet korábbi a kezdő dátumnál' };
+        const e: RowError = { rowIndex, field: 'end_date', value: cleanedRow.end_date, code: 'BUSINESS_RULE', message: 'End date cannot be earlier than start date' };
         errors.push(e);
         allErrors.push(e);
       }
@@ -160,7 +160,7 @@ export function validateRows(
         const keyStr = keyParts.join('||');
         const prev = seenKeys.get(keyStr);
         if (prev !== undefined) {
-          const e: RowError = { rowIndex, field: entity.uniqueKeyFields[0], value: keyParts[0], code: 'DUPLICATE_IN_FILE', message: `Duplikált sor a fájlban (másik sor: ${prev + 1})` };
+          const e: RowError = { rowIndex, field: entity.uniqueKeyFields[0], value: keyParts[0], code: 'DUPLICATE_IN_FILE', message: `Duplicate row in file (other row: ${prev + 1})` };
           errors.push(e);
           allErrors.push(e);
         } else {

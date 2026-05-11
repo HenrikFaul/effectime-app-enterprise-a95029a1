@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Upload, FileSpreadsheet, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props { workspaceId: string; userId: string }
 
@@ -24,6 +25,7 @@ function parseCSV(text: string): Record<string, string>[] {
 }
 
 export function CsvImportPanel({ workspaceId, userId }: Props) {
+  const { t } = useI18n();
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<ImportResult | null>(null);
 
@@ -46,7 +48,7 @@ export function CsvImportPanel({ workspaceId, userId }: Props) {
     }
     setResult({ ok, skipped, errors });
     setBusy(false);
-    if (ok > 0) toast.success(`${ok} meghívó létrehozva`);
+    if (ok > 0) toast.success(t('csv_import.invite_success', { ok }));
   };
 
   const importLeaveRequests = async (file: File) => {
@@ -69,7 +71,7 @@ export function CsvImportPanel({ workspaceId, userId }: Props) {
       const { data: profiles } = await (supabase as any).from('profiles').select('id,email').eq('email', email).maybeSingle();
       const userIdMatch = profiles?.id;
       const membership = memberships?.find((m: any) => m.user_id === userIdMatch);
-      if (!membership) { errors.push(`${email}: nincs ilyen tag`); continue; }
+      if (!membership) { errors.push(t('csv_import.member_not_found', { email })); continue; }
 
       const { error } = await (supabase as any).from('leave_requests').insert({
         workspace_id: workspaceId,
@@ -84,51 +86,51 @@ export function CsvImportPanel({ workspaceId, userId }: Props) {
     }
     setResult({ ok, skipped, errors });
     setBusy(false);
-    if (ok > 0) toast.success(`${ok} kérelem importálva`);
+    if (ok > 0) toast.success(t('csv_import.leave_success', { ok }));
   };
 
   return (
     <div className="space-y-3">
       <Tabs defaultValue="users">
         <TabsList className="grid grid-cols-2 w-full h-auto">
-          <TabsTrigger value="users" className="text-xs">Tagok meghívása</TabsTrigger>
-          <TabsTrigger value="requests" className="text-xs">Szabadságok</TabsTrigger>
+          <TabsTrigger value="users" className="text-xs">{t('csv_import.tab_invite')}</TabsTrigger>
+          <TabsTrigger value="requests" className="text-xs">{t('csv_import.tab_leave')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="users" className="space-y-2 mt-3">
-          <p className="text-[11px] text-muted-foreground">CSV fejléc: <code>email,role</code> — Role: owner / resourceAssistant / member</p>
+          <p className="text-[11px] text-muted-foreground" dangerouslySetInnerHTML={{ __html: t('csv_import.invite_instructions') }} />
           <Label className="block">
             <input type="file" accept=".csv,text/csv" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) importInvitations(f); }} />
             <Button asChild variant="outline" size="sm" disabled={busy}>
-              <span><Upload className="h-3 w-3 mr-1" /> CSV kiválasztása</span>
+              <span><Upload className="h-3 w-3 mr-1" /> {t('csv_import.select_file_btn')}</span>
             </Button>
           </Label>
         </TabsContent>
 
         <TabsContent value="requests" className="space-y-2 mt-3">
-          <p className="text-[11px] text-muted-foreground">CSV fejléc: <code>email,start_date,end_date,leave_type,status,comment</code></p>
+          <p className="text-[11px] text-muted-foreground" dangerouslySetInnerHTML={{ __html: t('csv_import.leave_instructions') }} />
           <Label className="block">
             <input type="file" accept=".csv,text/csv" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) importLeaveRequests(f); }} />
             <Button asChild variant="outline" size="sm" disabled={busy}>
-              <span><FileSpreadsheet className="h-3 w-3 mr-1" /> CSV kiválasztása</span>
+              <span><FileSpreadsheet className="h-3 w-3 mr-1" /> {t('csv_import.select_file_btn')}</span>
             </Button>
           </Label>
         </TabsContent>
       </Tabs>
 
-      {busy && <p className="text-xs text-muted-foreground flex items-center gap-2"><div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" /> Importálás folyamatban...</p>}
+      {busy && <p className="text-xs text-muted-foreground flex items-center gap-2"><div className="h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" /> {t('csv_import.importing_label')}</p>}
 
       {result && (
         <div className="rounded-md border p-3 space-y-2">
           <div className="flex items-center gap-2 text-xs">
-            <CheckCircle2 className="h-3 w-3 text-green-600" /> {result.ok} sikeres · {result.skipped} kihagyva
+            <CheckCircle2 className="h-3 w-3 text-green-600" /> {result.ok} {t('csv_import.result_summary', { skipped: result.skipped })}
           </div>
           {result.errors.length > 0 && (
             <div className="space-y-1 max-h-32 overflow-y-auto">
               {result.errors.slice(0, 10).map((e, i) => (
                 <p key={i} className="text-[10px] text-destructive flex items-start gap-1"><AlertCircle className="h-3 w-3 shrink-0 mt-0.5" />{e}</p>
               ))}
-              {result.errors.length > 10 && <p className="text-[10px] text-muted-foreground">...és további {result.errors.length - 10} hiba</p>}
+              {result.errors.length > 10 && <p className="text-[10px] text-muted-foreground">{t('csv_import.more_errors', { count: result.errors.length - 10 })}</p>}
             </div>
           )}
         </div>

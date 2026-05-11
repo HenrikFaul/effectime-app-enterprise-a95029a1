@@ -6,6 +6,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Cake, PartyPopper, ChevronDown } from 'lucide-react';
 import { format, getMonth, getDate } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -47,6 +48,7 @@ function isWithinWindow(item: Milestone, days = 7): boolean {
 }
 
 export function BirthdayAnniversaryWidget({ workspaceId }: Props) {
+  const { t } = useI18n();
   const [rows, setRows] = useState<Milestone[]>([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
@@ -121,7 +123,7 @@ export function BirthdayAnniversaryWidget({ workspaceId }: Props) {
           <button className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors rounded-t-lg">
             <CardTitle className="text-sm flex items-center gap-2">
               <Cake className="h-4 w-4 text-primary" />
-              Közelgő születésnapok és évfordulók
+              {t('birthday_widget.card_title')}
               {soonCount > 0 && !loading && (
                 <span className="bg-red-500 text-white rounded-full text-xs font-bold px-2 py-0.5 ml-1 leading-none">
                   {soonCount}
@@ -144,7 +146,7 @@ export function BirthdayAnniversaryWidget({ workspaceId }: Props) {
               </div>
             ) : upcoming.length === 0 ? (
               <p className="text-xs text-muted-foreground py-2">
-                Nincs közelgő esemény az elérhető adatok alapján.
+                {t('birthday_widget.empty')}
               </p>
             ) : (
               <div className="space-y-2 pt-2">
@@ -167,7 +169,7 @@ export function BirthdayAnniversaryWidget({ workspaceId }: Props) {
                         <div>
                           <p className="text-sm font-medium leading-none">{item.name}</p>
                           <p className="text-[11px] text-muted-foreground mt-1">
-                            {item.type === 'birthday' ? 'Születésnap' : 'Munkaévforduló'} ·{' '}
+                            {item.type === 'birthday' ? t('birthday_widget.type_birthday') : t('birthday_widget.type_anniversary')} ·{' '}
                             {format(item.nextDate, 'yyyy.MM.dd')}
                           </p>
                         </div>

@@ -3,23 +3,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Bell, Mail, Smartphone } from 'lucide-react';
 import { toast } from 'sonner';
+import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
   userId: string;
 }
-
-const EVENT_TYPES = [
-  { key: 'leave_approved', label: 'Szabadság jóváhagyva' },
-  { key: 'leave_rejected', label: 'Szabadság elutasítva' },
-  { key: 'leave_cancelled', label: 'Szabadság visszavonva/lemondva' },
-  { key: 'new_leave_request', label: 'Új szabadságkérelem (admin)' },
-  { key: 'invitation', label: 'Meghívó a munkaterületre' },
-  { key: 'approval_reminder', label: 'Jóváhagyási emlékeztető' },
-];
 
 interface Pref {
   event_type: string;
@@ -28,8 +19,18 @@ interface Pref {
 }
 
 export function NotificationPreferences({ workspaceId, userId }: Props) {
+  const { t } = useI18n();
   const [prefs, setPrefs] = useState<Map<string, Pref>>(new Map());
   const [loading, setLoading] = useState(true);
+
+  const EVENT_TYPES = [
+    { key: 'leave_approved', label: t('notifications.event_leave_approved') },
+    { key: 'leave_rejected', label: t('notifications.event_leave_rejected') },
+    { key: 'leave_cancelled', label: t('notifications.event_leave_cancelled') },
+    { key: 'new_leave_request', label: t('notifications.event_new_leave_request') },
+    { key: 'invitation', label: t('notifications.event_invitation') },
+    { key: 'approval_reminder', label: t('notifications.event_approval_reminder') },
+  ];
 
   useEffect(() => {
     fetchPrefs();
@@ -72,7 +73,7 @@ export function NotificationPreferences({ workspaceId, userId }: Props) {
       } as any, { onConflict: 'workspace_id,user_id,event_type' });
 
     if (error) {
-      toast.error('Hiba a mentéskor');
+      toast.error(t('notifications.save_error'));
       fetchPrefs();
     }
   };
@@ -85,7 +86,7 @@ export function NotificationPreferences({ workspaceId, userId }: Props) {
     <Card>
       <CardHeader className="py-3 px-4">
         <CardTitle className="text-sm flex items-center gap-2">
-          <Bell className="h-4 w-4" /> Értesítési beállítások
+          <Bell className="h-4 w-4" /> {t('notifications.title')}
         </CardTitle>
       </CardHeader>
       <CardContent className="px-4 pb-3 space-y-3">
@@ -112,7 +113,6 @@ export function NotificationPreferences({ workspaceId, userId }: Props) {
                     disabled
                     className="scale-75 opacity-40"
                   />
-                  {/* Tooltip-like badge */}
                 </div>
               </div>
             </div>
@@ -121,7 +121,7 @@ export function NotificationPreferences({ workspaceId, userId }: Props) {
 
         <p className="text-[10px] text-muted-foreground mt-2 flex items-center gap-1">
           <Smartphone className="h-3 w-3" />
-          Push értesítések hamarosan elérhetők a natív alkalmazásban.
+          {t('notifications.push_coming_soon')}
         </p>
       </CardContent>
     </Card>
