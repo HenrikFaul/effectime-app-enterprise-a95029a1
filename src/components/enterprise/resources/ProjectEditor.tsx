@@ -321,13 +321,13 @@ export function ProjectEditor({ mode, workspaceId, userId, isAdmin, project, ope
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        const t = newRoleInput.trim();
-                        if (!t) return;
-                        if (availableRoles.includes(t) || requirements.some((r) => r.business_role === t)) {
+                        const role = newRoleInput.trim();
+                        if (!role) return;
+                        if (availableRoles.includes(role) || requirements.some((r) => r.business_role === role)) {
                           toast.error(t('project_editor.role_exists_error')); return;
                         }
-                        setAvailableRoles([...availableRoles, t].sort());
-                        addRequirement(t);
+                        setAvailableRoles([...availableRoles, role].sort());
+                        addRequirement(role);
                         setNewRoleInput('');
                         setShowNewRole(false);
                       }
@@ -336,13 +336,13 @@ export function ProjectEditor({ mode, workspaceId, userId, isAdmin, project, ope
                   <Button
                     size="sm"
                     onClick={() => {
-                      const t = newRoleInput.trim();
-                      if (!t) return;
-                      if (availableRoles.includes(t) || requirements.some((r) => r.business_role === t)) {
+                      const role = newRoleInput.trim();
+                      if (!role) return;
+                      if (availableRoles.includes(role) || requirements.some((r) => r.business_role === role)) {
                         toast.error(t('project_editor.role_exists_error')); return;
                       }
-                      setAvailableRoles([...availableRoles, t].sort());
-                      addRequirement(t);
+                      setAvailableRoles([...availableRoles, role].sort());
+                      addRequirement(role);
                       setNewRoleInput('');
                       setShowNewRole(false);
                     }}
