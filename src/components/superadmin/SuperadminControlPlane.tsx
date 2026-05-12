@@ -1069,6 +1069,10 @@ export function SuperadminControlPlane({ userId: _userId }: { userId: string }) 
         <TabsContent value="email" className="mt-6">
           {loadedTabs.email && <EmailQueueTab />}
         </TabsContent>
+
+        <TabsContent value="tiers" className="mt-6">
+          {loadedTabs.tiers && <FeatureTiersTab />}
+        </TabsContent>
       </Tabs>
     </div>
   );
