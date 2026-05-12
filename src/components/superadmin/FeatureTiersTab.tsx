@@ -736,4 +736,193 @@ function countFeatures(node: { children: Map<string, { features: Feature[] } & o
   return n;
 }
 
+// Card palette inspired by the user-provided infographic — bold gradient cards.
+const CARD_PALETTE = [
+  'from-emerald-500 to-teal-500',
+  'from-cyan-500 to-blue-500',
+  'from-amber-500 to-orange-500',
+  'from-rose-500 to-pink-500',
+  'from-violet-500 to-purple-500',
+  'from-indigo-500 to-blue-600',
+  'from-fuchsia-500 to-pink-600',
+  'from-lime-500 to-emerald-600',
+];
+function paletteFor(key: string): string {
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  return CARD_PALETTE[h % CARD_PALETTE.length];
+}
+
+function FeatureNodeCard({ feature, onView, size = 'md' }: { feature: Feature; onView?: (id: string) => void; size?: 'sm' | 'md' | 'lg' }) {
+  const grad = paletteFor(feature.feature_key);
+  const dims = size === 'lg' ? 'min-w-[220px] p-3' : size === 'sm' ? 'min-w-[150px] p-2' : 'min-w-[180px] p-2.5';
+  return (
+    <button
+      type="button"
+      onClick={() => onView?.(feature.id)}
+      className={`group rounded-lg shadow-md text-left text-white bg-gradient-to-br ${grad} ${dims} hover:shadow-lg hover:scale-[1.02] transition-all`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px] uppercase tracking-wider opacity-90">{feature.module || 'feature'}</span>
+        <span className="h-5 w-5 rounded-full bg-white/25 flex items-center justify-center text-[10px]">●</span>
+      </div>
+      <div className={`font-semibold ${size === 'sm' ? 'text-xs' : 'text-sm'} leading-tight mt-0.5`}>{feature.name}</div>
+      <div className="text-[10px] font-mono opacity-80 truncate">{feature.feature_key}</div>
+      {feature.route_path && size !== 'sm' && (
+        <div className="mt-1 text-[10px] bg-black/20 rounded px-1.5 py-0.5 font-mono truncate">{feature.route_path}</div>
+      )}
+    </button>
+  );
+}
+
+function FeatureDetailDialog({
+  feature, open, onClose, featureByKey, dependents, onJump, onView,
+}: {
+  feature: Feature | null;
+  open: boolean;
+  onClose: () => void;
+  featureByKey: Map<string, Feature>;
+  dependents: Map<string, string[]>;
+  onJump: (key: string) => void;
+  onView: (id: string) => void;
+}) {
+  const [showDown, setShowDown] = useState(false);
+  useEffect(() => { if (!open) setShowDown(false); }, [open]);
+
+  if (!feature) return null;
+
+  // Upward branch: ancestors via dependencies (recursive)
+  const upward: Feature[][] = [];
+  let layer: Feature[] = (feature.dependencies || []).map(k => featureByKey.get(k)).filter(Boolean) as Feature[];
+  const seenUp = new Set<string>();
+  while (layer.length && upward.length < 5) {
+    const fresh = layer.filter(f => { if (seenUp.has(f.id)) return false; seenUp.add(f.id); return true; });
+    if (!fresh.length) break;
+    upward.push(fresh);
+    layer = fresh.flatMap(f => (f.dependencies || []).map(k => featureByKey.get(k)).filter(Boolean) as Feature[]);
+  }
+  // Downward branch: dependents recursive
+  const downward: Feature[][] = [];
+  let dlayer: Feature[] = (dependents.get(feature.feature_key) || []).map(k => featureByKey.get(k)).filter(Boolean) as Feature[];
+  const seenDown = new Set<string>();
+  while (dlayer.length && downward.length < 5) {
+    const fresh = dlayer.filter(f => { if (seenDown.has(f.id)) return false; seenDown.add(f.id); return true; });
+    if (!fresh.length) break;
+    downward.push(fresh);
+    dlayer = fresh.flatMap(f => (dependents.get(f.feature_key) || []).map(k => featureByKey.get(k)).filter(Boolean) as Feature[]);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            {feature.name}
+            <Badge variant="outline" className="font-mono text-[11px]">{feature.feature_key}</Badge>
+            {feature.module && <Badge variant="secondary" className="text-[11px]">{feature.module}</Badge>}
+          </DialogTitle>
+          {feature.description && <DialogDescription>{feature.description}</DialogDescription>}
+        </DialogHeader>
+
+        {/* Routing data sheet */}
+        <div className="grid gap-2 md:grid-cols-2 text-xs">
+          <div className="rounded border p-2">
+            <div className="text-muted-foreground mb-1">Útvonal (route_path)</div>
+            <code className="font-mono">{feature.route_path || <span className="italic text-muted-foreground">nincs megadva</span>}</code>
+          </div>
+          <div className="rounded border p-2">
+            <div className="text-muted-foreground mb-1">Menü útvonal (menu_path)</div>
+            <span className="font-mono">{(feature.menu_path && feature.menu_path.length) ? feature.menu_path.join(' › ') : <span className="italic text-muted-foreground">nincs megadva</span>}</span>
+          </div>
+          <div className="rounded border p-2">
+            <div className="text-muted-foreground mb-1">Státusz</div>
+            <Badge variant="outline">{feature.status || 'public'}</Badge>
+          </div>
+          <div className="rounded border p-2">
+            <div className="text-muted-foreground mb-1">Súly / Sort</div>
+            <span>fiscal_weight: <strong>—</strong> · sort_order: <strong>{feature.sort_order}</strong></span>
+          </div>
+        </div>
+
+        {/* Visualization */}
+        <div className="mt-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold flex items-center gap-2"><Network className="h-4 w-4" />Routing-fa vizualizáció</h3>
+            <Button size="sm" variant={showDown ? 'default' : 'outline'} onClick={() => setShowDown(s => !s)} className="gap-1">
+              <ArrowDownToLine className="h-3.5 w-3.5" />
+              {showDown ? 'Lefele ág elrejtése' : 'Lefele ág megjelenítése'}
+            </Button>
+          </div>
+
+          <div className="rounded-xl bg-slate-950 dark:bg-slate-900 p-4 overflow-x-auto">
+            <div className="flex items-center gap-6 min-w-max">
+              {/* Upward (ancestors) — leftmost = deepest */}
+              {upward.slice().reverse().map((lyr, i) => (
+                <div key={`up-${i}`} className="flex flex-col gap-2 items-end">
+                  <div className="text-[10px] uppercase tracking-wider text-white/50">Előfeltétel · {upward.length - i}</div>
+                  {lyr.map(f => <FeatureNodeCard key={f.id} feature={f} onView={onView} size="sm" />)}
+                </div>
+              ))}
+
+              {/* Connector arrow to focus */}
+              {upward.length > 0 && <ChevronRight className="h-6 w-6 text-white/40 shrink-0" />}
+
+              {/* Focused feature — large central card */}
+              <div className="flex flex-col gap-2 items-center">
+                <div className="text-[10px] uppercase tracking-wider text-white/70">Aktuális</div>
+                <FeatureNodeCard feature={feature} size="lg" />
+              </div>
+
+              {/* Downward (dependents) — only on toggle */}
+              {showDown && downward.length > 0 && (
+                <>
+                  <ChevronRight className="h-6 w-6 text-white/40 shrink-0" />
+                  {downward.map((lyr, i) => (
+                    <div key={`down-${i}`} className="flex flex-col gap-2 items-start">
+                      <div className="text-[10px] uppercase tracking-wider text-white/50">Erre épül · {i + 1}</div>
+                      {lyr.map(f => <FeatureNodeCard key={f.id} feature={f} onView={onView} size="sm" />)}
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {upward.length === 0 && !showDown && (
+                <div className="text-xs text-white/50 ml-4">Nincs előfeltétel. Kattints a „Lefele ág megjelenítése” gombra a függőségek megtekintéséhez.</div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Dependency lists */}
+        <div className="grid gap-3 md:grid-cols-2 mt-2">
+          <div>
+            <h4 className="text-xs font-semibold mb-1 flex items-center gap-1"><GitBranch className="h-3.5 w-3.5" />Előfeltételek (közvetlen)</h4>
+            <div className="flex flex-wrap gap-1">
+              {(feature.dependencies || []).length === 0
+                ? <span className="text-xs italic text-muted-foreground">Nincs.</span>
+                : (feature.dependencies || []).map(k => (
+                  <button key={k} type="button" onClick={() => onJump(k)} className="text-[11px] font-mono px-2 py-0.5 rounded border hover:bg-muted">
+                    {featureByKey.get(k)?.name || k}
+                  </button>
+                ))}
+            </div>
+          </div>
+          <div>
+            <h4 className="text-xs font-semibold mb-1 flex items-center gap-1"><ChevronRight className="h-3.5 w-3.5" />Erre épülő funkciók</h4>
+            <div className="flex flex-wrap gap-1">
+              {(dependents.get(feature.feature_key) || []).length === 0
+                ? <span className="text-xs italic text-muted-foreground">Nincs.</span>
+                : (dependents.get(feature.feature_key) || []).map(k => (
+                  <button key={k} type="button" onClick={() => onJump(k)} className="text-[11px] font-mono px-2 py-0.5 rounded border hover:bg-muted">
+                    {featureByKey.get(k)?.name || k}
+                  </button>
+                ))}
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default FeatureTiersTab;
