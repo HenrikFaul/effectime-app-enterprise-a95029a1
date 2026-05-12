@@ -53,6 +53,25 @@ export function FeatureTiersTab() {
   const [editingRouteFor, setEditingRouteFor] = useState<string>('');
   const [routeDraft, setRouteDraft] = useState<{ route_path: string; menu_path: string }>({ route_path: '', menu_path: '' });
   const [routingTier, setRoutingTier] = useState<string>('all');
+  const { user } = useAuth();
+  const openStorageKey = `routingTreeOpen:${user?.id || 'anon'}:${routingTier}`;
+  const [openPaths, setOpenPaths] = useState<Record<string, boolean>>({});
+
+  // Load persisted open-state when user/tier changes
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(openStorageKey);
+      setOpenPaths(raw ? JSON.parse(raw) : {});
+    } catch { setOpenPaths({}); }
+  }, [openStorageKey]);
+
+  const toggleOpenPath = useCallback((path: string, isOpen: boolean) => {
+    setOpenPaths(prev => {
+      const next = { ...prev, [path]: isOpen };
+      try { localStorage.setItem(openStorageKey, JSON.stringify(next)); } catch { /* ignore quota */ }
+      return next;
+    });
+  }, [openStorageKey]);
 
   const load = async () => {
     setLoading(true);
