@@ -559,7 +559,10 @@ function RoutingTree({
   const renderNode = (node: Node, depth: number, path: string): React.ReactNode => {
     const total = countFeatures(node);
     return (
-      <Collapsible defaultOpen={depth < 1}>
+      <Collapsible
+        open={openPaths[path] ?? (depth < 1)}
+        onOpenChange={(o) => toggleOpenPath(path, o)}
+      >
         <CollapsibleTrigger className="flex items-center gap-1.5 w-full hover:bg-muted/40 px-2 py-1 rounded text-left">
           <ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform data-[state=closed]:-rotate-90" />
           <span className={depth === 0 ? 'font-medium font-mono text-sm' : 'text-sm'}>{node.label}</span>
