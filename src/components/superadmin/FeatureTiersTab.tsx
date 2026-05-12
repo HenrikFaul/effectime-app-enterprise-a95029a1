@@ -353,7 +353,7 @@ export function FeatureTiersTab() {
               <Badge variant="outline">{tierMap.get(routingTier)?.size || 0} feature ebben a tierben</Badge>
             )}
           </div>
-          <RoutingAuditBanner features={filtered} />
+          <RoutingAuditBanner features={filtered} onJump={openFeatureEditor} />
           <FilterBar search={search} setSearch={setSearch} modules={modules} moduleFilter={moduleFilter} setModuleFilter={setModuleFilter} />
           <RoutingTree
             features={filtered}
@@ -371,9 +371,21 @@ export function FeatureTiersTab() {
             persistOrder={persistOrder}
             openPaths={openPaths}
             toggleOpenPath={toggleOpenPath}
+            onOpenDepEditor={openFeatureEditor}
+            onViewFeature={setViewingFeatureId}
           />
         </TabsContent>
       </Tabs>
+
+      <FeatureDetailDialog
+        feature={features.find(f => f.id === viewingFeatureId) || null}
+        open={!!viewingFeatureId}
+        onClose={() => setViewingFeatureId('')}
+        featureByKey={featureByKey}
+        dependents={dependents}
+        onJump={(key) => { setViewingFeatureId(''); openFeatureEditor(key); }}
+        onView={(id) => setViewingFeatureId(id)}
+      />
     </div>
   );
 }
