@@ -18,6 +18,8 @@ Read ALL of the following before implementing anything:
 | 5 | `.governance/agent_execution_rules.md` | always — execution authority |
 | 6 | `.governance/ui_ux_rules.md` | only when UI is touched |
 | 7 | Latest `versioning/*.md` file(s) relevant to the task | when the task relates to a known module |
+| 8 | `marketing/SYSTEM.md` | when producing marketing assets, copy, campaign plans, or feature announcements |
+| 8a | `marketing/marketing_values/` (recent files) | when a marketing agent needs to know current product capabilities |
 
 Do not skip steps 2 and 3. They are the primary defense against regressions and repeated mistakes.
 
@@ -124,9 +126,12 @@ The task is done only when ALL of the following are true:
 
 ### Phase 8 — Documentation requirements
 
-Update as needed: CHANGELOG · `codingLessonsLearnt.md` · versioning file · architecture/migration/operational notes.
+Update as needed: CHANGELOG · `codingLessonsLearnt.md` · versioning file · marketing_values file · architecture/migration/operational notes.
 
 Documentation must reflect: what changed · why · what was learned · what future developers should watch out for · any behavior or contract changes.
+
+**Marketing documentation (mandatory for every feature delivery):**
+Create `marketing/marketing_values/YYYYMMDD_vX.Y.Z_feature-slug_marketing_value.md` alongside the versioning file. Required sections: user-language problem description, primary personas, marketing-ready claim, claim types enabled, content angles, funnel stage, marketing files to update. See `marketing/marketing_values/README.md` for the full format spec.
 
 ### Phase 9 — PR and merge readiness
 
@@ -204,7 +209,12 @@ Use the `## ➕ APPEND — YYYY-MM-DD` section format already present in that fi
 Append to `CHANGELOG.md` (root) under the correct date/version header.
 Include: what changed, which files, what was fixed or added, acceptance criteria.
 
-Both updates must be committed together with the implementation changes in the same or the very next commit.
+**Feature delivered (any user-facing or backend capability) →**
+Create `marketing/marketing_values/YYYYMMDD_vX.Y.Z_feature-slug_marketing_value.md`.
+Include: user-language problem solved, personas, marketing-ready claim, claim types, content angles, funnel stage, marketing files to update.
+See `marketing/marketing_values/README.md` for the required format.
+
+All three updates (CHANGELOG + versioning + marketing_values) must be committed together with the implementation changes in the same or the very next commit.
 
 ---
 
@@ -242,7 +252,7 @@ Treat user requests as execution instructions:
 3. Compare ≥ 2 solution options when risk is non-trivial
 4. Implement
 5. Regression-check against CHANGELOG — verify affected features still work
-6. Update `CHANGELOG.md` + `codingLessonsLearnt.md` + versioning file
+6. Update `CHANGELOG.md` + `codingLessonsLearnt.md` + versioning file + `marketing/marketing_values/*.md`
 7. Commit + push to the designated development branch
 
 ---
@@ -253,6 +263,7 @@ When governance updates are needed, prefer this sequence:
 1. `codingLessonsLearnt.md` (root) — new lessons first
 2. `CHANGELOG.md` (root) — feature/fix record
 3. `versioning/*.md` — delivery artifact for the PR
+4. `marketing/marketing_values/*.md` — marketing impact record for the feature (create alongside versioning file)
 4. `.governance/*.md` — structural rule changes only when needed
 5. Summary back to the user
 
