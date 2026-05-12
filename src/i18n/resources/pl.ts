@@ -161,17 +161,6 @@ const pl = {
     expand_aria: 'Rozwiń',
     collapse_aria: 'Zwiń',
   },
-  skills_mgr: { empty_matrix_hint: 'Dodaj umiejętności i członków, aby wypełnić macierz.' },
-  scenario_planner: {
-    card_title: 'Scenariusze',
-    btn_new: 'Nowy scenariusz',
-    empty: 'Brak scenariuszy. Utwórz jeden do planowania "co jeśli".',
-    tentative_alloc_title: 'Tymczasowe alokacje',
-    conflicts_badge: '{{count}} konflikt(ów)',
-    btn_add_assignment: 'Dodaj',
-    btn_save_asgs: 'Zapisz',
-    no_assignments: 'Dodaj tymczasową alokację, aby modelować wpływ nowego projektu lub reorganizacji.',
-  },
   substitute_picker: {
     label: 'Zastępcy (w kolejności)',
     placeholder: 'Wybierz członka...',

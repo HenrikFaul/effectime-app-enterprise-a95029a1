@@ -161,17 +161,6 @@ const cs = {
     expand_aria: 'Rozbalit',
     collapse_aria: 'Sbalit',
   },
-  skills_mgr: { empty_matrix_hint: 'Přidejte dovednosti a členy pro vyplnění matice.' },
-  scenario_planner: {
-    card_title: 'Scénáře',
-    btn_new: 'Nový scénář',
-    empty: 'Zatím žádné scénáře. Vytvořte jeden pro plánování "co kdyby".',
-    tentative_alloc_title: 'Předběžné alokace',
-    conflicts_badge: '{{count}} konflikt(ů)',
-    btn_add_assignment: 'Přidat',
-    btn_save_asgs: 'Uložit',
-    no_assignments: 'Přidejte předběžnou alokaci pro modelování dopadu nového projektu nebo reorganizace.',
-  },
   substitute_picker: {
     label: 'Zástupci (v pořadí)',
     placeholder: 'Vyberte člena...',
