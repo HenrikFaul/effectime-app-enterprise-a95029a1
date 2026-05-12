@@ -8,3 +8,7 @@ verify_jwt = true
 
 [functions.import-entity-data]
 verify_jwt = true
+
+[functions.ms365-sync]
+verify_jwt = false
+

@@ -3095,6 +3095,27 @@ const sk = {
     save_error: 'Chyba pri ukladaní',
     save_success: 'Nastavenia filtrov uložené',
   },
+  m365: {
+    title: 'Kalendár Microsoft 365',
+    subtitle: 'Obojsmerná synchronizácia medzi Outlookom a Effectime',
+    not_connected_hint: 'Pripojte svoj účet Microsoft 365, aby sa schválené dovolenky zobrazili v Outlooku a OOF udalosti ako plánovacie obmedzenia.',
+    connect_btn: 'Pripojiť Microsoft 365',
+    connect_error: 'Chyba pripojenia',
+    disconnect: 'Odpojiť',
+    disconnect_confirm: 'Odpojiť tento účet Microsoft 365? Synchronizované udalosti zostanú v Outlooku.',
+    disconnect_error: 'Odpojenie zlyhalo',
+    disconnected: 'Microsoft 365 odpojené',
+    sync_now: 'Synchronizovať',
+    sync_success: 'Synchronizácia dokončená · {{count}} udalostí',
+    sync_failed: 'Synchronizácia zlyhala',
+    sync_schedule_hint: 'Automatická synchronizácia každých 15 minút.',
+    last_sync: 'Posledná synchronizácia',
+    never: 'nikdy',
+    status_ok: 'V poriadku',
+    status_error: 'Chyba',
+    status_pending: 'Čaká',
+    load_error: 'Stav integrácie sa nedá načítať',
+  },
 } as const;
 
 export default sk;

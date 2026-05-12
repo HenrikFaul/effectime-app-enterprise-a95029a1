@@ -3385,6 +3385,27 @@ const en = {
     save_error: 'Save error',
     save_success: 'Filter settings saved',
   },
+  m365: {
+    title: 'Microsoft 365 calendar',
+    subtitle: 'Two-way sync between your Outlook calendar and Effectime',
+    not_connected_hint: 'Connect your Microsoft 365 account to sync approved leave with Outlook and surface OOF events as scheduling constraints.',
+    connect_btn: 'Connect Microsoft 365',
+    connect_error: 'Connection failed',
+    disconnect: 'Disconnect',
+    disconnect_confirm: 'Disconnect this Microsoft 365 account? Synced events will remain in Outlook.',
+    disconnect_error: 'Disconnect failed',
+    disconnected: 'Microsoft 365 disconnected',
+    sync_now: 'Sync now',
+    sync_success: 'Sync complete · {{count}} events',
+    sync_failed: 'Sync failed',
+    sync_schedule_hint: 'Automatic sync runs every 15 minutes.',
+    last_sync: 'Last sync',
+    never: 'never',
+    status_ok: 'Healthy',
+    status_error: 'Error',
+    status_pending: 'Pending',
+    load_error: 'Could not load integration status',
+  },
 } as const;
 
 export default en;

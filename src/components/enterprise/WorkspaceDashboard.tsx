@@ -70,6 +70,7 @@ import { CapacityDnaPanel } from './CapacityDnaPanel';
 import { OrgPulseButton } from './OrgPulseButton';
 import { CommandCenterButton } from './CommandCenterButton';
 import { IntegrationHealthCenter } from './settings/IntegrationHealthCenter';
+import { M365IntegrationPanel } from './settings/M365IntegrationPanel';
 import { HelpSystemSettings } from './settings/HelpSystemSettings';
 import { DecisionMemoryStaleInbox } from './DecisionMemoryStaleInbox';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -916,6 +917,10 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
           <IntegrationHealthCenter workspaceId={workspace.id} />
         </SettingsSection>
       )}
+
+      <SettingsSection workspaceId={workspace.id} sectionKey="settings.m365_calendar" icon={<Plug className="h-4 w-4" />} title={t('m365.title')}>
+        <M365IntegrationPanel workspaceId={workspace.id} />
+      </SettingsSection>
 
       {isAdmin && (
         <SettingsSection workspaceId={workspace.id} sectionKey="settings.help_system" icon={<CircleHelp className="h-4 w-4" />} title={t('settings_sections.help_system')}>
