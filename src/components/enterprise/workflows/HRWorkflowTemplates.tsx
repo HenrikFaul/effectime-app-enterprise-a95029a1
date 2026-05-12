@@ -119,9 +119,19 @@ const BUILTIN_TEMPLATES: Omit<Template, 'id' | 'created_at' | 'is_active'>[] = [
   },
 ];
 
+const CATEGORY_ICON_META: Record<string, { icon: React.ElementType; color: string }> = {
+  medical_exam:        { icon: Stethoscope,    color: 'bg-red-100 text-red-700 border-red-200' },
+  salary_advance:      { icon: Wallet,         color: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+  contract_amendment:  { icon: FileSignature,  color: 'bg-blue-100 text-blue-700 border-blue-200' },
+  probation_review:    { icon: ClipboardCheck, color: 'bg-amber-100 text-amber-700 border-amber-200' },
+  fixed_term_expiry:   { icon: CalendarClock,  color: 'bg-orange-100 text-orange-700 border-orange-200' },
+  offboarding:         { icon: UserMinus,      color: 'bg-slate-100 text-slate-700 border-slate-200' },
+  custom:              { icon: Settings2,      color: 'bg-violet-100 text-violet-700 border-violet-200' },
+};
+
 function CategoryBadge({ category }: { category: string }) {
   const { t } = useI18n();
-  const meta = CATEGORY_META[category] ?? CATEGORY_META.custom;
+  const meta = CATEGORY_ICON_META[category] ?? CATEGORY_ICON_META.custom;
   const Icon = meta.icon;
   return (
     <Badge variant="outline" className={`gap-1 text-xs ${meta.color}`}>
