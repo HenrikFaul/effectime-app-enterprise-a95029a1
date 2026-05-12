@@ -564,6 +564,7 @@ function RoutingAuditBanner({ features, onJump }: { features: Feature[]; onJump:
 function RoutingTree({
   features, tierFilterIds, featureByKey, editingRouteFor, setEditingRouteFor,
   routeDraft, setRouteDraft, saveRoute, persistOrder, openPaths, toggleOpenPath,
+  onOpenDepEditor, onViewFeature,
 }: {
   features: Feature[];
   tierFilterIds: Set<string> | null;
@@ -576,6 +577,8 @@ function RoutingTree({
   persistOrder: (orderedIds: string[]) => void | Promise<void>;
   openPaths: Record<string, boolean>;
   toggleOpenPath: (path: string, isOpen: boolean) => void;
+  onOpenDepEditor: (featureKey: string) => void;
+  onViewFeature: (id: string) => void;
 }) {
   // Tier-aware visibility: hide features not in tier; flag missing deps
   const visible = tierFilterIds
