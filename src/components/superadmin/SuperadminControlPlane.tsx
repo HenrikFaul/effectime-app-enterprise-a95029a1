@@ -54,7 +54,9 @@ import {
   Loader2,
   AlertCircle,
   Play,
+  Layers,
 } from 'lucide-react';
+import { FeatureTiersTab } from './FeatureTiersTab';
 
 // ---------------------------------------------------------------------------
 // Types
