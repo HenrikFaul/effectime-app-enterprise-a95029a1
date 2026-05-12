@@ -477,32 +477,85 @@ function FeatureGrid({ features, featureByKey, dependents, isOn, onToggle, pendi
   );
 }
 
-function RoutingAuditBanner({ features }: { features: Feature[] }) {
+function RoutingAuditBanner({ features, onJump }: { features: Feature[]; onJump: (key: string) => void }) {
+  // Categorized consistency checks
   const missingRoute = features.filter(f => !f.route_path || !f.route_path.trim());
   const missingMenu = features.filter(f => !f.menu_path || f.menu_path.length === 0);
-  if (missingRoute.length === 0 && missingMenu.length === 0) {
+  // Invalid format: route must start with "/" and contain only safe URL chars
+  const invalidRoute = features.filter(f => f.route_path && f.route_path.trim() && !/^\/[A-Za-z0-9/_\-:$.{}-]*$/.test(f.route_path.trim()));
+  // Empty / whitespace menu segments
+  const invalidMenu = features.filter(f => (f.menu_path || []).some(seg => !seg || !seg.trim()));
+  // Empty core fields
+  const emptyName = features.filter(f => !f.name || !f.name.trim());
+  // Duplicate route_path + menu_path combos
+  const seen = new Map<string, Feature[]>();
+  features.forEach(f => {
+    if (!f.route_path || !f.route_path.trim()) return;
+    const key = `${f.route_path.trim()}::${(f.menu_path || []).join(' > ')}`;
+    if (!seen.has(key)) seen.set(key, []);
+    seen.get(key)!.push(f);
+  });
+  const duplicates = Array.from(seen.entries()).filter(([, list]) => list.length > 1);
+
+  const totalIssues = missingRoute.length + missingMenu.length + invalidRoute.length + invalidMenu.length + emptyName.length + duplicates.length;
+
+  if (totalIssues === 0) {
     return (
       <Alert className="border-emerald-500/40 bg-emerald-500/5">
         <Network className="h-4 w-4 text-emerald-600" />
-        <AlertTitle className="text-sm">Minden funkcióhoz definiált útvonal</AlertTitle>
+        <AlertTitle className="text-sm">Konzisztens routing</AlertTitle>
         <AlertDescription className="text-xs">
-          Az aktuális szűrésben szereplő összes feature-höz tartozik route_path és menu_path.
+          Az aktuális szűrésben szereplő minden feature-höz tartozik route_path és menu_path, nincs duplikátum vagy érvénytelen elem.
         </AlertDescription>
       </Alert>
     );
   }
+
+  const Section = ({ title, icon, items, color }: { title: string; icon: React.ReactNode; items: Feature[]; color: string }) => (
+    items.length === 0 ? null : (
+      <div className={`rounded border p-2 ${color}`}>
+        <div className="flex items-center gap-1.5 text-xs font-medium mb-1">{icon}<span>{title}</span><Badge variant="outline" className="text-[10px] ml-1">{items.length}</Badge></div>
+        <div className="flex flex-wrap gap-1">
+          {items.slice(0, 24).map(f => (
+            <button key={f.id} type="button" onClick={() => onJump(f.feature_key)} className="text-[10px] font-mono px-1.5 py-0.5 rounded border hover:bg-background hover:underline">
+              {f.feature_key}
+            </button>
+          ))}
+          {items.length > 24 && <span className="text-[10px] text-muted-foreground">+{items.length - 24}</span>}
+        </div>
+      </div>
+    )
+  );
+
   return (
     <Alert variant="destructive">
       <AlertTriangle className="h-4 w-4" />
-      <AlertTitle className="text-sm">Hiányzó útvonal-paraméterek</AlertTitle>
-      <AlertDescription className="text-xs space-y-1">
-        <div>{missingRoute.length} feature-nél hiányzik a <code>route_path</code>, {missingMenu.length}-nál a <code>menu_path</code>.</div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {[...new Set([...missingRoute, ...missingMenu].map(f => f.feature_key))].slice(0, 20).map(k => (
-            <Badge key={k} variant="outline" className="text-[10px] font-mono">{k}</Badge>
-          ))}
-          {missingRoute.length + missingMenu.length > 20 && <span className="text-[10px]">…</span>}
-        </div>
+      <AlertTitle className="text-sm">Routing audit — {totalIssues} hibakategória találat</AlertTitle>
+      <AlertDescription className="text-xs space-y-2 mt-2">
+        <Section title="Hiányzó route_path" icon={<Link2 className="h-3 w-3" />} items={missingRoute} color="border-destructive/40 bg-destructive/5" />
+        <Section title="Hiányzó menu_path" icon={<Network className="h-3 w-3" />} items={missingMenu} color="border-destructive/40 bg-destructive/5" />
+        <Section title="Érvénytelen route_path formátum" icon={<AlertCircle className="h-3 w-3" />} items={invalidRoute} color="border-amber-500/40 bg-amber-500/5" />
+        <Section title="Üres / whitespace menü szegmens" icon={<AlertCircle className="h-3 w-3" />} items={invalidMenu} color="border-amber-500/40 bg-amber-500/5" />
+        <Section title="Hiányzó név" icon={<AlertCircle className="h-3 w-3" />} items={emptyName} color="border-destructive/40 bg-destructive/5" />
+        {duplicates.length > 0 && (
+          <div className="rounded border border-amber-500/40 bg-amber-500/5 p-2">
+            <div className="flex items-center gap-1.5 text-xs font-medium mb-1"><CopyIcon className="h-3 w-3" /><span>Duplikált route_path + menu_path</span><Badge variant="outline" className="text-[10px] ml-1">{duplicates.length}</Badge></div>
+            <div className="space-y-1">
+              {duplicates.slice(0, 10).map(([key, list]) => (
+                <div key={key} className="flex flex-wrap items-center gap-1">
+                  <code className="text-[10px]">{key}</code>
+                  <span className="text-[10px] text-muted-foreground">→</span>
+                  {list.map(f => (
+                    <button key={f.id} type="button" onClick={() => onJump(f.feature_key)} className="text-[10px] font-mono px-1.5 py-0.5 rounded border hover:bg-background hover:underline">
+                      {f.feature_key}
+                    </button>
+                  ))}
+                </div>
+              ))}
+              {duplicates.length > 10 && <div className="text-[10px] text-muted-foreground">+{duplicates.length - 10} további</div>}
+            </div>
+          </div>
+        )}
       </AlertDescription>
     </Alert>
   );
