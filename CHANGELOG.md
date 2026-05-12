@@ -1,3 +1,47 @@
+## 2026-05-12 — v3.13.0 Superadmin / Platform Control Plane
+
+### Added — Platform Administration
+
+Platform-level superadmin control plane accessible at `/superadmin` (admin role only). Sharply separated from workspace-level admin controls — no workspace business logic is affected.
+
+**New route:** `/superadmin` → `src/pages/Superadmin.tsx`
+- Auth-gated: checks `user_roles.role = 'admin'`, redirects to `/app` if unauthorized
+- Header has back-to-Admin button; Admin page header has "Platform Control Plane →" button
+
+**`SuperadminControlPlane` component (`src/components/superadmin/SuperadminControlPlane.tsx`, 1074 lines):**
+6-tab layout — all data fetched lazily (tab activates on first open):
+
+| Tab | Purpose |
+|---|---|
+| **Overview** | Platform-wide KPI cards: workspaces (total/active/archived/recovery), users (total/new 30d), feature flags enabled, email queue pending |
+| **Workspaces** | Searchable table of all enterprise workspaces with status badges. Archive/unarchive, enable/disable recovery mode (with reason), hard-delete (requires typing workspace name to confirm) |
+| **Feature Flags** | Toggle `platform_feature_flags` entries on/off with instant feedback |
+| **Scheduled Jobs** | List pg_cron jobs; trigger allowlisted edge functions (`sync-holidays`, `ms365-sync`, `send-scheduled-reports`, `cleanup-temp-users`, `cleanup-demo-workspace`) |
+| **Locales** | Locale registry with workspace counts and feature flag status per locale |
+| **Email Queue** | Queue depth by status + last 10 entries |
+
+All mutations behind `AlertDialog` confirmation gates. Zero hardcoded strings — 98 `t('superadmin.*')` calls.
+
+**New edge function: `supabase/functions/superadmin-hub/index.ts` (634 lines)**
+Actions: `platform-overview`, `list-workspaces`, `workspace-action` (archive/unarchive/enable_recovery/disable_recovery/delete), `list-feature-flags`, `toggle-feature-flag`, `list-cron-jobs`, `trigger-edge-function`, `locale-registry`, `email-queue-status`, `platform-version`.
+Auth: JWT → `user_roles` admin check on every request. Service role operations server-side only.
+
+**New DB migration: `20260512230000_platform_superadmin.sql`**
+- `platform_feature_flags`: key, description, category, enabled, notes, updated_by, updated_at; RLS admin-only; 10 seed rows
+- `updated_at` trigger via `update_updated_at_column()`
+
+**i18n:** `superadmin` namespace (69 keys) added to all 5 locales (EN / HU / CS / SK / PL).
+
+**Security design:**
+- Backend-enforced: edge function re-checks admin role on every call
+- Service role key never exposed to client
+- pg_cron and function triggers use allowlist — no arbitrary invocation
+- Workspace delete requires name confirmation in UI + server-side auth check
+
+**TypeScript:** 0 errors.
+
+---
+
 ## 2026-05-12 — v3.12.0 SOC 2 / ISO 27001 Technical Controls — Security Center
 
 ### Added — Security & Compliance

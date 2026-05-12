@@ -9,6 +9,9 @@ verify_jwt = true
 [functions.security-admin]
 verify_jwt = true
 
+[functions.superadmin-hub]
+verify_jwt = true
+
 [functions.seed-demo-workspace]
 verify_jwt = true
 

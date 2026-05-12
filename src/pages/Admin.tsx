@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, LayoutDashboard, Users } from 'lucide-react';
+import { ArrowLeft, LayoutDashboard, Users, ShieldAlert } from 'lucide-react';
 import AdminDashboard from '@/components/admin/AdminDashboard';
 import AdminUsers from '@/components/admin/AdminUsers';
 import { useI18n } from '@/i18n/I18nProvider';
@@ -56,6 +56,12 @@ const Admin = () => {
               <LayoutDashboard className="h-4 w-4 text-primary-foreground" />
             </div>
             <h1 className="font-display text-lg font-bold">Admin Panel</h1>
+          </div>
+          <div className="ml-auto">
+            <Button variant="outline" size="sm" onClick={() => navigate('/superadmin')} className="gap-2">
+              <ShieldAlert className="h-4 w-4" />
+              Platform Control Plane
+            </Button>
           </div>
         </div>
       </header>
