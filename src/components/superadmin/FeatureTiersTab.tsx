@@ -669,11 +669,12 @@ function RoutingTree({
             return (
               <div
                 key={f.id}
+                id={`feature-row-${f.id}`}
                 draggable
                 onDragStart={(e) => onDragStart(e, f.id)}
                 onDragOver={onDragOver}
                 onDrop={(e) => onDrop(e, node.features, f.id)}
-                className="px-2 py-1.5 rounded hover:bg-muted/40 border border-transparent hover:border-border"
+                className={`px-2 py-1.5 rounded hover:bg-muted/40 border ${editingRouteFor === f.id ? 'border-primary/50 bg-primary/5' : 'border-transparent hover:border-border'}`}
               >
                 <div className="flex items-center gap-2 flex-wrap">
                   <GripVertical className="h-3.5 w-3.5 text-muted-foreground cursor-grab shrink-0" />
@@ -682,7 +683,10 @@ function RoutingTree({
                   {f.module && <Badge variant="secondary" className="text-[10px]">{f.module}</Badge>}
                   {noRoute && <Badge variant="destructive" className="text-[10px]">nincs route</Badge>}
                   {noMenu && <Badge variant="destructive" className="text-[10px]">nincs menü</Badge>}
-                  <Button size="sm" variant="ghost" className="ml-auto h-6 px-2" onClick={() => setEditingRouteFor(editingRouteFor === f.id ? '' : f.id)}>
+                  <Button size="sm" variant="ghost" className="ml-auto h-6 px-2" title="Megnyitás" onClick={() => onViewFeature(f.id)}>
+                    <Eye className="h-3 w-3" />
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-6 px-2" title="Szerkesztés" onClick={() => setEditingRouteFor(editingRouteFor === f.id ? '' : f.id)}>
                     <Pencil className="h-3 w-3" />
                   </Button>
                 </div>
@@ -691,7 +695,17 @@ function RoutingTree({
                     <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
                     <span>Hiányzó előfeltétel ebben a tierben:</span>
                     <span className="flex flex-wrap gap-1">
-                      {missing.map(m => <Badge key={m} variant="outline" className="text-[10px] border-destructive/50 text-destructive">{m}</Badge>)}
+                      {missing.map(m => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => onOpenDepEditor(m)}
+                          title={`Ugrás: ${m} szerkesztése`}
+                          className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-destructive/50 text-destructive hover:bg-destructive/10 hover:underline"
+                        >
+                          {m}
+                        </button>
+                      ))}
                     </span>
                   </div>
                 )}
