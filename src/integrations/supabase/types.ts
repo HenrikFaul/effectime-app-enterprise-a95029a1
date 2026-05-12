@@ -6134,6 +6134,7 @@ export type Database = {
           comment: string | null
           created_at: string
           end_date: string
+          external_calendar_event_id: string | null
           half_day_period: string | null
           id: string
           is_half_day: boolean
@@ -6155,6 +6156,7 @@ export type Database = {
           comment?: string | null
           created_at?: string
           end_date: string
+          external_calendar_event_id?: string | null
           half_day_period?: string | null
           id?: string
           is_half_day?: boolean
@@ -6176,6 +6178,7 @@ export type Database = {
           comment?: string | null
           created_at?: string
           end_date?: string
+          external_calendar_event_id?: string | null
           half_day_period?: string | null
           id?: string
           is_half_day?: boolean
