@@ -1,3 +1,77 @@
+## 2026-05-12 — v3.10.0 Open API Platform & Developer Ecosystem
+
+### Added — Enterprise API Platform
+
+Self-service API infrastructure for integrating Effectime with third-party tools and custom workflows.
+
+**`DeveloperPortal` component (`src/components/enterprise/developer/DeveloperPortal.tsx`):**
+- API key management: create named keys with scopes (read, write, webhooks, admin), list active keys, one-time key reveal dialog, revoke keys
+- SHA-256 hashing of keys via `crypto.subtle` — raw key never persisted
+- 7-day API usage chart (BarChart from Recharts) from `enterprise_api_usage_logs`
+- Webhook subscriptions: create with HTTPS-only URL validation, auto-generated signing secret, per-event-type checkboxes (member.created, leave.approved, etc.), toggle active/inactive, delete
+- Static developer reference card with authentication header example, rate limit, and endpoint overview
+
+**New DB tables (migration `20260512210000_analytics_wellbeing_api_platform.sql`):**
+- `enterprise_api_keys` — key_prefix, key_hash (SHA-256), scopes, expires_at, revoked_at, last_used_at
+- `enterprise_api_usage_logs` — method, path, status_code, duration_ms per request
+- `enterprise_webhook_subscriptions` — url, secret, events[], is_active, last_fired_at, last_error
+
+**Navigation:** "Developer API" tab visible to workspace admins (owner / resourceAssistant) in top nav.
+
+**i18n:** `developer` namespace added to all 5 locales (EN / HU / CS / SK / PL).
+
+**TypeScript:** 0 errors.
+
+---
+
+## 2026-05-12 — v3.9.0 Burnout & Wellbeing Detection Engine
+
+### Added — Predictive Wellbeing
+
+Automated wellbeing scoring and alert system to help managers identify burnout risk early.
+
+**`WellbeingDashboard` component (`src/components/enterprise/wellbeing/WellbeingDashboard.tsx`):**
+- 5-component weighted scoring algorithm: overtime density (30%), leave utilization (20%), weekend work density (25%), schedule stability (15%), recovery time (10%)
+- Score range 0–100 with status tiers: Healthy (≥70), Monitor (40–69), At Risk (<40)
+- "Recalculate" button upserts scores for all members to `wellbeing_scores`
+- Auto-creates `wellbeing_alerts` for members scoring <40 (burnout_risk, high_overtime, low_leave_usage, weekend_overload)
+- Team heatmap: color-coded grid of all members with score badge
+- Alert inbox with severity filter and Resolve button (marks resolved_at, resolved_by)
+- Admin-only; accessible via Resources → Wellbeing sub-tab
+
+**`WellbeingScoreCard` component (`src/components/enterprise/wellbeing/WellbeingScoreCard.tsx`):**
+- Employee self-view in My Portal: score donut, 5-component breakdown from JSONB, leave recommendation hint when score <60
+
+**New DB tables:**
+- `wellbeing_scores` — workspace_id, membership_id, score (0–100), components JSONB, calculated_at
+- `wellbeing_alerts` — alert_type, severity (low/medium/high), message, triggered_at, resolved_at, resolved_by
+
+**i18n:** `wellbeing` namespace added to all 5 locales (EN / HU / CS / SK / PL).
+
+**TypeScript:** 0 errors.
+
+---
+
+## 2026-05-12 — v3.8.0 Real-time Executive Intelligence Dashboard with Predictive Analytics
+
+### Added — Executive Analytics
+
+A dedicated analytics view for workspace admins giving KPI summary, 6-month labor cost forecast, 13-week coverage risk heatmap, and absence risk ranking.
+
+**`AnalyticsDashboard` component (`src/components/enterprise/analytics/AnalyticsDashboard.tsx`):**
+- 4 KPI cards: Scheduled Hours (MTD), Labor Cost (MTD), Absence Rate, Coverage Score
+- 6-month labor cost forecast AreaChart (Recharts): projects cost from `enterprise_member_rates` × scheduled hours
+- 13-week coverage risk heatmap: color-coded day-grid using `leave_requests` + `enterprise_coverage_rules`, risk levels none / low / medium / high / critical
+- Absence risk table: members ranked by sick days + overtime in last 90 days, red-highlighted high-risk rows
+
+**Navigation:** "Analytics" tab visible to workspace admins in top nav.
+
+**i18n:** `analytics` namespace added to all 5 locales (EN / HU / CS / SK / PL) including `kpi_*_sub` subtitle keys.
+
+**TypeScript:** 0 errors.
+
+---
+
 ## 2026-05-12 — v3.7.9 Extended office parameters: hours, contact, equipment, min staffing
 
 ### Added — Office / location management
