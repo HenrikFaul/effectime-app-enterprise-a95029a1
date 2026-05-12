@@ -125,20 +125,20 @@ export function LeaveTypeManager({ workspaceId }: Props) {
         <p className="text-xs text-muted-foreground">{t('leave_type_mgr.empty_state')}</p>
       ) : (
         <div className="space-y-1">
-          {types.map(t => (
-            <div key={t.id} className="flex items-center gap-2 p-2 rounded-md border text-sm">
-              <div className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: t.color }} />
-              <span className={t.is_active ? '' : 'line-through text-muted-foreground'}>{t.name}</span>
-              {t.is_paid && <Badge variant="outline" className="text-[10px] h-4">{t('leave_type_mgr.badge_paid')}</Badge>}
-              {t.requires_approval && <Badge variant="secondary" className="text-[10px] h-4">{t('leave_type_mgr.badge_approval')}</Badge>}
+          {types.map(lt => (
+            <div key={lt.id} className="flex items-center gap-2 p-2 rounded-md border text-sm">
+              <div className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: lt.color }} />
+              <span className={lt.is_active ? '' : 'line-through text-muted-foreground'}>{lt.name}</span>
+              {lt.is_paid && <Badge variant="outline" className="text-[10px] h-4">{t('leave_type_mgr.badge_paid')}</Badge>}
+              {lt.requires_approval && <Badge variant="secondary" className="text-[10px] h-4">{t('leave_type_mgr.badge_approval')}</Badge>}
               <div className="ml-auto flex gap-1">
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleActive(t)}>
-                  <Switch checked={t.is_active} className="scale-75" />
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => toggleActive(lt)}>
+                  <Switch checked={lt.is_active} className="scale-75" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEdit(t)}>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => openEdit(lt)}>
                   <Pencil className="h-3 w-3" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDelete(t.id)}>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => handleDelete(lt.id)}>
                   <Trash2 className="h-3 w-3 text-destructive" />
                 </Button>
               </div>

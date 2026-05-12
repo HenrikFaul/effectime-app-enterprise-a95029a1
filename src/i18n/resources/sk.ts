@@ -161,17 +161,6 @@ const sk = {
     expand_aria: 'Rozbaliť',
     collapse_aria: 'Zbaliť',
   },
-  skills_mgr: { empty_matrix_hint: 'Pridajte zručnosti a členov pre vyplnenie matice.' },
-  scenario_planner: {
-    card_title: 'Scenáre',
-    btn_new: 'Nový scenár',
-    empty: 'Zatiaľ žiadne scenáre. Vytvorte jeden pre plánovanie "čo keby".',
-    tentative_alloc_title: 'Predbežné alokácie',
-    conflicts_badge: '{{count}} konflikt(ov)',
-    btn_add_assignment: 'Pridať',
-    btn_save_asgs: 'Uložiť',
-    no_assignments: 'Pridajte predbežnú alokáciu pre modelovanie dopadu nového projektu alebo reorganizácie.',
-  },
   substitute_picker: {
     label: 'Zástupcovia (v poradí)',
     placeholder: 'Vyberte člena...',

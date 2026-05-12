@@ -140,7 +140,7 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
             employeeName: reqUserAuth?.display_name || t('common.colleague'), decision,
             startDate: format(new Date(req.start_date), 'yyyy.MM.dd', { locale: hu }),
             endDate: format(new Date(req.end_date), 'yyyy.MM.dd', { locale: hu }),
-            leaveType: TYPE_MAP[req.leave_type] || req.leave_type, reviewerName, reviewComment,
+            leaveType: t(`approval_inbox.type_${req.leave_type}` as any) || req.leave_type, reviewerName, reviewComment,
           },
         },
       }).catch(err => console.warn('Email notification failed:', err));

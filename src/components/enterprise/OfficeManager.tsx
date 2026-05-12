@@ -140,7 +140,7 @@ export function OfficeManager({ workspaceId }: Props) {
       .select('*')
       .eq('workspace_id', workspaceId)
       .order('name');
-    setOffices((data as Office[]) || []);
+    setOffices(((data as unknown) as Office[]) || []);
 
     const { data: members } = await supabase
       .from('enterprise_memberships')
