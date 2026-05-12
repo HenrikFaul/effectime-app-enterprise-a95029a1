@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { DensityProvider } from "@/hooks/useDensity";
@@ -93,6 +93,35 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
+function OAuthCallbackGuard({ children }: { children: React.ReactNode }) {
+  const [isOAuthCallback, setIsOAuthCallback] = useState(() =>
+    typeof window !== 'undefined' &&
+    window.location.hash.includes('access_token=') &&
+    window.location.hash.includes('refresh_token=')
+  );
+
+  useEffect(() => {
+    if (!isOAuthCallback) return;
+    const onHashChange = () => {
+      if (!window.location.hash.includes('access_token=')) {
+        setIsOAuthCallback(false);
+      }
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, [isOAuthCallback]);
+
+  if (isOAuthCallback) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      </div>
+    );
+  }
+
+  return <>{children}</>;
+}
+
 const SpaRedirectHandler = () => {
   const navigate = useNavigate();
   useEffect(() => {
@@ -122,21 +151,23 @@ const App = () => (
                 <Sonner />
                 <HelpDrawer />
                 <HashRouteBridge />
-                <HashRouter>
-                  <SpaRedirectHandler />
-                  <Routes>
-                    <Route path="/" element={<Landing />} />
-                    <Route path="/app" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
-                    <Route path="/enterprise" element={<ProtectedRoute><Navigate to="/app" replace /></ProtectedRoute>} />
-                    <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                    <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
-                    <Route path="/reset-password" element={<ResetPassword />} />
-                    <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-                    <Route path="/superadmin" element={<ProtectedRoute><Superadmin /></ProtectedRoute>} />
-                    <Route path="/unsubscribe" element={<Unsubscribe />} />
-                    <Route path="*" element={<NotFound />} />
-                  </Routes>
-                </HashRouter>
+                <OAuthCallbackGuard>
+                  <HashRouter>
+                    <SpaRedirectHandler />
+                    <Routes>
+                      <Route path="/" element={<Landing />} />
+                      <Route path="/app" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
+                      <Route path="/enterprise" element={<ProtectedRoute><Navigate to="/app" replace /></ProtectedRoute>} />
+                      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                      <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
+                      <Route path="/reset-password" element={<ResetPassword />} />
+                      <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+                      <Route path="/superadmin" element={<ProtectedRoute><Superadmin /></ProtectedRoute>} />
+                      <Route path="/unsubscribe" element={<Unsubscribe />} />
+                      <Route path="*" element={<NotFound />} />
+                    </Routes>
+                  </HashRouter>
+                </OAuthCallbackGuard>
               </TooltipProvider>
             </HelpRegistryProvider>
           </I18nProvider>

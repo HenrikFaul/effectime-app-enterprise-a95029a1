@@ -1,3 +1,24 @@
+## 2026-05-12 — v3.14.1 Google OAuth Login Fix (HashRouter 404 flash)
+
+### Fixed — Authentication
+
+Resolved a critical login regression where Google OAuth redirects caused a ~1-second 404 "page not found" flash and could leave the user stuck on the error screen with no way to proceed.
+
+**Root cause:** Supabase's OAuth implicit flow delivers tokens in the URL hash fragment (`#access_token=…`). The app uses HashRouter, which interprets everything after `#` as a route path. The token string matched no route → `<NotFound />` rendered. After `setSession()` resolved, the old code called `window.history.replaceState()`, which does **not** fire a `hashchange` event, so HashRouter never re-evaluated its routes and stayed on the 404 page.
+
+**Fix:**
+
+- `src/hooks/useAuth.tsx` — replaced `replaceState` with `window.location.replace(origin + '/#/app')` (on success) / `'/#/auth'` (on error). `location.replace` fires `hashchange`, which HashRouter correctly handles.
+- `src/App.tsx` — added `OAuthCallbackGuard` component that synchronously detects `#access_token=` in the hash on first render and shows a neutral loading spinner instead of mounting the HashRouter. Once `useAuth` calls `location.replace`, the guard's `hashchange` listener clears the flag, HashRouter mounts with the clean `#/app` URL, and the user lands on the app with no 404 flash at all.
+
+**Files changed:**
+- `src/hooks/useAuth.tsx` — `setSession.finally(replaceState)` → `setSession.then(location.replace)`
+- `src/App.tsx` — added `OAuthCallbackGuard`; wrapped `<HashRouter>` with it
+
+**TypeScript:** 0 errors.
+
+---
+
 ## 2026-05-12 — v3.14.0 Full Multilingual Coverage — CS / SK / PL / HU
 
 ### Fixed — Localization
