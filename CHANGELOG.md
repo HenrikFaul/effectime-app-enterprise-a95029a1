@@ -1,3 +1,62 @@
+## 2026-05-12 — v3.12.0 SOC 2 / ISO 27001 Technical Controls — Security Center
+
+### Added — Security & Compliance
+
+Enterprise-grade security and compliance module for SOC 2 Type II and ISO 27001 readiness.
+
+**`SecurityCenter` component (`src/components/enterprise/security/SecurityCenter.tsx`):**
+- **Audit log viewer (Tab 1):** Reads enhanced `enterprise_audit_events` (now with `ip_address` and `user_agent` columns). Filters: action type, date range, actor search. Expandable rows show prev_state/new_state diff. Paginated (50/page). CSV export.
+- **Data retention policy configuration (Tab 2):** Create/edit retention policies per table (`enterprise_audit_events`, `enterprise_api_usage_logs`, `wellbeing_scores`, etc.) with configurable retention days. `is_active=false` by default — activation requires explicit admin action after legal review. Backed by `enforce_data_retention()` PostgreSQL function callable via pg_cron.
+- **GDPR tools (Tab 3):** Article 20 data portability — downloads all user data as JSON from 5 tables. Article 17 erasure requests tracked in `gdpr_requests` table with status workflow.
+- Active session management: revoke any user's sessions via `security-admin` edge function.
+
+**Navigation:** "Security" tab visible to workspace admins in top nav.
+
+**New edge function: `supabase/functions/security-admin/index.ts`**
+- Actions: `export-audit-log`, `list-sessions`, `revoke-session` (global sign-out), `data-export-gdpr`
+
+**New DB tables/changes (migration `20260512220000_payroll_security_platform.sql`):**
+- `enterprise_audit_events`: added `ip_address TEXT`, `user_agent TEXT` columns
+- `data_retention_policies`: table-level retention rules, `is_active` defaults to false
+- `gdpr_requests`: tracks export/deletion requests with status lifecycle
+- `enforce_data_retention()`: SECURITY DEFINER function for pg_cron (not scheduled by this migration)
+
+**i18n:** `security` namespace added to all 5 locales (EN / HU / CS / SK / PL). `ws_nav.security` key added.
+
+**TypeScript:** 0 errors.
+
+---
+
+## 2026-05-12 — v3.11.0 Payroll Integration Engine (DATEV, Personio, BambooHR, SAP, Workday, ADP, Generic)
+
+### Added — Payroll
+
+Multi-provider payroll export system with period lifecycle management and provider-specific CSV formatting.
+
+**`PayrollPanel` component (`src/components/enterprise/payroll/PayrollPanel.tsx`):**
+- Payroll period management: create periods (name + date range), list with status badges (Open / Locked / Exported)
+- Period summary table: per-member breakdown of regular hours, overtime hours, leave days, gross estimate
+- 4 KPI cards: Total Hours, Overtime Hours, Gross Estimate, Member Count
+- **Export (11 providers):** DATEV (LODAS semicolon format, German headers), BambooHR, Personio, SAP SuccessFactors, Workday, ADP Workforce Now, Sage HR, Billingo (HU), Számlázz.hu (HU), Pohoda (CZ/SK), Generic CSV — all client-side CSV download
+- **Period locking:** Confirm dialog → sets status=locked, writes immutable audit event to `enterprise_audit_events`
+- Additional providers can be added by extending the provider switch in the edge function
+
+**New edge function: `supabase/functions/payroll-export/index.ts`**
+- Actions: `calculate-period` (server-side aggregation), `export-csv` (provider-formatted), `lock-period` (audit-safe), `export-api` (placeholder for direct provider API push)
+- Provider adapters: datev, bamboohr, personio, generic
+
+**New DB tables (migration `20260512220000_payroll_security_platform.sql`):**
+- `payroll_periods`: id, workspace_id, name, start/end date, status (open/locked/exported), lock/export timestamps and actor
+- `payroll_export_configs`: per-workspace provider config + field mappings JSONB
+
+**Navigation:** Payroll sub-tab in Resources → Payroll (admin-only, `CreditCard` icon).
+
+**i18n:** `payroll` namespace added to all 5 locales (EN / HU / CS / SK / PL). `ws_nav.payroll` key added.
+
+**TypeScript:** 0 errors.
+
+---
+
 ## 2026-05-12 — v3.10.0 Open API Platform & Developer Ecosystem
 
 ### Added — Enterprise API Platform
