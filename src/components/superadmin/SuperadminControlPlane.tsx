@@ -1009,7 +1009,7 @@ function EmailQueueTab() {
 // Main component
 // ---------------------------------------------------------------------------
 
-type TabKey = 'overview' | 'workspaces' | 'flags' | 'jobs' | 'locales' | 'email';
+type TabKey = 'overview' | 'workspaces' | 'flags' | 'jobs' | 'locales' | 'email' | 'tiers';
 
 interface TabState {
   loaded: boolean;
