@@ -16,6 +16,7 @@ import Landing from "./pages/Landing";
 import Profile from "./pages/Profile";
 import ResetPassword from "./pages/ResetPassword";
 import Admin from "./pages/Admin";
+import Superadmin from "./pages/Superadmin";
 import Enterprise from "./pages/Enterprise";
 import Unsubscribe from "./pages/Unsubscribe";
 import NotFound from "./pages/NotFound";
@@ -131,6 +132,7 @@ const App = () => (
                     <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
                     <Route path="/reset-password" element={<ResetPassword />} />
                     <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+                    <Route path="/superadmin" element={<ProtectedRoute><Superadmin /></ProtectedRoute>} />
                     <Route path="/unsubscribe" element={<Unsubscribe />} />
                     <Route path="*" element={<NotFound />} />
                   </Routes>
