@@ -30,6 +30,20 @@ interface LeaveType {
 
 interface Allowance { id: string; name: string }
 
+function isLeaveType(row: unknown): row is LeaveType {
+  if (!row || typeof row !== 'object') return false;
+  const r = row as Record<string, unknown>;
+  return (
+    typeof r.id === 'string' &&
+    typeof r.name === 'string' &&
+    typeof r.color === 'string' &&
+    typeof r.is_paid === 'boolean' &&
+    typeof r.requires_approval === 'boolean' &&
+    typeof r.is_active === 'boolean' &&
+    typeof r.sort_order === 'number'
+  );
+}
+
 export function LeaveTypeManager({ workspaceId }: Props) {
   const { t } = useI18n();
   const [types, setTypes] = useState<LeaveType[]>([]);
