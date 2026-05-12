@@ -1043,6 +1043,7 @@ export function SuperadminControlPlane({ userId: _userId }: { userId: string }) 
           <TabsTrigger value="jobs">{t('superadmin.tab_jobs')}</TabsTrigger>
           <TabsTrigger value="locales">{t('superadmin.tab_locales')}</TabsTrigger>
           <TabsTrigger value="email">{t('superadmin.tab_email')}</TabsTrigger>
+          <TabsTrigger value="tiers" className="gap-1"><Layers className="h-3.5 w-3.5" /> Feature & Tier</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
