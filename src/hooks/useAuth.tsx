@@ -30,9 +30,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const accessToken = hashParams.get('access_token');
       const refreshToken = hashParams.get('refresh_token');
       if (accessToken && refreshToken) {
-        supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken }).finally(() => {
-          window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}`);
-        });
+        supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+          .then(({ error }) => {
+            if (!error) {
+              window.location.replace(`${window.location.origin}/#/app`);
+            } else {
+              window.location.replace(`${window.location.origin}/#/auth`);
+            }
+          });
       }
     }
 
