@@ -14,9 +14,10 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import {
   Loader2, Layers, Puzzle, Search, GitBranch, Network, ChevronRight, ChevronDown, Pencil,
-  AlertTriangle, GripVertical,
+  AlertTriangle, GripVertical, Eye, ArrowDownToLine, Link2, Copy as CopyIcon, AlertCircle,
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -53,6 +54,7 @@ export function FeatureTiersTab() {
   const [editingRouteFor, setEditingRouteFor] = useState<string>('');
   const [routeDraft, setRouteDraft] = useState<{ route_path: string; menu_path: string }>({ route_path: '', menu_path: '' });
   const [routingTier, setRoutingTier] = useState<string>('all');
+  const [viewingFeatureId, setViewingFeatureId] = useState<string>('');
   const { user } = useAuth();
   const openStorageKey = `routingTreeOpen:${user?.id || 'anon'}:${routingTier}`;
   const [openPaths, setOpenPaths] = useState<Record<string, boolean>>({});
@@ -194,6 +196,26 @@ export function FeatureTiersTab() {
     toast.success('Sorrend mentve');
   };
 
+  // Jump to a feature's editor (used by missing-prereq badges).
+  // Expands the ancestor chain in the tree and scrolls the row into view.
+  const openFeatureEditor = useCallback((featureKey: string) => {
+    const f = features.find(x => x.feature_key === featureKey);
+    if (!f) { toast.error(`A "${featureKey}" feature nem található`); return; }
+    const page = f.route_path || '(nincs útvonal megadva)';
+    const segs = [page, ...(f.menu_path || [])];
+    let acc = '';
+    const next: Record<string, boolean> = { ...openPaths };
+    for (const seg of segs) { acc = acc ? `${acc}/${seg}` : seg; next[acc] = true; }
+    setOpenPaths(next);
+    try { localStorage.setItem(openStorageKey, JSON.stringify(next)); } catch { /* ignore */ }
+    setEditingRouteFor(f.id);
+    setRouteDraft({ route_path: f.route_path || '', menu_path: (f.menu_path || []).join(' > ') });
+    setMode('routing');
+    setTimeout(() => {
+      document.getElementById(`feature-row-${f.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 200);
+  }, [features, openPaths, openStorageKey]);
+
   if (loading) return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div>;
 
   // Autocomplete suggestions
@@ -331,7 +353,7 @@ export function FeatureTiersTab() {
               <Badge variant="outline">{tierMap.get(routingTier)?.size || 0} feature ebben a tierben</Badge>
             )}
           </div>
-          <RoutingAuditBanner features={filtered} />
+          <RoutingAuditBanner features={filtered} onJump={openFeatureEditor} />
           <FilterBar search={search} setSearch={setSearch} modules={modules} moduleFilter={moduleFilter} setModuleFilter={setModuleFilter} />
           <RoutingTree
             features={filtered}
@@ -349,9 +371,21 @@ export function FeatureTiersTab() {
             persistOrder={persistOrder}
             openPaths={openPaths}
             toggleOpenPath={toggleOpenPath}
+            onOpenDepEditor={openFeatureEditor}
+            onViewFeature={setViewingFeatureId}
           />
         </TabsContent>
       </Tabs>
+
+      <FeatureDetailDialog
+        feature={features.find(f => f.id === viewingFeatureId) || null}
+        open={!!viewingFeatureId}
+        onClose={() => setViewingFeatureId('')}
+        featureByKey={featureByKey}
+        dependents={dependents}
+        onJump={(key) => { setViewingFeatureId(''); openFeatureEditor(key); }}
+        onView={(id) => setViewingFeatureId(id)}
+      />
     </div>
   );
 }
@@ -443,32 +477,85 @@ function FeatureGrid({ features, featureByKey, dependents, isOn, onToggle, pendi
   );
 }
 
-function RoutingAuditBanner({ features }: { features: Feature[] }) {
+function RoutingAuditBanner({ features, onJump }: { features: Feature[]; onJump: (key: string) => void }) {
+  // Categorized consistency checks
   const missingRoute = features.filter(f => !f.route_path || !f.route_path.trim());
   const missingMenu = features.filter(f => !f.menu_path || f.menu_path.length === 0);
-  if (missingRoute.length === 0 && missingMenu.length === 0) {
+  // Invalid format: route must start with "/" and contain only safe URL chars
+  const invalidRoute = features.filter(f => f.route_path && f.route_path.trim() && !/^\/[A-Za-z0-9/_\-:$.{}-]*$/.test(f.route_path.trim()));
+  // Empty / whitespace menu segments
+  const invalidMenu = features.filter(f => (f.menu_path || []).some(seg => !seg || !seg.trim()));
+  // Empty core fields
+  const emptyName = features.filter(f => !f.name || !f.name.trim());
+  // Duplicate route_path + menu_path combos
+  const seen = new Map<string, Feature[]>();
+  features.forEach(f => {
+    if (!f.route_path || !f.route_path.trim()) return;
+    const key = `${f.route_path.trim()}::${(f.menu_path || []).join(' > ')}`;
+    if (!seen.has(key)) seen.set(key, []);
+    seen.get(key)!.push(f);
+  });
+  const duplicates = Array.from(seen.entries()).filter(([, list]) => list.length > 1);
+
+  const totalIssues = missingRoute.length + missingMenu.length + invalidRoute.length + invalidMenu.length + emptyName.length + duplicates.length;
+
+  if (totalIssues === 0) {
     return (
       <Alert className="border-emerald-500/40 bg-emerald-500/5">
         <Network className="h-4 w-4 text-emerald-600" />
-        <AlertTitle className="text-sm">Minden funkcióhoz definiált útvonal</AlertTitle>
+        <AlertTitle className="text-sm">Konzisztens routing</AlertTitle>
         <AlertDescription className="text-xs">
-          Az aktuális szűrésben szereplő összes feature-höz tartozik route_path és menu_path.
+          Az aktuális szűrésben szereplő minden feature-höz tartozik route_path és menu_path, nincs duplikátum vagy érvénytelen elem.
         </AlertDescription>
       </Alert>
     );
   }
+
+  const Section = ({ title, icon, items, color }: { title: string; icon: React.ReactNode; items: Feature[]; color: string }) => (
+    items.length === 0 ? null : (
+      <div className={`rounded border p-2 ${color}`}>
+        <div className="flex items-center gap-1.5 text-xs font-medium mb-1">{icon}<span>{title}</span><Badge variant="outline" className="text-[10px] ml-1">{items.length}</Badge></div>
+        <div className="flex flex-wrap gap-1">
+          {items.slice(0, 24).map(f => (
+            <button key={f.id} type="button" onClick={() => onJump(f.feature_key)} className="text-[10px] font-mono px-1.5 py-0.5 rounded border hover:bg-background hover:underline">
+              {f.feature_key}
+            </button>
+          ))}
+          {items.length > 24 && <span className="text-[10px] text-muted-foreground">+{items.length - 24}</span>}
+        </div>
+      </div>
+    )
+  );
+
   return (
     <Alert variant="destructive">
       <AlertTriangle className="h-4 w-4" />
-      <AlertTitle className="text-sm">Hiányzó útvonal-paraméterek</AlertTitle>
-      <AlertDescription className="text-xs space-y-1">
-        <div>{missingRoute.length} feature-nél hiányzik a <code>route_path</code>, {missingMenu.length}-nál a <code>menu_path</code>.</div>
-        <div className="flex flex-wrap gap-1 mt-1">
-          {[...new Set([...missingRoute, ...missingMenu].map(f => f.feature_key))].slice(0, 20).map(k => (
-            <Badge key={k} variant="outline" className="text-[10px] font-mono">{k}</Badge>
-          ))}
-          {missingRoute.length + missingMenu.length > 20 && <span className="text-[10px]">…</span>}
-        </div>
+      <AlertTitle className="text-sm">Routing audit — {totalIssues} hibakategória találat</AlertTitle>
+      <AlertDescription className="text-xs space-y-2 mt-2">
+        <Section title="Hiányzó route_path" icon={<Link2 className="h-3 w-3" />} items={missingRoute} color="border-destructive/40 bg-destructive/5" />
+        <Section title="Hiányzó menu_path" icon={<Network className="h-3 w-3" />} items={missingMenu} color="border-destructive/40 bg-destructive/5" />
+        <Section title="Érvénytelen route_path formátum" icon={<AlertCircle className="h-3 w-3" />} items={invalidRoute} color="border-amber-500/40 bg-amber-500/5" />
+        <Section title="Üres / whitespace menü szegmens" icon={<AlertCircle className="h-3 w-3" />} items={invalidMenu} color="border-amber-500/40 bg-amber-500/5" />
+        <Section title="Hiányzó név" icon={<AlertCircle className="h-3 w-3" />} items={emptyName} color="border-destructive/40 bg-destructive/5" />
+        {duplicates.length > 0 && (
+          <div className="rounded border border-amber-500/40 bg-amber-500/5 p-2">
+            <div className="flex items-center gap-1.5 text-xs font-medium mb-1"><CopyIcon className="h-3 w-3" /><span>Duplikált route_path + menu_path</span><Badge variant="outline" className="text-[10px] ml-1">{duplicates.length}</Badge></div>
+            <div className="space-y-1">
+              {duplicates.slice(0, 10).map(([key, list]) => (
+                <div key={key} className="flex flex-wrap items-center gap-1">
+                  <code className="text-[10px]">{key}</code>
+                  <span className="text-[10px] text-muted-foreground">→</span>
+                  {list.map(f => (
+                    <button key={f.id} type="button" onClick={() => onJump(f.feature_key)} className="text-[10px] font-mono px-1.5 py-0.5 rounded border hover:bg-background hover:underline">
+                      {f.feature_key}
+                    </button>
+                  ))}
+                </div>
+              ))}
+              {duplicates.length > 10 && <div className="text-[10px] text-muted-foreground">+{duplicates.length - 10} további</div>}
+            </div>
+          </div>
+        )}
       </AlertDescription>
     </Alert>
   );
@@ -477,6 +564,7 @@ function RoutingAuditBanner({ features }: { features: Feature[] }) {
 function RoutingTree({
   features, tierFilterIds, featureByKey, editingRouteFor, setEditingRouteFor,
   routeDraft, setRouteDraft, saveRoute, persistOrder, openPaths, toggleOpenPath,
+  onOpenDepEditor, onViewFeature,
 }: {
   features: Feature[];
   tierFilterIds: Set<string> | null;
@@ -489,6 +577,8 @@ function RoutingTree({
   persistOrder: (orderedIds: string[]) => void | Promise<void>;
   openPaths: Record<string, boolean>;
   toggleOpenPath: (path: string, isOpen: boolean) => void;
+  onOpenDepEditor: (featureKey: string) => void;
+  onViewFeature: (id: string) => void;
 }) {
   // Tier-aware visibility: hide features not in tier; flag missing deps
   const visible = tierFilterIds
@@ -579,11 +669,12 @@ function RoutingTree({
             return (
               <div
                 key={f.id}
+                id={`feature-row-${f.id}`}
                 draggable
                 onDragStart={(e) => onDragStart(e, f.id)}
                 onDragOver={onDragOver}
                 onDrop={(e) => onDrop(e, node.features, f.id)}
-                className="px-2 py-1.5 rounded hover:bg-muted/40 border border-transparent hover:border-border"
+                className={`px-2 py-1.5 rounded hover:bg-muted/40 border ${editingRouteFor === f.id ? 'border-primary/50 bg-primary/5' : 'border-transparent hover:border-border'}`}
               >
                 <div className="flex items-center gap-2 flex-wrap">
                   <GripVertical className="h-3.5 w-3.5 text-muted-foreground cursor-grab shrink-0" />
@@ -592,7 +683,10 @@ function RoutingTree({
                   {f.module && <Badge variant="secondary" className="text-[10px]">{f.module}</Badge>}
                   {noRoute && <Badge variant="destructive" className="text-[10px]">nincs route</Badge>}
                   {noMenu && <Badge variant="destructive" className="text-[10px]">nincs menü</Badge>}
-                  <Button size="sm" variant="ghost" className="ml-auto h-6 px-2" onClick={() => setEditingRouteFor(editingRouteFor === f.id ? '' : f.id)}>
+                  <Button size="sm" variant="ghost" className="ml-auto h-6 px-2" title="Megnyitás" onClick={() => onViewFeature(f.id)}>
+                    <Eye className="h-3 w-3" />
+                  </Button>
+                  <Button size="sm" variant="ghost" className="h-6 px-2" title="Szerkesztés" onClick={() => setEditingRouteFor(editingRouteFor === f.id ? '' : f.id)}>
                     <Pencil className="h-3 w-3" />
                   </Button>
                 </div>
@@ -601,7 +695,17 @@ function RoutingTree({
                     <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
                     <span>Hiányzó előfeltétel ebben a tierben:</span>
                     <span className="flex flex-wrap gap-1">
-                      {missing.map(m => <Badge key={m} variant="outline" className="text-[10px] border-destructive/50 text-destructive">{m}</Badge>)}
+                      {missing.map(m => (
+                        <button
+                          key={m}
+                          type="button"
+                          onClick={() => onOpenDepEditor(m)}
+                          title={`Ugrás: ${m} szerkesztése`}
+                          className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-destructive/50 text-destructive hover:bg-destructive/10 hover:underline"
+                        >
+                          {m}
+                        </button>
+                      ))}
                     </span>
                   </div>
                 )}
@@ -630,6 +734,195 @@ function countFeatures(node: { children: Map<string, { features: Feature[] } & o
   // @ts-expect-error recursive structural traversal
   for (const c of node.children.values()) n += countFeatures(c);
   return n;
+}
+
+// Card palette inspired by the user-provided infographic — bold gradient cards.
+const CARD_PALETTE = [
+  'from-emerald-500 to-teal-500',
+  'from-cyan-500 to-blue-500',
+  'from-amber-500 to-orange-500',
+  'from-rose-500 to-pink-500',
+  'from-violet-500 to-purple-500',
+  'from-indigo-500 to-blue-600',
+  'from-fuchsia-500 to-pink-600',
+  'from-lime-500 to-emerald-600',
+];
+function paletteFor(key: string): string {
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  return CARD_PALETTE[h % CARD_PALETTE.length];
+}
+
+function FeatureNodeCard({ feature, onView, size = 'md' }: { feature: Feature; onView?: (id: string) => void; size?: 'sm' | 'md' | 'lg' }) {
+  const grad = paletteFor(feature.feature_key);
+  const dims = size === 'lg' ? 'min-w-[220px] p-3' : size === 'sm' ? 'min-w-[150px] p-2' : 'min-w-[180px] p-2.5';
+  return (
+    <button
+      type="button"
+      onClick={() => onView?.(feature.id)}
+      className={`group rounded-lg shadow-md text-left text-white bg-gradient-to-br ${grad} ${dims} hover:shadow-lg hover:scale-[1.02] transition-all`}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[10px] uppercase tracking-wider opacity-90">{feature.module || 'feature'}</span>
+        <span className="h-5 w-5 rounded-full bg-white/25 flex items-center justify-center text-[10px]">●</span>
+      </div>
+      <div className={`font-semibold ${size === 'sm' ? 'text-xs' : 'text-sm'} leading-tight mt-0.5`}>{feature.name}</div>
+      <div className="text-[10px] font-mono opacity-80 truncate">{feature.feature_key}</div>
+      {feature.route_path && size !== 'sm' && (
+        <div className="mt-1 text-[10px] bg-black/20 rounded px-1.5 py-0.5 font-mono truncate">{feature.route_path}</div>
+      )}
+    </button>
+  );
+}
+
+function FeatureDetailDialog({
+  feature, open, onClose, featureByKey, dependents, onJump, onView,
+}: {
+  feature: Feature | null;
+  open: boolean;
+  onClose: () => void;
+  featureByKey: Map<string, Feature>;
+  dependents: Map<string, string[]>;
+  onJump: (key: string) => void;
+  onView: (id: string) => void;
+}) {
+  const [showDown, setShowDown] = useState(false);
+  useEffect(() => { if (!open) setShowDown(false); }, [open]);
+
+  if (!feature) return null;
+
+  // Upward branch: ancestors via dependencies (recursive)
+  const upward: Feature[][] = [];
+  let layer: Feature[] = (feature.dependencies || []).map(k => featureByKey.get(k)).filter(Boolean) as Feature[];
+  const seenUp = new Set<string>();
+  while (layer.length && upward.length < 5) {
+    const fresh = layer.filter(f => { if (seenUp.has(f.id)) return false; seenUp.add(f.id); return true; });
+    if (!fresh.length) break;
+    upward.push(fresh);
+    layer = fresh.flatMap(f => (f.dependencies || []).map(k => featureByKey.get(k)).filter(Boolean) as Feature[]);
+  }
+  // Downward branch: dependents recursive
+  const downward: Feature[][] = [];
+  let dlayer: Feature[] = (dependents.get(feature.feature_key) || []).map(k => featureByKey.get(k)).filter(Boolean) as Feature[];
+  const seenDown = new Set<string>();
+  while (dlayer.length && downward.length < 5) {
+    const fresh = dlayer.filter(f => { if (seenDown.has(f.id)) return false; seenDown.add(f.id); return true; });
+    if (!fresh.length) break;
+    downward.push(fresh);
+    dlayer = fresh.flatMap(f => (dependents.get(f.feature_key) || []).map(k => featureByKey.get(k)).filter(Boolean) as Feature[]);
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            {feature.name}
+            <Badge variant="outline" className="font-mono text-[11px]">{feature.feature_key}</Badge>
+            {feature.module && <Badge variant="secondary" className="text-[11px]">{feature.module}</Badge>}
+          </DialogTitle>
+          {feature.description && <DialogDescription>{feature.description}</DialogDescription>}
+        </DialogHeader>
+
+        {/* Routing data sheet */}
+        <div className="grid gap-2 md:grid-cols-2 text-xs">
+          <div className="rounded border p-2">
+            <div className="text-muted-foreground mb-1">Útvonal (route_path)</div>
+            <code className="font-mono">{feature.route_path || <span className="italic text-muted-foreground">nincs megadva</span>}</code>
+          </div>
+          <div className="rounded border p-2">
+            <div className="text-muted-foreground mb-1">Menü útvonal (menu_path)</div>
+            <span className="font-mono">{(feature.menu_path && feature.menu_path.length) ? feature.menu_path.join(' › ') : <span className="italic text-muted-foreground">nincs megadva</span>}</span>
+          </div>
+          <div className="rounded border p-2">
+            <div className="text-muted-foreground mb-1">Státusz</div>
+            <Badge variant="outline">{feature.status || 'public'}</Badge>
+          </div>
+          <div className="rounded border p-2">
+            <div className="text-muted-foreground mb-1">Súly / Sort</div>
+            <span>fiscal_weight: <strong>—</strong> · sort_order: <strong>{feature.sort_order}</strong></span>
+          </div>
+        </div>
+
+        {/* Visualization */}
+        <div className="mt-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold flex items-center gap-2"><Network className="h-4 w-4" />Routing-fa vizualizáció</h3>
+            <Button size="sm" variant={showDown ? 'default' : 'outline'} onClick={() => setShowDown(s => !s)} className="gap-1">
+              <ArrowDownToLine className="h-3.5 w-3.5" />
+              {showDown ? 'Lefele ág elrejtése' : 'Lefele ág megjelenítése'}
+            </Button>
+          </div>
+
+          <div className="rounded-xl bg-slate-950 dark:bg-slate-900 p-4 overflow-x-auto">
+            <div className="flex items-center gap-6 min-w-max">
+              {/* Upward (ancestors) — leftmost = deepest */}
+              {upward.slice().reverse().map((lyr, i) => (
+                <div key={`up-${i}`} className="flex flex-col gap-2 items-end">
+                  <div className="text-[10px] uppercase tracking-wider text-white/50">Előfeltétel · {upward.length - i}</div>
+                  {lyr.map(f => <FeatureNodeCard key={f.id} feature={f} onView={onView} size="sm" />)}
+                </div>
+              ))}
+
+              {/* Connector arrow to focus */}
+              {upward.length > 0 && <ChevronRight className="h-6 w-6 text-white/40 shrink-0" />}
+
+              {/* Focused feature — large central card */}
+              <div className="flex flex-col gap-2 items-center">
+                <div className="text-[10px] uppercase tracking-wider text-white/70">Aktuális</div>
+                <FeatureNodeCard feature={feature} size="lg" />
+              </div>
+
+              {/* Downward (dependents) — only on toggle */}
+              {showDown && downward.length > 0 && (
+                <>
+                  <ChevronRight className="h-6 w-6 text-white/40 shrink-0" />
+                  {downward.map((lyr, i) => (
+                    <div key={`down-${i}`} className="flex flex-col gap-2 items-start">
+                      <div className="text-[10px] uppercase tracking-wider text-white/50">Erre épül · {i + 1}</div>
+                      {lyr.map(f => <FeatureNodeCard key={f.id} feature={f} onView={onView} size="sm" />)}
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {upward.length === 0 && !showDown && (
+                <div className="text-xs text-white/50 ml-4">Nincs előfeltétel. Kattints a „Lefele ág megjelenítése” gombra a függőségek megtekintéséhez.</div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Dependency lists */}
+        <div className="grid gap-3 md:grid-cols-2 mt-2">
+          <div>
+            <h4 className="text-xs font-semibold mb-1 flex items-center gap-1"><GitBranch className="h-3.5 w-3.5" />Előfeltételek (közvetlen)</h4>
+            <div className="flex flex-wrap gap-1">
+              {(feature.dependencies || []).length === 0
+                ? <span className="text-xs italic text-muted-foreground">Nincs.</span>
+                : (feature.dependencies || []).map(k => (
+                  <button key={k} type="button" onClick={() => onJump(k)} className="text-[11px] font-mono px-2 py-0.5 rounded border hover:bg-muted">
+                    {featureByKey.get(k)?.name || k}
+                  </button>
+                ))}
+            </div>
+          </div>
+          <div>
+            <h4 className="text-xs font-semibold mb-1 flex items-center gap-1"><ChevronRight className="h-3.5 w-3.5" />Erre épülő funkciók</h4>
+            <div className="flex flex-wrap gap-1">
+              {(dependents.get(feature.feature_key) || []).length === 0
+                ? <span className="text-xs italic text-muted-foreground">Nincs.</span>
+                : (dependents.get(feature.feature_key) || []).map(k => (
+                  <button key={k} type="button" onClick={() => onJump(k)} className="text-[11px] font-mono px-2 py-0.5 rounded border hover:bg-muted">
+                    {featureByKey.get(k)?.name || k}
+                  </button>
+                ))}
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 export default FeatureTiersTab;
