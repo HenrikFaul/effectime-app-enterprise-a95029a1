@@ -7985,6 +7985,17 @@ export type Database = {
         Args: { p_workspace_id: string }
         Returns: undefined
       }
+      tenant_enabled_features: {
+        Args: { _tenant_id: string }
+        Returns: {
+          feature_key: string
+          source: string
+        }[]
+      }
+      tenant_id_for_workspace: {
+        Args: { _workspace_id: string }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "admin" | "user"
