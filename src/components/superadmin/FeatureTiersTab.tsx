@@ -15,7 +15,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Button } from '@/components/ui/button';
 import {
   Loader2, Layers, Puzzle, Search, GitBranch, Network, ChevronRight, ChevronDown, Pencil,
+  AlertTriangle, GripVertical,
 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface Tier { id: string; tier_key: string; name: string; sort_order: number; }
 interface Addon { id: string; addon_key: string; name: string; }
@@ -25,6 +27,7 @@ interface Feature {
   dependencies: string[] | null;
   route_path: string | null;
   menu_path: string[] | null;
+  sort_order: number;
 }
 interface TFRow { tier_id: string; feature_id: string; }
 interface AFRow { addon_id: string; feature_id: string; }
