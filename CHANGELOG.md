@@ -1,3 +1,36 @@
+## 2026-05-12 — v3.14.0 Full Multilingual Coverage — CS / SK / PL / HU
+
+### Fixed — Localization
+
+Closed all remaining translation gaps across Czech, Slovak, Polish, and Hungarian locales. The application is now fully multilingual for all user-facing namespaces.
+
+**Czech / Slovak / Polish — previously untranslated namespaces, now complete:**
+
+- **`developer` namespace (84 keys):** API Keys tab, Webhooks tab, all form labels, scopes, validation messages, endpoint reference table, toast notifications — fully translated to CS / SK / PL.
+- **`help.anchors` (24 context-aware help entries):** All contextual help drawer content (workspace overview, members, organization, calendar, approvals, requests, capacity DNA, command center, decision memory, coverage planner, org chart, audit log, quota manager, holiday manager, localization settings, integration health, role permissions, access requests, workflows, resources, reports, settings, agile panel) — translated from empty `{}` placeholder to full text in CS / SK / PL.
+- **`demo_seed.group_workflow` key:** Properly translated in all three locales (CS: "Pracovní postup", SK: "Pracovný postup", PL: "Przepływ pracy").
+
+**Hungarian — isolated untranslated keys fixed:**
+
+- `ws_nav.workspace_label`: "Workspace" → "Munkaterület"
+- `landing.cmp5_label`: "Audit trail" → "Auditnyomvonal"
+- `annual_leave_grid.allowance_label`: "Allowance" → "Keret"
+- `annual_leave_grid.carryover_label`: "Carried over" → "Átvitt"
+- `annual_leave_grid.used_label`: "Vacation used" → "Felhasznált szabadság"
+- `annual_leave_grid.remaining_label`: "Remaining" → "Maradék"
+- `integration_mgr.auto_create_label`: "Auto-create" → "Automatikus létrehozás"
+- `annual_leave_grid.quota_missing_warning`: Updated inline reference from "Vacation used" to "Felhasznált szabadság"
+
+**Files changed:**
+- `src/i18n/resources/cs.ts` — +259 lines (developer namespace + help anchors + group_workflow)
+- `src/i18n/resources/sk.ts` — +259 lines (same)
+- `src/i18n/resources/pl.ts` — +259 lines (same)
+- `src/i18n/resources/hu.ts` — +8 key corrections
+
+**TypeScript:** 0 errors.
+
+---
+
 ## 2026-05-12 — v3.13.0 Superadmin / Platform Control Plane
 
 ### Added — Platform Administration
