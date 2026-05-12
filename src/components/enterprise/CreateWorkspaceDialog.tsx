@@ -26,6 +26,18 @@ export function CreateWorkspaceDialog({ open, onOpenChange, userId: _userId, onC
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [seedingDemo, setSeedingDemo] = useState(false);
+  const [tiers, setTiers] = useState<TierOpt[]>([]);
+  const [tierKey, setTierKey] = useState<string>('freemium');
+
+  useEffect(() => {
+    if (!open) return;
+    supabase.from('tiers').select('id, tier_key, name').order('sort_order').then(({ data }) => {
+      const list = (data as TierOpt[]) || [];
+      setTiers(list);
+      if (list.length && !list.find(x => x.tier_key === tierKey)) setTierKey(list[0].tier_key);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const handleCreate = async () => {
     if (!name.trim()) {
@@ -37,6 +49,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange, userId: _userId, onC
       const { error } = await supabase.rpc('create_workspace_with_owner', {
         _name: name.trim(),
         _description: description.trim() || null,
+        _tier_key: tierKey,
       });
 
       if (error) throw error;
@@ -62,6 +75,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange, userId: _userId, onC
         body: {
           name: name.trim() || `${t('create_workspace.demo_default_name')} ${new Date().toLocaleDateString()}`,
           description: description.trim() || null,
+          tier_key: tierKey,
         },
       });
       if (error) throw error;
