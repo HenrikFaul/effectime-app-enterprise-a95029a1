@@ -1,0 +1,56 @@
+{
+  "domain": "marketing",
+  "purpose": "Routes all marketing-related AI work for Effectime",
+  "globalController": "marketing/SYSTEM.md",
+  "strategyEntry": "marketing/strategy/marketing_master_controller.md",
+  "sections": [
+    {
+      "name": "strategy",
+      "purpose": "Positioning, GTM, channels, offer strategy",
+      "recommendedAgent": "Claude strategy / reasoning agent",
+      "files": [
+        "marketing/strategy/positioning_masterprompt.md",
+        "marketing/strategy/go_to_market_masterprompt.md",
+        "marketing/strategy/channel_strategy_masterprompt.md"
+      ]
+    },
+    {
+      "name": "content",
+      "purpose": "Founder content, SEO, case studies, email, educational assets",
+      "recommendedAgent": "Claude writing/content agent",
+      "files": [
+        "marketing/content/linkedin_content_masterprompt.md",
+        "marketing/content/seo_article_masterprompt.md",
+        "marketing/content/case_study_masterprompt.md"
+      ]
+    },
+    {
+      "name": "visual",
+      "purpose": "Art direction, campaign visuals, website visual system",
+      "recommendedAgent": "Claude design/UX/web agent",
+      "files": [
+        "marketing/visual/visual_direction_controller.md",
+        "marketing/visual/website_art_direction.md",
+        "marketing/visual/ad_creative_prompt_library.md"
+      ]
+    },
+    {
+      "name": "campaigns",
+      "purpose": "Demand generation, retargeting, paid and organic campaigns",
+      "recommendedAgent": "Claude campaign strategist agent",
+      "files": [
+        "marketing/campaigns/campaign_architecture_masterprompt.md",
+        "marketing/campaigns/linkedin_ads_masterprompt.md",
+        "marketing/campaigns/retargeting_masterprompt.md"
+      ]
+    }
+  ],
+  "workflow": [
+    "Start with strategy",
+    "Translate strategy into messaging",
+    "Translate messaging into asset inventory",
+    "Translate assets into written and visual prompts",
+    "Launch campaign prompts only after message architecture is approved",
+    "Measure performance using analytics prompts"
+  ]
+}
