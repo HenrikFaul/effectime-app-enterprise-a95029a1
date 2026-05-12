@@ -132,6 +132,7 @@ Deno.serve(async (req) => {
       _name: name,
       _description: body?.description?.toString().trim() ||
         'Demo munkaterület – minden modul azonnal tesztelhető előre kitöltött adatokkal.',
+      _tier_key: tierKey,
     });
     if (rpcErr) return jsonRes({ error: 'Workspace létrehozás sikertelen: ' + rpcErr.message }, 500);
     const workspaceId = wsId as string;
