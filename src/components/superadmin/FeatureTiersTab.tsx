@@ -159,6 +159,21 @@ export function FeatureTiersTab() {
     toast.success('Mentve');
   };
 
+  // Reorder a list of feature IDs and persist their new sort_order (gap of 10)
+  const persistOrder = async (orderedIds: string[]) => {
+    const updates = orderedIds.map((id, idx) => ({ id, sort_order: (idx + 1) * 10 }));
+    setFeatures(prev => {
+      const map = new Map(updates.map(u => [u.id, u.sort_order]));
+      return prev.map(f => map.has(f.id) ? { ...f, sort_order: map.get(f.id)! } : f);
+    });
+    // Persist sequentially; small set per leaf node
+    for (const u of updates) {
+      const { error } = await supabase.from('features').update({ sort_order: u.sort_order }).eq('id', u.id);
+      if (error) { toast.error(error.message); return; }
+    }
+    toast.success('Sorrend mentve');
+  };
+
   if (loading) return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div>;
 
   // Autocomplete suggestions
