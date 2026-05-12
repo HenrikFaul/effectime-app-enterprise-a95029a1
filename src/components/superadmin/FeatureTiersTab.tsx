@@ -347,6 +347,8 @@ export function FeatureTiersTab() {
             setRouteDraft={setRouteDraft}
             saveRoute={saveRoute}
             persistOrder={persistOrder}
+            openPaths={openPaths}
+            toggleOpenPath={toggleOpenPath}
           />
         </TabsContent>
       </Tabs>
