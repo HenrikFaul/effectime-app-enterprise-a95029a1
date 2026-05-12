@@ -104,6 +104,7 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const name: string = (body?.name ?? '').toString().trim() ||
       `Demo munkaterület ${new Date().toLocaleDateString('hu-HU')}`;
+    const tierKey: string = (body?.tier_key ?? 'enterprise').toString().trim() || 'enterprise';
 
     if (!SERVICE_KEY) return jsonRes({ error: 'SUPABASE_SERVICE_ROLE_KEY not available in edge function environment' }, 500);
 
@@ -131,6 +132,7 @@ Deno.serve(async (req) => {
       _name: name,
       _description: body?.description?.toString().trim() ||
         'Demo munkaterület – minden modul azonnal tesztelhető előre kitöltött adatokkal.',
+      _tier_key: tierKey,
     });
     if (rpcErr) return jsonRes({ error: 'Workspace létrehozás sikertelen: ' + rpcErr.message }, 500);
     const workspaceId = wsId as string;

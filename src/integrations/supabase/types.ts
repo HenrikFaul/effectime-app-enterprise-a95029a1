@@ -6372,9 +6372,11 @@ export type Database = {
           feature_key: string
           fiscal_weight: number
           id: string
+          menu_path: string[] | null
           metadata: Json
           module: string
           name: string
+          route_path: string | null
           status: string
           updated_at: string
         }
@@ -6385,9 +6387,11 @@ export type Database = {
           feature_key: string
           fiscal_weight?: number
           id?: string
+          menu_path?: string[] | null
           metadata?: Json
           module: string
           name: string
+          route_path?: string | null
           status?: string
           updated_at?: string
         }
@@ -6398,9 +6402,11 @@ export type Database = {
           feature_key?: string
           fiscal_weight?: number
           id?: string
+          menu_path?: string[] | null
           metadata?: Json
           module?: string
           name?: string
+          route_path?: string | null
           status?: string
           updated_at?: string
         }
@@ -7807,10 +7813,17 @@ export type Database = {
         Args: { _event_id: string; _user_id: string }
         Returns: boolean
       }
-      create_workspace_with_owner: {
-        Args: { _description?: string; _name: string }
-        Returns: string
-      }
+      create_workspace_with_owner:
+        | { Args: { _description?: string; _name: string }; Returns: string }
+        | {
+            Args: {
+              _description?: string
+              _name: string
+              _seats?: number
+              _tier_key?: string
+            }
+            Returns: string
+          }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean

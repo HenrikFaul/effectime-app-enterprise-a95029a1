@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -6,9 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Sparkles, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useI18n } from '@/i18n/I18nProvider';
+
+interface TierOpt { id: string; tier_key: string; name: string; }
 
 interface Props {
   open: boolean;
@@ -23,6 +26,18 @@ export function CreateWorkspaceDialog({ open, onOpenChange, userId: _userId, onC
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
   const [seedingDemo, setSeedingDemo] = useState(false);
+  const [tiers, setTiers] = useState<TierOpt[]>([]);
+  const [tierKey, setTierKey] = useState<string>('freemium');
+
+  useEffect(() => {
+    if (!open) return;
+    supabase.from('tiers').select('id, tier_key, name').order('sort_order').then(({ data }) => {
+      const list = (data as TierOpt[]) || [];
+      setTiers(list);
+      if (list.length && !list.find(x => x.tier_key === tierKey)) setTierKey(list[0].tier_key);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const handleCreate = async () => {
     if (!name.trim()) {
@@ -34,6 +49,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange, userId: _userId, onC
       const { error } = await supabase.rpc('create_workspace_with_owner', {
         _name: name.trim(),
         _description: description.trim() || null,
+        _tier_key: tierKey,
       });
 
       if (error) throw error;
@@ -59,6 +75,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange, userId: _userId, onC
         body: {
           name: name.trim() || `${t('create_workspace.demo_default_name')} ${new Date().toLocaleDateString()}`,
           description: description.trim() || null,
+          tier_key: tierKey,
         },
       });
       if (error) throw error;
@@ -119,6 +136,20 @@ export function CreateWorkspaceDialog({ open, onOpenChange, userId: _userId, onC
               maxLength={500}
               disabled={busy}
             />
+          </div>
+          <div>
+            <Label htmlFor="ws-tier">Előfizetési csomag (Tier)</Label>
+            <Select value={tierKey} onValueChange={setTierKey} disabled={busy || tiers.length === 0}>
+              <SelectTrigger id="ws-tier"><SelectValue placeholder="Válassz csomagot" /></SelectTrigger>
+              <SelectContent>
+                {tiers.map(tier => (
+                  <SelectItem key={tier.id} value={tier.tier_key}>{tier.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-1">
+              A munkaterület csak a kiválasztott csomaghoz tartozó funkciókat fogja látni.
+            </p>
           </div>
 
           <Separator />
