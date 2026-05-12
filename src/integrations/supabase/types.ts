@@ -41,6 +41,81 @@ export type Database = {
         }
         Relationships: []
       }
+      addon_features: {
+        Row: {
+          addon_id: string
+          feature_id: string
+          id: string
+          limit_value: Json | null
+        }
+        Insert: {
+          addon_id: string
+          feature_id: string
+          id?: string
+          limit_value?: Json | null
+        }
+        Update: {
+          addon_id?: string
+          feature_id?: string
+          id?: string
+          limit_value?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "addon_features_addon_id_fkey"
+            columns: ["addon_id"]
+            isOneToOne: false
+            referencedRelation: "addons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "addon_features_feature_id_fkey"
+            columns: ["feature_id"]
+            isOneToOne: false
+            referencedRelation: "features"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      addons: {
+        Row: {
+          addon_key: string
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          metadata: Json
+          monthly_flat: number
+          name: string
+          price_per_seat: number
+          updated_at: string
+        }
+        Insert: {
+          addon_key: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          metadata?: Json
+          monthly_flat?: number
+          name: string
+          price_per_seat?: number
+          updated_at?: string
+        }
+        Update: {
+          addon_key?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          metadata?: Json
+          monthly_flat?: number
+          name?: string
+          price_per_seat?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       approval_decisions: {
         Row: {
           comment: string | null
@@ -6228,6 +6303,109 @@ export type Database = {
         }
         Relationships: []
       }
+      feature_gate_events: {
+        Row: {
+          action: string
+          allowed: boolean
+          blocked_reason: string | null
+          created_at: string
+          feature_key: string
+          id: string
+          metadata: Json
+          tenant_id: string | null
+          user_id: string | null
+          workspace_id: string | null
+        }
+        Insert: {
+          action: string
+          allowed: boolean
+          blocked_reason?: string | null
+          created_at?: string
+          feature_key: string
+          id?: string
+          metadata?: Json
+          tenant_id?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Update: {
+          action?: string
+          allowed?: boolean
+          blocked_reason?: string | null
+          created_at?: string
+          feature_key?: string
+          id?: string
+          metadata?: Json
+          tenant_id?: string | null
+          user_id?: string | null
+          workspace_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_gate_events_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_gate_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_org_pulse_membership"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "feature_gate_events_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      features: {
+        Row: {
+          created_at: string
+          dependencies: string[]
+          description: string | null
+          feature_key: string
+          fiscal_weight: number
+          id: string
+          metadata: Json
+          module: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          dependencies?: string[]
+          description?: string | null
+          feature_key: string
+          fiscal_weight?: number
+          id?: string
+          metadata?: Json
+          module: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          dependencies?: string[]
+          description?: string | null
+          feature_key?: string
+          fiscal_weight?: number
+          id?: string
+          metadata?: Json
+          module?: string
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       friendships: {
         Row: {
           addressee_id: string
@@ -6892,6 +7070,57 @@ export type Database = {
         }
         Relationships: []
       }
+      tenant_addons: {
+        Row: {
+          addon_id: string
+          created_at: string
+          ends_at: string | null
+          id: string
+          metadata: Json
+          seats: number
+          started_at: string
+          status: string
+          tenant_id: string
+        }
+        Insert: {
+          addon_id: string
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          metadata?: Json
+          seats?: number
+          started_at?: string
+          status?: string
+          tenant_id: string
+        }
+        Update: {
+          addon_id?: string
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          metadata?: Json
+          seats?: number
+          started_at?: string
+          status?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_addons_addon_id_fkey"
+            columns: ["addon_id"]
+            isOneToOne: false
+            referencedRelation: "addons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_addons_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenant_calendar_settings: {
         Row: {
           created_at: string
@@ -6916,6 +7145,277 @@ export type Database = {
           updated_at?: string
           updated_by?: string | null
           workspace_id?: string
+        }
+        Relationships: []
+      }
+      tenant_feature_overrides: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          enabled: boolean
+          expires_at: string | null
+          feature_id: string
+          id: string
+          reason: string | null
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          expires_at?: string | null
+          feature_id: string
+          id?: string
+          reason?: string | null
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          expires_at?: string | null
+          feature_id?: string
+          id?: string
+          reason?: string | null
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_feature_overrides_feature_id_fkey"
+            columns: ["feature_id"]
+            isOneToOne: false
+            referencedRelation: "features"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_feature_overrides_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_subscriptions: {
+        Row: {
+          created_at: string
+          ends_at: string | null
+          id: string
+          metadata: Json
+          seats: number
+          started_at: string
+          status: string
+          tenant_id: string
+          tier_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          metadata?: Json
+          seats?: number
+          started_at?: string
+          status?: string
+          tenant_id: string
+          tier_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          ends_at?: string | null
+          id?: string
+          metadata?: Json
+          seats?: number
+          started_at?: string
+          status?: string
+          tenant_id?: string
+          tier_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_subscriptions_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_subscriptions_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenant_workspaces: {
+        Row: {
+          created_at: string
+          id: string
+          is_primary: boolean
+          tenant_id: string
+          workspace_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          tenant_id: string
+          workspace_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          tenant_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_workspaces_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tenant_workspaces_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "enterprise_org_pulse_membership"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "tenant_workspaces_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: true
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tenants: {
+        Row: {
+          billing_email: string | null
+          country: string | null
+          created_at: string
+          id: string
+          metadata: Json
+          name: string
+          slug: string
+          status: string
+          updated_at: string
+          vat_number: string | null
+        }
+        Insert: {
+          billing_email?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          name: string
+          slug: string
+          status?: string
+          updated_at?: string
+          vat_number?: string | null
+        }
+        Update: {
+          billing_email?: string | null
+          country?: string | null
+          created_at?: string
+          id?: string
+          metadata?: Json
+          name?: string
+          slug?: string
+          status?: string
+          updated_at?: string
+          vat_number?: string | null
+        }
+        Relationships: []
+      }
+      tier_features: {
+        Row: {
+          created_at: string
+          feature_id: string
+          id: string
+          limit_value: Json | null
+          tier_id: string
+        }
+        Insert: {
+          created_at?: string
+          feature_id: string
+          id?: string
+          limit_value?: Json | null
+          tier_id: string
+        }
+        Update: {
+          created_at?: string
+          feature_id?: string
+          id?: string
+          limit_value?: Json | null
+          tier_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tier_features_feature_id_fkey"
+            columns: ["feature_id"]
+            isOneToOne: false
+            referencedRelation: "features"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tier_features_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tiers: {
+        Row: {
+          billing_period: string
+          created_at: string
+          currency: string
+          description: string | null
+          id: string
+          max_seats: number | null
+          metadata: Json
+          name: string
+          price_per_seat: number
+          sort_order: number
+          tier_key: string
+          updated_at: string
+        }
+        Insert: {
+          billing_period?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          max_seats?: number | null
+          metadata?: Json
+          name: string
+          price_per_seat?: number
+          sort_order?: number
+          tier_key: string
+          updated_at?: string
+        }
+        Update: {
+          billing_period?: string
+          created_at?: string
+          currency?: string
+          description?: string | null
+          id?: string
+          max_seats?: number | null
+          metadata?: Json
+          name?: string
+          price_per_seat?: number
+          sort_order?: number
+          tier_key?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -7450,6 +7950,10 @@ export type Database = {
       }
       is_enterprise_member: {
         Args: { _user_id: string; _workspace_id: string }
+        Returns: boolean
+      }
+      is_tenant_member: {
+        Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
       move_to_dlq: {
