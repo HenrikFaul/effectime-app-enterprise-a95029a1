@@ -15,7 +15,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Button } from '@/components/ui/button';
 import {
   Loader2, Layers, Puzzle, Search, GitBranch, Network, ChevronRight, ChevronDown, Pencil,
+  AlertTriangle, GripVertical,
 } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 interface Tier { id: string; tier_key: string; name: string; sort_order: number; }
 interface Addon { id: string; addon_key: string; name: string; }
@@ -25,6 +27,7 @@ interface Feature {
   dependencies: string[] | null;
   route_path: string | null;
   menu_path: string[] | null;
+  sort_order: number;
 }
 interface TFRow { tier_id: string; feature_id: string; }
 interface AFRow { addon_id: string; feature_id: string; }
@@ -48,13 +51,14 @@ export function FeatureTiersTab() {
   const [autoQ, setAutoQ] = useState('');
   const [editingRouteFor, setEditingRouteFor] = useState<string>('');
   const [routeDraft, setRouteDraft] = useState<{ route_path: string; menu_path: string }>({ route_path: '', menu_path: '' });
+  const [routingTier, setRoutingTier] = useState<string>('all');
 
   const load = async () => {
     setLoading(true);
     const [tRes, aRes, fRes, tfRes, afRes] = await Promise.all([
       supabase.from('tiers').select('id, tier_key, name, sort_order').order('sort_order'),
       supabase.from('addons').select('id, addon_key, name').order('addon_key'),
-      supabase.from('features').select('id, feature_key, name, module, description, status, dependencies, route_path, menu_path').order('module').order('feature_key'),
+      supabase.from('features').select('id, feature_key, name, module, description, status, dependencies, route_path, menu_path, sort_order').order('sort_order').order('module').order('feature_key'),
       supabase.from('tier_features').select('tier_id, feature_id'),
       supabase.from('addon_features').select('addon_id, feature_id'),
     ]);
@@ -153,6 +157,21 @@ export function FeatureTiersTab() {
     setFeatures(prev => prev.map(f => f.id === featureId ? { ...f, route_path: routeDraft.route_path.trim() || null, menu_path: menu } : f));
     setEditingRouteFor('');
     toast.success('Mentve');
+  };
+
+  // Reorder a list of feature IDs and persist their new sort_order (gap of 10)
+  const persistOrder = async (orderedIds: string[]) => {
+    const updates = orderedIds.map((id, idx) => ({ id, sort_order: (idx + 1) * 10 }));
+    setFeatures(prev => {
+      const map = new Map(updates.map(u => [u.id, u.sort_order]));
+      return prev.map(f => map.has(f.id) ? { ...f, sort_order: map.get(f.id)! } : f);
+    });
+    // Persist sequentially; small set per leaf node
+    for (const u of updates) {
+      const { error } = await supabase.from('features').update({ sort_order: u.sort_order }).eq('id', u.id);
+      if (error) { toast.error(error.message); return; }
+    }
+    toast.success('Sorrend mentve');
   };
 
   if (loading) return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div>;
@@ -280,9 +299,24 @@ export function FeatureTiersTab() {
         </TabsContent>
 
         <TabsContent value="routing" className="space-y-3 mt-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={routingTier} onValueChange={setRoutingTier}>
+              <SelectTrigger className="w-[260px] h-9"><SelectValue placeholder="Tier szűrő" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Összes feature (tier-független)</SelectItem>
+                {tiers.map(t => (<SelectItem key={t.id} value={t.id}>Csak: {t.name} ({t.tier_key})</SelectItem>))}
+              </SelectContent>
+            </Select>
+            {routingTier !== 'all' && (
+              <Badge variant="outline">{tierMap.get(routingTier)?.size || 0} feature ebben a tierben</Badge>
+            )}
+          </div>
+          <RoutingAuditBanner features={filtered} />
           <FilterBar search={search} setSearch={setSearch} modules={modules} moduleFilter={moduleFilter} setModuleFilter={setModuleFilter} />
           <RoutingTree
             features={filtered}
+            tierFilterIds={routingTier === 'all' ? null : (tierMap.get(routingTier) || new Set())}
+            featureByKey={featureByKey}
             editingRouteFor={editingRouteFor}
             setEditingRouteFor={(id) => {
               setEditingRouteFor(id);
@@ -292,6 +326,7 @@ export function FeatureTiersTab() {
             routeDraft={routeDraft}
             setRouteDraft={setRouteDraft}
             saveRoute={saveRoute}
+            persistOrder={persistOrder}
           />
         </TabsContent>
       </Tabs>
@@ -386,29 +421,81 @@ function FeatureGrid({ features, featureByKey, dependents, isOn, onToggle, pendi
   );
 }
 
-function RoutingTree({ features, editingRouteFor, setEditingRouteFor, routeDraft, setRouteDraft, saveRoute }: {
+function RoutingAuditBanner({ features }: { features: Feature[] }) {
+  const missingRoute = features.filter(f => !f.route_path || !f.route_path.trim());
+  const missingMenu = features.filter(f => !f.menu_path || f.menu_path.length === 0);
+  if (missingRoute.length === 0 && missingMenu.length === 0) {
+    return (
+      <Alert className="border-emerald-500/40 bg-emerald-500/5">
+        <Network className="h-4 w-4 text-emerald-600" />
+        <AlertTitle className="text-sm">Minden funkcióhoz definiált útvonal</AlertTitle>
+        <AlertDescription className="text-xs">
+          Az aktuális szűrésben szereplő összes feature-höz tartozik route_path és menu_path.
+        </AlertDescription>
+      </Alert>
+    );
+  }
+  return (
+    <Alert variant="destructive">
+      <AlertTriangle className="h-4 w-4" />
+      <AlertTitle className="text-sm">Hiányzó útvonal-paraméterek</AlertTitle>
+      <AlertDescription className="text-xs space-y-1">
+        <div>{missingRoute.length} feature-nél hiányzik a <code>route_path</code>, {missingMenu.length}-nál a <code>menu_path</code>.</div>
+        <div className="flex flex-wrap gap-1 mt-1">
+          {[...new Set([...missingRoute, ...missingMenu].map(f => f.feature_key))].slice(0, 20).map(k => (
+            <Badge key={k} variant="outline" className="text-[10px] font-mono">{k}</Badge>
+          ))}
+          {missingRoute.length + missingMenu.length > 20 && <span className="text-[10px]">…</span>}
+        </div>
+      </AlertDescription>
+    </Alert>
+  );
+}
+
+function RoutingTree({
+  features, tierFilterIds, featureByKey, editingRouteFor, setEditingRouteFor,
+  routeDraft, setRouteDraft, saveRoute, persistOrder,
+}: {
   features: Feature[];
+  tierFilterIds: Set<string> | null;
+  featureByKey: Map<string, Feature>;
   editingRouteFor: string;
   setEditingRouteFor: (id: string) => void;
   routeDraft: { route_path: string; menu_path: string };
   setRouteDraft: (d: { route_path: string; menu_path: string }) => void;
   saveRoute: (id: string) => void;
+  persistOrder: (orderedIds: string[]) => void | Promise<void>;
 }) {
-  // Build tree: page (route_path or '(nincs útvonal)') -> menu levels -> features
+  // Tier-aware visibility: hide features not in tier; flag missing deps
+  const visible = tierFilterIds
+    ? features.filter(f => tierFilterIds.has(f.id))
+    : features;
+
+  const missingDepsFor = (f: Feature): string[] => {
+    if (!tierFilterIds) return [];
+    return (f.dependencies || []).filter(depKey => {
+      const dep = featureByKey.get(depKey);
+      return !dep || !tierFilterIds.has(dep.id);
+    });
+  };
+
+  // Build tree: page (route_path) -> menu segments -> features (sorted by sort_order)
   type Node = { label: string; children: Map<string, Node>; features: Feature[] };
   const root: Node = { label: 'root', children: new Map(), features: [] };
-  features.forEach(f => {
-    const page = f.route_path || '(nincs útvonal megadva)';
-    if (!root.children.has(page)) root.children.set(page, { label: page, children: new Map(), features: [] });
-    const pageNode = root.children.get(page)!;
-    const menu = f.menu_path || [];
-    let cur = pageNode;
-    menu.forEach(seg => {
-      if (!cur.children.has(seg)) cur.children.set(seg, { label: seg, children: new Map(), features: [] });
-      cur = cur.children.get(seg)!;
+  [...visible]
+    .sort((a, b) => (a.sort_order - b.sort_order) || a.feature_key.localeCompare(b.feature_key))
+    .forEach(f => {
+      const page = f.route_path || '(nincs útvonal megadva)';
+      if (!root.children.has(page)) root.children.set(page, { label: page, children: new Map(), features: [] });
+      const pageNode = root.children.get(page)!;
+      const menu = f.menu_path || [];
+      let cur = pageNode;
+      menu.forEach(seg => {
+        if (!cur.children.has(seg)) cur.children.set(seg, { label: seg, children: new Map(), features: [] });
+        cur = cur.children.get(seg)!;
+      });
+      cur.features.push(f);
     });
-    cur.features.push(f);
-  });
 
   const renderEditor = (f: Feature) => (
     <div className="mt-2 p-2 rounded border bg-muted/30 space-y-2">
@@ -427,6 +514,24 @@ function RoutingTree({ features, editingRouteFor, setEditingRouteFor, routeDraft
     </div>
   );
 
+  // Drag-and-drop state per leaf list — simple in-component with refs by id
+  const onDragStart = (e: React.DragEvent, fid: string) => {
+    e.dataTransfer.setData('text/feature-id', fid);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+  const onDragOver = (e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; };
+  const onDrop = (e: React.DragEvent, list: Feature[], targetId: string) => {
+    e.preventDefault();
+    const draggedId = e.dataTransfer.getData('text/feature-id');
+    if (!draggedId || draggedId === targetId) return;
+    const ids = list.map(x => x.id);
+    if (!ids.includes(draggedId) || !ids.includes(targetId)) return; // only reorder within same leaf
+    const without = ids.filter(id => id !== draggedId);
+    const insertAt = without.indexOf(targetId);
+    without.splice(insertAt, 0, draggedId);
+    void persistOrder(without);
+  };
+
   const renderNode = (node: Node, depth: number, path: string): React.ReactNode => {
     const total = countFeatures(node);
     return (
@@ -440,25 +545,49 @@ function RoutingTree({ features, editingRouteFor, setEditingRouteFor, routeDraft
           {Array.from(node.children.values()).map(c => (
             <div key={`${path}/${c.label}`}>{renderNode(c, depth + 1, `${path}/${c.label}`)}</div>
           ))}
-          {node.features.map(f => (
-            <div key={f.id} className="px-2 py-1.5 rounded hover:bg-muted/40">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm font-medium">{f.name}</span>
-                <Badge variant="outline" className="text-[10px] font-mono">{f.feature_key}</Badge>
-                {f.module && <Badge variant="secondary" className="text-[10px]">{f.module}</Badge>}
-                <Button size="sm" variant="ghost" className="ml-auto h-6 px-2" onClick={() => setEditingRouteFor(editingRouteFor === f.id ? '' : f.id)}>
-                  <Pencil className="h-3 w-3" />
-                </Button>
+          {node.features.map(f => {
+            const missing = missingDepsFor(f);
+            const noRoute = !f.route_path || !f.route_path.trim();
+            const noMenu = !f.menu_path || f.menu_path.length === 0;
+            return (
+              <div
+                key={f.id}
+                draggable
+                onDragStart={(e) => onDragStart(e, f.id)}
+                onDragOver={onDragOver}
+                onDrop={(e) => onDrop(e, node.features, f.id)}
+                className="px-2 py-1.5 rounded hover:bg-muted/40 border border-transparent hover:border-border"
+              >
+                <div className="flex items-center gap-2 flex-wrap">
+                  <GripVertical className="h-3.5 w-3.5 text-muted-foreground cursor-grab shrink-0" />
+                  <span className="text-sm font-medium">{f.name}</span>
+                  <Badge variant="outline" className="text-[10px] font-mono">{f.feature_key}</Badge>
+                  {f.module && <Badge variant="secondary" className="text-[10px]">{f.module}</Badge>}
+                  {noRoute && <Badge variant="destructive" className="text-[10px]">nincs route</Badge>}
+                  {noMenu && <Badge variant="destructive" className="text-[10px]">nincs menü</Badge>}
+                  <Button size="sm" variant="ghost" className="ml-auto h-6 px-2" onClick={() => setEditingRouteFor(editingRouteFor === f.id ? '' : f.id)}>
+                    <Pencil className="h-3 w-3" />
+                  </Button>
+                </div>
+                {missing.length > 0 && (
+                  <div className="mt-1 flex items-start gap-1 text-[11px] text-destructive">
+                    <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />
+                    <span>Hiányzó előfeltétel ebben a tierben:</span>
+                    <span className="flex flex-wrap gap-1">
+                      {missing.map(m => <Badge key={m} variant="outline" className="text-[10px] border-destructive/50 text-destructive">{m}</Badge>)}
+                    </span>
+                  </div>
+                )}
+                {editingRouteFor === f.id && renderEditor(f)}
               </div>
-              {editingRouteFor === f.id && renderEditor(f)}
-            </div>
-          ))}
+            );
+          })}
         </CollapsibleContent>
       </Collapsible>
     );
   };
 
-  if (root.children.size === 0) return <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">Nincs találat.</CardContent></Card>;
+  if (root.children.size === 0) return <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">Nincs találat ebben a tierben.</CardContent></Card>;
 
   return (
     <div className="rounded-lg border p-3 max-h-[65vh] overflow-y-auto space-y-1">

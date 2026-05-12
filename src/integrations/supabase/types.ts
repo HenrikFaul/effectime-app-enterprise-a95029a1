@@ -6377,6 +6377,7 @@ export type Database = {
           module: string
           name: string
           route_path: string | null
+          sort_order: number
           status: string
           updated_at: string
         }
@@ -6392,6 +6393,7 @@ export type Database = {
           module: string
           name: string
           route_path?: string | null
+          sort_order?: number
           status?: string
           updated_at?: string
         }
@@ -6407,6 +6409,7 @@ export type Database = {
           module?: string
           name?: string
           route_path?: string | null
+          sort_order?: number
           status?: string
           updated_at?: string
         }
