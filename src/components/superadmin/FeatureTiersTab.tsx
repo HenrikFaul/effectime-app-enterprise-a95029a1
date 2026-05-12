@@ -58,7 +58,7 @@ export function FeatureTiersTab() {
     const [tRes, aRes, fRes, tfRes, afRes] = await Promise.all([
       supabase.from('tiers').select('id, tier_key, name, sort_order').order('sort_order'),
       supabase.from('addons').select('id, addon_key, name').order('addon_key'),
-      supabase.from('features').select('id, feature_key, name, module, description, status, dependencies, route_path, menu_path').order('module').order('feature_key'),
+      supabase.from('features').select('id, feature_key, name, module, description, status, dependencies, route_path, menu_path, sort_order').order('sort_order').order('module').order('feature_key'),
       supabase.from('tier_features').select('tier_id, feature_id'),
       supabase.from('addon_features').select('addon_id, feature_id'),
     ]);
