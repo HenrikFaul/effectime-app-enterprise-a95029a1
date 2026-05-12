@@ -3095,6 +3095,27 @@ const pl = {
     save_error: 'Błąd podczas zapisywania',
     save_success: 'Ustawienia filtrów zapisane',
   },
+  m365: {
+    title: 'Kalendarz Microsoft 365',
+    subtitle: 'Dwukierunkowa synchronizacja między Outlookiem a Effectime',
+    not_connected_hint: 'Połącz konto Microsoft 365, aby zatwierdzone urlopy pojawiły się w Outlooku, a wydarzenia OOF jako ograniczenia harmonogramu.',
+    connect_btn: 'Połącz Microsoft 365',
+    connect_error: 'Błąd połączenia',
+    disconnect: 'Rozłącz',
+    disconnect_confirm: 'Rozłączyć to konto Microsoft 365? Zsynchronizowane wydarzenia pozostaną w Outlooku.',
+    disconnect_error: 'Rozłączenie nie powiodło się',
+    disconnected: 'Microsoft 365 rozłączone',
+    sync_now: 'Synchronizuj',
+    sync_success: 'Synchronizacja zakończona · {{count}} wydarzeń',
+    sync_failed: 'Synchronizacja nie powiodła się',
+    sync_schedule_hint: 'Automatyczna synchronizacja co 15 minut.',
+    last_sync: 'Ostatnia synchronizacja',
+    never: 'nigdy',
+    status_ok: 'OK',
+    status_error: 'Błąd',
+    status_pending: 'Oczekuje',
+    load_error: 'Nie można załadować stanu integracji',
+  },
 } as const;
 
 export default pl;
