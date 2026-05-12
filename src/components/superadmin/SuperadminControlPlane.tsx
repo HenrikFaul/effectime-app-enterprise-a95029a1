@@ -54,7 +54,9 @@ import {
   Loader2,
   AlertCircle,
   Play,
+  Layers,
 } from 'lucide-react';
+import { FeatureTiersTab } from './FeatureTiersTab';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -1007,7 +1009,7 @@ function EmailQueueTab() {
 // Main component
 // ---------------------------------------------------------------------------
 
-type TabKey = 'overview' | 'workspaces' | 'flags' | 'jobs' | 'locales' | 'email';
+type TabKey = 'overview' | 'workspaces' | 'flags' | 'jobs' | 'locales' | 'email' | 'tiers';
 
 interface TabState {
   loaded: boolean;
@@ -1041,6 +1043,7 @@ export function SuperadminControlPlane({ userId: _userId }: { userId: string }) 
           <TabsTrigger value="jobs">{t('superadmin.tab_jobs')}</TabsTrigger>
           <TabsTrigger value="locales">{t('superadmin.tab_locales')}</TabsTrigger>
           <TabsTrigger value="email">{t('superadmin.tab_email')}</TabsTrigger>
+          <TabsTrigger value="tiers" className="gap-1"><Layers className="h-3.5 w-3.5" /> Feature & Tier</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
@@ -1065,6 +1068,10 @@ export function SuperadminControlPlane({ userId: _userId }: { userId: string }) 
 
         <TabsContent value="email" className="mt-6">
           {loadedTabs.email && <EmailQueueTab />}
+        </TabsContent>
+
+        <TabsContent value="tiers" className="mt-6">
+          {loadedTabs.tiers && <FeatureTiersTab />}
         </TabsContent>
       </Tabs>
     </div>
