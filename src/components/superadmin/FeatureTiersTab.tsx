@@ -299,9 +299,24 @@ export function FeatureTiersTab() {
         </TabsContent>
 
         <TabsContent value="routing" className="space-y-3 mt-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <Select value={routingTier} onValueChange={setRoutingTier}>
+              <SelectTrigger className="w-[260px] h-9"><SelectValue placeholder="Tier szűrő" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Összes feature (tier-független)</SelectItem>
+                {tiers.map(t => (<SelectItem key={t.id} value={t.id}>Csak: {t.name} ({t.tier_key})</SelectItem>))}
+              </SelectContent>
+            </Select>
+            {routingTier !== 'all' && (
+              <Badge variant="outline">{tierMap.get(routingTier)?.size || 0} feature ebben a tierben</Badge>
+            )}
+          </div>
+          <RoutingAuditBanner features={filtered} />
           <FilterBar search={search} setSearch={setSearch} modules={modules} moduleFilter={moduleFilter} setModuleFilter={setModuleFilter} />
           <RoutingTree
             features={filtered}
+            tierFilterIds={routingTier === 'all' ? null : (tierMap.get(routingTier) || new Set())}
+            featureByKey={featureByKey}
             editingRouteFor={editingRouteFor}
             setEditingRouteFor={(id) => {
               setEditingRouteFor(id);
@@ -311,6 +326,7 @@ export function FeatureTiersTab() {
             routeDraft={routeDraft}
             setRouteDraft={setRouteDraft}
             saveRoute={saveRoute}
+            persistOrder={persistOrder}
           />
         </TabsContent>
       </Tabs>
