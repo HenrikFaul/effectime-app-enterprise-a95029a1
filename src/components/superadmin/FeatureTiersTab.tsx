@@ -54,6 +54,7 @@ export function FeatureTiersTab() {
   const [editingRouteFor, setEditingRouteFor] = useState<string>('');
   const [routeDraft, setRouteDraft] = useState<{ route_path: string; menu_path: string }>({ route_path: '', menu_path: '' });
   const [routingTier, setRoutingTier] = useState<string>('all');
+  const [viewingFeatureId, setViewingFeatureId] = useState<string>('');
   const { user } = useAuth();
   const openStorageKey = `routingTreeOpen:${user?.id || 'anon'}:${routingTier}`;
   const [openPaths, setOpenPaths] = useState<Record<string, boolean>>({});
