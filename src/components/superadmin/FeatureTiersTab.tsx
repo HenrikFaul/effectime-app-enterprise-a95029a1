@@ -476,7 +476,7 @@ function RoutingAuditBanner({ features }: { features: Feature[] }) {
 
 function RoutingTree({
   features, tierFilterIds, featureByKey, editingRouteFor, setEditingRouteFor,
-  routeDraft, setRouteDraft, saveRoute, persistOrder,
+  routeDraft, setRouteDraft, saveRoute, persistOrder, openPaths, toggleOpenPath,
 }: {
   features: Feature[];
   tierFilterIds: Set<string> | null;
@@ -487,6 +487,8 @@ function RoutingTree({
   setRouteDraft: (d: { route_path: string; menu_path: string }) => void;
   saveRoute: (id: string) => void;
   persistOrder: (orderedIds: string[]) => void | Promise<void>;
+  openPaths: Record<string, boolean>;
+  toggleOpenPath: (path: string, isOpen: boolean) => void;
 }) {
   // Tier-aware visibility: hide features not in tier; flag missing deps
   const visible = tierFilterIds
