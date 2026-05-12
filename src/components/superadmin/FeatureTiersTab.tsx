@@ -51,6 +51,7 @@ export function FeatureTiersTab() {
   const [autoQ, setAutoQ] = useState('');
   const [editingRouteFor, setEditingRouteFor] = useState<string>('');
   const [routeDraft, setRouteDraft] = useState<{ route_path: string; menu_path: string }>({ route_path: '', menu_path: '' });
+  const [routingTier, setRoutingTier] = useState<string>('all');
 
   const load = async () => {
     setLoading(true);
