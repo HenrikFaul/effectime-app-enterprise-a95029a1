@@ -3,7 +3,7 @@ import { useI18n } from '@/i18n/I18nProvider';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Card, CardContent } from '@/components/ui/card';
-import { FolderKanban, BarChart3, ListTodo, TrendingDown, ChevronDown, Briefcase, Users, Activity, Tag, FlaskConical, Wallet } from 'lucide-react';
+import { FolderKanban, BarChart3, ListTodo, TrendingDown, ChevronDown, Briefcase, Users, Activity, Tag, FlaskConical, Wallet, HeartPulse } from 'lucide-react';
 import { ProjectList } from './ProjectList';
 import { ResourceDashboard } from './ResourceDashboard';
 import { CapacityGapReport } from './CapacityGapReport';
@@ -14,6 +14,7 @@ import { FinancialsPanel } from './FinancialsPanel';
 import { BusinessRoleManager } from '../BusinessRoleManager';
 import { TeamManager } from '../TeamManager';
 import { AgilePanel } from '../agile/AgilePanel';
+import { WellbeingDashboard } from '../wellbeing/WellbeingDashboard';
 
 interface Props {
   workspaceId: string;
@@ -39,6 +40,7 @@ export function ResourcesTab({ workspaceId, userId, isAdmin }: Props) {
           <TabsTrigger value="scenarios" className="gap-1"><FlaskConical className="h-4 w-4" /> {t('resources.tab_scenarios')}</TabsTrigger>
           <TabsTrigger value="financials" className="gap-1"><Wallet className="h-4 w-4" /> {t('resources.tab_financials')}</TabsTrigger>
           <TabsTrigger value="gaps" className="gap-1"><TrendingDown className="h-4 w-4" /> {t('resources.tab_gaps')}</TabsTrigger>
+          {isAdmin && <TabsTrigger value="wellbeing" className="gap-1"><HeartPulse className="h-4 w-4" /> {t('wellbeing.dashboard_title')}</TabsTrigger>}
         </TabsList>
         <TabsContent value="dashboard"><ResourceDashboard workspaceId={workspaceId} /></TabsContent>
         <TabsContent value="heatmap"><UtilizationHeatmap workspaceId={workspaceId} /></TabsContent>
@@ -48,6 +50,7 @@ export function ResourcesTab({ workspaceId, userId, isAdmin }: Props) {
         <TabsContent value="scenarios"><ScenarioPlanner workspaceId={workspaceId} userId={userId} isAdmin={isAdmin} /></TabsContent>
         <TabsContent value="financials"><FinancialsPanel workspaceId={workspaceId} isAdmin={isAdmin} /></TabsContent>
         <TabsContent value="gaps"><CapacityGapReport workspaceId={workspaceId} /></TabsContent>
+        {isAdmin && <TabsContent value="wellbeing"><WellbeingDashboard workspaceId={workspaceId} isAdmin={isAdmin} /></TabsContent>}
       </Tabs>
 
       {/* Pozíciók — áthelyezve a Beállításokból. Default collapsed. */}

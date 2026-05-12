@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft, LogOut, Building2, GitMerge, CircleHelp, Clock, LayoutDashboard } from 'lucide-react';
+import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft, LogOut, Building2, GitMerge, CircleHelp, Clock, LayoutDashboard, TrendingUp, Code2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
@@ -79,6 +79,9 @@ import { WorkspaceSidebar } from '@/components/shell/WorkspaceSidebar';
 import { DensityToggle } from '@/components/shell/DensityToggle';
 import { SkipToContent } from '@/components/shell/AppShell';
 import { useWorkspaceNavLayout } from '@/hooks/useWorkspaceNavLayout';
+import { AnalyticsDashboard } from './analytics/AnalyticsDashboard';
+import { DeveloperPortal } from './developer/DeveloperPortal';
+import { WellbeingScoreCard } from './wellbeing/WellbeingScoreCard';
 
 interface Workspace {
   id: string;
@@ -110,6 +113,8 @@ const WORKSPACE_TOP_NAV_ITEMS = [
   { value: 'workflows', i18nKey: 'ws_nav.workflows', icon: GitMerge },
   { value: 'resources', i18nKey: 'ws_nav.resources', icon: Briefcase },
   { value: 'reports-audit', i18nKey: 'ws_nav.reports', icon: BarChart3 },
+  { value: 'analytics', i18nKey: 'ws_nav.analytics', icon: TrendingUp },
+  { value: 'developer', i18nKey: 'ws_nav.developer', icon: Code2 },
   { value: 'settings', i18nKey: 'ws_nav.settings', icon: Settings },
 ] as const;
 
@@ -288,6 +293,8 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                   item.value === 'workflows' ? canView('members') :
                   item.value === 'resources' ? true :
                   item.value === 'reports-audit' ? (canView('reports') || canView('audit') || canView('export')) :
+                  item.value === 'analytics' ? isAdmin :
+                  item.value === 'developer' ? isAdmin :
                   item.value === 'settings' ? canView('settings') :
                   true;
 
@@ -316,6 +323,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                 isAdmin={isAdmin}
                 onNavigateTab={setActiveTab}
               />
+              <WellbeingScoreCard workspaceId={workspace.id} userId={userId} />
             </TabsContent>
 
             {canView('members') && (
@@ -431,6 +439,18 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
             {(canView('reports') || canView('audit') || canView('export')) && (
               <TabsContent value="reports-audit" data-help-region="workspace.reports">
                 <ReportsAndAuditTab workspaceId={workspace.id} userId={userId} />
+              </TabsContent>
+            )}
+
+            {isAdmin && (
+              <TabsContent value="analytics" className="space-y-4">
+                <AnalyticsDashboard workspaceId={workspace.id} isAdmin={isAdmin} />
+              </TabsContent>
+            )}
+
+            {isAdmin && (
+              <TabsContent value="developer" className="space-y-4">
+                <DeveloperPortal workspaceId={workspace.id} userId={userId} />
               </TabsContent>
             )}
 
