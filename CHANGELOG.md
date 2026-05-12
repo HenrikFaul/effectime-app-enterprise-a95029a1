@@ -1,3 +1,35 @@
+## 2026-05-12 — v3.7.9 Extended office parameters: hours, contact, equipment, min staffing
+
+### Added — Office / location management
+
+Extended `enterprise_offices` with new parameters and redesigned the `OfficeManager` UI to a Dialog-based editor with collapsible sections.
+
+**New scalar columns on `enterprise_offices`:**
+- `email`, `phone` — store contact details; shown compactly in the list view
+- `manager_name`, `deputy_name` — manager / deputy name
+- `opening_hours` (JSONB) — per-day open/close times with closed toggle (Mon–Sun)
+
+**New relational tables (with RLS — members read, admins write):**
+- `enterprise_office_equipment` — equipment/facilities list per office; each item can optionally require a specific skill (`required_skill_id → enterprise_skills`)
+- `enterprise_office_min_staffing` — permanent minimum staffing requirements per office (position or skill + headcount); distinct from date-ranged coverage rules
+
+**UI changes (`OfficeManager.tsx`):**
+- List view now shows phone, email, manager inline as compact chips
+- "New office" and edit pencil both open a full Dialog with four collapsible sections:
+  1. Basic info (name, city, address, email, phone, manager, deputy)
+  2. Opening hours — per-day grid with time pickers and "Closed" toggle
+  3. Equipment — live CRUD list with skill requirement picker
+  4. Minimum staffing — live CRUD list with role + skill dropdowns
+- Equipment and staffing sections disabled when creating a new office (hint shown); available immediately after save
+
+**i18n:** all new keys added to all 5 locales (EN / HU / CS / SK / PL).
+
+**Migration:** `supabase/migrations/20260512100000_office_extended_params.sql`
+
+**TypeScript:** 0 errors.
+
+---
+
 ## 2026-05-11 — v3.7.8 Complete Hungarian string overhaul — full i18n for all 5 locales
 
 ### Changed — Localization (non-breaking)
