@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -52,6 +53,25 @@ export function FeatureTiersTab() {
   const [editingRouteFor, setEditingRouteFor] = useState<string>('');
   const [routeDraft, setRouteDraft] = useState<{ route_path: string; menu_path: string }>({ route_path: '', menu_path: '' });
   const [routingTier, setRoutingTier] = useState<string>('all');
+  const { user } = useAuth();
+  const openStorageKey = `routingTreeOpen:${user?.id || 'anon'}:${routingTier}`;
+  const [openPaths, setOpenPaths] = useState<Record<string, boolean>>({});
+
+  // Load persisted open-state when user/tier changes
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(openStorageKey);
+      setOpenPaths(raw ? JSON.parse(raw) : {});
+    } catch { setOpenPaths({}); }
+  }, [openStorageKey]);
+
+  const toggleOpenPath = useCallback((path: string, isOpen: boolean) => {
+    setOpenPaths(prev => {
+      const next = { ...prev, [path]: isOpen };
+      try { localStorage.setItem(openStorageKey, JSON.stringify(next)); } catch { /* ignore quota */ }
+      return next;
+    });
+  }, [openStorageKey]);
 
   const load = async () => {
     setLoading(true);
@@ -327,6 +347,8 @@ export function FeatureTiersTab() {
             setRouteDraft={setRouteDraft}
             saveRoute={saveRoute}
             persistOrder={persistOrder}
+            openPaths={openPaths}
+            toggleOpenPath={toggleOpenPath}
           />
         </TabsContent>
       </Tabs>
@@ -454,7 +476,7 @@ function RoutingAuditBanner({ features }: { features: Feature[] }) {
 
 function RoutingTree({
   features, tierFilterIds, featureByKey, editingRouteFor, setEditingRouteFor,
-  routeDraft, setRouteDraft, saveRoute, persistOrder,
+  routeDraft, setRouteDraft, saveRoute, persistOrder, openPaths, toggleOpenPath,
 }: {
   features: Feature[];
   tierFilterIds: Set<string> | null;
@@ -465,6 +487,8 @@ function RoutingTree({
   setRouteDraft: (d: { route_path: string; menu_path: string }) => void;
   saveRoute: (id: string) => void;
   persistOrder: (orderedIds: string[]) => void | Promise<void>;
+  openPaths: Record<string, boolean>;
+  toggleOpenPath: (path: string, isOpen: boolean) => void;
 }) {
   // Tier-aware visibility: hide features not in tier; flag missing deps
   const visible = tierFilterIds
@@ -535,7 +559,10 @@ function RoutingTree({
   const renderNode = (node: Node, depth: number, path: string): React.ReactNode => {
     const total = countFeatures(node);
     return (
-      <Collapsible defaultOpen={depth < 1}>
+      <Collapsible
+        open={openPaths[path] ?? (depth < 1)}
+        onOpenChange={(o) => toggleOpenPath(path, o)}
+      >
         <CollapsibleTrigger className="flex items-center gap-1.5 w-full hover:bg-muted/40 px-2 py-1 rounded text-left">
           <ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform data-[state=closed]:-rotate-90" />
           <span className={depth === 0 ? 'font-medium font-mono text-sm' : 'text-sm'}>{node.label}</span>
