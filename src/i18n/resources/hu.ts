@@ -3373,6 +3373,27 @@ const hu = {
     save_error: 'Mentési hiba',
     save_success: 'Szűrő-beállítások mentve',
   },
+  m365: {
+    title: 'Microsoft 365 naptár',
+    subtitle: 'Kétirányú szinkron az Outlook naptárad és az Effectime között',
+    not_connected_hint: 'Csatlakoztasd a Microsoft 365 fiókodat, hogy a jóváhagyott szabadságok megjelenjenek az Outlookban, és az OOF események ütemezési korlátként jelenjenek meg.',
+    connect_btn: 'Microsoft 365 csatlakoztatása',
+    connect_error: 'Csatlakozási hiba',
+    disconnect: 'Lecsatlakoztatás',
+    disconnect_confirm: 'Lecsatlakoztatod ezt a Microsoft 365 fiókot? A már szinkronizált események az Outlookban maradnak.',
+    disconnect_error: 'Lecsatlakoztatási hiba',
+    disconnected: 'Microsoft 365 lecsatlakoztatva',
+    sync_now: 'Szinkronizálás most',
+    sync_success: 'Szinkron kész · {{count}} esemény',
+    sync_failed: 'Szinkron sikertelen',
+    sync_schedule_hint: 'Az automatikus szinkron 15 percenként fut.',
+    last_sync: 'Utolsó szinkron',
+    never: 'soha',
+    status_ok: 'Rendben',
+    status_error: 'Hiba',
+    status_pending: 'Függőben',
+    load_error: 'Az integráció állapota nem tölthető be',
+  },
 } as const;
 
 export default hu;
