@@ -3,6 +3,12 @@ project_id = "oezlzzmzzvbvinuysxaz"
 [functions.help-regenerator]
 verify_jwt = false
 
+[functions.payroll-export]
+verify_jwt = true
+
+[functions.security-admin]
+verify_jwt = true
+
 [functions.seed-demo-workspace]
 verify_jwt = true
 
