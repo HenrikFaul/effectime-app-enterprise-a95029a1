@@ -196,6 +196,26 @@ export function FeatureTiersTab() {
     toast.success('Sorrend mentve');
   };
 
+  // Jump to a feature's editor (used by missing-prereq badges).
+  // Expands the ancestor chain in the tree and scrolls the row into view.
+  const openFeatureEditor = useCallback((featureKey: string) => {
+    const f = features.find(x => x.feature_key === featureKey);
+    if (!f) { toast.error(`A "${featureKey}" feature nem található`); return; }
+    const page = f.route_path || '(nincs útvonal megadva)';
+    const segs = [page, ...(f.menu_path || [])];
+    let acc = '';
+    const next: Record<string, boolean> = { ...openPaths };
+    for (const seg of segs) { acc = acc ? `${acc}/${seg}` : seg; next[acc] = true; }
+    setOpenPaths(next);
+    try { localStorage.setItem(openStorageKey, JSON.stringify(next)); } catch { /* ignore */ }
+    setEditingRouteFor(f.id);
+    setRouteDraft({ route_path: f.route_path || '', menu_path: (f.menu_path || []).join(' > ') });
+    setMode('routing');
+    setTimeout(() => {
+      document.getElementById(`feature-row-${f.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 200);
+  }, [features, openPaths, openStorageKey]);
+
   if (loading) return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div>;
 
   // Autocomplete suggestions
