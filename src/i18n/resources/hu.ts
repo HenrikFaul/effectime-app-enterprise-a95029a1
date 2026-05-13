@@ -3630,6 +3630,7 @@ const hu = {
   },
   enterprise_page: {
     accept_invite_error: 'Nem sikerült elfogadni a meghívót.',
+    workspace_not_found: 'A munkaterület nem található, vagy már nem vagy a tagja. Válassz egy másikat.',
     already_member: 'Már tagja vagy ennek a munkaterületnek.',
     invite_accepted: 'A meghívót elfogadtuk, beléptél a munkaterületbe.',
     delete_error: 'A munkaterület törlése nem sikerült',

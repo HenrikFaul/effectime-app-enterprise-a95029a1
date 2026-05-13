@@ -157,6 +157,7 @@ const App = () => (
                     <Routes>
                       <Route path="/" element={<Landing />} />
                       <Route path="/app" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
+                      <Route path="/w/:workspaceId" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
                       <Route path="/enterprise" element={<ProtectedRoute><Navigate to="/app" replace /></ProtectedRoute>} />
                       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
                       <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />

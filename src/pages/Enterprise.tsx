@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Plus, Settings, LogOut, Building2, Trash2, Loader2, SlidersHorizontal, ArrowRight, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import {
   AlertDialog,
@@ -56,57 +56,38 @@ export default function Enterprise() {
   const t = useT();
   useHelpAnchor({ id: 'home.overview', crumbs: ['Effectime', 'Workspaces'] });
   const [searchParams, setSearchParams] = useSearchParams();
+  const { workspaceId: workspaceIdFromUrl } = useParams<{ workspaceId?: string }>();
+  const navigate = useNavigate();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [acceptingInvite, setAcceptingInvite] = useState(false);
-  const [selectedWorkspaceId, setSelectedWorkspaceIdState] = useState<string | null>(null);
-  const [userClearedWorkspace, setUserClearedWorkspace] = useState(false);
   const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showSeedConfig, setShowSeedConfig] = useState(false);
   // NOTE: must be declared above any early returns to satisfy the Rules of Hooks.
   const [filter, setFilter] = useState('');
 
+  // Workspace identity comes from the URL path (/w/<workspaceId>). When the
+  // user is on /app the path param is undefined → picker mode. ?ws=<id> is the
+  // legacy query-param shape; we redirect it to the path shape on mount.
   const activeTab = searchParams.get('tab') || 'members';
   const inviteToken = searchParams.get('invite') || null;
   const forceSelector = searchParams.get('select') === '1';
+  const legacyWsParam = searchParams.get('ws');
+  const selectedWorkspaceId = workspaceIdFromUrl ?? null;
 
-  // When navigated with ?select=1 (e.g. from Landing's "Munkaterület" button),
-  // suppress the auto-select-last-workspace behavior so the user always sees
-  // the picker.
+  // Legacy URL migration: /app?ws=<uuid> → /w/<uuid> (preserve other params).
+  // Replace history entry — old bookmark gets rewritten in place.
   useEffect(() => {
-    if (!forceSelector) return;
-    setUserClearedWorkspace(true);
-    setSelectedWorkspaceIdState(null);
-    localStorage.removeItem(ACTIVE_WORKSPACE_KEY);
+    if (workspaceIdFromUrl) return;
+    if (!legacyWsParam) return;
     const nextParams = new URLSearchParams(searchParams);
-    nextParams.delete('select');
-    setSearchParams(nextParams, { replace: true });
-  }, [forceSelector, searchParams, setSearchParams]);
-
-  const setSelectedWorkspaceId = (id: string | null) => {
-    setSelectedWorkspaceIdState(id);
-    if (id) {
-      setUserClearedWorkspace(false);
-      localStorage.setItem(ACTIVE_WORKSPACE_KEY, id);
-      const nextParams = new URLSearchParams(searchParams);
-      nextParams.set('tab', 'members');
-      nextParams.delete('invite');
-      nextParams.delete('ws');
-      setSearchParams(nextParams, { replace: true });
-      return;
-    }
-
-    setUserClearedWorkspace(true);
-    localStorage.removeItem(ACTIVE_WORKSPACE_KEY);
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.delete('invite');
     nextParams.delete('ws');
-    nextParams.delete('tab');
-    setSearchParams(nextParams, { replace: true });
-  };
+    const qs = nextParams.toString();
+    navigate(`/w/${legacyWsParam}${qs ? `?${qs}` : ''}`, { replace: true });
+  }, [workspaceIdFromUrl, legacyWsParam, navigate, searchParams]);
 
   const setActiveTab = (tab: string) => {
     if (!selectedWorkspaceId) return;
@@ -115,6 +96,21 @@ export default function Enterprise() {
     nextParams.delete('ws');
     // push (not replace) so the browser Back button traverses tab history
     setSearchParams(nextParams);
+  };
+
+  // Workspace pick from the picker grid. Use navigate() (push, NOT replace) so
+  // the picker step earns its own history entry — pressing Back from a tab
+  // inside the dashboard returns to the picker, never to the landing page.
+  const pickWorkspace = (id: string) => {
+    localStorage.setItem(ACTIVE_WORKSPACE_KEY, id);
+    navigate(`/w/${id}`);
+  };
+
+  // "Back to workspace picker" button inside the dashboard. Push, not replace,
+  // so a subsequent Back inside the picker returns to the previously viewed
+  // workspace (matches user expectation).
+  const backToPicker = () => {
+    navigate('/app?select=1');
   };
 
   const fetchWorkspaces = useCallback(async () => {
@@ -156,37 +152,54 @@ export default function Enterprise() {
     fetchWorkspaces();
   }, [fetchWorkspaces]);
 
+  // Picker auto-redirect: on /app (no workspaceId in path), if the user has a
+  // last-used workspace they still belong to, jump straight into it. Replace
+  // history so the transient /app entry doesn't create a Back-button loop
+  // (the picker is one click away via Profile → Change workspace).
+  // Skipped when ?select=1 is present (force-picker), an invite is being
+  // processed, or workspaces are still loading.
   useEffect(() => {
-    if (!workspaces.length) {
-      setSelectedWorkspaceIdState(null);
-      return;
+    if (workspaceIdFromUrl) return;
+    if (forceSelector) return;
+    if (inviteToken) return;
+    if (loading || acceptingInvite) return;
+    if (legacyWsParam) return;
+    if (workspaces.length === 0) return;
+
+    const stored = localStorage.getItem(ACTIVE_WORKSPACE_KEY);
+    const candidate =
+      (stored && workspaces.find((w) => w.id === stored)) || workspaces[0];
+    if (candidate) {
+      localStorage.setItem(ACTIVE_WORKSPACE_KEY, candidate.id);
+      navigate(`/w/${candidate.id}`, { replace: true });
     }
+  }, [
+    workspaceIdFromUrl,
+    forceSelector,
+    inviteToken,
+    legacyWsParam,
+    workspaces,
+    loading,
+    acceptingInvite,
+    navigate,
+  ]);
 
-    // Don't auto-select when the user explicitly navigated back to the selector
-    if (userClearedWorkspace) return;
-
-    const wsFromUrl = searchParams.get('ws');
-    const storedWorkspaceId = localStorage.getItem(ACTIVE_WORKSPACE_KEY);
-    const fallbackWorkspaceId = workspaces[0]?.id ?? null;
-    const candidate = wsFromUrl || storedWorkspaceId || fallbackWorkspaceId;
-    const resolvedWorkspace = workspaces.find((w) => w.id === candidate) || null;
-    const resolvedWorkspaceId = resolvedWorkspace?.id ?? null;
-
-    if (resolvedWorkspaceId !== selectedWorkspaceId) {
-      setSelectedWorkspaceIdState(resolvedWorkspaceId);
+  // Dashboard route: validate the workspaceId path param against the user's
+  // memberships. Unknown / inaccessible IDs (typo'd link, kicked-out user)
+  // bounce to the picker with a toast — preserves deep-link UX without
+  // silently swallowing the bad ID.
+  useEffect(() => {
+    if (!workspaceIdFromUrl) return;
+    if (loading) return;
+    if (workspaces.length === 0) return;
+    const exists = workspaces.some((w) => w.id === workspaceIdFromUrl);
+    if (!exists) {
+      toast.error(t('enterprise_page.workspace_not_found'));
+      navigate('/app?select=1', { replace: true });
+    } else {
+      localStorage.setItem(ACTIVE_WORKSPACE_KEY, workspaceIdFromUrl);
     }
-
-    if (resolvedWorkspaceId) {
-      localStorage.setItem(ACTIVE_WORKSPACE_KEY, resolvedWorkspaceId);
-    }
-
-    if (wsFromUrl) {
-      const nextParams = new URLSearchParams(searchParams);
-      nextParams.delete('ws');
-      if (!nextParams.get('tab')) nextParams.set('tab', 'members');
-      setSearchParams(nextParams, { replace: true });
-    }
-  }, [workspaces, searchParams, setSearchParams, selectedWorkspaceId, userClearedWorkspace]);
+  }, [workspaceIdFromUrl, workspaces, loading, navigate, t]);
 
   useEffect(() => {
     if (!user || !inviteToken || acceptingInvite) return;
@@ -220,12 +233,13 @@ export default function Enterprise() {
       if (cancelled) return;
 
       if (data?.workspace_id) {
-        setSelectedWorkspaceIdState(data.workspace_id);
         localStorage.setItem(ACTIVE_WORKSPACE_KEY, data.workspace_id);
-        nextParams.set('tab', 'members');
+        // Replace history — the /app?invite=<token> URL is one-time and
+        // back-buttoning to it would attempt to re-accept the invite.
+        navigate(`/w/${data.workspace_id}`, { replace: true });
+      } else {
+        setSearchParams(nextParams, { replace: true });
       }
-
-      setSearchParams(nextParams, { replace: true });
       toast.success(data?.already_member ? t('enterprise_page.already_member') : t('enterprise_page.invite_accepted'));
       setAcceptingInvite(false);
     };
@@ -289,11 +303,21 @@ export default function Enterprise() {
           workspace={ws}
           userRole={role}
           userId={user?.id || ''}
-          onBack={() => setSelectedWorkspaceId(null)}
+          onBack={backToPicker}
           onRefresh={fetchWorkspaces}
           activeTab={activeTab}
           onTabChange={setActiveTab}
         />
+      );
+    }
+    // workspaceId in URL but not yet resolved (workspaces still loading, or
+    // already validated as missing by the membership effect above which is
+    // about to redirect). Render a spinner instead of flashing the picker.
+    if (loading) {
+      return (
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+        </div>
       );
     }
   }
@@ -388,14 +412,14 @@ export default function Enterprise() {
                     <Card
                       key={ws.id}
                       className="group relative cursor-pointer transition-all hover:border-primary/60 hover:shadow-elevated focus-within:ring-2 focus-within:ring-ring"
-                      onClick={() => setSelectedWorkspaceId(ws.id)}
+                      onClick={() => pickWorkspace(ws.id)}
                       tabIndex={0}
                       role="button"
                       aria-label={t('enterprise_page.enter_workspace_aria', { name: ws.name })}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' || e.key === ' ') {
                           e.preventDefault();
-                          setSelectedWorkspaceId(ws.id);
+                          pickWorkspace(ws.id);
                         }
                       }}
                     >

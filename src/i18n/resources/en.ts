@@ -3644,6 +3644,7 @@ const en = {
     accept_invite_error: 'Failed to accept invitation.',
     already_member: 'You are already a member of this workspace.',
     invite_accepted: 'Invitation accepted — you have joined the workspace.',
+    workspace_not_found: 'Workspace not found or you are no longer a member. Pick another one.',
     delete_error: 'Failed to delete workspace',
     delete_success: '"{{name}}" workspace and all associated data deleted.',
     role_owner: 'Owner',
