@@ -56,7 +56,14 @@ export function FeatureTiersTab() {
   const [routingTier, setRoutingTier] = useState<string>('all');
   const [viewingFeatureId, setViewingFeatureId] = useState<string>('');
   const { user } = useAuth();
-  const openStorageKey = `routingTreeOpen:${user?.id || 'anon'}:${routingTier}`;
+  // openPaths keys are tree-position strings of the form
+  //   "page::<route_path>"  →  "page::<route_path>|menu::<seg1>"  → …
+  // The "page::" / "menu::" prefixes make the key independent of label
+  // collisions (e.g. a menu segment that happens to equal a route path),
+  // so reordering features or adding new branches never shifts what stays
+  // open. Persisted per (user, tier) so a Freemium audit and an Enterprise
+  // audit have separate expansion state.
+  const openStorageKey = `routingTreeOpen:v2:${user?.id || 'anon'}:${routingTier}`;
   const [openPaths, setOpenPaths] = useState<Record<string, boolean>>({});
 
   // Load persisted open-state when user/tier changes
