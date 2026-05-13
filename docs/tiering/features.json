@@ -10,6 +10,12 @@
     "necessity": "optional",
     "created_in_version": "3.7.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/workflows/access",
+    "menu_path": [
+      "Workflow",
+      "Hozzáférés",
+      "Inbox"
+    ],
     "dependencies": [
       "access_templates"
     ],
@@ -31,6 +37,12 @@
     "necessity": "optional",
     "created_in_version": "3.7.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/workflows/access",
+    "menu_path": [
+      "Workflow",
+      "Hozzáférés",
+      "Rendszerek"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -54,6 +66,12 @@
     "necessity": "optional",
     "created_in_version": "3.7.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/workflows/access",
+    "menu_path": [
+      "Workflow",
+      "Hozzáférés",
+      "Sablonok"
+    ],
     "dependencies": [
       "access_systems"
     ],
@@ -77,6 +95,11 @@
     "necessity": "required",
     "created_in_version": "1.5.0",
     "estimated_dev_cost": "S",
+    "route_path": "/profile",
+    "menu_path": [
+      "Profil",
+      "Fiók törlése"
+    ],
     "dependencies": [
       "profile_edit"
     ],
@@ -98,6 +121,11 @@
     "necessity": "required",
     "created_in_version": "2.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/admin/api",
+    "menu_path": [
+      "Admin",
+      "API"
+    ],
     "dependencies": [
       "admin_dashboard"
     ],
@@ -119,6 +147,11 @@
     "necessity": "required",
     "created_in_version": "2.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/admin",
+    "menu_path": [
+      "Admin",
+      "Dashboard"
+    ],
     "dependencies": [
       "auth_email_login"
     ],
@@ -144,6 +177,12 @@
     "necessity": "optional",
     "created_in_version": "2.5.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/requests/approvals",
+    "menu_path": [
+      "Kérelmek",
+      "Jóváhagyások",
+      "Admin felülbírálat"
+    ],
     "dependencies": [
       "approval_individual"
     ],
@@ -165,6 +204,12 @@
     "necessity": "optional",
     "created_in_version": "3.3.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/resources/agile/gantt",
+    "menu_path": [
+      "Erőforrások",
+      "Agile",
+      "Gantt"
+    ],
     "dependencies": [
       "agile_panel"
     ],
@@ -186,6 +231,12 @@
     "necessity": "optional",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/resources/agile",
+    "menu_path": [
+      "Erőforrások",
+      "Agile",
+      "Panel"
+    ],
     "dependencies": [
       "projects"
     ],
@@ -213,6 +264,12 @@
     "necessity": "optional",
     "created_in_version": "3.9.0",
     "estimated_dev_cost": "L",
+    "route_path": "/app/reports/ai",
+    "menu_path": [
+      "Riportok",
+      "AI",
+      "Burnout predikció"
+    ],
     "dependencies": [
       "attendance_log",
       "leave_my_view"
@@ -235,6 +292,11 @@
     "necessity": "optional",
     "created_in_version": "3.16.0",
     "estimated_dev_cost": "L",
+    "route_path": "/app/help/ai",
+    "menu_path": [
+      "Súgó",
+      "AI Chat asszisztens"
+    ],
     "dependencies": [
       "ms365_calendar_sync"
     ],
@@ -256,6 +318,12 @@
     "necessity": "optional",
     "created_in_version": "3.9.0",
     "estimated_dev_cost": "L",
+    "route_path": "/app/resources/ai",
+    "menu_path": [
+      "Erőforrások",
+      "AI",
+      "Smart Schedule"
+    ],
     "dependencies": [
       "calendar_monthly",
       "leave_quotas"
@@ -278,6 +346,11 @@
     "necessity": "recommended",
     "created_in_version": "2.5.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/settings/allowances",
+    "menu_path": [
+      "Beállítások",
+      "Juttatások"
+    ],
     "dependencies": [
       "leave_quotas"
     ],
@@ -299,6 +372,11 @@
     "necessity": "recommended",
     "created_in_version": "2.5.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/calendar",
+    "menu_path": [
+      "Naptár",
+      "Éves trend"
+    ],
     "dependencies": [
       "leave_my_view"
     ],
@@ -320,6 +398,11 @@
     "necessity": "recommended",
     "created_in_version": "2.5.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/calendar",
+    "menu_path": [
+      "Naptár",
+      "Éves nézet"
+    ],
     "dependencies": [
       "calendar_monthly"
     ],
@@ -341,6 +424,12 @@
     "necessity": "recommended",
     "created_in_version": "2.5.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/requests/approvals",
+    "menu_path": [
+      "Kérelmek",
+      "Jóváhagyások",
+      "Tömeges"
+    ],
     "dependencies": [
       "approval_individual"
     ],
@@ -362,6 +451,11 @@
     "necessity": "recommended",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "L",
+    "route_path": "/app/settings/approval-chains",
+    "menu_path": [
+      "Beállítások",
+      "Jóváhagyási lánc"
+    ],
     "dependencies": [
       "approval_individual",
       "members_list"
@@ -386,6 +480,12 @@
     "necessity": "required",
     "created_in_version": "1.5.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/requests/approvals",
+    "menu_path": [
+      "Kérelmek",
+      "Jóváhagyások",
+      "Inbox"
+    ],
     "dependencies": [
       "leave_team_view"
     ],
@@ -409,6 +509,12 @@
     "necessity": "required",
     "created_in_version": "1.5.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/requests/approvals",
+    "menu_path": [
+      "Kérelmek",
+      "Jóváhagyások",
+      "Egyenkénti"
+    ],
     "dependencies": [
       "approval_inbox"
     ],
@@ -435,6 +541,11 @@
     "necessity": "required",
     "created_in_version": "3.6.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/time-attendance/audit",
+    "menu_path": [
+      "Munkaóra",
+      "Audit"
+    ],
     "dependencies": [
       "attendance_log"
     ],
@@ -456,6 +567,11 @@
     "necessity": "recommended",
     "created_in_version": "3.7.1",
     "estimated_dev_cost": "M",
+    "route_path": "/app/time-attendance",
+    "menu_path": [
+      "Munkaóra",
+      "Edit mode"
+    ],
     "dependencies": [
       "attendance_log"
     ],
@@ -477,6 +593,11 @@
     "necessity": "required",
     "created_in_version": "3.6.0",
     "estimated_dev_cost": "L",
+    "route_path": "/app/time-attendance",
+    "menu_path": [
+      "Munkaóra",
+      "Napló"
+    ],
     "dependencies": [
       "members_list"
     ],
@@ -506,6 +627,11 @@
     "necessity": "optional",
     "created_in_version": "3.6.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/time-attendance/oncall",
+    "menu_path": [
+      "Munkaóra",
+      "On-call"
+    ],
     "dependencies": [
       "attendance_log"
     ],
@@ -527,6 +653,11 @@
     "necessity": "required",
     "created_in_version": "3.6.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/time-attendance/periods",
+    "menu_path": [
+      "Munkaóra",
+      "Időszakok"
+    ],
     "dependencies": [
       "attendance_log"
     ],
@@ -550,6 +681,11 @@
     "necessity": "required",
     "created_in_version": "2.5.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/reports/audit",
+    "menu_path": [
+      "Riportok",
+      "Audit napló"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -573,6 +709,11 @@
     "necessity": "required",
     "created_in_version": "1.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/auth",
+    "menu_path": [
+      "Bejelentkezés",
+      "E-mail bejelentkezés"
+    ],
     "dependencies": [
       "auth_email_signup"
     ],
@@ -598,6 +739,11 @@
     "necessity": "required",
     "created_in_version": "1.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/auth",
+    "menu_path": [
+      "Bejelentkezés",
+      "E-mail regisztráció"
+    ],
     "dependencies": [],
     "dependents": [
       "auth_email_login",
@@ -622,6 +768,11 @@
     "necessity": "recommended",
     "created_in_version": "1.2.0",
     "estimated_dev_cost": "S",
+    "route_path": "/auth",
+    "menu_path": [
+      "Bejelentkezés",
+      "Google OAuth"
+    ],
     "dependencies": [
       "auth_email_signup"
     ],
@@ -643,6 +794,11 @@
     "necessity": "optional",
     "created_in_version": "1.2.0",
     "estimated_dev_cost": "S",
+    "route_path": "/auth",
+    "menu_path": [
+      "Bejelentkezés",
+      "Magic link"
+    ],
     "dependencies": [
       "auth_email_signup"
     ],
@@ -664,6 +820,11 @@
     "necessity": "required",
     "created_in_version": "1.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/reset-password",
+    "menu_path": [
+      "Bejelentkezés",
+      "Jelszó-visszaállítás"
+    ],
     "dependencies": [
       "auth_email_signup"
     ],
@@ -685,6 +846,12 @@
     "necessity": "optional",
     "created_in_version": "3.0.1",
     "estimated_dev_cost": "L",
+    "route_path": "/app/settings/integrations",
+    "menu_path": [
+      "Beállítások",
+      "Integrációk",
+      "Azure DevOps"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -706,6 +873,12 @@
     "necessity": "optional",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/resources/agile/backlog",
+    "menu_path": [
+      "Erőforrások",
+      "Agile",
+      "Backlog"
+    ],
     "dependencies": [
       "agile_panel"
     ],
@@ -727,6 +900,11 @@
     "necessity": "optional",
     "created_in_version": "2.5.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/calendar",
+    "menu_path": [
+      "Naptár",
+      "Szülinapok"
+    ],
     "dependencies": [
       "members_list"
     ],
@@ -748,6 +926,11 @@
     "necessity": "recommended",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/settings/branding",
+    "menu_path": [
+      "Beállítások",
+      "Branding"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -769,6 +952,11 @@
     "necessity": "optional",
     "created_in_version": "3.9.0",
     "estimated_dev_cost": "L",
+    "route_path": "/app/reports/wellbeing",
+    "menu_path": [
+      "Riportok",
+      "Wellbeing"
+    ],
     "dependencies": [
       "leave_my_view",
       "attendance_log"
@@ -791,6 +979,11 @@
     "necessity": "required",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/resources/roles",
+    "menu_path": [
+      "Erőforrások",
+      "Munkakörök"
+    ],
     "dependencies": [
       "members_list"
     ],
@@ -812,6 +1005,11 @@
     "necessity": "recommended",
     "created_in_version": "2.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/calendar",
+    "menu_path": [
+      "Naptár",
+      "Szűrők"
+    ],
     "dependencies": [
       "calendar_monthly"
     ],
@@ -833,6 +1031,11 @@
     "necessity": "required",
     "created_in_version": "1.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/calendar",
+    "menu_path": [
+      "Naptár",
+      "Havi nézet"
+    ],
     "dependencies": [
       "leave_my_view"
     ],
@@ -863,6 +1066,12 @@
     "necessity": "optional",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "L",
+    "route_path": "/app/resources/capacity",
+    "menu_path": [
+      "Erőforrások",
+      "Kapacitás",
+      "DNA"
+    ],
     "dependencies": [
       "skills_mgmt",
       "members_list"
@@ -887,6 +1096,12 @@
     "necessity": "optional",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "L",
+    "route_path": "/app/resources/agile",
+    "menu_path": [
+      "Erőforrások",
+      "Agile",
+      "Capacity fit"
+    ],
     "dependencies": [
       "capacity_dna",
       "agile_panel"
@@ -909,6 +1124,12 @@
     "necessity": "recommended",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/resources/capacity",
+    "menu_path": [
+      "Erőforrások",
+      "Kapacitás",
+      "Hiány-riport"
+    ],
     "dependencies": [
       "resource_dashboard"
     ],
@@ -930,6 +1151,11 @@
     "necessity": "recommended",
     "created_in_version": "2.5.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/settings/holidays",
+    "menu_path": [
+      "Beállítások",
+      "Cég-szintű napok"
+    ],
     "dependencies": [
       "holidays"
     ],
@@ -951,6 +1177,11 @@
     "necessity": "required",
     "created_in_version": "2.5.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/organization/contracts",
+    "menu_path": [
+      "Szervezet",
+      "Szerződéstípusok"
+    ],
     "dependencies": [
       "members_list"
     ],
@@ -972,6 +1203,11 @@
     "necessity": "recommended",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "L",
+    "route_path": "/app/calendar/coverage",
+    "menu_path": [
+      "Naptár",
+      "Kapacitástervező"
+    ],
     "dependencies": [
       "calendar_monthly",
       "office_coverage_rules"
@@ -994,6 +1230,11 @@
     "necessity": "recommended",
     "created_in_version": "3.5.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/settings/import",
+    "menu_path": [
+      "Beállítások",
+      "CSV import"
+    ],
     "dependencies": [
       "members_list"
     ],
@@ -1015,6 +1256,12 @@
     "necessity": "optional",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "L",
+    "route_path": "/app/requests/approvals",
+    "menu_path": [
+      "Kérelmek",
+      "Jóváhagyások",
+      "Döntésmemória"
+    ],
     "dependencies": [
       "approval_individual"
     ],
@@ -1036,6 +1283,11 @@
     "necessity": "recommended",
     "created_in_version": "3.1.1",
     "estimated_dev_cost": "M",
+    "route_path": "/app",
+    "menu_path": [
+      "Munkaterületek",
+      "Demo workspace"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -1057,6 +1309,11 @@
     "necessity": "optional",
     "created_in_version": "2.5.0",
     "estimated_dev_cost": "S",
+    "route_path": "/superadmin/email",
+    "menu_path": [
+      "Superadmin",
+      "E-mail előnézet"
+    ],
     "dependencies": [
       "admin_dashboard"
     ],
@@ -1078,6 +1335,11 @@
     "necessity": "required",
     "created_in_version": "1.5.0",
     "estimated_dev_cost": "S",
+    "route_path": "/unsubscribe",
+    "menu_path": [
+      "Profil",
+      "Leiratkozás"
+    ],
     "dependencies": [],
     "dependents": [],
     "tiers": {
@@ -1097,6 +1359,11 @@
     "necessity": "optional",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/settings/approval-chains",
+    "menu_path": [
+      "Beállítások",
+      "Eszkaláció"
+    ],
     "dependencies": [
       "approval_chain"
     ],
@@ -1118,6 +1385,11 @@
     "necessity": "recommended",
     "created_in_version": "3.8.0",
     "estimated_dev_cost": "L",
+    "route_path": "/app/analytics",
+    "menu_path": [
+      "Analitika",
+      "Executive"
+    ],
     "dependencies": [
       "run_report"
     ],
@@ -1139,6 +1411,11 @@
     "necessity": "required",
     "created_in_version": "3.5.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/reports/export",
+    "menu_path": [
+      "Riportok",
+      "Export"
+    ],
     "dependencies": [
       "run_report"
     ],
@@ -1160,6 +1437,11 @@
     "necessity": "required",
     "created_in_version": "3.13.0",
     "estimated_dev_cost": "M",
+    "route_path": "/superadmin/flags",
+    "menu_path": [
+      "Superadmin",
+      "Feature Flags"
+    ],
     "dependencies": [
       "superadmin_control_plane"
     ],
@@ -1181,6 +1463,11 @@
     "necessity": "recommended",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "L",
+    "route_path": "/app/resources/financials",
+    "menu_path": [
+      "Erőforrások",
+      "Pénzügy"
+    ],
     "dependencies": [
       "projects"
     ],
@@ -1202,6 +1489,12 @@
     "necessity": "recommended",
     "created_in_version": "3.3.0",
     "estimated_dev_cost": "L",
+    "route_path": "/app/resources/projects/gantt",
+    "menu_path": [
+      "Erőforrások",
+      "Projektek",
+      "Gantt"
+    ],
     "dependencies": [
       "projects"
     ],
@@ -1223,6 +1516,12 @@
     "necessity": "recommended",
     "created_in_version": "3.16.0",
     "estimated_dev_cost": "L",
+    "route_path": "/app/calendar/sync",
+    "menu_path": [
+      "Naptár",
+      "Szinkron",
+      "Google Workspace"
+    ],
     "dependencies": [
       "calendar_monthly",
       "leave_submit"
@@ -1245,6 +1544,11 @@
     "necessity": "recommended",
     "created_in_version": "3.2.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/help",
+    "menu_path": [
+      "Súgó",
+      "Kontextuális drawer"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -1268,6 +1572,12 @@
     "necessity": "optional",
     "created_in_version": "3.2.0",
     "estimated_dev_cost": "M",
+    "route_path": "/superadmin/help",
+    "menu_path": [
+      "Superadmin",
+      "Help",
+      "Regenerálás"
+    ],
     "dependencies": [
       "help_settings"
     ],
@@ -1289,6 +1599,11 @@
     "necessity": "optional",
     "created_in_version": "3.2.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/help",
+    "menu_path": [
+      "Súgó",
+      "Anchor registry"
+    ],
     "dependencies": [
       "help_drawer"
     ],
@@ -1310,6 +1625,11 @@
     "necessity": "optional",
     "created_in_version": "3.2.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/settings/help",
+    "menu_path": [
+      "Beállítások",
+      "Súgó"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -1333,6 +1653,11 @@
     "necessity": "recommended",
     "created_in_version": "2.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/settings/holidays",
+    "menu_path": [
+      "Beállítások",
+      "Ünnepnap szinkron"
+    ],
     "dependencies": [
       "holidays"
     ],
@@ -1354,6 +1679,11 @@
     "necessity": "required",
     "created_in_version": "1.5.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/settings/holidays",
+    "menu_path": [
+      "Beállítások",
+      "Ünnepnapok"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -1378,6 +1708,12 @@
     "necessity": "recommended",
     "created_in_version": "2.5.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/calendar/sync",
+    "menu_path": [
+      "Naptár",
+      "Szinkron",
+      "iCal feed"
+    ],
     "dependencies": [
       "calendar_monthly"
     ],
@@ -1399,6 +1735,11 @@
     "necessity": "optional",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/organization/industries",
+    "menu_path": [
+      "Szervezet",
+      "Iparágak"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -1420,6 +1761,11 @@
     "necessity": "optional",
     "created_in_version": "2.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/members",
+    "menu_path": [
+      "Tagok",
+      "Azonnali létrehozás"
+    ],
     "dependencies": [
       "members_list"
     ],
@@ -1441,6 +1787,12 @@
     "necessity": "recommended",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/settings/integrations",
+    "menu_path": [
+      "Beállítások",
+      "Integrációk",
+      "Egészség"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -1462,6 +1814,11 @@
     "necessity": "required",
     "created_in_version": "1.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/members",
+    "menu_path": [
+      "Tagok",
+      "Meghívó elfogadása"
+    ],
     "dependencies": [
       "members_invite"
     ],
@@ -1483,6 +1840,12 @@
     "necessity": "optional",
     "created_in_version": "3.0.1",
     "estimated_dev_cost": "M",
+    "route_path": "/app/settings/integrations",
+    "menu_path": [
+      "Beállítások",
+      "Integrációk",
+      "Issue writeback"
+    ],
     "dependencies": [
       "jira_integration"
     ],
@@ -1504,6 +1867,12 @@
     "necessity": "recommended",
     "created_in_version": "3.0.1",
     "estimated_dev_cost": "L",
+    "route_path": "/app/settings/integrations",
+    "menu_path": [
+      "Beállítások",
+      "Integrációk",
+      "Jira"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -1528,6 +1897,12 @@
     "necessity": "optional",
     "created_in_version": "3.0.1",
     "estimated_dev_cost": "M",
+    "route_path": "/app/resources/agile/issues",
+    "menu_path": [
+      "Erőforrások",
+      "Agile",
+      "Issue szerkesztő"
+    ],
     "dependencies": [
       "jira_integration"
     ],
@@ -1549,6 +1924,11 @@
     "necessity": "recommended",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/organization/job-families",
+    "menu_path": [
+      "Szervezet",
+      "Állásfamilák"
+    ],
     "dependencies": [
       "members_list"
     ],
@@ -1570,6 +1950,12 @@
     "necessity": "optional",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/resources/agile/kanban",
+    "menu_path": [
+      "Erőforrások",
+      "Agile",
+      "Kanban"
+    ],
     "dependencies": [
       "agile_panel"
     ],
@@ -1591,6 +1977,11 @@
     "necessity": "recommended",
     "created_in_version": "2.5.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/organization/leadership",
+    "menu_path": [
+      "Szervezet",
+      "Vezetési szintek"
+    ],
     "dependencies": [
       "org_structure"
     ],
@@ -1612,6 +2003,12 @@
     "necessity": "recommended",
     "created_in_version": "2.5.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/settings/rules",
+    "menu_path": [
+      "Beállítások",
+      "Szabályok",
+      "Tiltott napok"
+    ],
     "dependencies": [
       "leave_submit"
     ],
@@ -1635,6 +2032,11 @@
     "necessity": "required",
     "created_in_version": "1.5.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/requests",
+    "menu_path": [
+      "Kérelmek",
+      "Visszavonás"
+    ],
     "dependencies": [
       "leave_submit"
     ],
@@ -1656,6 +2058,12 @@
     "necessity": "required",
     "created_in_version": "2.5.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/requests/new",
+    "menu_path": [
+      "Kérelmek",
+      "Új",
+      "Ütközésellenőrzés"
+    ],
     "dependencies": [
       "leave_submit",
       "leave_blocked_dates",
@@ -1679,6 +2087,12 @@
     "necessity": "recommended",
     "created_in_version": "2.5.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/settings/rules",
+    "menu_path": [
+      "Beállítások",
+      "Szabályok",
+      "Napi szabályok"
+    ],
     "dependencies": [],
     "dependents": [
       "leave_conflict_check",
@@ -1702,6 +2116,12 @@
     "necessity": "recommended",
     "created_in_version": "1.5.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/requests/new",
+    "menu_path": [
+      "Kérelmek",
+      "Új",
+      "Félnapos"
+    ],
     "dependencies": [
       "leave_submit"
     ],
@@ -1723,6 +2143,11 @@
     "necessity": "required",
     "created_in_version": "1.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/requests",
+    "menu_path": [
+      "Kérelmek",
+      "Saját kérelmek"
+    ],
     "dependencies": [
       "leave_submit"
     ],
@@ -1752,6 +2177,12 @@
     "necessity": "optional",
     "created_in_version": "2.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/requests/new",
+    "menu_path": [
+      "Kérelmek",
+      "Új",
+      "Privát"
+    ],
     "dependencies": [
       "leave_submit"
     ],
@@ -1773,6 +2204,11 @@
     "necessity": "required",
     "created_in_version": "2.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/requests/quota",
+    "menu_path": [
+      "Kérelmek",
+      "Kvóta egyenleg"
+    ],
     "dependencies": [
       "leave_submit",
       "leave_quotas"
@@ -1795,6 +2231,11 @@
     "necessity": "required",
     "created_in_version": "2.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/settings/quota",
+    "menu_path": [
+      "Beállítások",
+      "Kvóta admin"
+    ],
     "dependencies": [
       "members_list"
     ],
@@ -1820,6 +2261,11 @@
     "necessity": "required",
     "created_in_version": "1.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/requests/new",
+    "menu_path": [
+      "Kérelmek",
+      "Új szabadságkérelem"
+    ],
     "dependencies": [
       "members_list"
     ],
@@ -1852,6 +2298,11 @@
     "necessity": "required",
     "created_in_version": "1.5.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/requests/team",
+    "menu_path": [
+      "Kérelmek",
+      "Csapat kérelmek"
+    ],
     "dependencies": [
       "leave_my_view",
       "members_list"
@@ -1876,6 +2327,11 @@
     "necessity": "required",
     "created_in_version": "2.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/settings/leave-types",
+    "menu_path": [
+      "Beállítások",
+      "Szabadságtípusok"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -1897,6 +2353,11 @@
     "necessity": "recommended",
     "created_in_version": "2.5.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/settings/localization",
+    "menu_path": [
+      "Beállítások",
+      "Lokalizáció"
+    ],
     "dependencies": [
       "ws_general"
     ],
@@ -1920,6 +2381,11 @@
     "necessity": "required",
     "created_in_version": "1.5.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/members",
+    "menu_path": [
+      "Tagok",
+      "Deaktiválás"
+    ],
     "dependencies": [
       "members_list"
     ],
@@ -1941,6 +2407,11 @@
     "necessity": "required",
     "created_in_version": "1.5.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/members",
+    "menu_path": [
+      "Tagok",
+      "Szerkesztés"
+    ],
     "dependencies": [
       "members_list"
     ],
@@ -1962,6 +2433,11 @@
     "necessity": "required",
     "created_in_version": "1.5.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/members",
+    "menu_path": [
+      "Tagok",
+      "Szerepkör"
+    ],
     "dependencies": [
       "members_list"
     ],
@@ -1983,6 +2459,11 @@
     "necessity": "required",
     "created_in_version": "1.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/members",
+    "menu_path": [
+      "Tagok",
+      "Meghívás"
+    ],
     "dependencies": [
       "members_list"
     ],
@@ -2006,6 +2487,11 @@
     "necessity": "required",
     "created_in_version": "1.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/members",
+    "menu_path": [
+      "Tagok",
+      "Listázás"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -2052,6 +2538,12 @@
     "necessity": "recommended",
     "created_in_version": "3.15.0",
     "estimated_dev_cost": "L",
+    "route_path": "/app/calendar/sync",
+    "menu_path": [
+      "Naptár",
+      "Szinkron",
+      "Microsoft 365"
+    ],
     "dependencies": [
       "calendar_monthly",
       "leave_submit"
@@ -2076,6 +2568,11 @@
     "necessity": "recommended",
     "created_in_version": "3.14.0",
     "estimated_dev_cost": "M",
+    "route_path": "/superadmin/locales",
+    "menu_path": [
+      "Superadmin",
+      "Lokalizáció"
+    ],
     "dependencies": [
       "localization"
     ],
@@ -2097,6 +2594,12 @@
     "necessity": "required",
     "created_in_version": "2.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/settings/notifications",
+    "menu_path": [
+      "Beállítások",
+      "Értesítések",
+      "Preferenciák"
+    ],
     "dependencies": [
       "notifications"
     ],
@@ -2118,6 +2621,11 @@
     "necessity": "required",
     "created_in_version": "2.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/settings/notifications",
+    "menu_path": [
+      "Beállítások",
+      "Értesítések"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -2141,6 +2649,12 @@
     "necessity": "recommended",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/settings/rules",
+    "menu_path": [
+      "Beállítások",
+      "Szabályok",
+      "Telephelyi lefedettség"
+    ],
     "dependencies": [
       "offices",
       "leave_daily_rules"
@@ -2165,6 +2679,11 @@
     "necessity": "required",
     "created_in_version": "1.5.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/organization/offices",
+    "menu_path": [
+      "Szervezet",
+      "Telephelyek"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -2189,6 +2708,12 @@
     "necessity": "recommended",
     "created_in_version": "3.7.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/workflows/onboarding",
+    "menu_path": [
+      "Workflow",
+      "Onboarding",
+      "Inbox"
+    ],
     "dependencies": [
       "onboarding_template"
     ],
@@ -2210,6 +2735,12 @@
     "necessity": "recommended",
     "created_in_version": "3.7.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/workflows/onboarding",
+    "menu_path": [
+      "Workflow",
+      "Onboarding",
+      "Sablonok"
+    ],
     "dependencies": [
       "members_list"
     ],
@@ -2233,6 +2764,12 @@
     "necessity": "optional",
     "created_in_version": "3.10.0",
     "estimated_dev_cost": "L",
+    "route_path": "/superadmin/tiers",
+    "menu_path": [
+      "Superadmin",
+      "Feature & Tier",
+      "Open API"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -2254,6 +2791,11 @@
     "necessity": "recommended",
     "created_in_version": "3.3.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/organization/chart",
+    "menu_path": [
+      "Szervezet",
+      "Org chart"
+    ],
     "dependencies": [
       "org_structure"
     ],
@@ -2279,6 +2821,12 @@
     "necessity": "optional",
     "created_in_version": "3.4.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/organization/chart",
+    "menu_path": [
+      "Szervezet",
+      "Org chart",
+      "Fullscreen"
+    ],
     "dependencies": [
       "org_chart"
     ],
@@ -2300,6 +2848,12 @@
     "necessity": "optional",
     "created_in_version": "3.3.1",
     "estimated_dev_cost": "M",
+    "route_path": "/app/organization/chart",
+    "menu_path": [
+      "Szervezet",
+      "Org chart",
+      "Pan/zoom"
+    ],
     "dependencies": [
       "org_chart"
     ],
@@ -2321,6 +2875,12 @@
     "necessity": "optional",
     "created_in_version": "3.4.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/organization/chart",
+    "menu_path": [
+      "Szervezet",
+      "Org chart",
+      "Snapshot"
+    ],
     "dependencies": [
       "org_chart"
     ],
@@ -2342,6 +2902,11 @@
     "necessity": "required",
     "created_in_version": "2.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/organization/structure",
+    "menu_path": [
+      "Szervezet",
+      "Struktúra"
+    ],
     "dependencies": [
       "members_list"
     ],
@@ -2366,6 +2931,12 @@
     "necessity": "recommended",
     "created_in_version": "3.11.0",
     "estimated_dev_cost": "L",
+    "route_path": "/superadmin/tiers",
+    "menu_path": [
+      "Superadmin",
+      "Feature & Tier",
+      "Payroll Engine"
+    ],
     "dependencies": [
       "payroll_export"
     ],
@@ -2387,6 +2958,11 @@
     "necessity": "recommended",
     "created_in_version": "3.6.0",
     "estimated_dev_cost": "L",
+    "route_path": "/app/time-attendance/payroll",
+    "menu_path": [
+      "Munkaóra",
+      "Bérszámfejtés export"
+    ],
     "dependencies": [
       "attendance_periods"
     ],
@@ -2410,6 +2986,11 @@
     "necessity": "required",
     "created_in_version": "1.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/profile",
+    "menu_path": [
+      "Profil",
+      "Szerkesztés"
+    ],
     "dependencies": [
       "auth_email_login"
     ],
@@ -2433,6 +3014,12 @@
     "necessity": "required",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/resources/projects",
+    "menu_path": [
+      "Erőforrások",
+      "Projektek",
+      "Szerkesztő"
+    ],
     "dependencies": [
       "projects"
     ],
@@ -2454,6 +3041,11 @@
     "necessity": "required",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/resources/projects",
+    "menu_path": [
+      "Erőforrások",
+      "Projektek"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -2481,6 +3073,12 @@
     "necessity": "optional",
     "created_in_version": "2.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/superadmin/workspaces",
+    "menu_path": [
+      "Superadmin",
+      "Munkaterületek",
+      "Helyreállítás"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -2502,6 +3100,11 @@
     "necessity": "recommended",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/resources",
+    "menu_path": [
+      "Erőforrások",
+      "Áttekintő"
+    ],
     "dependencies": [
       "members_list"
     ],
@@ -2527,6 +3130,11 @@
     "necessity": "required",
     "created_in_version": "2.5.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/settings/permissions",
+    "menu_path": [
+      "Beállítások",
+      "Szerepkörök"
+    ],
     "dependencies": [
       "members_list"
     ],
@@ -2548,6 +3156,12 @@
     "necessity": "optional",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/settings/rules",
+    "menu_path": [
+      "Beállítások",
+      "Szabályok",
+      "Sablonok"
+    ],
     "dependencies": [
       "leave_daily_rules"
     ],
@@ -2569,6 +3183,11 @@
     "necessity": "required",
     "created_in_version": "2.5.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/reports",
+    "menu_path": [
+      "Riportok",
+      "Futtatás"
+    ],
     "dependencies": [
       "leave_my_view"
     ],
@@ -2594,6 +3213,11 @@
     "necessity": "optional",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "L",
+    "route_path": "/app/resources/scenarios",
+    "menu_path": [
+      "Erőforrások",
+      "Forgatókönyvek"
+    ],
     "dependencies": [
       "projects",
       "resource_dashboard"
@@ -2616,6 +3240,11 @@
     "necessity": "recommended",
     "created_in_version": "3.5.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/reports/scheduled",
+    "menu_path": [
+      "Riportok",
+      "Ütemezett"
+    ],
     "dependencies": [
       "run_report"
     ],
@@ -2637,6 +3266,12 @@
     "necessity": "optional",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/resources/agile/scrum",
+    "menu_path": [
+      "Erőforrások",
+      "Agile",
+      "Scrum"
+    ],
     "dependencies": [
       "agile_panel"
     ],
@@ -2658,6 +3293,11 @@
     "necessity": "recommended",
     "created_in_version": "3.7.7",
     "estimated_dev_cost": "M",
+    "route_path": "/app/time-attendance/sites",
+    "menu_path": [
+      "Munkaóra",
+      "Telephely beosztás"
+    ],
     "dependencies": [
       "offices",
       "attendance_log"
@@ -2680,6 +3320,11 @@
     "necessity": "optional",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "L",
+    "route_path": "/app/calendar/reports",
+    "menu_path": [
+      "Naptár",
+      "Készség-kapacitás"
+    ],
     "dependencies": [
       "timeline_view",
       "skills_mgmt"
@@ -2702,6 +3347,11 @@
     "necessity": "recommended",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/resources/skills",
+    "menu_path": [
+      "Erőforrások",
+      "Készségek"
+    ],
     "dependencies": [
       "members_list"
     ],
@@ -2726,6 +3376,12 @@
     "necessity": "recommended",
     "created_in_version": "3.12.0",
     "estimated_dev_cost": "L",
+    "route_path": "/superadmin/tiers",
+    "menu_path": [
+      "Superadmin",
+      "Feature & Tier",
+      "SOC2 / ISO 27001"
+    ],
     "dependencies": [
       "audit_log"
     ],
@@ -2747,6 +3403,11 @@
     "necessity": "optional",
     "created_in_version": "2.5.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/requests/team",
+    "menu_path": [
+      "Kérelmek",
+      "Helyettesítés inbox"
+    ],
     "dependencies": [
       "leave_submit",
       "members_list"
@@ -2769,6 +3430,11 @@
     "necessity": "required",
     "created_in_version": "3.13.0",
     "estimated_dev_cost": "L",
+    "route_path": "/superadmin",
+    "menu_path": [
+      "Superadmin",
+      "Control Plane"
+    ],
     "dependencies": [
       "admin_dashboard"
     ],
@@ -2792,6 +3458,11 @@
     "necessity": "required",
     "created_in_version": "1.5.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/organization/teams",
+    "menu_path": [
+      "Szervezet",
+      "Csapatok"
+    ],
     "dependencies": [
       "members_list"
     ],
@@ -2813,6 +3484,11 @@
     "necessity": "recommended",
     "created_in_version": "2.5.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/calendar/timeline",
+    "menu_path": [
+      "Naptár",
+      "Idővonal"
+    ],
     "dependencies": [
       "leave_my_view",
       "calendar_monthly"
@@ -2837,6 +3513,11 @@
     "necessity": "optional",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/settings/ui",
+    "menu_path": [
+      "Beállítások",
+      "UI állapot"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -2858,6 +3539,11 @@
     "necessity": "recommended",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "M",
+    "route_path": "/app/resources/utilization",
+    "menu_path": [
+      "Erőforrások",
+      "Kihasználtság"
+    ],
     "dependencies": [
       "resource_dashboard"
     ],
@@ -2879,6 +3565,11 @@
     "necessity": "recommended",
     "created_in_version": "3.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/organization/categories",
+    "menu_path": [
+      "Szervezet",
+      "Munkakategóriák"
+    ],
     "dependencies": [
       "members_list"
     ],
@@ -2900,6 +3591,11 @@
     "necessity": "recommended",
     "created_in_version": "1.5.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app",
+    "menu_path": [
+      "Munkaterületek",
+      "Archiválás"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -2923,6 +3619,11 @@
     "necessity": "required",
     "created_in_version": "1.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app",
+    "menu_path": [
+      "Munkaterületek",
+      "Új munkaterület"
+    ],
     "dependencies": [
       "auth_email_login"
     ],
@@ -2968,6 +3669,11 @@
     "necessity": "required",
     "created_in_version": "1.5.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app",
+    "menu_path": [
+      "Munkaterületek",
+      "Törlés"
+    ],
     "dependencies": [
       "workspace_archive"
     ],
@@ -2989,6 +3695,12 @@
     "necessity": "required",
     "created_in_version": "1.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/settings/general/regional",
+    "menu_path": [
+      "Beállítások",
+      "Általános",
+      "Régió & időzóna"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -3010,6 +3722,11 @@
     "necessity": "required",
     "created_in_version": "1.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app",
+    "menu_path": [
+      "Munkaterületek",
+      "Váltás"
+    ],
     "dependencies": [
       "workspace_create"
     ],
@@ -3031,6 +3748,11 @@
     "necessity": "required",
     "created_in_version": "1.0.0",
     "estimated_dev_cost": "S",
+    "route_path": "/app/settings/general",
+    "menu_path": [
+      "Beállítások",
+      "Általános"
+    ],
     "dependencies": [
       "workspace_create"
     ],

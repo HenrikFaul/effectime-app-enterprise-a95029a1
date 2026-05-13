@@ -1,3 +1,39 @@
+## 2026-05-13 — v3.15.2 Routing seed: all 135 features now have route_path + menu_path
+
+### Fixed — Empty route_path / menu_path for the whole catalog
+
+The v3.13.x routing audit banner reported "Hiányzó menu_path 135" because
+the columns existed in `features` but were never populated (the v3.15.0
+release added the audit infrastructure but didn't seed the routing data).
+This fills them in.
+
+- New migration `20260513140000_seed_feature_routes_menus.sql` — 135
+  `UPDATE public.features SET route_path = …, menu_path = ARRAY[…]`
+  statements, one per feature. Route conventions:
+  - `/app/<top-tab>[/<sub-tab>]` for in-workspace features
+  - `/superadmin/*` for platform admin features
+  - `/auth`, `/profile`, `/unsubscribe` for pre-workspace features
+  Menu breadcrumbs are Hungarian (workspace primary language).
+- Applied to remote DB; verified 135/135 features now have route + menu.
+- No duplicate (route_path, menu_path) combos — distinguishes
+  `workspace_general_settings` (TZ/locale-only) from `ws_general`
+  (general settings hub) with a sub-breadcrumb.
+- Sanity-guard `DO $$ ... $$` block at end of migration emits a WARNING
+  if any future feature is added without a matching UPDATE.
+
+### CSV regen
+
+- `scripts/build_tiering_csvs.mjs` now parses `UPDATE features SET
+  route_path = …, menu_path = …` migrations and includes the resolved
+  values in `features.csv` (2 new columns) and `features.json` (new
+  `route_path` + `menu_path` fields).
+- `docs/tiering/features.{csv,json}` regenerated; 135/135 features have
+  both fields populated.
+
+**Tests:** 146/146 passing. **TypeScript:** 0 errors.
+
+---
+
 ## 2026-05-13 — v3.15.1 Tiering follow-ups: audit viewer + catalog localization
 
 ### Added — Three items deferred from v3.15.0, all delivered
