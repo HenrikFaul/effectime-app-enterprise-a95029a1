@@ -691,11 +691,10 @@ function RoutingTree({
         </CollapsibleTrigger>
         <CollapsibleContent className="ml-4 border-l pl-2 mt-1 space-y-1">
           {Array.from(node.children.values()).map(c => {
-            // depth==0 child = page (route_path); deeper = menu segment.
-            // Prefix-tagged so the key is invariant under feature re-ordering.
-            const childPath = depth === 0
-              ? `page::${c.label}`
-              : `${path}|menu::${c.label}`;
+            // Children of a page or menu node are always menu segments.
+            // Prefix-tagged so the open-state key is invariant under
+            // feature re-ordering or new branches appearing/disappearing.
+            const childPath = `${path}|menu::${c.label}`;
             return <div key={childPath}>{renderNode(c, depth + 1, childPath)}</div>;
           })}
           {node.features.map(f => {
