@@ -15,7 +15,7 @@ import {
   ROLE_DEFINITION_DEFS, ROLE_PERMISSION_DEFS, MEMBER_TEMPLATE_DEFS,
   TRANSLATION_OVERRIDE_DEFS, INTEGRATION_DEF, AGILE_ISSUE_DEFS, AGILE_FIELD_METADATA_DEFS,
   DAILY_RULE_DEFS, OFFICE_COVERAGE_RULE_DEFS, RULE_TEMPLATE_DEFS,
-  APPROVAL_CHAIN_DEFS, DEFAULT_SEED_QUANTITIES,
+  APPROVAL_CHAIN_DEFS, DEFAULT_SEED_QUANTITIES, TIER_SEED_OVERRIDES,
   JOB_FAMILY_DEFS, LEADERSHIP_LEVEL_DEFS, CONTRACT_TYPE_DEFS,
   INDUSTRY_DEFS, WORK_CATEGORY_DEFS, PERSONA_ORG_ASSIGNMENTS,
   MEMBER_GOAL_DEFS,
@@ -118,8 +118,14 @@ Deno.serve(async (req) => {
       .select('config')
       .eq('owner_id', ownerId)
       .maybeSingle();
+    // Resolution: defaults → tier-aware override → per-owner override.
+    // The owner-saved config (DemoSeedConfigDialog) wins so operators can still
+    // tune individual seeds, but if they haven't customized, the tier controls
+    // realistic content sizing for that subscription level.
+    const tierOverrides = TIER_SEED_OVERRIDES[tierKey] ?? {};
     const seedQty: typeof DEFAULT_SEED_QUANTITIES = {
       ...DEFAULT_SEED_QUANTITIES,
+      ...tierOverrides,
       ...(seedConfigRow?.config ?? {}),
     };
 

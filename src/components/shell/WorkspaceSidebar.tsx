@@ -24,15 +24,19 @@ import {
 import { Button } from '@/components/ui/button';
 import { EffectimeLogo } from '@/components/EffectimeLogo';
 import { useT } from '@/i18n/I18nProvider';
+import { useEnabledFeatures } from '@/hooks/useFeature';
 
 export interface WorkspaceNavItem {
   value: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   visible: boolean;
+  /** Representative feature_key for tier-aware gating. */
+  featureKey: string;
 }
 
 interface Props {
+  workspaceId: string;
   workspaceName: string;
   activeTab: string;
   onTabChange: (tab: string) => void;
@@ -51,6 +55,7 @@ interface Props {
  * unchanged (zero functional regression).
  */
 export function WorkspaceSidebar({
+  workspaceId,
   workspaceName,
   activeTab,
   onTabChange,
@@ -64,17 +69,25 @@ export function WorkspaceSidebar({
   const { state } = useSidebar();
   const collapsed = state === 'collapsed';
   const t = useT();
+  const { features: enabledFeatures } = useEnabledFeatures(workspaceId);
 
   const items: WorkspaceNavItem[] = [
-    { value: 'members', label: t('ws_nav.members'), icon: Users, visible: canViewMembers },
-    { value: 'organization', label: t('ws_nav.organization'), icon: Building2, visible: canViewMembers },
-    { value: 'calendar', label: t('ws_nav.calendar'), icon: CalendarDays, visible: hasCalendarAccess },
-    { value: 'requests', label: t('ws_nav.requests'), icon: FileText, visible: hasRequestsAccess },
-    { value: 'workflows', label: t('ws_nav.workflows'), icon: GitMerge, visible: canViewMembers },
-    { value: 'resources', label: t('ws_nav.resources'), icon: Briefcase, visible: true },
-    { value: 'reports-audit', label: t('ws_nav.reports_audit'), icon: BarChart3, visible: canViewReports },
-    { value: 'settings', label: t('ws_nav.settings'), icon: Settings, visible: canViewSettings },
+    { value: 'members', label: t('ws_nav.members'), icon: Users, visible: canViewMembers, featureKey: 'members_list' },
+    { value: 'organization', label: t('ws_nav.organization'), icon: Building2, visible: canViewMembers, featureKey: 'org_structure' },
+    { value: 'calendar', label: t('ws_nav.calendar'), icon: CalendarDays, visible: hasCalendarAccess, featureKey: 'calendar_monthly' },
+    { value: 'requests', label: t('ws_nav.requests'), icon: FileText, visible: hasRequestsAccess, featureKey: 'leave_submit' },
+    { value: 'workflows', label: t('ws_nav.workflows'), icon: GitMerge, visible: canViewMembers, featureKey: 'approval_inbox' },
+    { value: 'resources', label: t('ws_nav.resources'), icon: Briefcase, visible: true, featureKey: 'resource_dashboard' },
+    { value: 'reports-audit', label: t('ws_nav.reports_audit'), icon: BarChart3, visible: canViewReports, featureKey: 'run_report' },
+    { value: 'settings', label: t('ws_nav.settings'), icon: Settings, visible: canViewSettings, featureKey: 'ws_general' },
   ];
+
+  // Fail-open: when the tier system has no opinion for this workspace
+  // (e.g. legacy workspaces with no tenant binding yet), don't hide
+  // anything. Only apply the gate when we actually got enabled features.
+  const tierFilterActive = enabledFeatures.length > 0;
+  const enabledKeys = new Set(enabledFeatures.map((f) => f.feature_key));
+  const isTierVisible = (key: string) => !tierFilterActive || enabledKeys.has(key);
 
   return (
     <Sidebar collapsible="icon">
@@ -111,7 +124,7 @@ export function WorkspaceSidebar({
           <SidebarGroupContent>
             <SidebarMenu>
               {items
-                .filter((i) => i.visible)
+                .filter((i) => i.visible && isTierVisible(i.featureKey))
                 .map((item) => {
                   const Icon = item.icon;
                   const isActive = activeTab === item.value;

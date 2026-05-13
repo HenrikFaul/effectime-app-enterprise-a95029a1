@@ -1,3 +1,56 @@
+## 2026-05-13 — v3.15.0 Feature Tiering — End-to-end activation
+
+### Added — Tiering enforcement, audit, demo seeds, tests
+
+Closes the gaps from the v3.13.x tiering rollout where the catalog and admin
+UI shipped but the runtime contract was not wired through the app.
+
+**FeatureGate wired up:**
+- `WorkspaceSidebar` filters nav items by tier (fail-open when no tier
+  binding exists, fail-closed once any feature is enabled).
+- Premium admin tabs gated with `<FeatureGate>` + new `LockedFeatureNotice`
+  fallback: Analytics (`executive_dashboard`), Developer Portal (`open_api`),
+  Security Center (`soc2_iso`).
+
+**Audit trail:**
+- New immutable `platform_audit_events` table with platform-admin RLS.
+- Every tier-feature toggle, addon-feature toggle, and feature routing edit
+  writes an audit row from `FeatureTiersTab`.
+
+**Tier-aware demo seeding:**
+- `TIER_SEED_OVERRIDES` in `seed-data.ts`: Freemium = 6 members + minimal
+  catalog; Pro = 12 members, 3 teams, 2 projects, 12 agile issues;
+  Enterprise = full catalog. Per-owner `enterprise_seed_config` still wins.
+
+**Localization:**
+- 22 hardcoded strings in `FeatureTiersTab.tsx` + 3 in
+  `CreateWorkspaceDialog.tsx` moved to a new `feature_tiers.*` /
+  `create_workspace.tier_*` / `feature_gate.*` namespace, added in all 5
+  locales (en, hu, cs, sk, pl).
+
+**Docs / tooling:**
+- `scripts/build_tiering_csvs.mjs` regenerates `docs/tiering/features.csv`,
+  `dependency_matrix.csv`, `tiers_matrix.csv` from migration source-of-truth
+  (135 rows each — were empty header-only stubs before).
+
+**Tests:**
+- New `featureTiering.test.ts` (13 tests) covering catalog invariants,
+  dependency graph integrity (no cycles, all refs valid), tier inheritance,
+  and demo seed monotonicity.
+
+### Fixed — Seed data bugs caught by the new test suite
+
+- 4 features had comma-joined dependency strings instead of proper text[]
+  arrays (`site_assignment`, `ai_smart_schedule`, `ai_burnout_predict`,
+  `burnout_engine`) — corrective migration splits them.
+- `leave_conflict_check ↔ leave_daily_rules` 2-cycle resolved by removing
+  the upward edge (`leave_daily_rules` no longer depends on
+  `leave_conflict_check`).
+
+**Tests:** 146/146 passing. **TypeScript:** 0 errors. **Build:** clean.
+
+---
+
 ## 2026-05-12 — v3.14.1 Google OAuth Login Fix (HashRouter 404 flash)
 
 ### Fixed — Authentication
