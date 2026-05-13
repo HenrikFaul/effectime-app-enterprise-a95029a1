@@ -1,0 +1,3046 @@
+[
+  {
+    "feature_key": "access_inbox",
+    "name": "Hozzáférés inbox",
+    "module": "workflows",
+    "description": "Approval workflow.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "optional",
+    "created_in_version": "3.7.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "access_templates"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "access_systems",
+    "name": "Hozzáférési rendszerek",
+    "module": "workflows",
+    "description": "IT-rendszer katalógus.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "optional",
+    "created_in_version": "3.7.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [
+      "access_templates"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "access_templates",
+    "name": "Hozzáférés-kérelem sablonok",
+    "module": "workflows",
+    "description": "Standardizált request.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "optional",
+    "created_in_version": "3.7.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "access_systems"
+    ],
+    "dependents": [
+      "access_inbox"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "account_delete",
+    "name": "Fiók törlés (GDPR)",
+    "module": "auth",
+    "description": "GDPR megfelelés.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "required",
+    "created_in_version": "1.5.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "profile_edit"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "admin_api",
+    "name": "Platform admin API",
+    "module": "admin",
+    "description": "Service ops.",
+    "fiscal_weight": 10,
+    "status": "public",
+    "value_score": 10,
+    "necessity": "required",
+    "created_in_version": "2.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "admin_dashboard"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": false
+    }
+  },
+  {
+    "feature_key": "admin_dashboard",
+    "name": "Platform admin dashboard",
+    "module": "admin",
+    "description": "SaaS-üzemeltetés.",
+    "fiscal_weight": 10,
+    "status": "public",
+    "value_score": 10,
+    "necessity": "required",
+    "created_in_version": "2.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "auth_email_login"
+    ],
+    "dependents": [
+      "admin_api",
+      "email_preview",
+      "superadmin_control_plane"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": false
+    }
+  },
+  {
+    "feature_key": "admin_override",
+    "name": "Admin felülbírálat",
+    "module": "approvals",
+    "description": "Vész-beavatkozás.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "optional",
+    "created_in_version": "2.5.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "approval_individual"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "agile_gantt",
+    "name": "Agile Gantt",
+    "module": "agile",
+    "description": "Hibrid view.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "optional",
+    "created_in_version": "3.3.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "agile_panel"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "agile_panel",
+    "name": "Agile panel",
+    "module": "agile",
+    "description": "Agile teamek.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "optional",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "projects"
+    ],
+    "dependents": [
+      "agile_gantt",
+      "backlog_browser",
+      "capacity_fit",
+      "kanban",
+      "scrum"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "ai_burnout_predict",
+    "name": "Burnout predikció",
+    "module": "ai",
+    "description": "Wellbeing forecast.",
+    "fiscal_weight": 7,
+    "status": "beta",
+    "value_score": 7,
+    "necessity": "optional",
+    "created_in_version": "3.9.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "attendance_log",
+      "leave_my_view"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "ai_chat_assist",
+    "name": "Chat asszisztens (Slack/Teams slash cmd)",
+    "module": "ai",
+    "description": "Asszisztens csatorna.",
+    "fiscal_weight": 7,
+    "status": "planned",
+    "value_score": 7,
+    "necessity": "optional",
+    "created_in_version": "3.16.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "ms365_calendar_sync"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "ai_smart_schedule",
+    "name": "Smart Schedule (AI javaslatok)",
+    "module": "ai",
+    "description": "AI-asszisztens.",
+    "fiscal_weight": 8,
+    "status": "beta",
+    "value_score": 8,
+    "necessity": "optional",
+    "created_in_version": "3.9.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "calendar_monthly",
+      "leave_quotas"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "allowances",
+    "name": "Juttatások kezelése",
+    "module": "leave",
+    "description": "Cafeteria/juttatás.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "recommended",
+    "created_in_version": "2.5.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "leave_quotas"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "annual_trend",
+    "name": "Éves trend diagram",
+    "module": "calendar",
+    "description": "Trendelemzés.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "recommended",
+    "created_in_version": "2.5.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "leave_my_view"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "annual_view",
+    "name": "Éves nézet",
+    "module": "calendar",
+    "description": "Éves tervezés.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "recommended",
+    "created_in_version": "2.5.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "calendar_monthly"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "approval_bulk",
+    "name": "Tömeges jóváhagyás",
+    "module": "approvals",
+    "description": "Hatékonyság nagy csapatoknál.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "recommended",
+    "created_in_version": "2.5.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "approval_individual"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "approval_chain",
+    "name": "Jóváhagyási lánc konfig",
+    "module": "approvals",
+    "description": "Multi-level workflow.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "recommended",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "approval_individual",
+      "members_list"
+    ],
+    "dependents": [
+      "escalation"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "approval_inbox",
+    "name": "Jóváhagyó inbox",
+    "module": "approvals",
+    "description": "Vezetői workflow.",
+    "fiscal_weight": 10,
+    "status": "public",
+    "value_score": 10,
+    "necessity": "required",
+    "created_in_version": "1.5.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "leave_team_view"
+    ],
+    "dependents": [
+      "approval_individual"
+    ],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "approval_individual",
+    "name": "Egyenkénti jóváhagyás",
+    "module": "approvals",
+    "description": "Alap döntéshozatal.",
+    "fiscal_weight": 10,
+    "status": "public",
+    "value_score": 10,
+    "necessity": "required",
+    "created_in_version": "1.5.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "approval_inbox"
+    ],
+    "dependents": [
+      "admin_override",
+      "approval_bulk",
+      "approval_chain",
+      "decision_memory"
+    ],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "attendance_audit",
+    "name": "Attendance audit",
+    "module": "attendance",
+    "description": "Compliance.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "required",
+    "created_in_version": "3.6.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "attendance_log"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "attendance_edit_mode",
+    "name": "Edit mode + batch drag",
+    "module": "attendance",
+    "description": "UX gyorsítás.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "recommended",
+    "created_in_version": "3.7.1",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "attendance_log"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "attendance_log",
+    "name": "Munkaóra naplózás",
+    "module": "attendance",
+    "description": "Időnyilvántartás.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "3.6.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "members_list"
+    ],
+    "dependents": [
+      "ai_burnout_predict",
+      "attendance_audit",
+      "attendance_edit_mode",
+      "attendance_oncall",
+      "attendance_periods",
+      "burnout_engine",
+      "site_assignment"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "attendance_oncall",
+    "name": "On-call ügyelet",
+    "module": "attendance",
+    "description": "24/7 csapatok.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "optional",
+    "created_in_version": "3.6.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "attendance_log"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "attendance_periods",
+    "name": "Időszak workflow",
+    "module": "attendance",
+    "description": "Hónap zárás.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "required",
+    "created_in_version": "3.6.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "attendance_log"
+    ],
+    "dependents": [
+      "payroll_export"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "audit_log",
+    "name": "Audit napló",
+    "module": "reports",
+    "description": "Compliance/SOC2.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "2.5.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [
+      "soc2_iso"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "auth_email_login",
+    "name": "E-mail bejelentkezés",
+    "module": "auth",
+    "description": "Napi belépés.",
+    "fiscal_weight": 10,
+    "status": "public",
+    "value_score": 10,
+    "necessity": "required",
+    "created_in_version": "1.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "auth_email_signup"
+    ],
+    "dependents": [
+      "admin_dashboard",
+      "profile_edit",
+      "workspace_create"
+    ],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "auth_email_signup",
+    "name": "E-mail regisztráció",
+    "module": "auth",
+    "description": "Felhasználói belépési pont, minden funkció előfeltétele.",
+    "fiscal_weight": 10,
+    "status": "public",
+    "value_score": 10,
+    "necessity": "required",
+    "created_in_version": "1.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [],
+    "dependents": [
+      "auth_email_login",
+      "auth_google_oauth",
+      "auth_magic_link",
+      "auth_password_reset"
+    ],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "auth_google_oauth",
+    "name": "Google OAuth",
+    "module": "auth",
+    "description": "Súrlódásmentes belépés Google fiókkal.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "recommended",
+    "created_in_version": "1.2.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "auth_email_signup"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "auth_magic_link",
+    "name": "Magic link",
+    "module": "auth",
+    "description": "Jelszó nélküli belépés.",
+    "fiscal_weight": 5,
+    "status": "public",
+    "value_score": 5,
+    "necessity": "optional",
+    "created_in_version": "1.2.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "auth_email_signup"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "auth_password_reset",
+    "name": "Jelszó-visszaállítás",
+    "module": "auth",
+    "description": "Önkiszolgáló helyreállítás.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "1.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "auth_email_signup"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "azure_devops",
+    "name": "Azure DevOps integráció",
+    "module": "agile",
+    "description": "Microsoft ökoszisztéma.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "optional",
+    "created_in_version": "3.0.1",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "backlog_browser",
+    "name": "Backlog böngésző",
+    "module": "agile",
+    "description": "Backlog grooming.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "optional",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "agile_panel"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "birthday_widget",
+    "name": "Születésnapok widget",
+    "module": "calendar",
+    "description": "Csapat-kohézió.",
+    "fiscal_weight": 4,
+    "status": "public",
+    "value_score": 4,
+    "necessity": "optional",
+    "created_in_version": "2.5.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "members_list"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "branding",
+    "name": "Branding / arculat",
+    "module": "settings",
+    "description": "Whitelabel/logo.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "recommended",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "burnout_engine",
+    "name": "Burnout & Wellbeing engine",
+    "module": "reports",
+    "description": "Wellbeing predikció.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "optional",
+    "created_in_version": "3.9.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "leave_my_view",
+      "attendance_log"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "business_roles",
+    "name": "Munkakör kezelés",
+    "module": "resources",
+    "description": "Role-katalógus.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "required",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "members_list"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "calendar_filters",
+    "name": "Naptár szűrők",
+    "module": "calendar",
+    "description": "Személyre szabott nézet.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "recommended",
+    "created_in_version": "2.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "calendar_monthly"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "calendar_monthly",
+    "name": "Havi naptár",
+    "module": "calendar",
+    "description": "Vizuális áttekintés.",
+    "fiscal_weight": 10,
+    "status": "public",
+    "value_score": 10,
+    "necessity": "required",
+    "created_in_version": "1.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "leave_my_view"
+    ],
+    "dependents": [
+      "ai_smart_schedule",
+      "annual_view",
+      "calendar_filters",
+      "coverage_planner",
+      "google_calendar_sync",
+      "ical_feed",
+      "ms365_calendar_sync",
+      "timeline_view"
+    ],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "capacity_dna",
+    "name": "Kapacitás DNA",
+    "module": "resources",
+    "description": "Csapat-DNS profil.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "optional",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "skills_mgmt",
+      "members_list"
+    ],
+    "dependents": [
+      "capacity_fit"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "capacity_fit",
+    "name": "Kapacitás-illeszkedés",
+    "module": "agile",
+    "description": "Sprint-cap match.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "optional",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "capacity_dna",
+      "agile_panel"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "capacity_gap",
+    "name": "Kapacitás-hiány riport",
+    "module": "resources",
+    "description": "Felvételi terv.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "recommended",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "resource_dashboard"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "company_days",
+    "name": "Cég-szintű napok",
+    "module": "rules",
+    "description": "Vállalati zárva.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "recommended",
+    "created_in_version": "2.5.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "holidays"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "contract_types",
+    "name": "Szerződéstípusok",
+    "module": "org",
+    "description": "Foglalkoztatás-típus.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "required",
+    "created_in_version": "2.5.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "members_list"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "coverage_planner",
+    "name": "Kapacitástervező",
+    "module": "calendar",
+    "description": "Műszak/lefedettség.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "recommended",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "calendar_monthly",
+      "office_coverage_rules"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "csv_import",
+    "name": "CSV import",
+    "module": "settings",
+    "description": "Bulk migráció.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "recommended",
+    "created_in_version": "3.5.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "members_list"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "decision_memory",
+    "name": "Döntésmemória figyelés",
+    "module": "approvals",
+    "description": "Lejárt döntések.",
+    "fiscal_weight": 5,
+    "status": "public",
+    "value_score": 5,
+    "necessity": "optional",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "approval_individual"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "demo_workspace_seed",
+    "name": "Demo workspace seed",
+    "module": "workspace",
+    "description": "Onboarding gyorsítás új ügyfeleknek.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "recommended",
+    "created_in_version": "3.1.1",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "email_preview",
+    "name": "E-mail előnézet",
+    "module": "admin",
+    "description": "Dev tool.",
+    "fiscal_weight": 4,
+    "status": "public",
+    "value_score": 4,
+    "necessity": "optional",
+    "created_in_version": "2.5.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "admin_dashboard"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": false
+    }
+  },
+  {
+    "feature_key": "email_unsubscribe",
+    "name": "Leiratkozás",
+    "module": "auth",
+    "description": "CAN-SPAM/GDPR.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "required",
+    "created_in_version": "1.5.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "escalation",
+    "name": "Eszkaláció",
+    "module": "approvals",
+    "description": "SLA betartás.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "optional",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "approval_chain"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "executive_dashboard",
+    "name": "Executive Analytics",
+    "module": "reports",
+    "description": "C-suite KPI dashboard.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "recommended",
+    "created_in_version": "3.8.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "run_report"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "export_center",
+    "name": "Riport export",
+    "module": "reports",
+    "description": "CSV/XLSX letöltés.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "3.5.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "run_report"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "feature_flags",
+    "name": "Platform Feature Flags",
+    "module": "platform",
+    "description": "Tier alap.",
+    "fiscal_weight": 10,
+    "status": "public",
+    "value_score": 10,
+    "necessity": "required",
+    "created_in_version": "3.13.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "superadmin_control_plane"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": false
+    }
+  },
+  {
+    "feature_key": "financials",
+    "name": "Pénzügyi panel",
+    "module": "resources",
+    "description": "Költség/bevétel.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "recommended",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "projects"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "gantt_timeline",
+    "name": "Gantt idővonal",
+    "module": "resources",
+    "description": "Klasszikus terv-eszköz.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "recommended",
+    "created_in_version": "3.3.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "projects"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "google_calendar_sync",
+    "name": "Google Workspace naptár szinkron",
+    "module": "calendar",
+    "description": "Google-első cégek.",
+    "fiscal_weight": 9,
+    "status": "planned",
+    "value_score": 9,
+    "necessity": "recommended",
+    "created_in_version": "3.16.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "calendar_monthly",
+      "leave_submit"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "help_drawer",
+    "name": "Kontextuális súgó",
+    "module": "help",
+    "description": "Onboarding-segéd.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "recommended",
+    "created_in_version": "3.2.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [
+      "help_registry"
+    ],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "help_regenerator",
+    "name": "Help cikkek újragenerálása",
+    "module": "help",
+    "description": "AI-content.",
+    "fiscal_weight": 4,
+    "status": "public",
+    "value_score": 4,
+    "necessity": "optional",
+    "created_in_version": "3.2.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "help_settings"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "help_registry",
+    "name": "Help anchor regisztráció",
+    "module": "help",
+    "description": "Dev infra.",
+    "fiscal_weight": 4,
+    "status": "public",
+    "value_score": 4,
+    "necessity": "optional",
+    "created_in_version": "3.2.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "help_drawer"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "help_settings",
+    "name": "Help rendszer beállítások",
+    "module": "settings",
+    "description": "KB szerkesztés.",
+    "fiscal_weight": 4,
+    "status": "public",
+    "value_score": 4,
+    "necessity": "optional",
+    "created_in_version": "3.2.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [
+      "help_regenerator"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "holiday_sync",
+    "name": "Ünnepnap szinkronizáció",
+    "module": "rules",
+    "description": "Országonkénti automatika.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "recommended",
+    "created_in_version": "2.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "holidays"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "holidays",
+    "name": "Ünnepnapok",
+    "module": "rules",
+    "description": "Munkanap-számítás.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "1.5.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [
+      "company_days",
+      "holiday_sync"
+    ],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "ical_feed",
+    "name": "iCal feed",
+    "module": "calendar",
+    "description": "Outlook/Google subscribe.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "recommended",
+    "created_in_version": "2.5.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "calendar_monthly"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "industries",
+    "name": "Iparágak",
+    "module": "org",
+    "description": "Benchmark-targeting.",
+    "fiscal_weight": 4,
+    "status": "public",
+    "value_score": 4,
+    "necessity": "optional",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "instant_member_create",
+    "name": "Azonnali tag létrehozás",
+    "module": "members",
+    "description": "Bulk onboarding ATS-ből.",
+    "fiscal_weight": 4,
+    "status": "public",
+    "value_score": 4,
+    "necessity": "optional",
+    "created_in_version": "2.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "members_list"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "integration_health",
+    "name": "Integráció egészség",
+    "module": "settings",
+    "description": "Monitoring.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "recommended",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "invitation_accept",
+    "name": "Meghívó elfogadása",
+    "module": "members",
+    "description": "Meghívó flow zárás.",
+    "fiscal_weight": 10,
+    "status": "public",
+    "value_score": 10,
+    "necessity": "required",
+    "created_in_version": "1.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "members_invite"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "issue_writeback",
+    "name": "Issue writeback",
+    "module": "agile",
+    "description": "Kétirányú Jira.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "optional",
+    "created_in_version": "3.0.1",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "jira_integration"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "jira_integration",
+    "name": "Jira integráció",
+    "module": "agile",
+    "description": "Atlassian ökoszisztéma.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "recommended",
+    "created_in_version": "3.0.1",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [
+      "issue_writeback",
+      "jira_issue_editor"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "jira_issue_editor",
+    "name": "Jira issue szerkesztő",
+    "module": "agile",
+    "description": "Inline edit.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "optional",
+    "created_in_version": "3.0.1",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "jira_integration"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "job_families",
+    "name": "Állásfamilák",
+    "module": "org",
+    "description": "Career path.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "recommended",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "members_list"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "kanban",
+    "name": "Kanban tábla",
+    "module": "agile",
+    "description": "Vizuális workflow.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "optional",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "agile_panel"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "leadership_levels",
+    "name": "Vezetési szintek",
+    "module": "org",
+    "description": "Hierarchia-kategória.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "recommended",
+    "created_in_version": "2.5.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "org_structure"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "leave_blocked_dates",
+    "name": "Tiltott napok",
+    "module": "rules",
+    "description": "Csúcsidőszak védelme.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "recommended",
+    "created_in_version": "2.5.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "leave_submit"
+    ],
+    "dependents": [
+      "leave_conflict_check"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "leave_cancel",
+    "name": "Kérelem visszavonása",
+    "module": "leave",
+    "description": "Felhasználói önkiszolgálás.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "required",
+    "created_in_version": "1.5.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "leave_submit"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "leave_conflict_check",
+    "name": "Ütközésellenőrzés",
+    "module": "leave",
+    "description": "Csapat-lefedettség védelem.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "2.5.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "leave_submit",
+      "leave_blocked_dates",
+      "leave_daily_rules"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "leave_daily_rules",
+    "name": "Napi szabályok (headcount)",
+    "module": "rules",
+    "description": "Lefedettségi minimum.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "recommended",
+    "created_in_version": "2.5.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [],
+    "dependents": [
+      "leave_conflict_check",
+      "office_coverage_rules",
+      "rule_templates"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "leave_half_day",
+    "name": "Félnapos kérelem",
+    "module": "leave",
+    "description": "Rugalmasság.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "recommended",
+    "created_in_version": "1.5.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "leave_submit"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "leave_my_view",
+    "name": "Saját kérelmek",
+    "module": "leave",
+    "description": "Áttekintés.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "1.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "leave_submit"
+    ],
+    "dependents": [
+      "ai_burnout_predict",
+      "annual_trend",
+      "burnout_engine",
+      "calendar_monthly",
+      "leave_team_view",
+      "run_report",
+      "timeline_view"
+    ],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "leave_private",
+    "name": "Privát kérelem",
+    "module": "leave",
+    "description": "Érzékeny szabadság (orvosi).",
+    "fiscal_weight": 5,
+    "status": "public",
+    "value_score": 5,
+    "necessity": "optional",
+    "created_in_version": "2.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "leave_submit"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "leave_quota_balance",
+    "name": "Kvóta egyenleg",
+    "module": "leave",
+    "description": "Maradványnap számítás.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "2.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "leave_submit",
+      "leave_quotas"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "leave_quotas",
+    "name": "Kvóta admin",
+    "module": "leave",
+    "description": "HR-szabályozás.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "2.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "members_list"
+    ],
+    "dependents": [
+      "ai_smart_schedule",
+      "allowances",
+      "leave_quota_balance"
+    ],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "leave_submit",
+    "name": "Szabadságkérelem beküldése",
+    "module": "leave",
+    "description": "Self-service alap.",
+    "fiscal_weight": 10,
+    "status": "public",
+    "value_score": 10,
+    "necessity": "required",
+    "created_in_version": "1.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "members_list"
+    ],
+    "dependents": [
+      "google_calendar_sync",
+      "leave_blocked_dates",
+      "leave_cancel",
+      "leave_conflict_check",
+      "leave_half_day",
+      "leave_my_view",
+      "leave_private",
+      "leave_quota_balance",
+      "ms365_calendar_sync",
+      "substitute_inbox"
+    ],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "leave_team_view",
+    "name": "Csapat kérelmei",
+    "module": "leave",
+    "description": "Vezetői átláthatóság.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "1.5.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "leave_my_view",
+      "members_list"
+    ],
+    "dependents": [
+      "approval_inbox"
+    ],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "leave_types",
+    "name": "Szabadságtípusok",
+    "module": "rules",
+    "description": "Típus-taxonómia.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "2.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "localization",
+    "name": "Lokalizáció / fordítás",
+    "module": "settings",
+    "description": "5 nyelv.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "recommended",
+    "created_in_version": "2.5.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "ws_general"
+    ],
+    "dependents": [
+      "multilingual"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "member_deactivate",
+    "name": "Tag deaktiválása",
+    "module": "members",
+    "description": "Kilépő dolgozók.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "required",
+    "created_in_version": "1.5.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "members_list"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "member_edit",
+    "name": "Tag adatainak szerkesztése",
+    "module": "members",
+    "description": "HR alapadatok.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "required",
+    "created_in_version": "1.5.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "members_list"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "member_role_change",
+    "name": "Tag szerepkörének változtatása",
+    "module": "members",
+    "description": "Jogosultságkezelés.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "1.5.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "members_list"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "members_invite",
+    "name": "Tag meghívása",
+    "module": "members",
+    "description": "Csapatépítés.",
+    "fiscal_weight": 10,
+    "status": "public",
+    "value_score": 10,
+    "necessity": "required",
+    "created_in_version": "1.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "members_list"
+    ],
+    "dependents": [
+      "invitation_accept"
+    ],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "members_list",
+    "name": "Tagok listázása",
+    "module": "members",
+    "description": "Csapat-átláthatóság.",
+    "fiscal_weight": 10,
+    "status": "public",
+    "value_score": 10,
+    "necessity": "required",
+    "created_in_version": "1.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [
+      "approval_chain",
+      "attendance_log",
+      "birthday_widget",
+      "business_roles",
+      "capacity_dna",
+      "contract_types",
+      "csv_import",
+      "instant_member_create",
+      "job_families",
+      "leave_quotas",
+      "leave_submit",
+      "leave_team_view",
+      "member_deactivate",
+      "member_edit",
+      "member_role_change",
+      "members_invite",
+      "onboarding_template",
+      "org_structure",
+      "resource_dashboard",
+      "role_permissions",
+      "skills_mgmt",
+      "substitute_inbox",
+      "teams",
+      "work_categories"
+    ],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "ms365_calendar_sync",
+    "name": "M365 naptár szinkron (kétirányú)",
+    "module": "calendar",
+    "description": "Vállalati go/no-go.",
+    "fiscal_weight": 10,
+    "status": "beta",
+    "value_score": 10,
+    "necessity": "recommended",
+    "created_in_version": "3.15.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "calendar_monthly",
+      "leave_submit"
+    ],
+    "dependents": [
+      "ai_chat_assist"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "multilingual",
+    "name": "5-locale full coverage",
+    "module": "platform",
+    "description": "EU-coverage.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "recommended",
+    "created_in_version": "3.14.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "localization"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "notification_prefs",
+    "name": "Értesítési preferenciák",
+    "module": "settings",
+    "description": "Önkiszolgálás.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "required",
+    "created_in_version": "2.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "notifications"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "notifications",
+    "name": "Értesítések",
+    "module": "settings",
+    "description": "E-mail/in-app.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "required",
+    "created_in_version": "2.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [
+      "notification_prefs"
+    ],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "office_coverage_rules",
+    "name": "Telephelyi lefedettségi szabályok",
+    "module": "rules",
+    "description": "Telephely-szintű kontroll.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "recommended",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "offices",
+      "leave_daily_rules"
+    ],
+    "dependents": [
+      "coverage_planner"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "offices",
+    "name": "Irodák / telephelyek",
+    "module": "members",
+    "description": "Telephely-szervezés.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "1.5.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [
+      "office_coverage_rules",
+      "site_assignment"
+    ],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "onboarding_inbox",
+    "name": "Onboarding inbox",
+    "module": "workflows",
+    "description": "Feladat-tracking.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "recommended",
+    "created_in_version": "3.7.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "onboarding_template"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "onboarding_template",
+    "name": "Onboarding sablon",
+    "module": "workflows",
+    "description": "Új belépő checklist.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "recommended",
+    "created_in_version": "3.7.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "members_list"
+    ],
+    "dependents": [
+      "onboarding_inbox"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "open_api",
+    "name": "Open API / Developer Platform",
+    "module": "platform",
+    "description": "API hozzáférés.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "optional",
+    "created_in_version": "3.10.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "org_chart",
+    "name": "Org chart megjelenítés",
+    "module": "org",
+    "description": "Vizuális hierarchia.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "recommended",
+    "created_in_version": "3.3.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "org_structure"
+    ],
+    "dependents": [
+      "org_chart_fullscreen",
+      "org_chart_panzoom",
+      "org_chart_snapshot"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "org_chart_fullscreen",
+    "name": "Org chart fullscreen",
+    "module": "org",
+    "description": "Bemutató mód.",
+    "fiscal_weight": 4,
+    "status": "public",
+    "value_score": 4,
+    "necessity": "optional",
+    "created_in_version": "3.4.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "org_chart"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "org_chart_panzoom",
+    "name": "Org chart pan/zoom",
+    "module": "org",
+    "description": "Nagy szervezet böngészés.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "optional",
+    "created_in_version": "3.3.1",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "org_chart"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "org_chart_snapshot",
+    "name": "Org chart snapshot",
+    "module": "org",
+    "description": "Időbeli változás-archív.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "optional",
+    "created_in_version": "3.4.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "org_chart"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "org_structure",
+    "name": "Szervezeti struktúra",
+    "module": "org",
+    "description": "Szervezet-modell.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "2.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "members_list"
+    ],
+    "dependents": [
+      "leadership_levels",
+      "org_chart"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "payroll_engine",
+    "name": "Payroll Integration Engine",
+    "module": "platform",
+    "description": "Multi-payroll-rendszer.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "recommended",
+    "created_in_version": "3.11.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "payroll_export"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "payroll_export",
+    "name": "Bérszámfejtési export",
+    "module": "attendance",
+    "description": "Bér-átadás.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "recommended",
+    "created_in_version": "3.6.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "attendance_periods"
+    ],
+    "dependents": [
+      "payroll_engine"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "profile_edit",
+    "name": "Profil szerkesztése",
+    "module": "auth",
+    "description": "Felhasználói alapadat-karbantartás.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "1.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "auth_email_login"
+    ],
+    "dependents": [
+      "account_delete"
+    ],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "project_editor",
+    "name": "Projekt szerkesztő",
+    "module": "resources",
+    "description": "CRUD.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "projects"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "projects",
+    "name": "Projektek",
+    "module": "resources",
+    "description": "Projekt-modell.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [
+      "agile_panel",
+      "financials",
+      "gantt_timeline",
+      "project_editor",
+      "scenario_planner"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "recovery_mode",
+    "name": "Helyreállítási mód",
+    "module": "workspace",
+    "description": "Vész-helyreállítás superadmin-mal.",
+    "fiscal_weight": 5,
+    "status": "public",
+    "value_score": 5,
+    "necessity": "optional",
+    "created_in_version": "2.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "resource_dashboard",
+    "name": "Erőforrás áttekintő",
+    "module": "resources",
+    "description": "Kapacitás-vezérlőpult.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "recommended",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "members_list"
+    ],
+    "dependents": [
+      "capacity_gap",
+      "scenario_planner",
+      "utilization_heatmap"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "role_permissions",
+    "name": "Szerepkör-jogosultságok",
+    "module": "settings",
+    "description": "Granular RBAC.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "2.5.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "members_list"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "rule_templates",
+    "name": "Szabálysablon könyvtár",
+    "module": "rules",
+    "description": "Gyors konfiguráció.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "optional",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "leave_daily_rules"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "run_report",
+    "name": "Riport futtatás",
+    "module": "reports",
+    "description": "Vezetői KPI.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "2.5.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "leave_my_view"
+    ],
+    "dependents": [
+      "executive_dashboard",
+      "export_center",
+      "scheduled_reports"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "scenario_planner",
+    "name": "Forgatókönyv tervező",
+    "module": "resources",
+    "description": "What-if elemzés.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "optional",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "projects",
+      "resource_dashboard"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "scheduled_reports",
+    "name": "Ütemezett riport",
+    "module": "reports",
+    "description": "E-mail riport.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "recommended",
+    "created_in_version": "3.5.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "run_report"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "scrum",
+    "name": "Scrum tábla",
+    "module": "agile",
+    "description": "Sprint-kezelés.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "optional",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "agile_panel"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "site_assignment",
+    "name": "Telephely beosztás",
+    "module": "attendance",
+    "description": "Műszak/telephely.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "recommended",
+    "created_in_version": "3.7.7",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "offices",
+      "attendance_log"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "skill_capacity_report",
+    "name": "Készség-kapacitás riport",
+    "module": "calendar",
+    "description": "Készség-szűk keresztmetszet.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "optional",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "timeline_view",
+      "skills_mgmt"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "skills_mgmt",
+    "name": "Készségek kezelése",
+    "module": "resources",
+    "description": "Skill-mátrix.",
+    "fiscal_weight": 8,
+    "status": "public",
+    "value_score": 8,
+    "necessity": "recommended",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "members_list"
+    ],
+    "dependents": [
+      "capacity_dna",
+      "skill_capacity_report"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "soc2_iso",
+    "name": "SOC2/ISO27001 Security Center",
+    "module": "platform",
+    "description": "Compliance bizonyíték.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "recommended",
+    "created_in_version": "3.12.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "audit_log"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "substitute_inbox",
+    "name": "Helyettesítési felkérés",
+    "module": "leave",
+    "description": "Lefedettség-biztosítás.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "optional",
+    "created_in_version": "2.5.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "leave_submit",
+      "members_list"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "superadmin_control_plane",
+    "name": "Superadmin Control Plane",
+    "module": "admin",
+    "description": "Platform vezérlő.",
+    "fiscal_weight": 10,
+    "status": "public",
+    "value_score": 10,
+    "necessity": "required",
+    "created_in_version": "3.13.0",
+    "estimated_dev_cost": "L",
+    "dependencies": [
+      "admin_dashboard"
+    ],
+    "dependents": [
+      "feature_flags"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": false,
+      "enterprise": false
+    }
+  },
+  {
+    "feature_key": "teams",
+    "name": "Csapatok kezelése",
+    "module": "members",
+    "description": "Csapat-struktúra.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "1.5.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "members_list"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "timeline_view",
+    "name": "Idővonal nézet",
+    "module": "calendar",
+    "description": "Hosszú periódusú átlátás.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "recommended",
+    "created_in_version": "2.5.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "leave_my_view",
+      "calendar_monthly"
+    ],
+    "dependents": [
+      "skill_capacity_report"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "ui_section_state",
+    "name": "UI szekció állapot",
+    "module": "settings",
+    "description": "UI customization.",
+    "fiscal_weight": 4,
+    "status": "public",
+    "value_score": 4,
+    "necessity": "optional",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "utilization_heatmap",
+    "name": "Kihasználtság hőtérkép",
+    "module": "resources",
+    "description": "Túl/alulterhelés.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "recommended",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "M",
+    "dependencies": [
+      "resource_dashboard"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "work_categories",
+    "name": "Munkakategóriák",
+    "module": "org",
+    "description": "Költséghely-bontás.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "recommended",
+    "created_in_version": "3.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "members_list"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "workspace_archive",
+    "name": "Munkaterület archiválása",
+    "module": "workspace",
+    "description": "Életciklus-kezelés.",
+    "fiscal_weight": 6,
+    "status": "public",
+    "value_score": 6,
+    "necessity": "recommended",
+    "created_in_version": "1.5.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [
+      "workspace_delete"
+    ],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "workspace_create",
+    "name": "Munkaterület létrehozása",
+    "module": "workspace",
+    "description": "Tenancy alap, minden enterprise funkció előfeltétele.",
+    "fiscal_weight": 10,
+    "status": "public",
+    "value_score": 10,
+    "necessity": "required",
+    "created_in_version": "1.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "auth_email_login"
+    ],
+    "dependents": [
+      "access_systems",
+      "audit_log",
+      "azure_devops",
+      "branding",
+      "demo_workspace_seed",
+      "help_drawer",
+      "help_settings",
+      "holidays",
+      "industries",
+      "integration_health",
+      "jira_integration",
+      "leave_types",
+      "members_list",
+      "notifications",
+      "offices",
+      "open_api",
+      "projects",
+      "recovery_mode",
+      "ui_section_state",
+      "workspace_archive",
+      "workspace_general_settings",
+      "workspace_select",
+      "ws_general"
+    ],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "workspace_delete",
+    "name": "Munkaterület törlése",
+    "module": "workspace",
+    "description": "Hard delete + GDPR.",
+    "fiscal_weight": 7,
+    "status": "public",
+    "value_score": 7,
+    "necessity": "required",
+    "created_in_version": "1.5.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "workspace_archive"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": false,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "workspace_general_settings",
+    "name": "Általános ws beállítások (TZ, locale)",
+    "module": "workspace",
+    "description": "Lokalizáció + időzóna.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "1.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "workspace_select",
+    "name": "Munkaterület váltás",
+    "module": "workspace",
+    "description": "Több cég/projekt kezelése egy fiókkal.",
+    "fiscal_weight": 10,
+    "status": "public",
+    "value_score": 10,
+    "necessity": "required",
+    "created_in_version": "1.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  },
+  {
+    "feature_key": "ws_general",
+    "name": "Általános ws beállítások",
+    "module": "settings",
+    "description": "TZ/locale/név.",
+    "fiscal_weight": 9,
+    "status": "public",
+    "value_score": 9,
+    "necessity": "required",
+    "created_in_version": "1.0.0",
+    "estimated_dev_cost": "S",
+    "dependencies": [
+      "workspace_create"
+    ],
+    "dependents": [
+      "localization"
+    ],
+    "tiers": {
+      "freemium": true,
+      "pro": true,
+      "enterprise": true
+    }
+  }
+]

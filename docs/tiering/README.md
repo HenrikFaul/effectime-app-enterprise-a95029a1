@@ -6,20 +6,29 @@ plusz egy export scriptet, amellyel friss CSV pillanatfelvétel készíthető.
 
 ## Tartalom
 
-| Fájl | Leírás |
-|------|--------|
-| `master_spec.md` | Indexdokumentum, minden artefakt referenciája |
-| `recommended_tiers.md` | 3 javasolt tier (Freemium / Pro / Enterprise) + 5 addon, indoklással |
-| `pricing_model.md` | Árazási javaslat, fiscal tagek, A/B kísérlettervek |
-| `db_model.md` | A bevezetett adatbázis-séma (Phase 5) |
-| `rls_policies.md` | RLS minták és tenant-izoláció (Phase 6) |
-| `feature_flag_strategy.md` | Feature flag életciklus, safe migration pattern (Phase 7) |
-| `superadmin_spec.md` | UI specifikáció (Phase 8) — élő implementáció: `src/components/superadmin/FeatureTiersTab.tsx` |
-| `frontend_pattern.md` | `useFeature()` / `<FeatureGate>` használat (Phase 9) |
-| `regression_matrix.md` | Non-regression mátrix (Phase 11) |
-| `rollout_plan.md` | Kiadási és pilot terv (Phase 13) |
-| `backlog.md` | Maradék implementációs backlog (Phase 14) |
-| `scripts/gen_tiering_docs.mjs` | Friss CSV export futtatása (lásd alább) |
+| Fájl | Phase | Leírás |
+|------|-------|--------|
+| `master_spec.md` | — | Indexdokumentum, minden artefakt referenciája |
+| `context-recon.md` | 1 | Termék-kontextus, megerősített/inferált modulok, constraint-ek |
+| `features.csv` / `features.json` | 2 | Feature inventar — 135 row × 11 kolumn |
+| `dependency_matrix.csv` | 3 | Dependency edge-ek + dependents inverz gráf |
+| `matrix_summary.md` | 3 | Top fan-out, módszertan, methodology, cycle-mentes igazolás |
+| `recommended_tiers.md` | 4 | 3 tier (Freemium / Pro / Enterprise) + 5 addon, indoklással |
+| `tiers_matrix.csv` | 4 | Feature → tier mapping (0/1 oszlopok) |
+| `db_model.md` | 5 | A bevezetett adatbázis-séma |
+| `rls_policies.md` | 6 | RLS minták, tenant-izoláció + rationale |
+| `feature_flag_strategy.md` | 7 | Feature flag életciklus, safe migration pattern |
+| `superadmin_spec.md` | 8 | UI specifikáció + ASCII wireframes — élő implementáció: `src/components/superadmin/FeatureTiersTab.tsx` |
+| `frontend_pattern.md` | 9 | `useFeature()` / `<FeatureGate>` használat |
+| `pricing_model.md` | 10 | Árazási javaslat, A/B kísérlettervek |
+| `pricing_matrix.csv` | 10 | Per-feature fiscal tag (core/pro/enterprise/addon) + price hint |
+| `regression_matrix.md` | 11 | Non-regression mátrix |
+| `localization_strategy.md` | 12 | i18n stratégia, fallback chain, language selector UX |
+| `docs_tasks.md` | 12 | Lokalizációs / dokumentációs task lista |
+| `rollout_plan.md` | 13 | Kiadási és pilot terv |
+| `backlog.md` | 14 | Maradék implementációs backlog |
+| `../../scripts/build_tiering_csvs.mjs` | — | Static CSV/JSON generator (offline, migration-alapú) |
+| `scripts/gen_tiering_docs.mjs` | — | Live CSV export DB-ből (service role keyre szüksége) |
 
 ## CSV pillanatfelvétel készítése
 
