@@ -89,6 +89,21 @@ for (const file of files) {
     // record as a pending update keyed by feature_key
     featureRows.push({ __update: true, feature_key: key, dependencies: deps });
   }
+
+  // Apply UPDATE public.features SET route_path = '...', menu_path = ARRAY[...] WHERE feature_key = 'x';
+  // (the v3.15.x routing seed migration; pattern allows route_path/menu_path
+  // to appear in either order or alone).
+  const routeUpdates = sql.matchAll(/UPDATE\s+public\.features\s+SET\s+([^;]+?)\s+WHERE\s+feature_key\s*=\s*'([a-z0-9_]+)'/g);
+  for (const u of routeUpdates) {
+    const [, setExpr, key] = u;
+    const routeMatch = setExpr.match(/route_path\s*=\s*'([^']+)'/);
+    const menuMatch = setExpr.match(/menu_path\s*=\s*(ARRAY\[[^\]]*\])/);
+    if (!routeMatch && !menuMatch) continue;
+    const patch = { __update: true, feature_key: key };
+    if (routeMatch) patch.route_path = routeMatch[1];
+    if (menuMatch) patch.menu_path = [...menuMatch[1].matchAll(/'([^']+)'/g)].map(x => x[1]);
+    featureRows.push(patch);
+  }
 }
 
 if (featureRows.length === 0) {
@@ -97,12 +112,19 @@ if (featureRows.length === 0) {
 }
 
 // Deduplicate features by key (later migrations override earlier).
-// __update entries only patch the dependencies field on top of the prior row.
+// __update entries patch only the fields they specify on top of the prior row
+// (dependencies, route_path, menu_path).
 const byKey = new Map();
 for (const f of featureRows) {
   if (f.__update) {
     const existing = byKey.get(f.feature_key);
-    if (existing) byKey.set(f.feature_key, { ...existing, dependencies: f.dependencies });
+    if (existing) {
+      const patch = {};
+      if ('dependencies' in f) patch.dependencies = f.dependencies;
+      if ('route_path' in f) patch.route_path = f.route_path;
+      if ('menu_path' in f) patch.menu_path = f.menu_path;
+      byKey.set(f.feature_key, { ...existing, ...patch });
+    }
   } else {
     byKey.set(f.feature_key, f);
   }
@@ -134,12 +156,13 @@ const csvLine = arr => arr.map(csvCell).join(',');
 
 // --- features.csv -----------------------------------------------------------
 {
-  const header = ['feature_key','name','module','fiscal_weight','status','value_score','necessity','created_in_version','estimated_dev_cost','description','dependencies'];
+  const header = ['feature_key','name','module','fiscal_weight','status','value_score','necessity','created_in_version','estimated_dev_cost','route_path','menu_path','description','dependencies'];
   const lines = [header.join(',')];
   for (const f of features) {
     lines.push(csvLine([
       f.feature_key, f.name, f.module, f.fiscal_weight, f.status,
       f.value_score, f.necessity, f.created_in_version, f.estimated_dev_cost,
+      f.route_path || '', (f.menu_path || []).join(' > '),
       f.description, f.dependencies.join(';'),
     ]));
   }
@@ -163,6 +186,8 @@ const csvLine = arr => arr.map(csvCell).join(',');
     necessity: f.necessity || null,
     created_in_version: f.created_in_version || null,
     estimated_dev_cost: f.estimated_dev_cost || null,
+    route_path: f.route_path || null,
+    menu_path: f.menu_path || [],
     dependencies: f.dependencies,
     dependents: dependents.get(f.feature_key) || [],
     tiers: {

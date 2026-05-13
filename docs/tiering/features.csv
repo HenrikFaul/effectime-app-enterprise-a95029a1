@@ -1,136 +1,136 @@
-feature_key,name,module,fiscal_weight,status,value_score,necessity,created_in_version,estimated_dev_cost,description,dependencies
-access_inbox,Hozzáférés inbox,workflows,6,public,6,optional,3.7.0,M,Approval workflow.,access_templates
-access_systems,Hozzáférési rendszerek,workflows,6,public,6,optional,3.7.0,M,IT-rendszer katalógus.,workspace_create
-access_templates,Hozzáférés-kérelem sablonok,workflows,6,public,6,optional,3.7.0,M,Standardizált request.,access_systems
-account_delete,Fiók törlés (GDPR),auth,8,public,8,required,1.5.0,S,GDPR megfelelés.,profile_edit
-admin_api,Platform admin API,admin,10,public,10,required,2.0.0,M,Service ops.,admin_dashboard
-admin_dashboard,Platform admin dashboard,admin,10,public,10,required,2.0.0,M,SaaS-üzemeltetés.,auth_email_login
-admin_override,Admin felülbírálat,approvals,6,public,6,optional,2.5.0,M,Vész-beavatkozás.,approval_individual
-agile_gantt,Agile Gantt,agile,6,public,6,optional,3.3.0,M,Hibrid view.,agile_panel
-agile_panel,Agile panel,agile,6,public,6,optional,3.0.0,M,Agile teamek.,projects
-ai_burnout_predict,Burnout predikció,ai,7,beta,7,optional,3.9.0,L,Wellbeing forecast.,attendance_log;leave_my_view
-ai_chat_assist,Chat asszisztens (Slack/Teams slash cmd),ai,7,planned,7,optional,3.16.0,L,Asszisztens csatorna.,ms365_calendar_sync
-ai_smart_schedule,Smart Schedule (AI javaslatok),ai,8,beta,8,optional,3.9.0,L,AI-asszisztens.,calendar_monthly;leave_quotas
-allowances,Juttatások kezelése,leave,7,public,7,recommended,2.5.0,M,Cafeteria/juttatás.,leave_quotas
-annual_trend,Éves trend diagram,calendar,6,public,6,recommended,2.5.0,M,Trendelemzés.,leave_my_view
-annual_view,Éves nézet,calendar,6,public,6,recommended,2.5.0,M,Éves tervezés.,calendar_monthly
-approval_bulk,Tömeges jóváhagyás,approvals,7,public,7,recommended,2.5.0,S,Hatékonyság nagy csapatoknál.,approval_individual
-approval_chain,Jóváhagyási lánc konfig,approvals,8,public,8,recommended,3.0.0,L,Multi-level workflow.,approval_individual;members_list
-approval_inbox,Jóváhagyó inbox,approvals,10,public,10,required,1.5.0,S,Vezetői workflow.,leave_team_view
-approval_individual,Egyenkénti jóváhagyás,approvals,10,public,10,required,1.5.0,S,Alap döntéshozatal.,approval_inbox
-attendance_audit,Attendance audit,attendance,8,public,8,required,3.6.0,S,Compliance.,attendance_log
-attendance_edit_mode,Edit mode + batch drag,attendance,6,public,6,recommended,3.7.1,M,UX gyorsítás.,attendance_log
-attendance_log,Munkaóra naplózás,attendance,9,public,9,required,3.6.0,L,Időnyilvántartás.,members_list
-attendance_oncall,On-call ügyelet,attendance,7,public,7,optional,3.6.0,M,24/7 csapatok.,attendance_log
-attendance_periods,Időszak workflow,attendance,8,public,8,required,3.6.0,M,Hónap zárás.,attendance_log
-audit_log,Audit napló,reports,9,public,9,required,2.5.0,M,Compliance/SOC2.,workspace_create
-auth_email_login,E-mail bejelentkezés,auth,10,public,10,required,1.0.0,S,Napi belépés.,auth_email_signup
-auth_email_signup,E-mail regisztráció,auth,10,public,10,required,1.0.0,S,"Felhasználói belépési pont, minden funkció előfeltétele.",
-auth_google_oauth,Google OAuth,auth,7,public,7,recommended,1.2.0,S,Súrlódásmentes belépés Google fiókkal.,auth_email_signup
-auth_magic_link,Magic link,auth,5,public,5,optional,1.2.0,S,Jelszó nélküli belépés.,auth_email_signup
-auth_password_reset,Jelszó-visszaállítás,auth,9,public,9,required,1.0.0,S,Önkiszolgáló helyreállítás.,auth_email_signup
-azure_devops,Azure DevOps integráció,agile,7,public,7,optional,3.0.1,L,Microsoft ökoszisztéma.,workspace_create
-backlog_browser,Backlog böngésző,agile,6,public,6,optional,3.0.0,M,Backlog grooming.,agile_panel
-birthday_widget,Születésnapok widget,calendar,4,public,4,optional,2.5.0,S,Csapat-kohézió.,members_list
-branding,Branding / arculat,settings,7,public,7,recommended,3.0.0,M,Whitelabel/logo.,workspace_create
-burnout_engine,Burnout & Wellbeing engine,reports,8,public,8,optional,3.9.0,L,Wellbeing predikció.,leave_my_view;attendance_log
-business_roles,Munkakör kezelés,resources,8,public,8,required,3.0.0,S,Role-katalógus.,members_list
-calendar_filters,Naptár szűrők,calendar,7,public,7,recommended,2.0.0,S,Személyre szabott nézet.,calendar_monthly
-calendar_monthly,Havi naptár,calendar,10,public,10,required,1.0.0,M,Vizuális áttekintés.,leave_my_view
-capacity_dna,Kapacitás DNA,resources,6,public,6,optional,3.0.0,L,Csapat-DNS profil.,skills_mgmt;members_list
-capacity_fit,Kapacitás-illeszkedés,agile,6,public,6,optional,3.0.0,L,Sprint-cap match.,capacity_dna;agile_panel
-capacity_gap,Kapacitás-hiány riport,resources,8,public,8,recommended,3.0.0,M,Felvételi terv.,resource_dashboard
-company_days,Cég-szintű napok,rules,6,public,6,recommended,2.5.0,S,Vállalati zárva.,holidays
-contract_types,Szerződéstípusok,org,7,public,7,required,2.5.0,S,Foglalkoztatás-típus.,members_list
-coverage_planner,Kapacitástervező,calendar,9,public,9,recommended,3.0.0,L,Műszak/lefedettség.,calendar_monthly;office_coverage_rules
-csv_import,CSV import,settings,8,public,8,recommended,3.5.0,M,Bulk migráció.,members_list
-decision_memory,Döntésmemória figyelés,approvals,5,public,5,optional,3.0.0,L,Lejárt döntések.,approval_individual
-demo_workspace_seed,Demo workspace seed,workspace,8,public,8,recommended,3.1.1,M,Onboarding gyorsítás új ügyfeleknek.,workspace_create
-email_preview,E-mail előnézet,admin,4,public,4,optional,2.5.0,S,Dev tool.,admin_dashboard
-email_unsubscribe,Leiratkozás,auth,6,public,6,required,1.5.0,S,CAN-SPAM/GDPR.,
-escalation,Eszkaláció,approvals,6,public,6,optional,3.0.0,M,SLA betartás.,approval_chain
-executive_dashboard,Executive Analytics,reports,8,public,8,recommended,3.8.0,L,C-suite KPI dashboard.,run_report
-export_center,Riport export,reports,9,public,9,required,3.5.0,M,CSV/XLSX letöltés.,run_report
-feature_flags,Platform Feature Flags,platform,10,public,10,required,3.13.0,M,Tier alap.,superadmin_control_plane
-financials,Pénzügyi panel,resources,8,public,8,recommended,3.0.0,L,Költség/bevétel.,projects
-gantt_timeline,Gantt idővonal,resources,9,public,9,recommended,3.3.0,L,Klasszikus terv-eszköz.,projects
-google_calendar_sync,Google Workspace naptár szinkron,calendar,9,planned,9,recommended,3.16.0,L,Google-első cégek.,calendar_monthly;leave_submit
-help_drawer,Kontextuális súgó,help,7,public,7,recommended,3.2.0,M,Onboarding-segéd.,workspace_create
-help_regenerator,Help cikkek újragenerálása,help,4,public,4,optional,3.2.0,M,AI-content.,help_settings
-help_registry,Help anchor regisztráció,help,4,public,4,optional,3.2.0,S,Dev infra.,help_drawer
-help_settings,Help rendszer beállítások,settings,4,public,4,optional,3.2.0,S,KB szerkesztés.,workspace_create
-holiday_sync,Ünnepnap szinkronizáció,rules,7,public,7,recommended,2.0.0,S,Országonkénti automatika.,holidays
-holidays,Ünnepnapok,rules,9,public,9,required,1.5.0,S,Munkanap-számítás.,workspace_create
-ical_feed,iCal feed,calendar,6,public,6,recommended,2.5.0,M,Outlook/Google subscribe.,calendar_monthly
-industries,Iparágak,org,4,public,4,optional,3.0.0,S,Benchmark-targeting.,workspace_create
-instant_member_create,Azonnali tag létrehozás,members,4,public,4,optional,2.0.0,S,Bulk onboarding ATS-ből.,members_list
-integration_health,Integráció egészség,settings,6,public,6,recommended,3.0.0,M,Monitoring.,workspace_create
-invitation_accept,Meghívó elfogadása,members,10,public,10,required,1.0.0,S,Meghívó flow zárás.,members_invite
-issue_writeback,Issue writeback,agile,7,public,7,optional,3.0.1,M,Kétirányú Jira.,jira_integration
-jira_integration,Jira integráció,agile,9,public,9,recommended,3.0.1,L,Atlassian ökoszisztéma.,workspace_create
-jira_issue_editor,Jira issue szerkesztő,agile,6,public,6,optional,3.0.1,M,Inline edit.,jira_integration
-job_families,Állásfamilák,org,6,public,6,recommended,3.0.0,S,Career path.,members_list
-kanban,Kanban tábla,agile,7,public,7,optional,3.0.0,M,Vizuális workflow.,agile_panel
-leadership_levels,Vezetési szintek,org,6,public,6,recommended,2.5.0,S,Hierarchia-kategória.,org_structure
-leave_blocked_dates,Tiltott napok,rules,8,public,8,recommended,2.5.0,S,Csúcsidőszak védelme.,leave_submit
-leave_cancel,Kérelem visszavonása,leave,8,public,8,required,1.5.0,S,Felhasználói önkiszolgálás.,leave_submit
-leave_conflict_check,Ütközésellenőrzés,leave,9,public,9,required,2.5.0,M,Csapat-lefedettség védelem.,leave_submit;leave_blocked_dates;leave_daily_rules
-leave_daily_rules,Napi szabályok (headcount),rules,8,public,8,recommended,2.5.0,M,Lefedettségi minimum.,
-leave_half_day,Félnapos kérelem,leave,7,public,7,recommended,1.5.0,S,Rugalmasság.,leave_submit
-leave_my_view,Saját kérelmek,leave,9,public,9,required,1.0.0,S,Áttekintés.,leave_submit
-leave_private,Privát kérelem,leave,5,public,5,optional,2.0.0,S,Érzékeny szabadság (orvosi).,leave_submit
-leave_quota_balance,Kvóta egyenleg,leave,9,public,9,required,2.0.0,M,Maradványnap számítás.,leave_submit;leave_quotas
-leave_quotas,Kvóta admin,leave,9,public,9,required,2.0.0,M,HR-szabályozás.,members_list
-leave_submit,Szabadságkérelem beküldése,leave,10,public,10,required,1.0.0,M,Self-service alap.,members_list
-leave_team_view,Csapat kérelmei,leave,9,public,9,required,1.5.0,S,Vezetői átláthatóság.,leave_my_view;members_list
-leave_types,Szabadságtípusok,rules,9,public,9,required,2.0.0,S,Típus-taxonómia.,workspace_create
-localization,Lokalizáció / fordítás,settings,8,public,8,recommended,2.5.0,M,5 nyelv.,ws_general
-member_deactivate,Tag deaktiválása,members,8,public,8,required,1.5.0,S,Kilépő dolgozók.,members_list
-member_edit,Tag adatainak szerkesztése,members,8,public,8,required,1.5.0,S,HR alapadatok.,members_list
-member_role_change,Tag szerepkörének változtatása,members,9,public,9,required,1.5.0,S,Jogosultságkezelés.,members_list
-members_invite,Tag meghívása,members,10,public,10,required,1.0.0,S,Csapatépítés.,members_list
-members_list,Tagok listázása,members,10,public,10,required,1.0.0,S,Csapat-átláthatóság.,workspace_create
-ms365_calendar_sync,M365 naptár szinkron (kétirányú),calendar,10,beta,10,recommended,3.15.0,L,Vállalati go/no-go.,calendar_monthly;leave_submit
-multilingual,5-locale full coverage,platform,8,public,8,recommended,3.14.0,M,EU-coverage.,localization
-notification_prefs,Értesítési preferenciák,settings,7,public,7,required,2.0.0,S,Önkiszolgálás.,notifications
-notifications,Értesítések,settings,8,public,8,required,2.0.0,M,E-mail/in-app.,workspace_create
-office_coverage_rules,Telephelyi lefedettségi szabályok,rules,8,public,8,recommended,3.0.0,M,Telephely-szintű kontroll.,offices;leave_daily_rules
-offices,Irodák / telephelyek,members,9,public,9,required,1.5.0,M,Telephely-szervezés.,workspace_create
-onboarding_inbox,Onboarding inbox,workflows,7,public,7,recommended,3.7.0,M,Feladat-tracking.,onboarding_template
-onboarding_template,Onboarding sablon,workflows,8,public,8,recommended,3.7.0,M,Új belépő checklist.,members_list
-open_api,Open API / Developer Platform,platform,8,public,8,optional,3.10.0,L,API hozzáférés.,workspace_create
-org_chart,Org chart megjelenítés,org,8,public,8,recommended,3.3.0,M,Vizuális hierarchia.,org_structure
-org_chart_fullscreen,Org chart fullscreen,org,4,public,4,optional,3.4.0,S,Bemutató mód.,org_chart
-org_chart_panzoom,Org chart pan/zoom,org,6,public,6,optional,3.3.1,M,Nagy szervezet böngészés.,org_chart
-org_chart_snapshot,Org chart snapshot,org,6,public,6,optional,3.4.0,M,Időbeli változás-archív.,org_chart
-org_structure,Szervezeti struktúra,org,9,public,9,required,2.0.0,M,Szervezet-modell.,members_list
-payroll_engine,Payroll Integration Engine,platform,9,public,9,recommended,3.11.0,L,Multi-payroll-rendszer.,payroll_export
-payroll_export,Bérszámfejtési export,attendance,9,public,9,recommended,3.6.0,L,Bér-átadás.,attendance_periods
-profile_edit,Profil szerkesztése,auth,9,public,9,required,1.0.0,S,Felhasználói alapadat-karbantartás.,auth_email_login
-project_editor,Projekt szerkesztő,resources,9,public,9,required,3.0.0,M,CRUD.,projects
-projects,Projektek,resources,9,public,9,required,3.0.0,M,Projekt-modell.,workspace_create
-recovery_mode,Helyreállítási mód,workspace,5,public,5,optional,2.0.0,M,Vész-helyreállítás superadmin-mal.,workspace_create
-resource_dashboard,Erőforrás áttekintő,resources,8,public,8,recommended,3.0.0,M,Kapacitás-vezérlőpult.,members_list
-role_permissions,Szerepkör-jogosultságok,settings,9,public,9,required,2.5.0,M,Granular RBAC.,members_list
-rule_templates,Szabálysablon könyvtár,rules,6,public,6,optional,3.0.0,M,Gyors konfiguráció.,leave_daily_rules
-run_report,Riport futtatás,reports,9,public,9,required,2.5.0,M,Vezetői KPI.,leave_my_view
-scenario_planner,Forgatókönyv tervező,resources,7,public,7,optional,3.0.0,L,What-if elemzés.,projects;resource_dashboard
-scheduled_reports,Ütemezett riport,reports,7,public,7,recommended,3.5.0,M,E-mail riport.,run_report
-scrum,Scrum tábla,agile,7,public,7,optional,3.0.0,M,Sprint-kezelés.,agile_panel
-site_assignment,Telephely beosztás,attendance,7,public,7,recommended,3.7.7,M,Műszak/telephely.,offices;attendance_log
-skill_capacity_report,Készség-kapacitás riport,calendar,7,public,7,optional,3.0.0,L,Készség-szűk keresztmetszet.,timeline_view;skills_mgmt
-skills_mgmt,Készségek kezelése,resources,8,public,8,recommended,3.0.0,M,Skill-mátrix.,members_list
-soc2_iso,SOC2/ISO27001 Security Center,platform,9,public,9,recommended,3.12.0,L,Compliance bizonyíték.,audit_log
-substitute_inbox,Helyettesítési felkérés,leave,6,public,6,optional,2.5.0,M,Lefedettség-biztosítás.,leave_submit;members_list
-superadmin_control_plane,Superadmin Control Plane,admin,10,public,10,required,3.13.0,L,Platform vezérlő.,admin_dashboard
-teams,Csapatok kezelése,members,9,public,9,required,1.5.0,M,Csapat-struktúra.,members_list
-timeline_view,Idővonal nézet,calendar,7,public,7,recommended,2.5.0,M,Hosszú periódusú átlátás.,leave_my_view;calendar_monthly
-ui_section_state,UI szekció állapot,settings,4,public,4,optional,3.0.0,S,UI customization.,workspace_create
-utilization_heatmap,Kihasználtság hőtérkép,resources,7,public,7,recommended,3.0.0,M,Túl/alulterhelés.,resource_dashboard
-work_categories,Munkakategóriák,org,6,public,6,recommended,3.0.0,S,Költséghely-bontás.,members_list
-workspace_archive,Munkaterület archiválása,workspace,6,public,6,recommended,1.5.0,S,Életciklus-kezelés.,workspace_create
-workspace_create,Munkaterület létrehozása,workspace,10,public,10,required,1.0.0,S,"Tenancy alap, minden enterprise funkció előfeltétele.",auth_email_login
-workspace_delete,Munkaterület törlése,workspace,7,public,7,required,1.5.0,S,Hard delete + GDPR.,workspace_archive
-workspace_general_settings,"Általános ws beállítások (TZ, locale)",workspace,9,public,9,required,1.0.0,S,Lokalizáció + időzóna.,workspace_create
-workspace_select,Munkaterület váltás,workspace,10,public,10,required,1.0.0,S,Több cég/projekt kezelése egy fiókkal.,workspace_create
-ws_general,Általános ws beállítások,settings,9,public,9,required,1.0.0,S,TZ/locale/név.,workspace_create
+feature_key,name,module,fiscal_weight,status,value_score,necessity,created_in_version,estimated_dev_cost,route_path,menu_path,description,dependencies
+access_inbox,Hozzáférés inbox,workflows,6,public,6,optional,3.7.0,M,/app/workflows/access,Workflow > Hozzáférés > Inbox,Approval workflow.,access_templates
+access_systems,Hozzáférési rendszerek,workflows,6,public,6,optional,3.7.0,M,/app/workflows/access,Workflow > Hozzáférés > Rendszerek,IT-rendszer katalógus.,workspace_create
+access_templates,Hozzáférés-kérelem sablonok,workflows,6,public,6,optional,3.7.0,M,/app/workflows/access,Workflow > Hozzáférés > Sablonok,Standardizált request.,access_systems
+account_delete,Fiók törlés (GDPR),auth,8,public,8,required,1.5.0,S,/profile,Profil > Fiók törlése,GDPR megfelelés.,profile_edit
+admin_api,Platform admin API,admin,10,public,10,required,2.0.0,M,/admin/api,Admin > API,Service ops.,admin_dashboard
+admin_dashboard,Platform admin dashboard,admin,10,public,10,required,2.0.0,M,/admin,Admin > Dashboard,SaaS-üzemeltetés.,auth_email_login
+admin_override,Admin felülbírálat,approvals,6,public,6,optional,2.5.0,M,/app/requests/approvals,Kérelmek > Jóváhagyások > Admin felülbírálat,Vész-beavatkozás.,approval_individual
+agile_gantt,Agile Gantt,agile,6,public,6,optional,3.3.0,M,/app/resources/agile/gantt,Erőforrások > Agile > Gantt,Hibrid view.,agile_panel
+agile_panel,Agile panel,agile,6,public,6,optional,3.0.0,M,/app/resources/agile,Erőforrások > Agile > Panel,Agile teamek.,projects
+ai_burnout_predict,Burnout predikció,ai,7,beta,7,optional,3.9.0,L,/app/reports/ai,Riportok > AI > Burnout predikció,Wellbeing forecast.,attendance_log;leave_my_view
+ai_chat_assist,Chat asszisztens (Slack/Teams slash cmd),ai,7,planned,7,optional,3.16.0,L,/app/help/ai,Súgó > AI Chat asszisztens,Asszisztens csatorna.,ms365_calendar_sync
+ai_smart_schedule,Smart Schedule (AI javaslatok),ai,8,beta,8,optional,3.9.0,L,/app/resources/ai,Erőforrások > AI > Smart Schedule,AI-asszisztens.,calendar_monthly;leave_quotas
+allowances,Juttatások kezelése,leave,7,public,7,recommended,2.5.0,M,/app/settings/allowances,Beállítások > Juttatások,Cafeteria/juttatás.,leave_quotas
+annual_trend,Éves trend diagram,calendar,6,public,6,recommended,2.5.0,M,/app/calendar,Naptár > Éves trend,Trendelemzés.,leave_my_view
+annual_view,Éves nézet,calendar,6,public,6,recommended,2.5.0,M,/app/calendar,Naptár > Éves nézet,Éves tervezés.,calendar_monthly
+approval_bulk,Tömeges jóváhagyás,approvals,7,public,7,recommended,2.5.0,S,/app/requests/approvals,Kérelmek > Jóváhagyások > Tömeges,Hatékonyság nagy csapatoknál.,approval_individual
+approval_chain,Jóváhagyási lánc konfig,approvals,8,public,8,recommended,3.0.0,L,/app/settings/approval-chains,Beállítások > Jóváhagyási lánc,Multi-level workflow.,approval_individual;members_list
+approval_inbox,Jóváhagyó inbox,approvals,10,public,10,required,1.5.0,S,/app/requests/approvals,Kérelmek > Jóváhagyások > Inbox,Vezetői workflow.,leave_team_view
+approval_individual,Egyenkénti jóváhagyás,approvals,10,public,10,required,1.5.0,S,/app/requests/approvals,Kérelmek > Jóváhagyások > Egyenkénti,Alap döntéshozatal.,approval_inbox
+attendance_audit,Attendance audit,attendance,8,public,8,required,3.6.0,S,/app/time-attendance/audit,Munkaóra > Audit,Compliance.,attendance_log
+attendance_edit_mode,Edit mode + batch drag,attendance,6,public,6,recommended,3.7.1,M,/app/time-attendance,Munkaóra > Edit mode,UX gyorsítás.,attendance_log
+attendance_log,Munkaóra naplózás,attendance,9,public,9,required,3.6.0,L,/app/time-attendance,Munkaóra > Napló,Időnyilvántartás.,members_list
+attendance_oncall,On-call ügyelet,attendance,7,public,7,optional,3.6.0,M,/app/time-attendance/oncall,Munkaóra > On-call,24/7 csapatok.,attendance_log
+attendance_periods,Időszak workflow,attendance,8,public,8,required,3.6.0,M,/app/time-attendance/periods,Munkaóra > Időszakok,Hónap zárás.,attendance_log
+audit_log,Audit napló,reports,9,public,9,required,2.5.0,M,/app/reports/audit,Riportok > Audit napló,Compliance/SOC2.,workspace_create
+auth_email_login,E-mail bejelentkezés,auth,10,public,10,required,1.0.0,S,/auth,Bejelentkezés > E-mail bejelentkezés,Napi belépés.,auth_email_signup
+auth_email_signup,E-mail regisztráció,auth,10,public,10,required,1.0.0,S,/auth,Bejelentkezés > E-mail regisztráció,"Felhasználói belépési pont, minden funkció előfeltétele.",
+auth_google_oauth,Google OAuth,auth,7,public,7,recommended,1.2.0,S,/auth,Bejelentkezés > Google OAuth,Súrlódásmentes belépés Google fiókkal.,auth_email_signup
+auth_magic_link,Magic link,auth,5,public,5,optional,1.2.0,S,/auth,Bejelentkezés > Magic link,Jelszó nélküli belépés.,auth_email_signup
+auth_password_reset,Jelszó-visszaállítás,auth,9,public,9,required,1.0.0,S,/reset-password,Bejelentkezés > Jelszó-visszaállítás,Önkiszolgáló helyreállítás.,auth_email_signup
+azure_devops,Azure DevOps integráció,agile,7,public,7,optional,3.0.1,L,/app/settings/integrations,Beállítások > Integrációk > Azure DevOps,Microsoft ökoszisztéma.,workspace_create
+backlog_browser,Backlog böngésző,agile,6,public,6,optional,3.0.0,M,/app/resources/agile/backlog,Erőforrások > Agile > Backlog,Backlog grooming.,agile_panel
+birthday_widget,Születésnapok widget,calendar,4,public,4,optional,2.5.0,S,/app/calendar,Naptár > Szülinapok,Csapat-kohézió.,members_list
+branding,Branding / arculat,settings,7,public,7,recommended,3.0.0,M,/app/settings/branding,Beállítások > Branding,Whitelabel/logo.,workspace_create
+burnout_engine,Burnout & Wellbeing engine,reports,8,public,8,optional,3.9.0,L,/app/reports/wellbeing,Riportok > Wellbeing,Wellbeing predikció.,leave_my_view;attendance_log
+business_roles,Munkakör kezelés,resources,8,public,8,required,3.0.0,S,/app/resources/roles,Erőforrások > Munkakörök,Role-katalógus.,members_list
+calendar_filters,Naptár szűrők,calendar,7,public,7,recommended,2.0.0,S,/app/calendar,Naptár > Szűrők,Személyre szabott nézet.,calendar_monthly
+calendar_monthly,Havi naptár,calendar,10,public,10,required,1.0.0,M,/app/calendar,Naptár > Havi nézet,Vizuális áttekintés.,leave_my_view
+capacity_dna,Kapacitás DNA,resources,6,public,6,optional,3.0.0,L,/app/resources/capacity,Erőforrások > Kapacitás > DNA,Csapat-DNS profil.,skills_mgmt;members_list
+capacity_fit,Kapacitás-illeszkedés,agile,6,public,6,optional,3.0.0,L,/app/resources/agile,Erőforrások > Agile > Capacity fit,Sprint-cap match.,capacity_dna;agile_panel
+capacity_gap,Kapacitás-hiány riport,resources,8,public,8,recommended,3.0.0,M,/app/resources/capacity,Erőforrások > Kapacitás > Hiány-riport,Felvételi terv.,resource_dashboard
+company_days,Cég-szintű napok,rules,6,public,6,recommended,2.5.0,S,/app/settings/holidays,Beállítások > Cég-szintű napok,Vállalati zárva.,holidays
+contract_types,Szerződéstípusok,org,7,public,7,required,2.5.0,S,/app/organization/contracts,Szervezet > Szerződéstípusok,Foglalkoztatás-típus.,members_list
+coverage_planner,Kapacitástervező,calendar,9,public,9,recommended,3.0.0,L,/app/calendar/coverage,Naptár > Kapacitástervező,Műszak/lefedettség.,calendar_monthly;office_coverage_rules
+csv_import,CSV import,settings,8,public,8,recommended,3.5.0,M,/app/settings/import,Beállítások > CSV import,Bulk migráció.,members_list
+decision_memory,Döntésmemória figyelés,approvals,5,public,5,optional,3.0.0,L,/app/requests/approvals,Kérelmek > Jóváhagyások > Döntésmemória,Lejárt döntések.,approval_individual
+demo_workspace_seed,Demo workspace seed,workspace,8,public,8,recommended,3.1.1,M,/app,Munkaterületek > Demo workspace,Onboarding gyorsítás új ügyfeleknek.,workspace_create
+email_preview,E-mail előnézet,admin,4,public,4,optional,2.5.0,S,/superadmin/email,Superadmin > E-mail előnézet,Dev tool.,admin_dashboard
+email_unsubscribe,Leiratkozás,auth,6,public,6,required,1.5.0,S,/unsubscribe,Profil > Leiratkozás,CAN-SPAM/GDPR.,
+escalation,Eszkaláció,approvals,6,public,6,optional,3.0.0,M,/app/settings/approval-chains,Beállítások > Eszkaláció,SLA betartás.,approval_chain
+executive_dashboard,Executive Analytics,reports,8,public,8,recommended,3.8.0,L,/app/analytics,Analitika > Executive,C-suite KPI dashboard.,run_report
+export_center,Riport export,reports,9,public,9,required,3.5.0,M,/app/reports/export,Riportok > Export,CSV/XLSX letöltés.,run_report
+feature_flags,Platform Feature Flags,platform,10,public,10,required,3.13.0,M,/superadmin/flags,Superadmin > Feature Flags,Tier alap.,superadmin_control_plane
+financials,Pénzügyi panel,resources,8,public,8,recommended,3.0.0,L,/app/resources/financials,Erőforrások > Pénzügy,Költség/bevétel.,projects
+gantt_timeline,Gantt idővonal,resources,9,public,9,recommended,3.3.0,L,/app/resources/projects/gantt,Erőforrások > Projektek > Gantt,Klasszikus terv-eszköz.,projects
+google_calendar_sync,Google Workspace naptár szinkron,calendar,9,planned,9,recommended,3.16.0,L,/app/calendar/sync,Naptár > Szinkron > Google Workspace,Google-első cégek.,calendar_monthly;leave_submit
+help_drawer,Kontextuális súgó,help,7,public,7,recommended,3.2.0,M,/app/help,Súgó > Kontextuális drawer,Onboarding-segéd.,workspace_create
+help_regenerator,Help cikkek újragenerálása,help,4,public,4,optional,3.2.0,M,/superadmin/help,Superadmin > Help > Regenerálás,AI-content.,help_settings
+help_registry,Help anchor regisztráció,help,4,public,4,optional,3.2.0,S,/app/help,Súgó > Anchor registry,Dev infra.,help_drawer
+help_settings,Help rendszer beállítások,settings,4,public,4,optional,3.2.0,S,/app/settings/help,Beállítások > Súgó,KB szerkesztés.,workspace_create
+holiday_sync,Ünnepnap szinkronizáció,rules,7,public,7,recommended,2.0.0,S,/app/settings/holidays,Beállítások > Ünnepnap szinkron,Országonkénti automatika.,holidays
+holidays,Ünnepnapok,rules,9,public,9,required,1.5.0,S,/app/settings/holidays,Beállítások > Ünnepnapok,Munkanap-számítás.,workspace_create
+ical_feed,iCal feed,calendar,6,public,6,recommended,2.5.0,M,/app/calendar/sync,Naptár > Szinkron > iCal feed,Outlook/Google subscribe.,calendar_monthly
+industries,Iparágak,org,4,public,4,optional,3.0.0,S,/app/organization/industries,Szervezet > Iparágak,Benchmark-targeting.,workspace_create
+instant_member_create,Azonnali tag létrehozás,members,4,public,4,optional,2.0.0,S,/app/members,Tagok > Azonnali létrehozás,Bulk onboarding ATS-ből.,members_list
+integration_health,Integráció egészség,settings,6,public,6,recommended,3.0.0,M,/app/settings/integrations,Beállítások > Integrációk > Egészség,Monitoring.,workspace_create
+invitation_accept,Meghívó elfogadása,members,10,public,10,required,1.0.0,S,/app/members,Tagok > Meghívó elfogadása,Meghívó flow zárás.,members_invite
+issue_writeback,Issue writeback,agile,7,public,7,optional,3.0.1,M,/app/settings/integrations,Beállítások > Integrációk > Issue writeback,Kétirányú Jira.,jira_integration
+jira_integration,Jira integráció,agile,9,public,9,recommended,3.0.1,L,/app/settings/integrations,Beállítások > Integrációk > Jira,Atlassian ökoszisztéma.,workspace_create
+jira_issue_editor,Jira issue szerkesztő,agile,6,public,6,optional,3.0.1,M,/app/resources/agile/issues,Erőforrások > Agile > Issue szerkesztő,Inline edit.,jira_integration
+job_families,Állásfamilák,org,6,public,6,recommended,3.0.0,S,/app/organization/job-families,Szervezet > Állásfamilák,Career path.,members_list
+kanban,Kanban tábla,agile,7,public,7,optional,3.0.0,M,/app/resources/agile/kanban,Erőforrások > Agile > Kanban,Vizuális workflow.,agile_panel
+leadership_levels,Vezetési szintek,org,6,public,6,recommended,2.5.0,S,/app/organization/leadership,Szervezet > Vezetési szintek,Hierarchia-kategória.,org_structure
+leave_blocked_dates,Tiltott napok,rules,8,public,8,recommended,2.5.0,S,/app/settings/rules,Beállítások > Szabályok > Tiltott napok,Csúcsidőszak védelme.,leave_submit
+leave_cancel,Kérelem visszavonása,leave,8,public,8,required,1.5.0,S,/app/requests,Kérelmek > Visszavonás,Felhasználói önkiszolgálás.,leave_submit
+leave_conflict_check,Ütközésellenőrzés,leave,9,public,9,required,2.5.0,M,/app/requests/new,Kérelmek > Új > Ütközésellenőrzés,Csapat-lefedettség védelem.,leave_submit;leave_blocked_dates;leave_daily_rules
+leave_daily_rules,Napi szabályok (headcount),rules,8,public,8,recommended,2.5.0,M,/app/settings/rules,Beállítások > Szabályok > Napi szabályok,Lefedettségi minimum.,
+leave_half_day,Félnapos kérelem,leave,7,public,7,recommended,1.5.0,S,/app/requests/new,Kérelmek > Új > Félnapos,Rugalmasság.,leave_submit
+leave_my_view,Saját kérelmek,leave,9,public,9,required,1.0.0,S,/app/requests,Kérelmek > Saját kérelmek,Áttekintés.,leave_submit
+leave_private,Privát kérelem,leave,5,public,5,optional,2.0.0,S,/app/requests/new,Kérelmek > Új > Privát,Érzékeny szabadság (orvosi).,leave_submit
+leave_quota_balance,Kvóta egyenleg,leave,9,public,9,required,2.0.0,M,/app/requests/quota,Kérelmek > Kvóta egyenleg,Maradványnap számítás.,leave_submit;leave_quotas
+leave_quotas,Kvóta admin,leave,9,public,9,required,2.0.0,M,/app/settings/quota,Beállítások > Kvóta admin,HR-szabályozás.,members_list
+leave_submit,Szabadságkérelem beküldése,leave,10,public,10,required,1.0.0,M,/app/requests/new,Kérelmek > Új szabadságkérelem,Self-service alap.,members_list
+leave_team_view,Csapat kérelmei,leave,9,public,9,required,1.5.0,S,/app/requests/team,Kérelmek > Csapat kérelmek,Vezetői átláthatóság.,leave_my_view;members_list
+leave_types,Szabadságtípusok,rules,9,public,9,required,2.0.0,S,/app/settings/leave-types,Beállítások > Szabadságtípusok,Típus-taxonómia.,workspace_create
+localization,Lokalizáció / fordítás,settings,8,public,8,recommended,2.5.0,M,/app/settings/localization,Beállítások > Lokalizáció,5 nyelv.,ws_general
+member_deactivate,Tag deaktiválása,members,8,public,8,required,1.5.0,S,/app/members,Tagok > Deaktiválás,Kilépő dolgozók.,members_list
+member_edit,Tag adatainak szerkesztése,members,8,public,8,required,1.5.0,S,/app/members,Tagok > Szerkesztés,HR alapadatok.,members_list
+member_role_change,Tag szerepkörének változtatása,members,9,public,9,required,1.5.0,S,/app/members,Tagok > Szerepkör,Jogosultságkezelés.,members_list
+members_invite,Tag meghívása,members,10,public,10,required,1.0.0,S,/app/members,Tagok > Meghívás,Csapatépítés.,members_list
+members_list,Tagok listázása,members,10,public,10,required,1.0.0,S,/app/members,Tagok > Listázás,Csapat-átláthatóság.,workspace_create
+ms365_calendar_sync,M365 naptár szinkron (kétirányú),calendar,10,beta,10,recommended,3.15.0,L,/app/calendar/sync,Naptár > Szinkron > Microsoft 365,Vállalati go/no-go.,calendar_monthly;leave_submit
+multilingual,5-locale full coverage,platform,8,public,8,recommended,3.14.0,M,/superadmin/locales,Superadmin > Lokalizáció,EU-coverage.,localization
+notification_prefs,Értesítési preferenciák,settings,7,public,7,required,2.0.0,S,/app/settings/notifications,Beállítások > Értesítések > Preferenciák,Önkiszolgálás.,notifications
+notifications,Értesítések,settings,8,public,8,required,2.0.0,M,/app/settings/notifications,Beállítások > Értesítések,E-mail/in-app.,workspace_create
+office_coverage_rules,Telephelyi lefedettségi szabályok,rules,8,public,8,recommended,3.0.0,M,/app/settings/rules,Beállítások > Szabályok > Telephelyi lefedettség,Telephely-szintű kontroll.,offices;leave_daily_rules
+offices,Irodák / telephelyek,members,9,public,9,required,1.5.0,M,/app/organization/offices,Szervezet > Telephelyek,Telephely-szervezés.,workspace_create
+onboarding_inbox,Onboarding inbox,workflows,7,public,7,recommended,3.7.0,M,/app/workflows/onboarding,Workflow > Onboarding > Inbox,Feladat-tracking.,onboarding_template
+onboarding_template,Onboarding sablon,workflows,8,public,8,recommended,3.7.0,M,/app/workflows/onboarding,Workflow > Onboarding > Sablonok,Új belépő checklist.,members_list
+open_api,Open API / Developer Platform,platform,8,public,8,optional,3.10.0,L,/superadmin/tiers,Superadmin > Feature & Tier > Open API,API hozzáférés.,workspace_create
+org_chart,Org chart megjelenítés,org,8,public,8,recommended,3.3.0,M,/app/organization/chart,Szervezet > Org chart,Vizuális hierarchia.,org_structure
+org_chart_fullscreen,Org chart fullscreen,org,4,public,4,optional,3.4.0,S,/app/organization/chart,Szervezet > Org chart > Fullscreen,Bemutató mód.,org_chart
+org_chart_panzoom,Org chart pan/zoom,org,6,public,6,optional,3.3.1,M,/app/organization/chart,Szervezet > Org chart > Pan/zoom,Nagy szervezet böngészés.,org_chart
+org_chart_snapshot,Org chart snapshot,org,6,public,6,optional,3.4.0,M,/app/organization/chart,Szervezet > Org chart > Snapshot,Időbeli változás-archív.,org_chart
+org_structure,Szervezeti struktúra,org,9,public,9,required,2.0.0,M,/app/organization/structure,Szervezet > Struktúra,Szervezet-modell.,members_list
+payroll_engine,Payroll Integration Engine,platform,9,public,9,recommended,3.11.0,L,/superadmin/tiers,Superadmin > Feature & Tier > Payroll Engine,Multi-payroll-rendszer.,payroll_export
+payroll_export,Bérszámfejtési export,attendance,9,public,9,recommended,3.6.0,L,/app/time-attendance/payroll,Munkaóra > Bérszámfejtés export,Bér-átadás.,attendance_periods
+profile_edit,Profil szerkesztése,auth,9,public,9,required,1.0.0,S,/profile,Profil > Szerkesztés,Felhasználói alapadat-karbantartás.,auth_email_login
+project_editor,Projekt szerkesztő,resources,9,public,9,required,3.0.0,M,/app/resources/projects,Erőforrások > Projektek > Szerkesztő,CRUD.,projects
+projects,Projektek,resources,9,public,9,required,3.0.0,M,/app/resources/projects,Erőforrások > Projektek,Projekt-modell.,workspace_create
+recovery_mode,Helyreállítási mód,workspace,5,public,5,optional,2.0.0,M,/superadmin/workspaces,Superadmin > Munkaterületek > Helyreállítás,Vész-helyreállítás superadmin-mal.,workspace_create
+resource_dashboard,Erőforrás áttekintő,resources,8,public,8,recommended,3.0.0,M,/app/resources,Erőforrások > Áttekintő,Kapacitás-vezérlőpult.,members_list
+role_permissions,Szerepkör-jogosultságok,settings,9,public,9,required,2.5.0,M,/app/settings/permissions,Beállítások > Szerepkörök,Granular RBAC.,members_list
+rule_templates,Szabálysablon könyvtár,rules,6,public,6,optional,3.0.0,M,/app/settings/rules,Beállítások > Szabályok > Sablonok,Gyors konfiguráció.,leave_daily_rules
+run_report,Riport futtatás,reports,9,public,9,required,2.5.0,M,/app/reports,Riportok > Futtatás,Vezetői KPI.,leave_my_view
+scenario_planner,Forgatókönyv tervező,resources,7,public,7,optional,3.0.0,L,/app/resources/scenarios,Erőforrások > Forgatókönyvek,What-if elemzés.,projects;resource_dashboard
+scheduled_reports,Ütemezett riport,reports,7,public,7,recommended,3.5.0,M,/app/reports/scheduled,Riportok > Ütemezett,E-mail riport.,run_report
+scrum,Scrum tábla,agile,7,public,7,optional,3.0.0,M,/app/resources/agile/scrum,Erőforrások > Agile > Scrum,Sprint-kezelés.,agile_panel
+site_assignment,Telephely beosztás,attendance,7,public,7,recommended,3.7.7,M,/app/time-attendance/sites,Munkaóra > Telephely beosztás,Műszak/telephely.,offices;attendance_log
+skill_capacity_report,Készség-kapacitás riport,calendar,7,public,7,optional,3.0.0,L,/app/calendar/reports,Naptár > Készség-kapacitás,Készség-szűk keresztmetszet.,timeline_view;skills_mgmt
+skills_mgmt,Készségek kezelése,resources,8,public,8,recommended,3.0.0,M,/app/resources/skills,Erőforrások > Készségek,Skill-mátrix.,members_list
+soc2_iso,SOC2/ISO27001 Security Center,platform,9,public,9,recommended,3.12.0,L,/superadmin/tiers,Superadmin > Feature & Tier > SOC2 / ISO 27001,Compliance bizonyíték.,audit_log
+substitute_inbox,Helyettesítési felkérés,leave,6,public,6,optional,2.5.0,M,/app/requests/team,Kérelmek > Helyettesítés inbox,Lefedettség-biztosítás.,leave_submit;members_list
+superadmin_control_plane,Superadmin Control Plane,admin,10,public,10,required,3.13.0,L,/superadmin,Superadmin > Control Plane,Platform vezérlő.,admin_dashboard
+teams,Csapatok kezelése,members,9,public,9,required,1.5.0,M,/app/organization/teams,Szervezet > Csapatok,Csapat-struktúra.,members_list
+timeline_view,Idővonal nézet,calendar,7,public,7,recommended,2.5.0,M,/app/calendar/timeline,Naptár > Idővonal,Hosszú periódusú átlátás.,leave_my_view;calendar_monthly
+ui_section_state,UI szekció állapot,settings,4,public,4,optional,3.0.0,S,/app/settings/ui,Beállítások > UI állapot,UI customization.,workspace_create
+utilization_heatmap,Kihasználtság hőtérkép,resources,7,public,7,recommended,3.0.0,M,/app/resources/utilization,Erőforrások > Kihasználtság,Túl/alulterhelés.,resource_dashboard
+work_categories,Munkakategóriák,org,6,public,6,recommended,3.0.0,S,/app/organization/categories,Szervezet > Munkakategóriák,Költséghely-bontás.,members_list
+workspace_archive,Munkaterület archiválása,workspace,6,public,6,recommended,1.5.0,S,/app,Munkaterületek > Archiválás,Életciklus-kezelés.,workspace_create
+workspace_create,Munkaterület létrehozása,workspace,10,public,10,required,1.0.0,S,/app,Munkaterületek > Új munkaterület,"Tenancy alap, minden enterprise funkció előfeltétele.",auth_email_login
+workspace_delete,Munkaterület törlése,workspace,7,public,7,required,1.5.0,S,/app,Munkaterületek > Törlés,Hard delete + GDPR.,workspace_archive
+workspace_general_settings,"Általános ws beállítások (TZ, locale)",workspace,9,public,9,required,1.0.0,S,/app/settings/general/regional,Beállítások > Általános > Régió & időzóna,Lokalizáció + időzóna.,workspace_create
+workspace_select,Munkaterület váltás,workspace,10,public,10,required,1.0.0,S,/app,Munkaterületek > Váltás,Több cég/projekt kezelése egy fiókkal.,workspace_create
+ws_general,Általános ws beállítások,settings,9,public,9,required,1.0.0,S,/app/settings/general,Beállítások > Általános,TZ/locale/név.,workspace_create
