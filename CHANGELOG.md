@@ -1,3 +1,91 @@
+## 2026-05-13 — v3.16.0 Workspace UUID in URL + Back-button regression fix
+
+### New routing principle (non-negotiable from now)
+
+Every workspace-scoped route now uses the path shape **`/w/<workspaceId>/<rest>`**.
+This is a deliberate exception to the previous "no internal IDs in URLs" rule
+— workspace UUIDs are non-secret tenant identifiers and deep-linking into a
+specific workspace is a primary product affordance (sharing links, bookmarks).
+
+- Workspace picker: `/app` (also `/app?select=1` to force-show the picker)
+- Dashboard: `/w/:workspaceId` (with `?tab=<name>` for tab selection)
+- Legacy bookmarks `/app?ws=<uuid>` are auto-redirected (replace) to `/w/<uuid>`
+- User IDs, session tokens, and email addresses are STILL forbidden in URLs.
+
+### Fixed — Back button used to drop the user on the landing page
+
+When a user picked a workspace from the picker grid, the old code called
+`setSearchParams(..., { replace: true })` instead of pushing a new history
+entry. The picker step was therefore invisible in browser history. Pressing
+Back from any tab inside the dashboard fell through past the picker and
+landed on `/` (the Landing page) — not the workspace picker.
+
+Root cause was at `src/pages/Enterprise.tsx:98` (workspace selected from
+picker) and `:187` (auto-select for returning users). Both used replace.
+
+**Fix:** picking a workspace from the picker grid is now
+`navigate('/w/<id>')` — a real history entry. Pressing Back from a tab
+returns to the picker (or to whatever was before the picker, transitively).
+
+The auto-redirect for returning users on `/app` (jump straight into the
+last-used workspace) intentionally KEEPS `replace: true` — that one is a
+transient URL with no meaning to the user, and the new
+`.governance/ui_ux_rules.md` explicitly enumerates this as a legitimate
+use of replace.
+
+### Changed — `src/pages/Enterprise.tsx`
+
+- Workspace identity is now driven by `useParams<{ workspaceId }>` instead
+  of `useState + localStorage + ?ws=` query param.
+- One component, two modes:
+  - On `/app` → picker (auto-redirects to `/w/<last>` for returning users
+    unless `?select=1`, an invite token, or the workspaces list is still loading).
+  - On `/w/:workspaceId` → dashboard. If the path UUID doesn't match any
+    workspace the user belongs to, a toast fires and the user is bounced
+    (replace) to `/app?select=1`.
+- Removed the legacy `userClearedWorkspace`/`setSelectedWorkspaceIdState`
+  state — no longer needed since URL is the source of truth.
+- Invite-acceptance flow now `navigate`s (replace) to `/w/<workspace_id>` on
+  success, instead of mutating searchParams in place.
+
+### Added — `.governance/ui_ux_rules.md`
+
+- New "Core principle: Workspace identifier in URL" section codifies the
+  rule, the exception, the back-button consequence, and the legacy-URL
+  compatibility behavior.
+- Existing "Core principle: Browser Back button" section expanded to
+  enumerate exactly when `replace: true` is permitted (consumed tokens,
+  auth/permission redirects, legacy-URL migration shims, transient
+  same-tab auto-redirects). Anything user-clicked must push.
+
+### Localization
+
+1 new key in EN + HU: `enterprise_page.workspace_not_found` (shown when a
+user follows a `/w/<uuid>` deep-link they no longer have access to).
+
+### Files changed
+
+- `src/App.tsx` — added `<Route path="/w/:workspaceId">` next to `/app`.
+- `src/pages/Enterprise.tsx` — refactored URL-driven workspace selection.
+- `src/i18n/resources/en.ts`, `src/i18n/resources/hu.ts` — 1 new key each.
+- `.governance/ui_ux_rules.md` — new principle + expanded back-button section.
+- `CLAUDE.md` — quick-reference entry for the new principle.
+- `CHANGELOG.md`, `versioning/`, `marketing/marketing_values/` — release records.
+
+**Tests:** 146/146 passing. **TypeScript:** 0 errors.
+
+**Back-button verification matrix** (must be smoke-tested in browser):
+- Landing `/` → click "Munkaterületeim" → `/app?select=1` → pick workspace
+  → `/w/<id>` → click any tab → press Back → returns to picker.
+- `/w/<id>` → click another tab → press Back → returns to previous tab.
+- `/w/<A>` → ProfileMenu → "Change workspace" → picker → pick `<B>` →
+  `/w/<B>` → press Back twice → returns to `/w/<A>`.
+- Direct visit to `/app?ws=<uuid>` (legacy bookmark) → instant
+  replace-redirect to `/w/<uuid>`. Back returns to whatever the user did
+  before the bookmark.
+
+---
+
 ## 2026-05-13 — v3.15.3 Superadmin Platform Control Plane: 3 bug fixes + 2 routing-tree UX additions
 
 ### Fixed — 3 hard regressions blocking the Superadmin UI
