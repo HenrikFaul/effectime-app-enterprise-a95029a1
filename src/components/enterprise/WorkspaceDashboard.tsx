@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft, LogOut, Building2, GitMerge, CircleHelp, Clock, LayoutDashboard, TrendingUp, Code2, CreditCard, ShieldCheck } from 'lucide-react';
+import { useWorkspaceTier } from '@/hooks/useWorkspaceTier';
+import { tierName } from '@/lib/tiering/labels';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
@@ -257,7 +259,10 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                 )}
                 <HelpButton />
                 <div className="min-w-0">
-                  <h1 className="text-base font-semibold truncate">{workspace.name}</h1>
+                  <h1 className="text-base font-semibold truncate flex items-center gap-2">
+                    <span className="truncate">{workspace.name}</span>
+                    <WorkspaceTierBadge workspaceId={workspace.id} />
+                  </h1>
                   {workspace.description && (
                     <p className="text-xs text-muted-foreground truncate">{workspace.description}</p>
                   )}
@@ -1188,5 +1193,52 @@ function SettingsSection({ workspaceId, sectionKey, icon, title, children, defau
         </CollapsibleContent>
       </Card>
     </Collapsible>
+  );
+}
+
+
+// ────────────────────────────────────────────────────────────────────────────
+// WorkspaceTierBadge — small visible indicator of the workspace's current
+// subscription tier. Read-only. Set ONCE at workspace creation, only changed
+// by a platform admin via /superadmin → Workspaces → Change tier. See
+// .governance/ui_ux_rules.md § "Core principle: Workspace tier persistence".
+// ────────────────────────────────────────────────────────────────────────────
+function WorkspaceTierBadge({ workspaceId }: { workspaceId: string }) {
+  const { t } = useI18n();
+  const { data, isLoading } = useWorkspaceTier(workspaceId);
+
+  if (isLoading) {
+    return (
+      <Badge variant="outline" className="text-[10px] uppercase tracking-wide font-mono shrink-0">
+        …
+      </Badge>
+    );
+  }
+  if (!data) {
+    return (
+      <Badge variant="outline" className="text-[10px] uppercase tracking-wide font-mono shrink-0 text-muted-foreground" title={t('workspace_tier.no_subscription_title')}>
+        {t('workspace_tier.no_subscription_badge')}
+      </Badge>
+    );
+  }
+
+  // Visual emphasis scales with tier — freemium muted, pro neutral,
+  // enterprise/higher tinted. Keep this generic so adding new tiers
+  // later doesn't break the visual hierarchy.
+  const klass =
+    data.tier_key === 'freemium'
+      ? 'bg-muted text-muted-foreground border-muted-foreground/20'
+      : data.tier_key === 'pro'
+      ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-300'
+      : 'bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-200 border-amber-400';
+
+  return (
+    <Badge
+      variant="outline"
+      className={`text-[10px] uppercase tracking-wide font-medium shrink-0 ${klass}`}
+      title={t('workspace_tier.badge_title', { tier: tierName(t, data.tier_key, data.tier_name) })}
+    >
+      {tierName(t, data.tier_key, data.tier_name)}
+    </Badge>
   );
 }

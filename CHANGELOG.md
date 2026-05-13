@@ -1,3 +1,121 @@
+## 2026-05-13 — v3.17.0 Workspace tier persistence + visible badge + superadmin-only change
+
+### The customer-facing concern
+
+User reported: "I create a workspace in a chosen tier, and after I reopen it
+the tier seems to change randomly." Investigation showed:
+
+1. **No code path was actually mutating tiers silently** — the
+   `create_workspace_with_owner` RPC correctly inserts the selected tier into
+   `tenant_subscriptions` at creation time, and no other write path exists.
+2. **But the tier was invisible everywhere in the product UI** — the user had
+   no way to verify what tier their workspace was on. The only place the
+   tier could be selected was during creation in `CreateWorkspaceDialog`;
+   afterward, nothing displayed it.
+3. **And there was no way to change a tier post-creation** — not even for
+   platform admins. If a customer upgraded from Freemium to Pro after a
+   sales call, the only "fix" was to delete and recreate the workspace.
+
+This release ships all three corrections together so paying customers can
+verify what they're getting, and so the platform team can adjust tiers
+without data loss.
+
+### New DB primitives
+
+- **`public.workspace_active_tier`** — view mapping `workspace_id` →
+  current active subscription tier (tier_id, tier_key, tier_name, seats,
+  started_at, ends_at). `security_invoker = on` so existing RLS on
+  `tenant_subscriptions` and `tenant_workspaces` applies (members can read
+  their own workspace's tier; platform admins can read all).
+- **`public.superadmin_change_workspace_tier(_workspace_id uuid, _tier_key text, _reason text)`**
+  — the ONLY supported way to change a workspace's tier after creation.
+  - Requires the caller to have `user_roles.role = 'admin'` (platform admin
+    — NOT enterprise owner / resourceAssistant — tier changes have billing
+    impact and must flow through the platform team).
+  - Updates `tenant_subscriptions.tier_id`, stamps the subscription's
+    metadata with `last_tier_change_at/actor/reason/from/to`.
+  - Writes an immutable `platform_audit_events` row with action
+    `workspace_tier_changed`, prev_state, new_state, metadata.
+  - Returns `{ok, workspace_id, tenant_id, subscription_id, from_tier_key, to_tier_key}`.
+  - `REVOKE ALL … FROM PUBLIC; GRANT EXECUTE … TO authenticated`. The RPC
+    re-checks the role server-side so revoking is defense in depth.
+
+### Frontend additions
+
+- **Tier badge in the workspace dashboard header** (`WorkspaceTierBadge` in
+  `src/components/enterprise/WorkspaceDashboard.tsx`) — next to the
+  workspace name, visible on every tab. Visual emphasis scales with tier:
+  freemium = muted, pro = blue, enterprise+ = amber/gold. Read via the new
+  `useWorkspaceTier(workspaceId)` hook against `workspace_active_tier`.
+- **Tier badge on each picker card** in `Enterprise.tsx`. Same color
+  scheme. The picker calls `fetchWorkspaceTiers()` once for all displayed
+  workspaces (single round-trip).
+- **"Change tier…" action** in `/superadmin → Workspaces → ⋯`. Opens a
+  dialog with: current tier shown, dropdown of available tiers, required
+  reason field (stored in audit log). Submitting routes through the
+  superadmin-hub edge function's new `change-workspace-tier` action which
+  calls the RPC.
+- **New "Tier" column** in the Superadmin Workspaces table — the workspace
+  list now shows each row's current tier at a glance, so a platform admin
+  doesn't have to open each workspace individually to audit tier
+  distribution.
+
+### Edge function `superadmin-hub` v3
+
+Two new actions:
+- `change-workspace-tier` — delegates to the RPC above, propagates any
+  error message verbatim to the caller.
+- `list-tiers` — used by the change-tier dialog dropdown.
+
+All 10 existing actions (platform-overview, list-workspaces,
+workspace-action, list-feature-flags, toggle-feature-flag, list-cron-jobs,
+trigger-edge-function, locale-registry, email-queue-status, platform-version)
+are preserved in version 3.
+
+### Governance update
+
+`.governance/ui_ux_rules.md` now contains a new non-negotiable principle:
+"Workspace tier persistence". It codifies:
+- Tier is set ONCE at creation; only the superadmin RPC may change it.
+- No other code path is permitted to mutate `tenant_subscriptions.tier_id`.
+  Future audit cycles must enforce this — Pass 3 (DB-internal necessity
+  verification) should surface only those two writers.
+- The badge in the dashboard header is mandatory; paying customers must
+  verify their tier without opening superadmin.
+- Demo workspaces follow the same rule (whatever the operator picks in the
+  dialog persists; the `seed-demo-workspace` default `'enterprise'` only
+  applies when no `tier_key` is sent).
+
+### Files changed
+
+- `supabase/migrations/…workspace_tier_visibility_and_admin_change…` — new view + RPC (applied to remote via MCP).
+- `supabase/functions/superadmin-hub/index.ts` — +2 actions, deployed as version 3.
+- `src/hooks/useWorkspaceTier.ts` — new hook + batch fetch helper.
+- `src/components/enterprise/WorkspaceDashboard.tsx` — `WorkspaceTierBadge` component + import + render in header.
+- `src/pages/Enterprise.tsx` — picker-card tier badge + batch fetch effect.
+- `src/components/superadmin/SuperadminControlPlane.tsx` — Tier column + "Change tier" action + change-tier dialog + `handleChangeTier` flow.
+- `src/i18n/resources/en.ts`, `src/i18n/resources/hu.ts` — new `workspace_tier` namespace + 12 new superadmin keys (`ws_col_tier`, `ws_action_change_tier`, `ws_tier_change_*`, etc.) in both locales.
+- `.governance/ui_ux_rules.md` — new "Workspace tier persistence" principle.
+- `CLAUDE.md` — quick-reference entry.
+
+### Verification
+
+- DB: `SELECT * FROM workspace_active_tier ORDER BY started_at DESC` returns one row per workspace.
+- DB: 12 of 12 existing workspaces are on `freemium` (unchanged — no silent migration).
+- `npx tsc --noEmit` → 0 errors.
+- `npx vitest run` → 146/146 passing.
+
+### Why the user's perception was correct even though no auto-mutation existed
+
+Without a visible tier indicator, users had to infer their tier from which
+features were available — but the feature visibility depends on the tier
+PLUS addons PLUS feature overrides PLUS the local feature-flags cache (5-min
+TTL). Any of those can shift the visible feature set independently of the
+tier. The combination felt random. Making the tier explicit and persistent
+removes the ambiguity.
+
+---
+
 ## 2026-05-13 — v3.16.0 Workspace UUID in URL + Back-button regression fix
 
 ### New routing principle (non-negotiable from now)

@@ -52,6 +52,31 @@ history entry (pushState), not replace the current one (replaceState).
   workspace from the picker: back from a tab inside that workspace returns to
   the picker, never to `/`.
 
+## Core principle: Workspace tier persistence (non-negotiable, from v3.17.0)
+A workspace's subscription tier (`tenant_subscriptions.tier_id`) is set ONCE at
+workspace creation by `create_workspace_with_owner(_tier_key, …)` and is NEVER
+changed implicitly by any other code path. The only supported way to change a
+workspace's tier post-creation is the SQL function
+`public.superadmin_change_workspace_tier(_workspace_id, _tier_key, _reason)`,
+which:
+- requires the caller to have `user_roles.role = 'admin'` (platform admin);
+- writes an immutable `platform_audit_events` row with prev/new tier;
+- is only surfaced in `/superadmin → Workspaces → ⋯ → Change tier…`.
+Rules:
+- No edge function, hook, RPC, trigger, RLS policy, or migration may modify
+  `tenant_subscriptions.tier_id` outside of `create_workspace_with_owner` or
+  `superadmin_change_workspace_tier`. Audit (Pass 3 — necessity verification)
+  must continue to surface only those two writers.
+- The active tier MUST be visible to the user: a `WorkspaceTierBadge` in the
+  workspace dashboard header AND on each picker card. Both read the
+  `public.workspace_active_tier` view (security_invoker honors RLS).
+- Demo workspaces follow the same rule — whatever tier the operator selects
+  in the `CreateWorkspaceDialog`, that tier persists. The
+  `seed-demo-workspace` edge function's default of `enterprise` only applies
+  when no `tier_key` is sent in the request body.
+- Paying customers must be able to verify their tier at any time without
+  opening superadmin. The badge in the dashboard header is non-negotiable.
+
 ## Core principle: Workspace identifier in URL (non-negotiable, from v3.16.0)
 The active workspace's UUID is part of the URL path for every workspace-scoped
 route, using the shape `/w/<workspaceId>/<rest>`. This is an explicit exception
