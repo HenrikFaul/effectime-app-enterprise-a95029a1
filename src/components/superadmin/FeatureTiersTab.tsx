@@ -201,14 +201,21 @@ export function FeatureTiersTab() {
 
   const saveRoute = async (featureId: string) => {
     const menu = routeDraft.menu_path.split('>').map(x => x.trim()).filter(Boolean);
+    const nextRoute = routeDraft.route_path.trim() || null;
     const { error } = await supabase.from('features').update({
-      route_path: routeDraft.route_path.trim() || null,
+      route_path: nextRoute,
       menu_path: menu,
     }).eq('id', featureId);
     if (error) { toast.error(error.message); return; }
-    setFeatures(prev => prev.map(f => f.id === featureId ? { ...f, route_path: routeDraft.route_path.trim() || null, menu_path: menu } : f));
+    setFeatures(prev => prev.map(f => f.id === featureId ? { ...f, route_path: nextRoute, menu_path: menu } : f));
+    // Auto-expand the saved branch so the user sees the row land in the tree.
+    expandToFeature(nextRoute, menu);
     setEditingRouteFor('');
     toast.success('Mentve');
+    // Defer scroll until the tree has re-rendered with the new path open.
+    setTimeout(() => {
+      document.getElementById(`feature-row-${featureId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 200);
   };
 
   // Reorder a list of feature IDs and persist their new sort_order (gap of 10)
