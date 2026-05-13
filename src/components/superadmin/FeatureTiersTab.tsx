@@ -690,9 +690,14 @@ function RoutingTree({
           <Badge variant="outline" className="text-[10px] ml-auto">{total}</Badge>
         </CollapsibleTrigger>
         <CollapsibleContent className="ml-4 border-l pl-2 mt-1 space-y-1">
-          {Array.from(node.children.values()).map(c => (
-            <div key={`${path}/${c.label}`}>{renderNode(c, depth + 1, `${path}/${c.label}`)}</div>
-          ))}
+          {Array.from(node.children.values()).map(c => {
+            // depth==0 child = page (route_path); deeper = menu segment.
+            // Prefix-tagged so the key is invariant under feature re-ordering.
+            const childPath = depth === 0
+              ? `page::${c.label}`
+              : `${path}|menu::${c.label}`;
+            return <div key={childPath}>{renderNode(c, depth + 1, childPath)}</div>;
+          })}
           {node.features.map(f => {
             const missing = missingDepsFor(f);
             const noRoute = !f.route_path || !f.route_path.trim();
