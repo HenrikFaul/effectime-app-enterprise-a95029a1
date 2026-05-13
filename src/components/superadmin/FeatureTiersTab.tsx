@@ -56,7 +56,14 @@ export function FeatureTiersTab() {
   const [routingTier, setRoutingTier] = useState<string>('all');
   const [viewingFeatureId, setViewingFeatureId] = useState<string>('');
   const { user } = useAuth();
-  const openStorageKey = `routingTreeOpen:${user?.id || 'anon'}:${routingTier}`;
+  // openPaths keys are tree-position strings of the form
+  //   "page::<route_path>"  →  "page::<route_path>|menu::<seg1>"  → …
+  // The "page::" / "menu::" prefixes make the key independent of label
+  // collisions (e.g. a menu segment that happens to equal a route path),
+  // so reordering features or adding new branches never shifts what stays
+  // open. Persisted per (user, tier) so a Freemium audit and an Enterprise
+  // audit have separate expansion state.
+  const openStorageKey = `routingTreeOpen:v2:${user?.id || 'anon'}:${routingTier}`;
   const [openPaths, setOpenPaths] = useState<Record<string, boolean>>({});
 
   // Load persisted open-state when user/tier changes
@@ -74,6 +81,29 @@ export function FeatureTiersTab() {
       return next;
     });
   }, [openStorageKey]);
+
+  // Stable tree-position keys built from the same prefixes RoutingTree uses.
+  // Keep these in sync with renderNode() in RoutingTree.
+  const buildPathKeys = useCallback((routePath: string | null, menuPath: string[]): string[] => {
+    const page = routePath && routePath.trim() ? routePath.trim() : '(nincs útvonal megadva)';
+    const keys: string[] = [`page::${page}`];
+    let acc = keys[0];
+    for (const seg of menuPath) {
+      acc = `${acc}|menu::${seg}`;
+      keys.push(acc);
+    }
+    return keys;
+  }, []);
+
+  const expandToFeature = useCallback((routePath: string | null, menuPath: string[]) => {
+    const keys = buildPathKeys(routePath, menuPath);
+    setOpenPaths(prev => {
+      const next = { ...prev };
+      for (const k of keys) next[k] = true;
+      try { localStorage.setItem(openStorageKey, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, [buildPathKeys, openStorageKey]);
 
   const load = async () => {
     setLoading(true);
@@ -171,14 +201,21 @@ export function FeatureTiersTab() {
 
   const saveRoute = async (featureId: string) => {
     const menu = routeDraft.menu_path.split('>').map(x => x.trim()).filter(Boolean);
+    const nextRoute = routeDraft.route_path.trim() || null;
     const { error } = await supabase.from('features').update({
-      route_path: routeDraft.route_path.trim() || null,
+      route_path: nextRoute,
       menu_path: menu,
     }).eq('id', featureId);
     if (error) { toast.error(error.message); return; }
-    setFeatures(prev => prev.map(f => f.id === featureId ? { ...f, route_path: routeDraft.route_path.trim() || null, menu_path: menu } : f));
+    setFeatures(prev => prev.map(f => f.id === featureId ? { ...f, route_path: nextRoute, menu_path: menu } : f));
+    // Auto-expand the saved branch so the user sees the row land in the tree.
+    expandToFeature(nextRoute, menu);
     setEditingRouteFor('');
     toast.success('Mentve');
+    // Defer scroll until the tree has re-rendered with the new path open.
+    setTimeout(() => {
+      document.getElementById(`feature-row-${featureId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 200);
   };
 
   // Reorder a list of feature IDs and persist their new sort_order (gap of 10)
@@ -201,20 +238,14 @@ export function FeatureTiersTab() {
   const openFeatureEditor = useCallback((featureKey: string) => {
     const f = features.find(x => x.feature_key === featureKey);
     if (!f) { toast.error(`A "${featureKey}" feature nem található`); return; }
-    const page = f.route_path || '(nincs útvonal megadva)';
-    const segs = [page, ...(f.menu_path || [])];
-    let acc = '';
-    const next: Record<string, boolean> = { ...openPaths };
-    for (const seg of segs) { acc = acc ? `${acc}/${seg}` : seg; next[acc] = true; }
-    setOpenPaths(next);
-    try { localStorage.setItem(openStorageKey, JSON.stringify(next)); } catch { /* ignore */ }
+    expandToFeature(f.route_path, f.menu_path || []);
     setEditingRouteFor(f.id);
     setRouteDraft({ route_path: f.route_path || '', menu_path: (f.menu_path || []).join(' > ') });
     setMode('routing');
     setTimeout(() => {
       document.getElementById(`feature-row-${f.id}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }, 200);
-  }, [features, openPaths, openStorageKey]);
+  }, [features, expandToFeature]);
 
   if (loading) return <div className="flex items-center justify-center py-12"><Loader2 className="h-6 w-6 animate-spin" /></div>;
 
@@ -659,9 +690,13 @@ function RoutingTree({
           <Badge variant="outline" className="text-[10px] ml-auto">{total}</Badge>
         </CollapsibleTrigger>
         <CollapsibleContent className="ml-4 border-l pl-2 mt-1 space-y-1">
-          {Array.from(node.children.values()).map(c => (
-            <div key={`${path}/${c.label}`}>{renderNode(c, depth + 1, `${path}/${c.label}`)}</div>
-          ))}
+          {Array.from(node.children.values()).map(c => {
+            // Children of a page or menu node are always menu segments.
+            // Prefix-tagged so the open-state key is invariant under
+            // feature re-ordering or new branches appearing/disappearing.
+            const childPath = `${path}|menu::${c.label}`;
+            return <div key={childPath}>{renderNode(c, depth + 1, childPath)}</div>;
+          })}
           {node.features.map(f => {
             const missing = missingDepsFor(f);
             const noRoute = !f.route_path || !f.route_path.trim();
@@ -722,9 +757,10 @@ function RoutingTree({
 
   return (
     <div className="rounded-lg border p-3 max-h-[65vh] overflow-y-auto space-y-1">
-      {Array.from(root.children.values()).map(c => (
-        <div key={c.label}>{renderNode(c, 0, c.label)}</div>
-      ))}
+      {Array.from(root.children.values()).map(c => {
+        const pagePath = `page::${c.label}`;
+        return <div key={pagePath}>{renderNode(c, 0, pagePath)}</div>;
+      })}
     </div>
   );
 }

@@ -7816,17 +7816,15 @@ export type Database = {
         Args: { _event_id: string; _user_id: string }
         Returns: boolean
       }
-      create_workspace_with_owner:
-        | { Args: { _description?: string; _name: string }; Returns: string }
-        | {
-            Args: {
-              _description?: string
-              _name: string
-              _seats?: number
-              _tier_key?: string
-            }
-            Returns: string
-          }
+      create_workspace_with_owner: {
+        Args: {
+          _description?: string
+          _name: string
+          _seats?: number
+          _tier_key?: string
+        }
+        Returns: string
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
