@@ -82,6 +82,29 @@ export function FeatureTiersTab() {
     });
   }, [openStorageKey]);
 
+  // Stable tree-position keys built from the same prefixes RoutingTree uses.
+  // Keep these in sync with renderNode() in RoutingTree.
+  const buildPathKeys = useCallback((routePath: string | null, menuPath: string[]): string[] => {
+    const page = routePath && routePath.trim() ? routePath.trim() : '(nincs útvonal megadva)';
+    const keys: string[] = [`page::${page}`];
+    let acc = keys[0];
+    for (const seg of menuPath) {
+      acc = `${acc}|menu::${seg}`;
+      keys.push(acc);
+    }
+    return keys;
+  }, []);
+
+  const expandToFeature = useCallback((routePath: string | null, menuPath: string[]) => {
+    const keys = buildPathKeys(routePath, menuPath);
+    setOpenPaths(prev => {
+      const next = { ...prev };
+      for (const k of keys) next[k] = true;
+      try { localStorage.setItem(openStorageKey, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, [buildPathKeys, openStorageKey]);
+
   const load = async () => {
     setLoading(true);
     const [tRes, aRes, fRes, tfRes, afRes] = await Promise.all([
