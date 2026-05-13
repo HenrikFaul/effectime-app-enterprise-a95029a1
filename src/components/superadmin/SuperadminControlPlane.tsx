@@ -227,7 +227,28 @@ function OverviewTab() {
         body: { action: 'platform-overview' },
       });
       if (err) throw err;
-      setData(res as PlatformOverview);
+      // Edge function returns a nested shape:
+      //   { workspaces: { total, active, archived, recovery_mode },
+      //     users: { total_auth, new_30d },
+      //     features: { flags_enabled },
+      //     email_queue: { pending, sent, failed } }
+      // Flatten it to the PlatformOverview shape the stat cards read.
+      const r = (res ?? {}) as {
+        workspaces?: { total?: number; active?: number; archived?: number; recovery_mode?: number };
+        users?: { total_auth?: number; total_profiles?: number; new_30d?: number };
+        features?: { flags_enabled?: number };
+        email_queue?: { pending?: number };
+      };
+      setData({
+        total_workspaces:         r.workspaces?.total ?? 0,
+        active_workspaces:        r.workspaces?.active ?? 0,
+        archived_workspaces:      r.workspaces?.archived ?? 0,
+        recovery_mode_workspaces: r.workspaces?.recovery_mode ?? 0,
+        total_users:              r.users?.total_auth ?? r.users?.total_profiles ?? 0,
+        new_users_30d:            r.users?.new_30d ?? 0,
+        feature_flags_enabled:    r.features?.flags_enabled ?? 0,
+        email_queue_pending:      r.email_queue?.pending ?? 0,
+      });
     } catch {
       setError(true);
     } finally {
@@ -304,7 +325,32 @@ function WorkspacesTab() {
         body: { action: 'list-workspaces' },
       });
       if (err) throw err;
-      setWorkspaces((res as { workspaces: Workspace[] }).workspaces ?? []);
+      // Edge function returns nested rows:
+      //   { workspaces: [{ workspace: {id,name,locale,timezone,created_at,is_archived,recovery_mode}, member_count, owner_email }, ...] }
+      // Flatten to the Workspace shape the table reads (plus derive `status`).
+      type RawRow = {
+        workspace?: {
+          id?: string; name?: string; locale?: string; timezone?: string;
+          created_at?: string; is_archived?: boolean; recovery_mode?: boolean;
+        };
+        member_count?: number;
+      };
+      const raw = ((res as { workspaces?: RawRow[] })?.workspaces ?? []);
+      const flat: Workspace[] = raw.map((r) => {
+        const w = r.workspace ?? {};
+        const status: Workspace['status'] =
+          w.recovery_mode ? 'recovery' : (w.is_archived ? 'archived' : 'active');
+        return {
+          id:           w.id ?? '',
+          name:         w.name ?? '',
+          locale:       w.locale ?? '',
+          timezone:     w.timezone ?? '',
+          member_count: r.member_count ?? 0,
+          status,
+          created_at:   w.created_at ?? '',
+        };
+      });
+      setWorkspaces(flat);
     } catch {
       setError(true);
     } finally {

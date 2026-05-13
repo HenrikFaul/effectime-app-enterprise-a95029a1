@@ -1,3 +1,71 @@
+## 2026-05-13 — v3.15.3 Superadmin Platform Control Plane: 3 bug fixes + 2 routing-tree UX additions
+
+### Fixed — 3 hard regressions blocking the Superadmin UI
+
+**Bug 1: Overview tab cards all showed `—` (empty)**
+The OverviewTab read the response with a flat shape
+(`data.total_workspaces`, `data.active_workspaces`, etc.) but the
+`superadmin-hub` edge function returns a nested shape
+(`{ workspaces: { total, active, ... }, users: {...}, features: {...},
+email_queue: {...} }`). Every field was `undefined` so the cards rendered
+`value ?? '—'`. Fixed by flattening the response at the client boundary
+inside `OverviewTab.load()`.
+
+**Bug 2: Workspaces tab rows had no name, locale, timezone, member count**
+Same class of bug — the WorkspacesTab cast the response as
+`Workspace[]` but the actual shape is `[{ workspace: {id,name,...},
+member_count, owner_email }, ...]`. Every read of `w.name`/`w.locale`
+yielded `undefined`. Fixed with an explicit mapper in
+`WorkspacesTab.load()` that flattens and derives `status` from
+`is_archived` + `recovery_mode`.
+
+**Bug 3: Audit log tab errored with "[object Object]" + HTTP 404**
+Root cause was *two stacked issues*:
+1. The migration `20260513120000_platform_audit_events.sql` (created in
+   v3.15.0) had never been applied to the remote DB. PostgREST returned
+   404 because the `platform_audit_events` table did not exist.
+2. The catch block used `String(e)` which produces `"[object Object]"`
+   for `PostgrestError` (a plain object, not an Error instance).
+Fixed by:
+- Applying the missing migration to remote (table + RLS policies for
+  platform admins).
+- Applying the missing `20260513120100_fix_feature_dependencies.sql`
+  (4 comma-joined dependency arrays + 1 cycle break) at the same time.
+- Improving the error formatter in `PlatformAuditLogTab.load()` to read
+  `.message`/`.details`/`.hint`/`.code` off PostgrestError before
+  falling back to `JSON.stringify`.
+
+### Added — 2 routing-tree UX improvements (Superadmin → Feature & Tier → Routing)
+
+**Click-to-expand-all under a branch.** The count badge on every parent
+node (e.g. the `3` on `/app/workflows/access` → `Workflow` → `Hozzáférés`)
+is now an interactive button. Clicking it opens the node *and every node
+beneath it* in a single batch, so an operator can drill into the
+complete sub-structure with one click instead of expanding each level
+manually. Stops propagation so the badge doesn't toggle the collapsible.
+
+**Flat-path display mode.** A new view-mode toggle ("Fa nézet" /
+"Lapos útvonal") appears at the right edge of the routing tab toolbar.
+In Flat mode, each feature renders as a single line with its full
+hierarchy concatenated:
+```
+/app/workflows/access / Workflow / Hozzáférés / Inbox / Hozzáférés inbox
+```
+Sorted by route, then by menu, then by sort_order. Choice is persisted
+per user in localStorage. The audit banner and filter bar work in both
+modes.
+
+### Localization
+
+3 new keys in EN + HU:
+- `feature_tiers.tree_expand_all_under`
+- `feature_tiers.tree_view_mode_tree`
+- `feature_tiers.tree_view_mode_flat`
+
+**Tests:** 146/146 passing. **TypeScript:** 0 errors.
+
+---
+
 ## 2026-05-13 — v3.15.2 Routing seed: all 135 features now have route_path + menu_path
 
 ### Fixed — Empty route_path / menu_path for the whole catalog

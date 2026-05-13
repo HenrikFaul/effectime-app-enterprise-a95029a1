@@ -108,6 +108,33 @@ export function FeatureTiersTab() {
     });
   }, [buildPathKeys, openStorageKey]);
 
+  // Open many paths at once — used when a user clicks a node's count badge to
+  // expand the whole subtree under that node. Persisted alongside toggleOpenPath.
+  const expandSubtree = useCallback((paths: string[]) => {
+    if (paths.length === 0) return;
+    setOpenPaths(prev => {
+      const next = { ...prev };
+      for (const p of paths) next[p] = true;
+      try { localStorage.setItem(openStorageKey, JSON.stringify(next)); } catch { /* ignore */ }
+      return next;
+    });
+  }, [openStorageKey]);
+
+  // Routing tree view mode — "tree" (collapsible nested) or "flat" (one line per
+  // feature with the full route+menu path concatenated). Persisted per user.
+  const viewModeStorageKey = `routingTreeViewMode:v1:${user?.id || 'anon'}`;
+  const [routingViewMode, setRoutingViewMode] = useState<'tree' | 'flat'>('tree');
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(viewModeStorageKey);
+      if (raw === 'tree' || raw === 'flat') setRoutingViewMode(raw);
+    } catch { /* ignore */ }
+  }, [viewModeStorageKey]);
+  const setRoutingViewModePersisted = useCallback((m: 'tree' | 'flat') => {
+    setRoutingViewMode(m);
+    try { localStorage.setItem(viewModeStorageKey, m); } catch { /* ignore */ }
+  }, [viewModeStorageKey]);
+
   const load = async () => {
     setLoading(true);
     const [tRes, aRes, fRes, tfRes, afRes] = await Promise.all([
@@ -422,28 +449,62 @@ export function FeatureTiersTab() {
             {routingTier !== 'all' && (
               <Badge variant="outline">{t('feature_tiers.tier_filter_badge', { count: tierMap.get(routingTier)?.size || 0 })}</Badge>
             )}
+            <div className="ml-auto inline-flex rounded-md border bg-background overflow-hidden">
+              <Button
+                type="button"
+                size="sm"
+                variant={routingViewMode === 'tree' ? 'default' : 'ghost'}
+                className="h-8 rounded-none"
+                onClick={() => setRoutingViewModePersisted('tree')}
+              >
+                {t('feature_tiers.tree_view_mode_tree')}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={routingViewMode === 'flat' ? 'default' : 'ghost'}
+                className="h-8 rounded-none"
+                onClick={() => setRoutingViewModePersisted('flat')}
+              >
+                {t('feature_tiers.tree_view_mode_flat')}
+              </Button>
+            </div>
           </div>
           <RoutingAuditBanner features={filtered} onJump={openFeatureEditor} />
           <FilterBar search={search} setSearch={setSearch} modules={modules} moduleFilter={moduleFilter} setModuleFilter={setModuleFilter} />
-          <RoutingTree
-            features={filtered}
-            tierFilterIds={routingTier === 'all' ? null : (tierMap.get(routingTier) || new Set())}
-            featureByKey={featureByKey}
-            editingRouteFor={editingRouteFor}
-            setEditingRouteFor={(id) => {
-              setEditingRouteFor(id);
-              const f = features.find(x => x.id === id);
-              if (f) setRouteDraft({ route_path: f.route_path || '', menu_path: (f.menu_path || []).join(' > ') });
-            }}
-            routeDraft={routeDraft}
-            setRouteDraft={setRouteDraft}
-            saveRoute={saveRoute}
-            persistOrder={persistOrder}
-            openPaths={openPaths}
-            toggleOpenPath={toggleOpenPath}
-            onOpenDepEditor={openFeatureEditor}
-            onViewFeature={setViewingFeatureId}
-          />
+          {routingViewMode === 'tree' ? (
+            <RoutingTree
+              features={filtered}
+              tierFilterIds={routingTier === 'all' ? null : (tierMap.get(routingTier) || new Set())}
+              featureByKey={featureByKey}
+              editingRouteFor={editingRouteFor}
+              setEditingRouteFor={(id) => {
+                setEditingRouteFor(id);
+                const f = features.find(x => x.id === id);
+                if (f) setRouteDraft({ route_path: f.route_path || '', menu_path: (f.menu_path || []).join(' > ') });
+              }}
+              routeDraft={routeDraft}
+              setRouteDraft={setRouteDraft}
+              saveRoute={saveRoute}
+              persistOrder={persistOrder}
+              openPaths={openPaths}
+              toggleOpenPath={toggleOpenPath}
+              expandSubtree={expandSubtree}
+              onOpenDepEditor={openFeatureEditor}
+              onViewFeature={setViewingFeatureId}
+            />
+          ) : (
+            <RoutingFlatList
+              features={filtered}
+              tierFilterIds={routingTier === 'all' ? null : (tierMap.get(routingTier) || new Set())}
+              onViewFeature={setViewingFeatureId}
+              onEditRoute={(id) => {
+                setEditingRouteFor(id);
+                const f = features.find(x => x.id === id);
+                if (f) setRouteDraft({ route_path: f.route_path || '', menu_path: (f.menu_path || []).join(' > ') });
+              }}
+            />
+          )}
         </TabsContent>
       </Tabs>
 
@@ -640,7 +701,7 @@ function RoutingAuditBanner({ features, onJump }: { features: Feature[]; onJump:
 function RoutingTree({
   features, tierFilterIds, featureByKey, editingRouteFor, setEditingRouteFor,
   routeDraft, setRouteDraft, saveRoute, persistOrder, openPaths, toggleOpenPath,
-  onOpenDepEditor, onViewFeature,
+  expandSubtree, onOpenDepEditor, onViewFeature,
 }: {
   features: Feature[];
   tierFilterIds: Set<string> | null;
@@ -653,6 +714,7 @@ function RoutingTree({
   persistOrder: (orderedIds: string[]) => void | Promise<void>;
   openPaths: Record<string, boolean>;
   toggleOpenPath: (path: string, isOpen: boolean) => void;
+  expandSubtree: (paths: string[]) => void;
   onOpenDepEditor: (featureKey: string) => void;
   onViewFeature: (id: string) => void;
 }) {
@@ -724,8 +786,21 @@ function RoutingTree({
     void persistOrder(without);
   };
 
+  // Recursively collect every path in this node's subtree (including self),
+  // mirroring the same prefix scheme renderNode uses, so that one click on the
+  // count badge can mark the whole branch open in a single setOpenPaths batch.
+  const collectSubtreePaths = (n: Node, p: string): string[] => {
+    const out: string[] = [p];
+    n.children.forEach((c) => {
+      const cp = `${p}|menu::${c.label}`;
+      out.push(...collectSubtreePaths(c, cp));
+    });
+    return out;
+  };
+
   const renderNode = (node: Node, depth: number, path: string): React.ReactNode => {
     const total = countFeatures(node);
+    const hasChildren = node.children.size > 0;
     return (
       <Collapsible
         open={openPaths[path] ?? (depth < 1)}
@@ -734,7 +809,22 @@ function RoutingTree({
         <CollapsibleTrigger className="flex items-center gap-1.5 w-full hover:bg-muted/40 px-2 py-1 rounded text-left">
           <ChevronDown className="h-3.5 w-3.5 shrink-0 transition-transform data-[state=closed]:-rotate-90" />
           <span className={depth === 0 ? 'font-medium font-mono text-sm' : 'text-sm'}>{node.label === NO_ROUTE_KEY ? t('feature_tiers.tree_no_route_label') : node.label}</span>
-          <Badge variant="outline" className="text-[10px] ml-auto">{total}</Badge>
+          {hasChildren ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                expandSubtree(collectSubtreePaths(node, path));
+              }}
+              title={t('feature_tiers.tree_expand_all_under')}
+              className="ml-auto text-[10px] px-1.5 py-0.5 rounded border border-input bg-background hover:bg-primary hover:text-primary-foreground hover:border-primary transition-colors"
+            >
+              {total}
+            </button>
+          ) : (
+            <Badge variant="outline" className="text-[10px] ml-auto">{total}</Badge>
+          )}
         </CollapsibleTrigger>
         <CollapsibleContent className="ml-4 border-l pl-2 mt-1 space-y-1">
           {Array.from(node.children.values()).map(c => {
@@ -817,6 +907,62 @@ function countFeatures(node: { children: Map<string, { features: Feature[] } & o
   // @ts-expect-error recursive structural traversal
   for (const c of node.children.values()) n += countFeatures(c);
   return n;
+}
+
+// Flat-path view: one line per feature with the full hierarchy concatenated
+// as `/<route>/<menu1>/<menu2>/<feature_name>`. Useful when an operator wants
+// a single-glance feature inventory ordered by app location.
+function RoutingFlatList({
+  features, tierFilterIds, onViewFeature, onEditRoute,
+}: {
+  features: Feature[];
+  tierFilterIds: Set<string> | null;
+  onViewFeature: (id: string) => void;
+  onEditRoute: (id: string) => void;
+}) {
+  const { t } = useI18n();
+  const visible = tierFilterIds ? features.filter(f => tierFilterIds.has(f.id)) : features;
+  const sorted = [...visible].sort((a, b) => {
+    const ra = a.route_path || '';
+    const rb = b.route_path || '';
+    if (ra !== rb) return ra.localeCompare(rb);
+    const ma = (a.menu_path || []).join('/');
+    const mb = (b.menu_path || []).join('/');
+    if (ma !== mb) return ma.localeCompare(mb);
+    return (a.sort_order - b.sort_order) || a.feature_key.localeCompare(b.feature_key);
+  });
+
+  if (sorted.length === 0) {
+    return <Card><CardContent className="py-8 text-center text-sm text-muted-foreground">{t('feature_tiers.tree_empty')}</CardContent></Card>;
+  }
+
+  return (
+    <div className="rounded-lg border max-h-[65vh] overflow-y-auto">
+      <ul className="divide-y">
+        {sorted.map((f) => {
+          const route = f.route_path || t('feature_tiers.tree_no_route_label');
+          const menu = (f.menu_path || []).join(' / ');
+          const displayName = featureName(t, f.feature_key, f.name);
+          const fullPath = menu
+            ? `${route} / ${menu} / ${displayName}`
+            : `${route} / ${displayName}`;
+          return (
+            <li key={f.id} className="px-3 py-1.5 hover:bg-muted/40 flex items-center gap-2 text-xs font-mono">
+              <span className="flex-1 truncate" title={fullPath}>{fullPath}</span>
+              <Badge variant="outline" className="text-[10px] font-mono shrink-0">{f.feature_key}</Badge>
+              {f.module && <Badge variant="secondary" className="text-[10px] shrink-0">{f.module}</Badge>}
+              <Button size="sm" variant="ghost" className="h-6 px-2 shrink-0" title={t('feature_tiers.tree_view_btn')} onClick={() => onViewFeature(f.id)}>
+                <Eye className="h-3 w-3" />
+              </Button>
+              <Button size="sm" variant="ghost" className="h-6 px-2 shrink-0" title={t('feature_tiers.tree_edit_btn')} onClick={() => onEditRoute(f.id)}>
+                <Pencil className="h-3 w-3" />
+              </Button>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
 }
 
 // Card palette inspired by the user-provided infographic — bold gradient cards.
