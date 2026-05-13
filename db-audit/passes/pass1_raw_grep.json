@@ -1,0 +1,2291 @@
+{
+  "tables": {
+    "account_deletions": {
+      "hits_src": 4,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/admin/index.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/delete-account/index.ts"
+      ],
+      "hits_mig": 6,
+      "files_mig_count": 3
+    },
+    "addon_features": {
+      "hits_src": 4,
+      "files_src": [
+        "src/components/superadmin/FeatureTiersTab.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 11,
+      "files_mig_count": 3
+    },
+    "addons": {
+      "hits_src": 20,
+      "files_src": [
+        "src/components/superadmin/FeatureTiersTab.tsx",
+        "src/i18n/resources/cs.ts",
+        "src/i18n/resources/en.ts",
+        "src/i18n/resources/hu.ts",
+        "src/i18n/resources/pl.ts",
+        "src/i18n/resources/sk.ts",
+        "src/integrations/supabase/types.ts",
+        "src/lib/tiering/labels.ts"
+      ],
+      "hits_mig": 15,
+      "files_mig_count": 3
+    },
+    "approval_decisions": {
+      "hits_src": 14,
+      "files_src": [
+        "src/components/enterprise/ApprovalInbox.tsx",
+        "src/components/enterprise/reports/SqlMode.tsx",
+        "src/components/enterprise/reports/reportTemplates.ts",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/run-report/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 5,
+      "files_mig_count": 2
+    },
+    "data_retention_policies": {
+      "hits_src": 6,
+      "files_src": [
+        "src/components/enterprise/security/SecurityCenter.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 14,
+      "files_mig_count": 1
+    },
+    "email_send_log": {
+      "hits_src": 17,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/handle-email-suppression/index.ts",
+        "supabase/functions/process-email-queue/index.ts",
+        "supabase/functions/send-transactional-email/index.ts"
+      ],
+      "hits_mig": 12,
+      "files_mig_count": 1
+    },
+    "email_send_state": {
+      "hits_src": 4,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/process-email-queue/index.ts"
+      ],
+      "hits_mig": 9,
+      "files_mig_count": 1
+    },
+    "email_unsubscribe_tokens": {
+      "hits_src": 7,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/handle-email-unsubscribe/index.ts",
+        "supabase/functions/send-transactional-email/index.ts"
+      ],
+      "hits_mig": 6,
+      "files_mig_count": 1
+    },
+    "enterprise_access_decisions": {
+      "hits_src": 6,
+      "files_src": [
+        "src/components/enterprise/workflows/AccessInbox.tsx",
+        "src/i18n/resources/en.ts",
+        "src/i18n/resources/hu.ts",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 7,
+      "files_mig_count": 1
+    },
+    "enterprise_access_requests": {
+      "hits_src": 10,
+      "files_src": [
+        "src/components/enterprise/CommandCenter.tsx",
+        "src/components/enterprise/CommandCenterButton.tsx",
+        "src/components/enterprise/MemberExtendedDetails.tsx",
+        "src/components/enterprise/workflows/AccessInbox.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 15,
+      "files_mig_count": 1
+    },
+    "enterprise_access_systems": {
+      "hits_src": 11,
+      "files_src": [
+        "src/components/enterprise/MemberExtendedDetails.tsx",
+        "src/components/enterprise/workflows/AccessInbox.tsx",
+        "src/components/enterprise/workflows/AccessSystems.tsx",
+        "src/components/enterprise/workflows/AccessTemplates.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 12,
+      "files_mig_count": 1
+    },
+    "enterprise_access_template_systems": {
+      "hits_src": 5,
+      "files_src": [
+        "src/components/enterprise/workflows/AccessTemplates.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 6,
+      "files_mig_count": 1
+    },
+    "enterprise_access_templates": {
+      "hits_src": 6,
+      "files_src": [
+        "src/components/enterprise/workflows/AccessTemplates.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 13,
+      "files_mig_count": 1
+    },
+    "enterprise_agile_capacity_events": {
+      "hits_src": 1,
+      "files_src": [
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 8,
+      "files_mig_count": 1
+    },
+    "enterprise_agile_external_field_mappings": {
+      "hits_src": 1,
+      "files_src": [
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 6,
+      "files_mig_count": 1
+    },
+    "enterprise_agile_field_metadata": {
+      "hits_src": 9,
+      "files_src": [
+        "src/components/enterprise/agile/FieldDiscovery.tsx",
+        "src/components/enterprise/agile/IssueWriteback.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/jira-devops-proxy/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 6,
+      "files_mig_count": 1
+    },
+    "enterprise_agile_issues": {
+      "hits_src": 15,
+      "files_src": [
+        "src/components/enterprise/MemberExtendedDetails.tsx",
+        "src/components/enterprise/agile/AgileBoards.tsx",
+        "src/components/enterprise/agile/AgileInsights.tsx",
+        "src/components/enterprise/agile/BacklogBrowser.tsx",
+        "src/components/enterprise/agile/IssueWriteback.tsx",
+        "src/i18n/resources/cs.ts",
+        "src/i18n/resources/en.ts",
+        "src/i18n/resources/hu.ts"
+      ],
+      "hits_mig": 25,
+      "files_mig_count": 6
+    },
+    "enterprise_agile_sync_log": {
+      "hits_src": 5,
+      "files_src": [
+        "src/components/enterprise/settings/IntegrationHealthCenter.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/jira-devops-proxy/index.ts"
+      ],
+      "hits_mig": 9,
+      "files_mig_count": 2
+    },
+    "enterprise_allowances": {
+      "hits_src": 10,
+      "files_src": [
+        "src/components/enterprise/AllowanceManager.tsx",
+        "src/components/enterprise/LeaveTypeManager.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 8,
+      "files_mig_count": 1
+    },
+    "enterprise_api_keys": {
+      "hits_src": 5,
+      "files_src": [
+        "src/components/enterprise/developer/DeveloperPortal.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 5,
+      "files_mig_count": 1
+    },
+    "enterprise_api_usage_logs": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/developer/DeveloperPortal.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 8,
+      "files_mig_count": 2
+    },
+    "enterprise_approval_chains": {
+      "hits_src": 8,
+      "files_src": [
+        "src/components/enterprise/ApprovalChainManager.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts",
+        "supabase/functions/seed-demo-workspace/seed-data.ts"
+      ],
+      "hits_mig": 7,
+      "files_mig_count": 1
+    },
+    "enterprise_attendance_audit": {
+      "hits_src": 1,
+      "files_src": [
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "enterprise_attendance_oncall_windows": {
+      "hits_src": 4,
+      "files_src": [
+        "src/components/enterprise/time-attendance/api.ts",
+        "src/components/enterprise/time-attendance/types.ts",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "enterprise_attendance_payroll_exports": {
+      "hits_src": 1,
+      "files_src": [
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "enterprise_attendance_periods": {
+      "hits_src": 13,
+      "files_src": [
+        "src/components/enterprise/analytics/AnalyticsDashboard.tsx",
+        "src/components/enterprise/payroll/PayrollPanel.tsx",
+        "src/components/enterprise/security/SecurityCenter.tsx",
+        "src/components/enterprise/self-service/EmployeeDashboard.tsx",
+        "src/components/enterprise/time-attendance/api.ts",
+        "src/components/enterprise/time-attendance/types.ts",
+        "src/components/enterprise/wellbeing/WellbeingDashboard.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "enterprise_attendance_schedule_templates": {
+      "hits_src": 4,
+      "files_src": [
+        "src/components/enterprise/time-attendance/api.ts",
+        "src/components/enterprise/time-attendance/types.ts",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "enterprise_attendance_segments": {
+      "hits_src": 3,
+      "files_src": [
+        "src/components/enterprise/time-attendance/api.ts",
+        "src/components/enterprise/time-attendance/types.ts",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "enterprise_audit_events": {
+      "hits_src": 24,
+      "files_src": [
+        "src/components/enterprise/AuditLog.tsx",
+        "src/components/enterprise/ExportCenter.tsx",
+        "src/components/enterprise/import-export/ExportWizard.tsx",
+        "src/components/enterprise/payroll/PayrollPanel.tsx",
+        "src/components/enterprise/reports/SqlMode.tsx",
+        "src/components/enterprise/security/SecurityCenter.tsx",
+        "src/integrations/supabase/types.ts",
+        "src/lib/auditLog.ts"
+      ],
+      "hits_mig": 11,
+      "files_mig_count": 3
+    },
+    "enterprise_blocked_dates": {
+      "hits_src": 12,
+      "files_src": [
+        "src/components/enterprise/BlockedDateManager.tsx",
+        "src/components/enterprise/CoverageConflictSummary.tsx",
+        "src/components/enterprise/LeaveCalendar.tsx",
+        "src/components/enterprise/calendar/CoveragePlannerView.tsx",
+        "src/components/enterprise/reports/SqlMode.tsx",
+        "src/integrations/supabase/types.ts",
+        "src/lib/conflictEngine.ts",
+        "supabase/functions/data-migration/index.ts"
+      ],
+      "hits_mig": 5,
+      "files_mig_count": 1
+    },
+    "enterprise_calendar_sync_log": {
+      "hits_src": 4,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/ms365-sync/index.ts"
+      ],
+      "hits_mig": 6,
+      "files_mig_count": 1
+    },
+    "enterprise_capacity_snapshots": {
+      "hits_src": 4,
+      "files_src": [
+        "src/components/enterprise/CapacityDnaPanel.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 7,
+      "files_mig_count": 1
+    },
+    "enterprise_catalog_categories": {
+      "hits_src": 4,
+      "files_src": [
+        "src/components/enterprise/positions/PositionPickerDialog.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 5,
+      "files_mig_count": 2
+    },
+    "enterprise_catalog_role_skills": {
+      "hits_src": 3,
+      "files_src": [
+        "src/components/enterprise/positions/PositionPickerDialog.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 4,
+      "files_mig_count": 2
+    },
+    "enterprise_catalog_roles": {
+      "hits_src": 4,
+      "files_src": [
+        "src/components/enterprise/positions/PositionPickerDialog.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 6,
+      "files_mig_count": 2
+    },
+    "enterprise_catalog_skills": {
+      "hits_src": 5,
+      "files_src": [
+        "src/components/enterprise/positions/PositionPickerDialog.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 5,
+      "files_mig_count": 2
+    },
+    "enterprise_company_leave_days": {
+      "hits_src": 10,
+      "files_src": [
+        "src/components/enterprise/CompanyLeaveDayManager.tsx",
+        "src/components/enterprise/ExportCenter.tsx",
+        "src/components/enterprise/reports/SqlMode.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/run-report/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 6,
+      "files_mig_count": 1
+    },
+    "enterprise_contract_types": {
+      "hits_src": 5,
+      "files_src": [
+        "src/components/enterprise/InviteMemberDialog.tsx",
+        "src/components/enterprise/organization/ContractTypes.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 10,
+      "files_mig_count": 1
+    },
+    "enterprise_daily_rules": {
+      "hits_src": 14,
+      "files_src": [
+        "src/components/enterprise/CoverageConflictSummary.tsx",
+        "src/components/enterprise/DailyRuleManager.tsx",
+        "src/components/enterprise/LeaveCalendar.tsx",
+        "src/components/enterprise/ReportingDashboard.tsx",
+        "src/components/enterprise/reports/SqlMode.tsx",
+        "src/integrations/supabase/types.ts",
+        "src/lib/conflictEngine.ts",
+        "supabase/functions/data-migration/index.ts"
+      ],
+      "hits_mig": 13,
+      "files_mig_count": 3
+    },
+    "enterprise_decision_memory": {
+      "hits_src": 7,
+      "files_src": [
+        "src/components/enterprise/DecisionMemoryEditor.tsx",
+        "src/components/enterprise/DecisionMemoryStaleInbox.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 9,
+      "files_mig_count": 2
+    },
+    "enterprise_escalation_rules": {
+      "hits_src": 6,
+      "files_src": [
+        "src/components/enterprise/ApprovalChainManager.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 7,
+      "files_mig_count": 1
+    },
+    "enterprise_export_jobs": {
+      "hits_src": 2,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts"
+      ],
+      "hits_mig": 5,
+      "files_mig_count": 1
+    },
+    "enterprise_feature_catalog": {
+      "hits_src": 4,
+      "files_src": [
+        "src/hooks/useEnterprisePermissions.ts",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts"
+      ],
+      "hits_mig": 6,
+      "files_mig_count": 2
+    },
+    "enterprise_ganttic_dependencies": {
+      "hits_src": 1,
+      "files_src": [
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "enterprise_holidays": {
+      "hits_src": 19,
+      "files_src": [
+        "src/components/enterprise/AnnualLeaveGrid.tsx",
+        "src/components/enterprise/CoverageConflictSummary.tsx",
+        "src/components/enterprise/ExportCenter.tsx",
+        "src/components/enterprise/HolidayManager.tsx",
+        "src/components/enterprise/LeaveCalendar.tsx",
+        "src/components/enterprise/calendar/CoveragePlannerView.tsx",
+        "src/components/enterprise/calendar/TimelineView.tsx",
+        "src/components/enterprise/reports/SqlMode.tsx"
+      ],
+      "hits_mig": 6,
+      "files_mig_count": 1
+    },
+    "enterprise_hr_workflow_instances": {
+      "hits_src": 5,
+      "files_src": [
+        "src/components/enterprise/self-service/EmployeeDashboard.tsx",
+        "src/components/enterprise/workflows/HRWorkflowInbox.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 14,
+      "files_mig_count": 1
+    },
+    "enterprise_hr_workflow_tasks": {
+      "hits_src": 3,
+      "files_src": [
+        "src/components/enterprise/self-service/EmployeeDashboard.tsx",
+        "src/components/enterprise/workflows/HRWorkflowInbox.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 13,
+      "files_mig_count": 1
+    },
+    "enterprise_hr_workflow_templates": {
+      "hits_src": 8,
+      "files_src": [
+        "src/components/enterprise/workflows/HRWorkflowInbox.tsx",
+        "src/components/enterprise/workflows/HRWorkflowTemplates.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 9,
+      "files_mig_count": 1
+    },
+    "enterprise_ical_tokens": {
+      "hits_src": 8,
+      "files_src": [
+        "src/components/enterprise/ICalSubscription.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/leave-ical/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 5,
+      "files_mig_count": 1
+    },
+    "enterprise_industries": {
+      "hits_src": 3,
+      "files_src": [
+        "src/components/enterprise/organization/Industries.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 8,
+      "files_mig_count": 1
+    },
+    "enterprise_integration_sync_log": {
+      "hits_src": 2,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts"
+      ],
+      "hits_mig": 3,
+      "files_mig_count": 1
+    },
+    "enterprise_invitations": {
+      "hits_src": 11,
+      "files_src": [
+        "src/components/enterprise/CsvImportPanel.tsx",
+        "src/components/enterprise/InvitationsPanel.tsx",
+        "src/components/enterprise/InviteMemberDialog.tsx",
+        "src/components/enterprise/WorkspaceDashboard.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/import-entity-data/index.ts",
+        "supabase/functions/join-event/index.ts"
+      ],
+      "hits_mig": 13,
+      "files_mig_count": 4
+    },
+    "enterprise_job_families": {
+      "hits_src": 3,
+      "files_src": [
+        "src/components/enterprise/organization/JobFamilies.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 8,
+      "files_mig_count": 1
+    },
+    "enterprise_leadership_levels": {
+      "hits_src": 5,
+      "files_src": [
+        "src/components/enterprise/InviteMemberDialog.tsx",
+        "src/components/enterprise/organization/LeadershipLevels.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 10,
+      "files_mig_count": 1
+    },
+    "enterprise_leave_quotas": {
+      "hits_src": 8,
+      "files_src": [
+        "src/components/enterprise/AnnualLeaveGrid.tsx",
+        "src/components/enterprise/QuotaManager.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 14,
+      "files_mig_count": 2
+    },
+    "enterprise_leave_types": {
+      "hits_src": 10,
+      "files_src": [
+        "src/components/enterprise/AnnualLeaveGrid.tsx",
+        "src/components/enterprise/LeaveTypeManager.tsx",
+        "src/components/enterprise/calendar/TimelineView.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 8,
+      "files_mig_count": 2
+    },
+    "enterprise_member_goals": {
+      "hits_src": 12,
+      "files_src": [
+        "src/components/enterprise/MemberExtendedDetails.tsx",
+        "src/i18n/resources/cs.ts",
+        "src/i18n/resources/en.ts",
+        "src/i18n/resources/hu.ts",
+        "src/i18n/resources/pl.ts",
+        "src/i18n/resources/sk.ts",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 10,
+      "files_mig_count": 1
+    },
+    "enterprise_member_rates": {
+      "hits_src": 8,
+      "files_src": [
+        "src/components/enterprise/analytics/AnalyticsDashboard.tsx",
+        "src/components/enterprise/payroll/PayrollPanel.tsx",
+        "src/components/enterprise/resources/FinancialsPanel.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/payroll-export/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 10,
+      "files_mig_count": 2
+    },
+    "enterprise_member_role_allocations": {
+      "hits_src": 28,
+      "files_src": [
+        "src/components/enterprise/BusinessRoleManager.tsx",
+        "src/components/enterprise/CapacityDnaPanel.tsx",
+        "src/components/enterprise/InviteMemberDialog.tsx",
+        "src/components/enterprise/MemberProfileSheet.tsx",
+        "src/components/enterprise/OfficeCoverageRuleManager.tsx",
+        "src/components/enterprise/OfficeManager.tsx",
+        "src/components/enterprise/TeamManager.tsx",
+        "src/components/enterprise/reports/SqlMode.tsx"
+      ],
+      "hits_mig": 16,
+      "files_mig_count": 2
+    },
+    "enterprise_member_site_priorities": {
+      "hits_src": 8,
+      "files_src": [
+        "src/components/enterprise/MemberSitePriorityEditor.tsx",
+        "src/components/enterprise/calendar/CoveragePlannerView.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 11,
+      "files_mig_count": 1
+    },
+    "enterprise_member_skills": {
+      "hits_src": 15,
+      "files_src": [
+        "src/components/enterprise/MemberExtendedDetails.tsx",
+        "src/components/enterprise/calendar/CoveragePlannerView.tsx",
+        "src/components/enterprise/calendar/SkillCapacityReport.tsx",
+        "src/components/enterprise/calendar/TimelineView.tsx",
+        "src/components/enterprise/organization/OrgChartPremiumView.tsx",
+        "src/components/enterprise/resources/SkillsManager.tsx",
+        "src/integrations/supabase/types.ts",
+        "src/lib/coverageEligibility.ts"
+      ],
+      "hits_mig": 7,
+      "files_mig_count": 1
+    },
+    "enterprise_member_templates": {
+      "hits_src": 6,
+      "files_src": [
+        "src/components/enterprise/InviteMemberDialog.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 6,
+      "files_mig_count": 1
+    },
+    "enterprise_memberships": {
+      "hits_src": 113,
+      "files_src": [
+        "src/components/enterprise/AdminLeaveOverride.tsx",
+        "src/components/enterprise/AnnualLeaveGrid.tsx",
+        "src/components/enterprise/ApprovalInbox.tsx",
+        "src/components/enterprise/BirthdayAnniversaryWidget.tsx",
+        "src/components/enterprise/BusinessRoleManager.tsx",
+        "src/components/enterprise/CapacityDnaPanel.tsx",
+        "src/components/enterprise/CommandCenter.tsx",
+        "src/components/enterprise/CommandCenterButton.tsx"
+      ],
+      "hits_mig": 65,
+      "files_mig_count": 22
+    },
+    "enterprise_notification_preferences": {
+      "hits_src": 5,
+      "files_src": [
+        "src/components/enterprise/NotificationPreferences.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 8,
+      "files_mig_count": 1
+    },
+    "enterprise_notifications": {
+      "hits_src": 14,
+      "files_src": [
+        "src/components/enterprise/EnterpriseNotifications.tsx",
+        "src/components/enterprise/NotificationBell.tsx",
+        "src/i18n/resources/cs.ts",
+        "src/i18n/resources/en.ts",
+        "src/i18n/resources/hu.ts",
+        "src/i18n/resources/pl.ts",
+        "src/i18n/resources/sk.ts",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 7,
+      "files_mig_count": 1
+    },
+    "enterprise_office_coverage_rules": {
+      "hits_src": 12,
+      "files_src": [
+        "src/components/enterprise/OfficeCoverageRuleManager.tsx",
+        "src/components/enterprise/calendar/CoveragePlannerView.tsx",
+        "src/integrations/supabase/types.ts",
+        "src/lib/conflictEngine.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts",
+        "supabase/functions/seed-demo-workspace/seed-data.ts"
+      ],
+      "hits_mig": 24,
+      "files_mig_count": 5
+    },
+    "enterprise_office_equipment": {
+      "hits_src": 4,
+      "files_src": [
+        "src/components/enterprise/OfficeManager.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 7,
+      "files_mig_count": 1
+    },
+    "enterprise_office_min_staffing": {
+      "hits_src": 4,
+      "files_src": [
+        "src/components/enterprise/OfficeManager.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 7,
+      "files_mig_count": 1
+    },
+    "enterprise_offices": {
+      "hits_src": 30,
+      "files_src": [
+        "src/components/enterprise/InviteMemberDialog.tsx",
+        "src/components/enterprise/MemberList.tsx",
+        "src/components/enterprise/MemberProfileSheet.tsx",
+        "src/components/enterprise/MemberSitePriorityEditor.tsx",
+        "src/components/enterprise/OfficeCoverageRuleManager.tsx",
+        "src/components/enterprise/OfficeManager.tsx",
+        "src/components/enterprise/calendar/CoveragePlannerView.tsx",
+        "src/components/enterprise/calendar/TimelineView.tsx"
+      ],
+      "hits_mig": 14,
+      "files_mig_count": 4
+    },
+    "enterprise_onboarding_instances": {
+      "hits_src": 10,
+      "files_src": [
+        "src/components/enterprise/CommandCenter.tsx",
+        "src/components/enterprise/CommandCenterButton.tsx",
+        "src/components/enterprise/MemberExtendedDetails.tsx",
+        "src/components/enterprise/workflows/OnboardingInbox.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 13,
+      "files_mig_count": 1
+    },
+    "enterprise_onboarding_step_completions": {
+      "hits_src": 4,
+      "files_src": [
+        "src/components/enterprise/MemberExtendedDetails.tsx",
+        "src/components/enterprise/workflows/OnboardingInbox.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 8,
+      "files_mig_count": 1
+    },
+    "enterprise_onboarding_template_steps": {
+      "hits_src": 7,
+      "files_src": [
+        "src/components/enterprise/workflows/OnboardingInbox.tsx",
+        "src/components/enterprise/workflows/OnboardingTemplates.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 10,
+      "files_mig_count": 1
+    },
+    "enterprise_onboarding_templates": {
+      "hits_src": 10,
+      "files_src": [
+        "src/components/enterprise/MemberExtendedDetails.tsx",
+        "src/components/enterprise/workflows/OnboardingInbox.tsx",
+        "src/components/enterprise/workflows/OnboardingTemplates.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 13,
+      "files_mig_count": 1
+    },
+    "enterprise_org_chart_snapshots": {
+      "hits_src": 3,
+      "files_src": [
+        "src/components/enterprise/organization/OrgChart.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 9,
+      "files_mig_count": 2
+    },
+    "enterprise_org_units": {
+      "hits_src": 12,
+      "files_src": [
+        "src/components/enterprise/InviteMemberDialog.tsx",
+        "src/components/enterprise/organization/OrgChartPremiumView.tsx",
+        "src/components/enterprise/organization/OrgStructure.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 14,
+      "files_mig_count": 2
+    },
+    "enterprise_project_assignments": {
+      "hits_src": 10,
+      "files_src": [
+        "src/components/enterprise/resources/FinancialsPanel.tsx",
+        "src/components/enterprise/resources/ProjectEditor.tsx",
+        "src/components/enterprise/resources/ScenarioPlanner.tsx",
+        "src/components/enterprise/resources/UtilizationHeatmap.tsx",
+        "src/integrations/supabase/types.ts",
+        "src/lib/capacityEngine.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 11,
+      "files_mig_count": 2
+    },
+    "enterprise_project_rates": {
+      "hits_src": 6,
+      "files_src": [
+        "src/components/enterprise/resources/FinancialsPanel.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 7,
+      "files_mig_count": 1
+    },
+    "enterprise_project_resource_requirements": {
+      "hits_src": 8,
+      "files_src": [
+        "src/components/enterprise/resources/CapacityGapReport.tsx",
+        "src/components/enterprise/resources/ProjectEditor.tsx",
+        "src/components/enterprise/resources/ResourceWidgetCard.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 8,
+      "files_mig_count": 1
+    },
+    "enterprise_project_skill_requirements": {
+      "hits_src": 3,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 7,
+      "files_mig_count": 1
+    },
+    "enterprise_projects": {
+      "hits_src": 17,
+      "files_src": [
+        "src/components/enterprise/resources/CapacityGapReport.tsx",
+        "src/components/enterprise/resources/FinancialsPanel.tsx",
+        "src/components/enterprise/resources/GanttTimeline.tsx",
+        "src/components/enterprise/resources/ProjectEditor.tsx",
+        "src/components/enterprise/resources/ProjectList.tsx",
+        "src/components/enterprise/resources/ResourceWidgetCard.tsx",
+        "src/components/enterprise/resources/ScenarioPlanner.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 14,
+      "files_mig_count": 2
+    },
+    "enterprise_quota_transactions": {
+      "hits_src": 4,
+      "files_src": [
+        "src/components/enterprise/AnnualLeaveGrid.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 10,
+      "files_mig_count": 2
+    },
+    "enterprise_report_schedules": {
+      "hits_src": 9,
+      "files_src": [
+        "src/components/enterprise/reports/ReportSchedulesManager.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts",
+        "supabase/functions/send-scheduled-reports/index.ts"
+      ],
+      "hits_mig": 12,
+      "files_mig_count": 2
+    },
+    "enterprise_reports": {
+      "hits_src": 17,
+      "files_src": [
+        "src/components/enterprise/reports/PinnedReportsWidget.tsx",
+        "src/components/enterprise/reports/ReportBuilder.tsx",
+        "src/components/enterprise/reports/ReportLibrary.tsx",
+        "src/components/enterprise/resources/ResourceWidgetCard.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts",
+        "supabase/functions/send-scheduled-reports/index.ts"
+      ],
+      "hits_mig": 15,
+      "files_mig_count": 3
+    },
+    "enterprise_role_definitions": {
+      "hits_src": 9,
+      "files_src": [
+        "src/components/enterprise/RolePermissionManager.tsx",
+        "src/components/enterprise/reports/SqlMode.tsx",
+        "src/hooks/useEnterprisePermissions.ts",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/join-event/index.ts",
+        "supabase/functions/run-report/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 6,
+      "files_mig_count": 1
+    },
+    "enterprise_role_permissions": {
+      "hits_src": 8,
+      "files_src": [
+        "src/components/enterprise/RolePermissionManager.tsx",
+        "src/hooks/useEnterprisePermissions.ts",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 15,
+      "files_mig_count": 2
+    },
+    "enterprise_rule_templates": {
+      "hits_src": 9,
+      "files_src": [
+        "src/components/enterprise/RuleTemplateLibrary.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts",
+        "supabase/functions/seed-demo-workspace/seed-data.ts"
+      ],
+      "hits_mig": 7,
+      "files_mig_count": 1
+    },
+    "enterprise_scenario_assignments": {
+      "hits_src": 6,
+      "files_src": [
+        "src/components/enterprise/resources/ScenarioPlanner.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 7,
+      "files_mig_count": 1
+    },
+    "enterprise_scenarios": {
+      "hits_src": 7,
+      "files_src": [
+        "src/components/enterprise/resources/ScenarioPlanner.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 8,
+      "files_mig_count": 1
+    },
+    "enterprise_seed_config": {
+      "hits_src": 6,
+      "files_src": [
+        "src/components/enterprise/DemoSeedConfigDialog.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/seed-demo-workspace/index.ts",
+        "supabase/functions/seed-demo-workspace/seed-data.ts"
+      ],
+      "hits_mig": 8,
+      "files_mig_count": 1
+    },
+    "enterprise_shift_assignments": {
+      "hits_src": 12,
+      "files_src": [
+        "src/components/enterprise/calendar/CoveragePlannerView.tsx",
+        "src/components/enterprise/calendar/SmartBatchScheduleDialog.tsx",
+        "src/components/enterprise/time-attendance/EmployeeMonthView.tsx",
+        "src/components/enterprise/time-attendance/api.ts",
+        "src/components/enterprise/wellbeing/WellbeingDashboard.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 13,
+      "files_mig_count": 2
+    },
+    "enterprise_skills": {
+      "hits_src": 24,
+      "files_src": [
+        "src/components/enterprise/MemberExtendedDetails.tsx",
+        "src/components/enterprise/OfficeCoverageRuleManager.tsx",
+        "src/components/enterprise/OfficeManager.tsx",
+        "src/components/enterprise/calendar/CoveragePlannerView.tsx",
+        "src/components/enterprise/calendar/SkillCapacityReport.tsx",
+        "src/components/enterprise/calendar/TimelineView.tsx",
+        "src/components/enterprise/import-export/utils/data-fetcher.ts",
+        "src/components/enterprise/resources/SkillsManager.tsx"
+      ],
+      "hits_mig": 12,
+      "files_mig_count": 3
+    },
+    "enterprise_team_roles": {
+      "hits_src": 10,
+      "files_src": [
+        "src/components/enterprise/MemberProfileSheet.tsx",
+        "src/components/enterprise/TeamManager.tsx",
+        "src/components/enterprise/reports/SqlMode.tsx",
+        "src/components/enterprise/resources/UtilizationHeatmap.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/run-report/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 8,
+      "files_mig_count": 1
+    },
+    "enterprise_teams": {
+      "hits_src": 14,
+      "files_src": [
+        "src/components/enterprise/LeaveCalendar.tsx",
+        "src/components/enterprise/MemberProfileSheet.tsx",
+        "src/components/enterprise/TeamManager.tsx",
+        "src/components/enterprise/reports/SqlMode.tsx",
+        "src/components/enterprise/resources/UtilizationHeatmap.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/run-report/index.ts"
+      ],
+      "hits_mig": 11,
+      "files_mig_count": 2
+    },
+    "enterprise_translation_overrides": {
+      "hits_src": 4,
+      "files_src": [
+        "src/components/enterprise/settings/LocalizationSettings.tsx",
+        "src/i18n/I18nProvider.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 17,
+      "files_mig_count": 2
+    },
+    "enterprise_ui_section_states": {
+      "hits_src": 5,
+      "files_src": [
+        "src/components/enterprise/UiSectionStateManager.tsx",
+        "src/hooks/useWorkspaceSectionState.ts",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts"
+      ],
+      "hits_mig": 8,
+      "files_mig_count": 1
+    },
+    "enterprise_user_calendar_integrations": {
+      "hits_src": 9,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/ms365-sync/index.ts"
+      ],
+      "hits_mig": 12,
+      "files_mig_count": 1
+    },
+    "enterprise_webhook_subscriptions": {
+      "hits_src": 5,
+      "files_src": [
+        "src/components/enterprise/developer/DeveloperPortal.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 6,
+      "files_mig_count": 1
+    },
+    "enterprise_work_categories": {
+      "hits_src": 5,
+      "files_src": [
+        "src/components/enterprise/organization/WorkCategories.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 10,
+      "files_mig_count": 1
+    },
+    "enterprise_workspace_integrations": {
+      "hits_src": 17,
+      "files_src": [
+        "src/components/enterprise/IntegrationManager.tsx",
+        "src/components/enterprise/agile/AgilePanel.tsx",
+        "src/components/enterprise/settings/IntegrationHealthCenter.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/jira-devops-proxy/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 14,
+      "files_mig_count": 4
+    },
+    "enterprise_workspace_role_categories": {
+      "hits_src": 9,
+      "files_src": [
+        "src/components/enterprise/import-export/utils/data-fetcher.ts",
+        "src/components/enterprise/positions/PositionPickerDialog.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/import-entity-data/index.ts"
+      ],
+      "hits_mig": 7,
+      "files_mig_count": 1
+    },
+    "enterprise_workspace_role_skills": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/positions/PositionPickerDialog.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 6,
+      "files_mig_count": 1
+    },
+    "enterprise_workspace_roles": {
+      "hits_src": 11,
+      "files_src": [
+        "src/components/enterprise/import-export/utils/data-fetcher.ts",
+        "src/components/enterprise/positions/PositionPickerDialog.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/import-entity-data/index.ts"
+      ],
+      "hits_mig": 11,
+      "files_mig_count": 3
+    },
+    "enterprise_workspace_skills": {
+      "hits_src": 3,
+      "files_src": [
+        "src/components/enterprise/positions/PositionPickerDialog.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 7,
+      "files_mig_count": 1
+    },
+    "enterprise_workspaces": {
+      "hits_src": 140,
+      "files_src": [
+        "src/components/enterprise/BrandingManager.tsx",
+        "src/components/enterprise/HolidayManager.tsx",
+        "src/components/enterprise/InviteMemberDialog.tsx",
+        "src/components/enterprise/WorkspaceDashboard.tsx",
+        "src/components/enterprise/WorkspaceGeneralSettings.tsx",
+        "src/components/enterprise/settings/HelpSystemSettings.tsx",
+        "src/components/enterprise/settings/RecoveryModeSettings.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 111,
+      "files_mig_count": 38
+    },
+    "event_participants": {
+      "hits_src": 24,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/admin/index.ts",
+        "supabase/functions/cleanup-temp-users/index.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/delete-account/index.ts",
+        "supabase/functions/join-event/index.ts"
+      ],
+      "hits_mig": 14,
+      "files_mig_count": 4
+    },
+    "event_share_tokens": {
+      "hits_src": 11,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/delete-account/index.ts",
+        "supabase/functions/join-event/index.ts"
+      ],
+      "hits_mig": 33,
+      "files_mig_count": 8
+    },
+    "events": {
+      "hits_src": 118,
+      "files_src": [
+        "src/components/enterprise/AdminLeaveOverride.tsx",
+        "src/components/enterprise/ApprovalInbox.tsx",
+        "src/components/enterprise/AuditLog.tsx",
+        "src/components/enterprise/BlockedDateManager.tsx",
+        "src/components/enterprise/CompanyLeaveDayManager.tsx",
+        "src/components/enterprise/DailyRuleManager.tsx",
+        "src/components/enterprise/ExportCenter.tsx",
+        "src/components/enterprise/HolidayManager.tsx"
+      ],
+      "hits_mig": 48,
+      "files_mig_count": 14
+    },
+    "favorites": {
+      "hits_src": 7,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/admin/index.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/delete-account/index.ts"
+      ],
+      "hits_mig": 8,
+      "files_mig_count": 2
+    },
+    "feature_gate_events": {
+      "hits_src": 1,
+      "files_src": [
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 6,
+      "files_mig_count": 1
+    },
+    "features": {
+      "hits_src": 97,
+      "files_src": [
+        "src/components/SiteNav.tsx",
+        "src/components/feature-gate/FeatureGate.tsx",
+        "src/components/shell/WorkspaceSidebar.tsx",
+        "src/components/superadmin/FeatureTiersTab.tsx",
+        "src/components/superadmin/SuperadminControlPlane.tsx",
+        "src/hooks/useFeature.ts",
+        "src/i18n/resources/en.ts",
+        "src/i18n/resources/hu.ts"
+      ],
+      "hits_mig": 179,
+      "files_mig_count": 13
+    },
+    "friendships": {
+      "hits_src": 6,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/admin/index.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/delete-account/index.ts"
+      ],
+      "hits_mig": 11,
+      "files_mig_count": 2
+    },
+    "gdpr_requests": {
+      "hits_src": 6,
+      "files_src": [
+        "src/components/enterprise/security/SecurityCenter.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/security-admin/index.ts"
+      ],
+      "hits_mig": 14,
+      "files_mig_count": 1
+    },
+    "help_articles": {
+      "hits_src": 7,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "src/lib/help/useHelpArticles.ts",
+        "supabase/functions/help-regenerator/index.ts"
+      ],
+      "hits_mig": 17,
+      "files_mig_count": 4
+    },
+    "help_releases": {
+      "hits_src": 7,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/help-regenerator/index.ts"
+      ],
+      "hits_mig": 6,
+      "files_mig_count": 1
+    },
+    "leave_request_attachments": {
+      "hits_src": 2,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts"
+      ],
+      "hits_mig": 8,
+      "files_mig_count": 2
+    },
+    "leave_request_substitutes": {
+      "hits_src": 7,
+      "files_src": [
+        "src/components/enterprise/LeaveRequestDialog.tsx",
+        "src/components/enterprise/SubstituteInbox.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 9,
+      "files_mig_count": 2
+    },
+    "leave_requests": {
+      "hits_src": 81,
+      "files_src": [
+        "src/components/enterprise/AdminLeaveOverride.tsx",
+        "src/components/enterprise/AnnualLeaveGrid.tsx",
+        "src/components/enterprise/AnnualTrendChart.tsx",
+        "src/components/enterprise/ApprovalInbox.tsx",
+        "src/components/enterprise/CapacityDnaPanel.tsx",
+        "src/components/enterprise/CommandCenter.tsx",
+        "src/components/enterprise/CommandCenterButton.tsx",
+        "src/components/enterprise/CoverageConflictSummary.tsx"
+      ],
+      "hits_mig": 26,
+      "files_mig_count": 6
+    },
+    "payroll_export_configs": {
+      "hits_src": 7,
+      "files_src": [
+        "src/components/enterprise/payroll/PayrollPanel.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/payroll-export/index.ts"
+      ],
+      "hits_mig": 13,
+      "files_mig_count": 1
+    },
+    "payroll_periods": {
+      "hits_src": 9,
+      "files_src": [
+        "src/components/enterprise/payroll/PayrollPanel.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/payroll-export/index.ts"
+      ],
+      "hits_mig": 13,
+      "files_mig_count": 1
+    },
+    "personal_availability": {
+      "hits_src": 4,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/admin/index.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/delete-account/index.ts"
+      ],
+      "hits_mig": 9,
+      "files_mig_count": 2
+    },
+    "platform_audit_events": {
+      "hits_src": 8,
+      "files_src": [
+        "src/components/superadmin/FeatureTiersTab.tsx",
+        "src/components/superadmin/PlatformAuditLogTab.tsx"
+      ],
+      "hits_mig": 9,
+      "files_mig_count": 1
+    },
+    "platform_feature_flags": {
+      "hits_src": 6,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 14,
+      "files_mig_count": 1
+    },
+    "profiles": {
+      "hits_src": 154,
+      "files_src": [
+        "src/components/ProfileMenu.tsx",
+        "src/components/enterprise/AdminLeaveOverride.tsx",
+        "src/components/enterprise/ApprovalInbox.tsx",
+        "src/components/enterprise/AuditLog.tsx",
+        "src/components/enterprise/BirthdayAnniversaryWidget.tsx",
+        "src/components/enterprise/BusinessRoleManager.tsx",
+        "src/components/enterprise/CsvImportPanel.tsx",
+        "src/components/enterprise/ExportCenter.tsx"
+      ],
+      "hits_mig": 20,
+      "files_mig_count": 9
+    },
+    "suppressed_emails": {
+      "hits_src": 6,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/handle-email-suppression/index.ts",
+        "supabase/functions/handle-email-unsubscribe/index.ts",
+        "supabase/functions/send-transactional-email/index.ts"
+      ],
+      "hits_mig": 5,
+      "files_mig_count": 1
+    },
+    "tenant_addons": {
+      "hits_src": 1,
+      "files_src": [
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 5,
+      "files_mig_count": 2
+    },
+    "tenant_calendar_settings": {
+      "hits_src": 4,
+      "files_src": [
+        "src/hooks/useCalendarFilterConfig.ts",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/data-migration/index.ts"
+      ],
+      "hits_mig": 9,
+      "files_mig_count": 3
+    },
+    "tenant_feature_overrides": {
+      "hits_src": 1,
+      "files_src": [
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 6,
+      "files_mig_count": 2
+    },
+    "tenant_subscriptions": {
+      "hits_src": 1,
+      "files_src": [
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 9,
+      "files_mig_count": 3
+    },
+    "tenant_workspaces": {
+      "hits_src": 1,
+      "files_src": [
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 10,
+      "files_mig_count": 3
+    },
+    "tenants": {
+      "hits_src": 8,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/jira-devops-proxy/index.ts"
+      ],
+      "hits_mig": 13,
+      "files_mig_count": 3
+    },
+    "tier_features": {
+      "hits_src": 4,
+      "files_src": [
+        "src/components/superadmin/FeatureTiersTab.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 9,
+      "files_mig_count": 3
+    },
+    "tiers": {
+      "hits_src": 37,
+      "files_src": [
+        "src/components/enterprise/CreateWorkspaceDialog.tsx",
+        "src/components/superadmin/FeatureTiersTab.tsx",
+        "src/components/superadmin/SuperadminControlPlane.tsx",
+        "src/i18n/resources/cs.ts",
+        "src/i18n/resources/en.ts",
+        "src/i18n/resources/hu.ts",
+        "src/i18n/resources/pl.ts",
+        "src/i18n/resources/sk.ts"
+      ],
+      "hits_mig": 19,
+      "files_mig_count": 6
+    },
+    "user_roles": {
+      "hits_src": 14,
+      "files_src": [
+        "src/components/ProfileMenu.tsx",
+        "src/integrations/supabase/types.ts",
+        "src/pages/Admin.tsx",
+        "src/pages/Superadmin.tsx",
+        "supabase/functions/admin/index.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/delete-account/index.ts",
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 6,
+      "files_mig_count": 2
+    },
+    "votes": {
+      "hits_src": 32,
+      "files_src": [
+        "src/components/admin/AdminDashboard.tsx",
+        "src/i18n/resources/en.ts",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/admin/index.ts",
+        "supabase/functions/cleanup-temp-users/index.ts",
+        "supabase/functions/data-migration/index.ts",
+        "supabase/functions/delete-account/index.ts",
+        "supabase/functions/join-event/index.ts"
+      ],
+      "hits_mig": 15,
+      "files_mig_count": 3
+    },
+    "wellbeing_alerts": {
+      "hits_src": 4,
+      "files_src": [
+        "src/components/enterprise/wellbeing/WellbeingDashboard.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 7,
+      "files_mig_count": 1
+    },
+    "wellbeing_scores": {
+      "hits_src": 8,
+      "files_src": [
+        "src/components/enterprise/security/SecurityCenter.tsx",
+        "src/components/enterprise/wellbeing/WellbeingDashboard.tsx",
+        "src/components/enterprise/wellbeing/WellbeingScoreCard.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/security-admin/index.ts"
+      ],
+      "hits_mig": 9,
+      "files_mig_count": 2
+    }
+  },
+  "views": {
+    "enterprise_leave_quota_balances": {
+      "hits_src": 6,
+      "files_src": [
+        "src/components/enterprise/QuotaBalanceCard.tsx",
+        "src/components/enterprise/QuotaManager.tsx",
+        "src/components/enterprise/self-service/EmployeeDashboard.tsx",
+        "src/components/enterprise/wellbeing/WellbeingScoreCard.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 3,
+      "files_mig_count": 2
+    },
+    "enterprise_org_pulse_membership": {
+      "hits_src": 100,
+      "files_src": [
+        "src/components/enterprise/OrgPulseButton.tsx",
+        "src/components/enterprise/OrgPulseWidget.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 5,
+      "files_mig_count": 2
+    }
+  },
+  "functions": {
+    "attendance_caller_membership": {
+      "hits_src": 1,
+      "files_src": [
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "attendance_can_edit_period": {
+      "hits_src": 1,
+      "files_src": [
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "attendance_delete_oncall_window": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/time-attendance/api.ts",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "attendance_delete_segment": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/time-attendance/api.ts",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "attendance_expected_hours_for_period": {
+      "hits_src": 1,
+      "files_src": [
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "attendance_get_or_create_period": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/time-attendance/api.ts",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "attendance_list_workspace_periods": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/time-attendance/api.ts",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "attendance_payroll_export": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/time-attendance/api.ts",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "attendance_recompute_totals": {
+      "hits_src": 4,
+      "files_src": [
+        "src/components/enterprise/time-attendance/calculations.ts",
+        "src/integrations/supabase/types.ts",
+        "src/test/timeAttendanceCalculations.test.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "attendance_record_export": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/time-attendance/api.ts",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "attendance_remove_site_assignment": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/time-attendance/api.ts",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 1,
+      "files_mig_count": 1
+    },
+    "attendance_transition_period": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/time-attendance/api.ts",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "attendance_upsert_oncall_window": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/time-attendance/api.ts",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "attendance_upsert_segment": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/time-attendance/api.ts",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "attendance_upsert_site_assignment": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/time-attendance/api.ts",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 1,
+      "files_mig_count": 1
+    },
+    "auto_archive_expired_coverage_rules": {
+      "hits_src": 1,
+      "files_src": [
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 1,
+      "files_mig_count": 1
+    },
+    "calc_leave_days": {
+      "hits_src": 1,
+      "files_src": [
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 5,
+      "files_mig_count": 3
+    },
+    "can_access_event": {
+      "hits_src": 1,
+      "files_src": [
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 3,
+      "files_mig_count": 2
+    },
+    "create_workspace_with_owner": {
+      "hits_src": 3,
+      "files_src": [
+        "src/components/enterprise/CreateWorkspaceDialog.tsx",
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/seed-demo-workspace/index.ts"
+      ],
+      "hits_mig": 3,
+      "files_mig_count": 3
+    },
+    "delete_email": {
+      "hits_src": 3,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/process-email-queue/index.ts"
+      ],
+      "hits_mig": 4,
+      "files_mig_count": 2
+    },
+    "enforce_data_retention": {
+      "hits_src": 1,
+      "files_src": [
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 3,
+      "files_mig_count": 1
+    },
+    "enqueue_email": {
+      "hits_src": 2,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/send-transactional-email/index.ts"
+      ],
+      "hits_mig": 4,
+      "files_mig_count": 2
+    },
+    "enterprise_decision_memory_set_due": {
+      "hits_src": 0,
+      "files_src": [],
+      "hits_mig": 2,
+      "files_mig_count": 1
+    },
+    "enterprise_memberships_check_manager_cycle": {
+      "hits_src": 0,
+      "files_src": [],
+      "hits_mig": 2,
+      "files_mig_count": 1
+    },
+    "ganttic_has_dependency_cycle": {
+      "hits_src": 1,
+      "files_src": [
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "get_user_ids_by_emails": {
+      "hits_src": 3,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/import-entity-data/index.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "get_workspace_leave_for_export": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/import-export/utils/data-fetcher.ts",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "get_workspace_members_for_export": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/import-export/utils/data-fetcher.ts",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "handle_leave_quota_change": {
+      "hits_src": 0,
+      "files_src": [],
+      "hits_mig": 3,
+      "files_mig_count": 2
+    },
+    "handle_new_user": {
+      "hits_src": 0,
+      "files_src": [],
+      "hits_mig": 2,
+      "files_mig_count": 1
+    },
+    "has_enterprise_role": {
+      "hits_src": 3,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/import-entity-data/index.ts",
+        "supabase/functions/sync-holidays/index.ts"
+      ],
+      "hits_mig": 232,
+      "files_mig_count": 38
+    },
+    "has_role": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/superadmin/PlatformAuditLogTab.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 20,
+      "files_mig_count": 5
+    },
+    "help_articles_search_trigger": {
+      "hits_src": 0,
+      "files_src": [],
+      "hits_mig": 2,
+      "files_mig_count": 1
+    },
+    "hr_workflow_close_instance": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/workflows/HRWorkflowInbox.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 1,
+      "files_mig_count": 1
+    },
+    "hr_workflow_create_instance": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/workflows/HRWorkflowInbox.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 1,
+      "files_mig_count": 1
+    },
+    "hr_workflow_list_instances": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/workflows/HRWorkflowInbox.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 1,
+      "files_mig_count": 1
+    },
+    "hr_workflow_update_task": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/workflows/HRWorkflowInbox.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 1,
+      "files_mig_count": 1
+    },
+    "import_enterprise_catalog_to_workspace": {
+      "hits_src": 1,
+      "files_src": [
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "is_enterprise_member": {
+      "hits_src": 1,
+      "files_src": [
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 96,
+      "files_mig_count": 37
+    },
+    "is_tenant_member": {
+      "hits_src": 1,
+      "files_src": [
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 6,
+      "files_mig_count": 1
+    },
+    "move_to_dlq": {
+      "hits_src": 2,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/process-email-queue/index.ts"
+      ],
+      "hits_mig": 4,
+      "files_mig_count": 2
+    },
+    "read_email_batch": {
+      "hits_src": 2,
+      "files_src": [
+        "src/integrations/supabase/types.ts",
+        "supabase/functions/process-email-queue/index.ts"
+      ],
+      "hits_mig": 4,
+      "files_mig_count": 2
+    },
+    "rls_auto_enable": {
+      "hits_src": 0,
+      "files_src": [],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "seed_default_access_systems": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/workflows/AccessSystems.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 1,
+      "files_mig_count": 1
+    },
+    "seed_default_contract_types": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/organization/ContractTypes.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 1,
+      "files_mig_count": 1
+    },
+    "seed_default_leadership_levels": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/organization/LeadershipLevels.tsx",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 1,
+      "files_mig_count": 1
+    },
+    "seed_workspace_roles": {
+      "hits_src": 0,
+      "files_src": [],
+      "hits_mig": 2,
+      "files_mig_count": 1
+    },
+    "set_hr_workflow_updated_at": {
+      "hits_src": 0,
+      "files_src": [],
+      "hits_mig": 4,
+      "files_mig_count": 1
+    },
+    "set_updated_at": {
+      "hits_src": 0,
+      "files_src": [],
+      "hits_mig": 9,
+      "files_mig_count": 4
+    },
+    "set_webhook_updated_at": {
+      "hits_src": 0,
+      "files_src": [],
+      "hits_mig": 2,
+      "files_mig_count": 1
+    },
+    "tenant_enabled_features": {
+      "hits_src": 3,
+      "files_src": [
+        "src/hooks/useFeature.ts",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 2,
+      "files_mig_count": 2
+    },
+    "tenant_id_for_workspace": {
+      "hits_src": 3,
+      "files_src": [
+        "src/hooks/useFeature.ts",
+        "src/integrations/supabase/types.ts"
+      ],
+      "hits_mig": 1,
+      "files_mig_count": 1
+    },
+    "update_office_equipment_updated_at": {
+      "hits_src": 0,
+      "files_src": [],
+      "hits_mig": 2,
+      "files_mig_count": 1
+    },
+    "update_office_min_staffing_updated_at": {
+      "hits_src": 0,
+      "files_src": [],
+      "hits_mig": 2,
+      "files_mig_count": 1
+    },
+    "update_updated_at_column": {
+      "hits_src": 0,
+      "files_src": [],
+      "hits_mig": 63,
+      "files_mig_count": 32
+    }
+  },
+  "edge_fns": {
+    "admin": {
+      "hits_src": 479,
+      "files_src": [
+        "src/App.tsx",
+        "src/components/ProfileMenu.tsx",
+        "src/components/admin/AdminDashboard.tsx",
+        "src/components/admin/AdminUsers.tsx",
+        "src/components/enterprise/AdminLeaveOverride.tsx",
+        "src/components/enterprise/AnnualLeaveGrid.tsx",
+        "src/components/enterprise/LeaveRequestList.tsx",
+        "src/components/enterprise/MemberExtendedDetails.tsx"
+      ],
+      "hits_mig": 61,
+      "files_mig_count": 17
+    },
+    "auth-email-hook": {
+      "hits_src": 2,
+      "files_src": [
+        "supabase/functions/handle-email-suppression/index.ts",
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "cleanup-demo-workspace": {
+      "hits_src": 6,
+      "files_src": [
+        "src/components/superadmin/SuperadminControlPlane.tsx",
+        "supabase/functions/cleanup-demo-workspace/index.ts",
+        "supabase/functions/seed-demo-workspace/index.ts",
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "cleanup-temp-users": {
+      "hits_src": 3,
+      "files_src": [
+        "src/components/superadmin/SuperadminControlPlane.tsx",
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "create-instant-enterprise-member": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/MemberList.tsx",
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "data-migration": {
+      "hits_src": 1,
+      "files_src": [
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "delete-account": {
+      "hits_src": 3,
+      "files_src": [
+        "src/components/DeleteAccountCard.tsx",
+        "supabase/functions/delete-account/index.ts",
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "handle-email-suppression": {
+      "hits_src": 1,
+      "files_src": [
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "handle-email-unsubscribe": {
+      "hits_src": 3,
+      "files_src": [
+        "src/pages/Unsubscribe.tsx",
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "help-regenerator": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/settings/HelpSystemSettings.tsx",
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "import-entity-data": {
+      "hits_src": 4,
+      "files_src": [
+        "src/components/enterprise/import-export/ImportWizard.tsx",
+        "supabase/functions/import-entity-data/index.ts",
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "jira-devops-proxy": {
+      "hits_src": 15,
+      "files_src": [
+        "src/components/enterprise/IntegrationManager.tsx",
+        "src/components/enterprise/agile/AgileBoards.tsx",
+        "src/components/enterprise/agile/BacklogBrowser.tsx",
+        "src/components/enterprise/agile/CapacityFit.tsx",
+        "src/components/enterprise/agile/FieldDiscovery.tsx",
+        "src/components/enterprise/agile/IssueWriteback.tsx",
+        "src/components/enterprise/agile/JiraIssueEditor.tsx",
+        "supabase/functions/jira-devops-proxy/index.ts"
+      ],
+      "hits_mig": 2,
+      "files_mig_count": 1
+    },
+    "join-event": {
+      "hits_src": 5,
+      "files_src": [
+        "src/components/ProfileMenu.tsx",
+        "src/pages/Auth.tsx",
+        "src/pages/Enterprise.tsx",
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "leave-ical": {
+      "hits_src": 2,
+      "files_src": [
+        "src/components/enterprise/ICalSubscription.tsx",
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "ms365-sync": {
+      "hits_src": 11,
+      "files_src": [
+        "src/components/enterprise/settings/M365IntegrationPanel.tsx",
+        "src/components/superadmin/SuperadminControlPlane.tsx",
+        "supabase/functions/ms365-sync/index.ts",
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 4,
+      "files_mig_count": 1
+    },
+    "payroll-export": {
+      "hits_src": 5,
+      "files_src": [
+        "supabase/functions/payroll-export/index.ts",
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "preview-transactional-email": {
+      "hits_src": 1,
+      "files_src": [
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "process-email-queue": {
+      "hits_src": 2,
+      "files_src": [
+        "supabase/functions/send-transactional-email/index.ts",
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 3,
+      "files_mig_count": 1
+    },
+    "run-report": {
+      "hits_src": 6,
+      "files_src": [
+        "src/components/enterprise/reports/ReportRunner.tsx",
+        "supabase/functions/run-report/index.ts",
+        "supabase/functions/send-scheduled-reports/index.ts",
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "security-admin": {
+      "hits_src": 5,
+      "files_src": [
+        "supabase/functions/security-admin/index.ts",
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "seed-demo-workspace": {
+      "hits_src": 5,
+      "files_src": [
+        "src/components/enterprise/CreateWorkspaceDialog.tsx",
+        "src/test/featureTiering.test.ts",
+        "supabase/functions/seed-demo-workspace/index.ts",
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 1,
+      "files_mig_count": 1
+    },
+    "send-scheduled-reports": {
+      "hits_src": 5,
+      "files_src": [
+        "src/components/superadmin/SuperadminControlPlane.tsx",
+        "supabase/functions/send-scheduled-reports/index.ts",
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "send-transactional-email": {
+      "hits_src": 4,
+      "files_src": [
+        "src/components/enterprise/ApprovalInbox.tsx",
+        "src/components/enterprise/InviteMemberDialog.tsx",
+        "supabase/functions/send-scheduled-reports/index.ts",
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "superadmin-hub": {
+      "hits_src": 14,
+      "files_src": [
+        "src/components/superadmin/SuperadminControlPlane.tsx",
+        "supabase/functions/superadmin-hub/index.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    },
+    "sync-holidays": {
+      "hits_src": 5,
+      "files_src": [
+        "src/components/enterprise/HolidayManager.tsx",
+        "src/components/superadmin/SuperadminControlPlane.tsx",
+        "supabase/functions/superadmin-hub/index.ts",
+        "supabase/functions/sync-holidays/index.ts"
+      ],
+      "hits_mig": 0,
+      "files_mig_count": 0
+    }
+  }
+}
