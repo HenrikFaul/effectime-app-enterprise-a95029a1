@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AchievementsPanel } from '@/components/engagement/AchievementsPanel';
+import { OnboardingChecklist } from '@/components/customer-success/OnboardingChecklist';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -372,6 +373,22 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
           </CardContent>
         </Card>
       )}
+
+      {/* Customer Success onboarding checklist (Top-20 Rank 17, v3.19.0).
+          Floating widget that hides itself once all items are complete.
+          Click-to-jump is wired via onNavigateTab. */}
+      <OnboardingChecklist
+        workspaceId={workspaceId}
+        onJumpToItem={(key) => {
+          // Map onboarding items to the dashboard tab the user needs to visit.
+          if (key === 'team_invited') onNavigateTab?.('members');
+          else if (key === 'sites_configured') onNavigateTab?.('organization');
+          else if (key === 'schedule_template_created') onNavigateTab?.('time-attendance');
+          else if (key === 'calendar_connected') onNavigateTab?.('settings');
+          else if (key === 'first_schedule_published') onNavigateTab?.('calendar');
+          else if (key === 'member_skill_added') onNavigateTab?.('resources');
+        }}
+      />
 
       {/* Gamification (Top-20 Rank 14, v3.18.0). Renders only if the
           membership exists; respects per-workspace + per-member opt-out via

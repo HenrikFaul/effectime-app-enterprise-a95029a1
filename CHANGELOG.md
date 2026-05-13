@@ -1,3 +1,116 @@
+## 2026-05-13 — v3.20.0 GDPR / WTD Compliance Engine (Top-20 Rank 13)
+
+Promotes Rank 13 from MISSING (catalog ready) → DONE.
+
+### DB (applied via Supabase MCP migration `v3_20_0_compliance_engine`)
+- `compliance_rulesets` — per-workspace jurisdiction selector
+  (EU_WTD, HU_MT, DE_ArbZG, AT_AVRAG, custom) + parameters override.
+  Editable by owners + resourceAssistants.
+- `compliance_violations` — append-only finding log per workspace +
+  member, with `severity` (warning/violation), actual vs limit numerics,
+  jurisdiction tag, period_start/end. Direct INSERT policy-blocked.
+- `compliance_check_working_time(workspace_id, period_start, period_end)`
+  RPC — runs the EU WTD / DE ArbZG / HU Mt. check across all active
+  memberships, evaluates approx weekly hours from attendance segments,
+  inserts violation rows for hard breaches AND warnings (90% of limit).
+
+### Feature catalog + tier mapping
+- 3 new feature_keys: `compliance_engine`, `compliance_dashboard`,
+  `compliance_export`. All routed under `/w/:workspaceId`. Dependencies:
+  `compliance_dashboard` and `compliance_export` depend on
+  `compliance_engine`.
+- Mapped to **Pro + Enterprise** tiers only. Freemium intentionally
+  excluded (compliance is the explicit enterprise-sales unlock per the
+  strategy doc).
+
+### Frontend
+- `src/hooks/useCompliance.ts` — useComplianceViolations,
+  useComplianceRuleset + `runComplianceCheck` helper.
+- `src/components/compliance/ComplianceDashboard.tsx` —
+  green/yellow/red status header + 3 KPI cards (violations, warnings,
+  status) + period date pickers + run button + unresolved findings
+  list color-coded by severity.
+- Wired into the existing **Reports** tab inside the workspace
+  dashboard via FeatureGate so Freemium sees a LockedFeatureNotice.
+
+### Localization
+- 24 new `compliance.*` keys × 5 locales (en, hu, cs, sk, pl) = 120
+  strings. Jurisdiction labels translated for each locale.
+
+### What this DOES NOT do (deferred to v3.20.1+)
+- Pre-publish hard blocking of schedules with hard violations
+  (currently the dashboard reports; the schedule-publish flow does not
+  yet call this RPC as a gate).
+- Generate monthly compliance PDF for labor inspectors
+  (`compliance_export` feature_key exists, but no `compliance-engine`
+  edge function yet).
+- Daily-rest-11h and weekly-rest-24h checks (currently only
+  weekly-max-48h is enforced; ruleset includes the columns and the
+  function reads `daily_rest_min` but does not yet compute it).
+- GDPR data-export/erasure endpoints (already present in
+  `security-admin` edge function from v3.15.x; not duplicated here).
+
+---
+
+## 2026-05-13 — v3.19.0 Customer Success Platform (Top-20 Rank 17)
+
+Top-20 Rank 17 — completely green-field on audit, shipped end-to-end.
+
+### DB (applied via Supabase MCP migration `v3_19_0_customer_success_platform`)
+- `customer_success_onboarding_progress` — per-workspace item completion
+  (7 whitelisted item_keys).
+- `customer_success_nps_surveys` — per-user NPS surveys with category
+  (onboarding | periodic), score (0-10 constrained), feedback,
+  responded_at.
+- `customer_success_health_scores` — per-workspace snapshots with
+  score (0-100), components JSON, trend (improving/stable/declining),
+  calculated_at.
+- 4 SECURITY DEFINER RPCs (sole writers):
+  - `customer_success_record_onboarding_step(workspace_id, item_key)`
+  - `customer_success_trigger_nps(workspace_id, category)` — dedup
+    (no duplicate within 60 days for same user+workspace)
+  - `customer_success_submit_nps(survey_id, score, feedback)` — only
+    the survey's owner can respond
+  - `customer_success_calculate_health_score(workspace_id)` — 5-component
+    weighted score, computes trend by comparing to previous snapshot
+
+### Feature catalog + tier mapping
+- 3 new feature_keys: `cs_onboarding_checklist`, `cs_health_score`,
+  `cs_nps_survey`. All routed (`/w/:workspaceId` or `/superadmin` for
+  health score). Mapped to **all 3 tiers** — customer success matters
+  on Freemium too, not just paying customers.
+
+### Frontend
+- `src/hooks/useCustomerSuccess.ts` — 5 hooks + 4 RPC helpers.
+- `src/components/customer-success/OnboardingChecklist.tsx` — floating
+  progress widget with click-to-jump on each item; hides itself when
+  100% complete (persisted per-workspace in localStorage); collapsible.
+- `src/components/customer-success/NPSSurvey.tsx` — fixed-bottom-right
+  slide-up banner; renders only when an unresponded survey row exists
+  for the user. 0-10 scale + contextual follow-up textarea (different
+  prompts for detractors / passive / promoters).
+- OnboardingChecklist wired into `EmployeeDashboard` (the self-service
+  area) with onJumpToItem → tab navigation for each checklist item.
+- NPSSurvey wired into the root of `WorkspaceDashboard` so it floats
+  globally for any member of any workspace.
+
+### Localization
+- 32 new `customer_success.*` keys × 5 locales = 160 strings.
+- 4 new `common.*` keys (`expand`, `collapse`, `dismiss`, `later`) × 5
+  locales = 20 strings.
+
+### What this DOES NOT do (deferred)
+- Auto-trigger of `customer_success_trigger_nps` 30 days post-onboarding
+  is not yet hooked into a scheduled job — surveys need to be triggered
+  manually via the RPC or via a follow-up pg_cron addition.
+- The internal Customer Success Dashboard (for Effectime's own team) is
+  not yet built. The data is queryable from `/superadmin → Workspaces`
+  but a dedicated CS-team view comes in v3.19.1.
+- Health score is calculated on-demand, not on a schedule. A weekly
+  pg_cron job is a small follow-up.
+
+---
+
 ## 2026-05-13 — v3.18.0 Gamification & engagement layer (Top-20 Rank 14)
 
 ### Context
