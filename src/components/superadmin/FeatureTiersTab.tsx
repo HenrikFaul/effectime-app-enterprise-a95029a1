@@ -758,9 +758,10 @@ function RoutingTree({
 
   return (
     <div className="rounded-lg border p-3 max-h-[65vh] overflow-y-auto space-y-1">
-      {Array.from(root.children.values()).map(c => (
-        <div key={c.label}>{renderNode(c, 0, c.label)}</div>
-      ))}
+      {Array.from(root.children.values()).map(c => {
+        const pagePath = `page::${c.label}`;
+        return <div key={pagePath}>{renderNode(c, 0, pagePath)}</div>;
+      })}
     </div>
   );
 }
