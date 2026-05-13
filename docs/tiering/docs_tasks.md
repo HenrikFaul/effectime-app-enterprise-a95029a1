@@ -16,11 +16,11 @@ Ez a fájl a tiering-rendszer és kapcsolódó user-facing doksik fordítási TO
 | `feature_tiers.*` namespace cs/sk/pl | ✓ | — | v3.15.0-ban hozzáadva, fallback-mentes |
 | `feature_gate.*` (locked notice) en/hu/cs/sk/pl | ✓ | — | v3.15.0 |
 | `create_workspace.tier_*` 5 nyelven | ✓ | — | v3.15.0 |
-| Tier seed nevek lokalizálása (`tiers.name` → i18n-kulcs) | ⏭️ | 0.5 nap | Jelenleg en master data; `metadata.name_i18n_key` mező hozzáadása + UI lookup |
-| Addon seed nevek lokalizálása | ⏭️ | 0.5 nap | Mint fent, `addons.name` |
-| Feature `name` és `description` lokalizálása | ⏭️ | 2-3 nap | 135 feature × 5 locale = 675 fordítás; CSV import flow needed |
-| `enterprise_audit_events.action` enum lokalizálás | ⏭️ | 0.5 nap | Audit log viewer-hez |
-| `platform_audit_events.action` enum lokalizálás | ⏭️ | 0.5 nap | Superadmin audit log viewer-hez |
+| Tier seed nevek lokalizálása (`tiers.<tier_key>.name` namespace) | ✓ | — | v3.15.1: 5 nyelv, fallback DB-érték |
+| Addon seed nevek lokalizálása (`addons.<addon_key>.name`) | ✓ | — | v3.15.1: 5 nyelv |
+| Feature `name` és `description` lokalizálása (`features.<feature_key>.*`) | ✓ | — | v3.15.1: 135 feature × 2 mező × EN+HU. CS/SK/PL EN-re fallback-el a chain szerint. `scripts/build_feature_labels.mjs` + `inject_feature_labels.mjs` generálja. |
+| `enterprise_audit_events.action` enum lokalizálás | ⏭️ | 0.5 nap | Audit log viewer-hez (workspace-szintű) |
+| `platform_audit_events.action` enum lokalizálás | ⏭️ | 0.5 nap | A `platform_audit` namespace már az 5 action értékét kezeli, de a Badge label még a raw enum — explicit `platform_audit.action.<key>` lookup hozzáadása opcionális finomítás |
 
 ## User-facing docs
 

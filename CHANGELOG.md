@@ -1,3 +1,55 @@
+## 2026-05-13 — v3.15.1 Tiering follow-ups: audit viewer + catalog localization
+
+### Added — Three items deferred from v3.15.0, all delivered
+
+**Platform audit log viewer (Superadmin Control Plane):**
+- New `PlatformAuditLogTab` — paginated table (50 rows / page) of
+  `platform_audit_events`, with action filter, date filter, client-side
+  search, and a detail dialog rendering prev/new state JSON side-by-side.
+- New `'audit'` tab in `SuperadminControlPlane` (ScrollText icon).
+
+**Tier + addon name localization:**
+- `tiers.<tier_key>.{name,description}` and `addons.<addon_key>.*` keys
+  in all 5 locales (en, hu, cs, sk, pl).
+- New `src/lib/tiering/labels.ts` helper module (`tierName`,
+  `addonName`, `featureName`, etc.) with DB-value fallback when the
+  bundle lookup misses.
+- `FeatureTiersTab` and `CreateWorkspaceDialog` switched to use the
+  localized labels.
+
+**Feature catalog localization (135 features × 2 fields × EN+HU):**
+- 135 hand-curated EN translations of feature names + descriptions.
+- HU bundle auto-generated from `docs/tiering/features.json`.
+- `scripts/build_feature_labels.mjs` (generator with the EN translation
+  table inline) + `scripts/inject_feature_labels.mjs` (idempotent
+  injector for `features:` namespace in en.ts and hu.ts).
+- `FeatureTiersTab` feature grid, routing tree, FeatureNodeCard cards,
+  dependency / dependents chips, and FeatureDetailDialog all use the
+  localized labels.
+- cs/sk/pl deliberately *not* given per-feature names; the bundle
+  fallback chain (active → en → key) keeps the UI functional.
+
+**Other i18n:**
+- New `platform_audit.*` namespace in all 5 locales (filter labels,
+  table headers, pagination, detail dialog).
+- `superadmin.tab_tiers` (replaces hardcoded "Feature & Tier" tab
+  label) and `superadmin.tab_audit` in all 5 locales.
+
+### Files changed
+
+- `src/components/superadmin/PlatformAuditLogTab.tsx` — new (~240 lines)
+- `src/components/superadmin/SuperadminControlPlane.tsx` — `audit` tab
+- `src/components/superadmin/FeatureTiersTab.tsx` — localized labels
+- `src/components/enterprise/CreateWorkspaceDialog.tsx` — localized tier name
+- `src/lib/tiering/labels.ts` — new helper module
+- `src/i18n/resources/{en,hu,cs,sk,pl}.ts` — new namespaces
+- `scripts/build_feature_labels.mjs` — new generator
+- `scripts/inject_feature_labels.mjs` — new injector
+
+**Tests:** 146/146 passing. **TypeScript:** 0 errors. **Build:** clean.
+
+---
+
 ## 2026-05-13 — v3.15.0 Feature Tiering — End-to-end activation
 
 ### Added — Tiering enforcement, audit, demo seeds, tests

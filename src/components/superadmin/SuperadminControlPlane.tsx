@@ -55,8 +55,10 @@ import {
   AlertCircle,
   Play,
   Layers,
+  ScrollText,
 } from 'lucide-react';
 import { FeatureTiersTab } from './FeatureTiersTab';
+import { PlatformAuditLogTab } from './PlatformAuditLogTab';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -1009,7 +1011,7 @@ function EmailQueueTab() {
 // Main component
 // ---------------------------------------------------------------------------
 
-type TabKey = 'overview' | 'workspaces' | 'flags' | 'jobs' | 'locales' | 'email' | 'tiers';
+type TabKey = 'overview' | 'workspaces' | 'flags' | 'jobs' | 'locales' | 'email' | 'tiers' | 'audit';
 
 interface TabState {
   loaded: boolean;
@@ -1043,7 +1045,8 @@ export function SuperadminControlPlane({ userId: _userId }: { userId: string }) 
           <TabsTrigger value="jobs">{t('superadmin.tab_jobs')}</TabsTrigger>
           <TabsTrigger value="locales">{t('superadmin.tab_locales')}</TabsTrigger>
           <TabsTrigger value="email">{t('superadmin.tab_email')}</TabsTrigger>
-          <TabsTrigger value="tiers" className="gap-1"><Layers className="h-3.5 w-3.5" /> Feature & Tier</TabsTrigger>
+          <TabsTrigger value="tiers" className="gap-1"><Layers className="h-3.5 w-3.5" /> {t('superadmin.tab_tiers')}</TabsTrigger>
+          <TabsTrigger value="audit" className="gap-1"><ScrollText className="h-3.5 w-3.5" /> {t('superadmin.tab_audit')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
@@ -1072,6 +1075,10 @@ export function SuperadminControlPlane({ userId: _userId }: { userId: string }) 
 
         <TabsContent value="tiers" className="mt-6">
           {loadedTabs.tiers && <FeatureTiersTab />}
+        </TabsContent>
+
+        <TabsContent value="audit" className="mt-6">
+          {loadedTabs.audit && <PlatformAuditLogTab />}
         </TabsContent>
       </Tabs>
     </div>

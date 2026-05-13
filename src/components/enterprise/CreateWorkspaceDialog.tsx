@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Sparkles, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useI18n } from '@/i18n/I18nProvider';
+import { tierName } from '@/lib/tiering/labels';
 
 interface TierOpt { id: string; tier_key: string; name: string; }
 
@@ -143,7 +144,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange, userId: _userId, onC
               <SelectTrigger id="ws-tier"><SelectValue placeholder={t('create_workspace.tier_placeholder')} /></SelectTrigger>
               <SelectContent>
                 {tiers.map(tier => (
-                  <SelectItem key={tier.id} value={tier.tier_key}>{tier.name}</SelectItem>
+                  <SelectItem key={tier.id} value={tier.tier_key}>{tierName(t, tier.tier_key, tier.name)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

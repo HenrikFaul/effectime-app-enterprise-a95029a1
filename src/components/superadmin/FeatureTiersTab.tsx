@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useI18n } from '@/i18n/I18nProvider';
+import { tierName, addonName, featureName, featureDescription } from '@/lib/tiering/labels';
 
 interface Tier { id: string; tier_key: string; name: string; sort_order: number; }
 interface Addon { id: string; addon_key: string; name: string; }
@@ -292,14 +293,15 @@ export function FeatureTiersTab() {
     if (!q) return [] as Array<{ kind: 'feature' | 'module' | 'route' | 'menu'; label: string; value: string; meta?: string }>;
     const items: Array<{ kind: 'feature' | 'module' | 'route' | 'menu'; label: string; value: string; meta?: string }> = [];
     features.forEach(f => {
-      if (f.feature_key.toLowerCase().includes(q) || f.name.toLowerCase().includes(q)) {
-        items.push({ kind: 'feature', label: f.name, value: f.feature_key, meta: f.module || '' });
+      const localizedName = featureName(t, f.feature_key, f.name);
+      if (f.feature_key.toLowerCase().includes(q) || localizedName.toLowerCase().includes(q)) {
+        items.push({ kind: 'feature', label: localizedName, value: f.feature_key, meta: f.module || '' });
       }
       if (f.route_path && f.route_path.toLowerCase().includes(q)) {
-        items.push({ kind: 'route', label: f.route_path, value: f.feature_key, meta: f.name });
+        items.push({ kind: 'route', label: f.route_path, value: f.feature_key, meta: localizedName });
       }
       (f.menu_path || []).forEach(m => {
-        if (m.toLowerCase().includes(q)) items.push({ kind: 'menu', label: m, value: f.feature_key, meta: f.name });
+        if (m.toLowerCase().includes(q)) items.push({ kind: 'menu', label: m, value: f.feature_key, meta: localizedName });
       });
     });
     modules.forEach(m => { if (m.toLowerCase().includes(q)) items.push({ kind: 'module', label: m, value: m }); });
@@ -363,7 +365,7 @@ export function FeatureTiersTab() {
             <Select value={activeTier} onValueChange={setActiveTier}>
               <SelectTrigger className="w-[260px]"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {tiers.map(ti => (<SelectItem key={ti.id} value={ti.id}>{ti.name} ({ti.tier_key})</SelectItem>))}
+                {tiers.map(ti => (<SelectItem key={ti.id} value={ti.id}>{tierName(t, ti.tier_key, ti.name)} ({ti.tier_key})</SelectItem>))}
               </SelectContent>
             </Select>
             {tiers.find(ti => ti.id === activeTier) && (
@@ -389,7 +391,7 @@ export function FeatureTiersTab() {
             <Select value={activeAddon} onValueChange={setActiveAddon}>
               <SelectTrigger className="w-[260px]"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {addons.map(a => (<SelectItem key={a.id} value={a.id}>{a.name} ({a.addon_key})</SelectItem>))}
+                {addons.map(a => (<SelectItem key={a.id} value={a.id}>{addonName(t, a.addon_key, a.name)} ({a.addon_key})</SelectItem>))}
               </SelectContent>
             </Select>
             {addons.find(a => a.id === activeAddon) && (
@@ -414,7 +416,7 @@ export function FeatureTiersTab() {
               <SelectTrigger className="w-[260px] h-9"><SelectValue placeholder={t('feature_tiers.tier_filter_placeholder')} /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('feature_tiers.tier_filter_all')}</SelectItem>
-                {tiers.map(ti => (<SelectItem key={ti.id} value={ti.id}>{t('feature_tiers.tier_filter_only', { name: ti.name, key: ti.tier_key })}</SelectItem>))}
+                {tiers.map(ti => (<SelectItem key={ti.id} value={ti.id}>{t('feature_tiers.tier_filter_only', { name: tierName(t, ti.tier_key, ti.name), key: ti.tier_key })}</SelectItem>))}
               </SelectContent>
             </Select>
             {routingTier !== 'all' && (
@@ -497,18 +499,21 @@ function FeatureGrid({ features, featureByKey, dependents, isOn, onToggle, pendi
         const on = isOn(f.id);
         const busy = pendingKey === `${pendingKeyPrefix}${f.id}`;
         const deps = (f.dependencies || []).filter(Boolean);
-        const dependsOn = deps.map(k => featureByKey.get(k)?.name || k);
+        const dependsOn = deps.map(k => {
+          const fk = featureByKey.get(k);
+          return fk ? featureName(t, fk.feature_key, fk.name) : k;
+        });
         const dependents4 = dependents.get(f.feature_key) || [];
         return (
           <div key={f.id} className="flex items-start gap-3 p-3 hover:bg-muted/40">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-medium text-sm">{f.name}</span>
+                <span className="font-medium text-sm">{featureName(t, f.feature_key, f.name)}</span>
                 <Badge variant="outline" className="text-[10px] font-mono">{f.feature_key}</Badge>
                 {f.module && <Badge variant="secondary" className="text-[10px]">{f.module}</Badge>}
                 {f.status && f.status !== 'public' && <Badge className="text-[10px]">{f.status}</Badge>}
               </div>
-              {f.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{f.description}</p>}
+              {featureDescription(t, f.feature_key, f.description) && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{featureDescription(t, f.feature_key, f.description)}</p>}
               <div className="mt-1.5 space-y-0.5">
                 <div className="flex items-start gap-1 text-[11px]">
                   <GitBranch className="h-3 w-3 mt-0.5 text-muted-foreground shrink-0" />
@@ -521,7 +526,7 @@ function FeatureGrid({ features, featureByKey, dependents, isOn, onToggle, pendi
                   <div className="flex items-start gap-1 text-[11px]">
                     <ChevronRight className="h-3 w-3 mt-0.5 text-muted-foreground shrink-0" />
                     <span className="text-muted-foreground shrink-0">{t('feature_tiers.grid_label_dependents')}</span>
-                    <span className="flex flex-wrap gap-1">{dependents4.slice(0, 6).map(d => <Badge key={d} variant="secondary" className="text-[10px]">{featureByKey.get(d)?.name || d}</Badge>)}{dependents4.length > 6 && <span className="text-[10px] text-muted-foreground">+{dependents4.length - 6}</span>}</span>
+                    <span className="flex flex-wrap gap-1">{dependents4.slice(0, 6).map(d => { const fk = featureByKey.get(d); return <Badge key={d} variant="secondary" className="text-[10px]">{fk ? featureName(t, fk.feature_key, fk.name) : d}</Badge>; })}{dependents4.length > 6 && <span className="text-[10px] text-muted-foreground">+{dependents4.length - 6}</span>}</span>
                   </div>
                 )}
                 {(f.route_path || (f.menu_path && f.menu_path.length > 0)) && (
@@ -755,7 +760,7 @@ function RoutingTree({
               >
                 <div className="flex items-center gap-2 flex-wrap">
                   <GripVertical className="h-3.5 w-3.5 text-muted-foreground cursor-grab shrink-0" />
-                  <span className="text-sm font-medium">{f.name}</span>
+                  <span className="text-sm font-medium">{featureName(t, f.feature_key, f.name)}</span>
                   <Badge variant="outline" className="text-[10px] font-mono">{f.feature_key}</Badge>
                   {f.module && <Badge variant="secondary" className="text-[10px]">{f.module}</Badge>}
                   {noRoute && <Badge variant="destructive" className="text-[10px]">{t('feature_tiers.tree_no_route_badge')}</Badge>}
@@ -832,6 +837,7 @@ function paletteFor(key: string): string {
 }
 
 function FeatureNodeCard({ feature, onView, size = 'md' }: { feature: Feature; onView?: (id: string) => void; size?: 'sm' | 'md' | 'lg' }) {
+  const { t } = useI18n();
   const grad = paletteFor(feature.feature_key);
   const dims = size === 'lg' ? 'min-w-[220px] p-3' : size === 'sm' ? 'min-w-[150px] p-2' : 'min-w-[180px] p-2.5';
   return (
@@ -844,7 +850,7 @@ function FeatureNodeCard({ feature, onView, size = 'md' }: { feature: Feature; o
         <span className="text-[10px] uppercase tracking-wider opacity-90">{feature.module || 'feature'}</span>
         <span className="h-5 w-5 rounded-full bg-white/25 flex items-center justify-center text-[10px]">●</span>
       </div>
-      <div className={`font-semibold ${size === 'sm' ? 'text-xs' : 'text-sm'} leading-tight mt-0.5`}>{feature.name}</div>
+      <div className={`font-semibold ${size === 'sm' ? 'text-xs' : 'text-sm'} leading-tight mt-0.5`}>{featureName(t, feature.feature_key, feature.name)}</div>
       <div className="text-[10px] font-mono opacity-80 truncate">{feature.feature_key}</div>
       {feature.route_path && size !== 'sm' && (
         <div className="mt-1 text-[10px] bg-black/20 rounded px-1.5 py-0.5 font-mono truncate">{feature.route_path}</div>
@@ -896,11 +902,11 @@ function FeatureDetailDialog({
       <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {feature.name}
+            {featureName(t, feature.feature_key, feature.name)}
             <Badge variant="outline" className="font-mono text-[11px]">{feature.feature_key}</Badge>
             {feature.module && <Badge variant="secondary" className="text-[11px]">{feature.module}</Badge>}
           </DialogTitle>
-          {feature.description && <DialogDescription>{feature.description}</DialogDescription>}
+          {featureDescription(t, feature.feature_key, feature.description) && <DialogDescription>{featureDescription(t, feature.feature_key, feature.description)}</DialogDescription>}
         </DialogHeader>
 
         {/* Routing data sheet */}
@@ -979,11 +985,11 @@ function FeatureDetailDialog({
             <div className="flex flex-wrap gap-1">
               {(feature.dependencies || []).length === 0
                 ? <span className="text-xs italic text-muted-foreground">{t('feature_tiers.detail_empty')}</span>
-                : (feature.dependencies || []).map(k => (
+                : (feature.dependencies || []).map(k => { const fk = featureByKey.get(k); return (
                   <button key={k} type="button" onClick={() => onJump(k)} className="text-[11px] font-mono px-2 py-0.5 rounded border hover:bg-muted">
-                    {featureByKey.get(k)?.name || k}
+                    {fk ? featureName(t, fk.feature_key, fk.name) : k}
                   </button>
-                ))}
+                ); })}
             </div>
           </div>
           <div>
@@ -991,11 +997,11 @@ function FeatureDetailDialog({
             <div className="flex flex-wrap gap-1">
               {(dependents.get(feature.feature_key) || []).length === 0
                 ? <span className="text-xs italic text-muted-foreground">{t('feature_tiers.detail_empty')}</span>
-                : (dependents.get(feature.feature_key) || []).map(k => (
+                : (dependents.get(feature.feature_key) || []).map(k => { const fk = featureByKey.get(k); return (
                   <button key={k} type="button" onClick={() => onJump(k)} className="text-[11px] font-mono px-2 py-0.5 rounded border hover:bg-muted">
-                    {featureByKey.get(k)?.name || k}
+                    {fk ? featureName(t, fk.feature_key, fk.name) : k}
                   </button>
-                ))}
+                ); })}
             </div>
           </div>
         </div>
