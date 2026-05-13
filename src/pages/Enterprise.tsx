@@ -20,6 +20,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { CreateWorkspaceDialog } from '@/components/enterprise/CreateWorkspaceDialog';
 import { WorkspaceDashboard } from '@/components/enterprise/WorkspaceDashboard';
+import { fetchWorkspaceTiers, type WorkspaceTier } from '@/hooks/useWorkspaceTier';
+import { tierName } from '@/lib/tiering/labels';
 import { DemoSeedConfigDialog } from '@/components/enterprise/DemoSeedConfigDialog';
 import { EffectimeLogo } from '@/components/EffectimeLogo';
 import { HelpButton } from '@/components/help/HelpButton';
@@ -60,6 +62,7 @@ export default function Enterprise() {
   const navigate = useNavigate();
   const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
   const [memberships, setMemberships] = useState<Membership[]>([]);
+  const [workspaceTiers, setWorkspaceTiers] = useState<Map<string, WorkspaceTier>>(new Map());
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [acceptingInvite, setAcceptingInvite] = useState(false);
@@ -147,6 +150,21 @@ export default function Enterprise() {
       setLoading(false);
     }
   }, [user]);
+
+  // Fetch the active tier for every workspace in the picker so each card can
+  // display its tier badge. Fire-and-forget — picker still renders without
+  // the tier (defaults to '…' until loaded).
+  useEffect(() => {
+    if (workspaces.length === 0) {
+      setWorkspaceTiers(new Map());
+      return;
+    }
+    let cancelled = false;
+    fetchWorkspaceTiers(workspaces.map((w) => w.id))
+      .then((map) => { if (!cancelled) setWorkspaceTiers(map); })
+      .catch((err) => console.warn('[Enterprise] fetchWorkspaceTiers failed', err));
+    return () => { cancelled = true; };
+  }, [workspaces]);
 
   useEffect(() => {
     fetchWorkspaces();
@@ -408,6 +426,14 @@ export default function Enterprise() {
                 {filteredWorkspaces.map((ws) => {
                   const role = getRoleForWorkspace(ws.id);
                   const canDelete = role === 'owner';
+                  const tier = workspaceTiers.get(ws.id);
+                  const tierBadgeClass = !tier
+                    ? 'bg-muted text-muted-foreground border-dashed'
+                    : tier.tier_key === 'freemium'
+                    ? 'bg-muted text-muted-foreground border-muted-foreground/20'
+                    : tier.tier_key === 'pro'
+                    ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-300'
+                    : 'bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-200 border-amber-400';
                   return (
                     <Card
                       key={ws.id}
@@ -431,7 +457,14 @@ export default function Enterprise() {
                             </div>
                             <CardTitle className="text-base truncate">{ws.name}</CardTitle>
                           </div>
-                          <div className="flex items-center gap-1 shrink-0">
+                          <div className="flex items-center gap-1 shrink-0 flex-wrap justify-end">
+                            <Badge
+                              variant="outline"
+                              className={`text-[10px] uppercase tracking-wide font-medium ${tierBadgeClass}`}
+                              title={tier ? t('workspace_tier.badge_title', { tier: tierName(t, tier.tier_key, tier.tier_name) }) : t('workspace_tier.no_subscription_title')}
+                            >
+                              {tier ? tierName(t, tier.tier_key, tier.tier_name) : t('workspace_tier.no_subscription_badge')}
+                            </Badge>
                             <Badge variant={getRoleBadgeVariant(role)} className="text-[10px]">
                               {getRoleLabel(role)}
                             </Badge>

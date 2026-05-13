@@ -355,6 +355,43 @@ Deno.serve(async (req: Request) => {
     }
 
     // =========================================================================
+    // Action: change-workspace-tier
+    // Platform-admin only. Delegates to the
+    // public.superadmin_change_workspace_tier(uuid, text, text) RPC which
+    // verifies the role again server-side, performs the UPDATE on
+    // tenant_subscriptions, and writes a platform_audit_events row.
+    // =========================================================================
+    if (action === 'change-workspace-tier') {
+      const { workspace_id, tier_key, reason } = body
+      if (!workspace_id) return jsonRes({ error: 'workspace_id is required' }, 400)
+      if (!tier_key)     return jsonRes({ error: 'tier_key is required' }, 400)
+
+      // Use a userClient so SECURITY DEFINER's auth.uid() resolves to the
+      // platform admin. The RPC re-checks the admin role server-side.
+      const { data, error: rpcErr } = await userClient.rpc('superadmin_change_workspace_tier', {
+        _workspace_id: workspace_id,
+        _tier_key: tier_key,
+        _reason: reason ?? null,
+      })
+
+      if (rpcErr) return jsonRes({ error: rpcErr.message }, 400)
+      return jsonRes(data)
+    }
+
+    // =========================================================================
+    // Action: list-tiers (used by the change-tier dialog dropdown)
+    // =========================================================================
+    if (action === 'list-tiers') {
+      const { data: tiers, error: tiersErr } = await admin
+        .from('tiers')
+        .select('id, tier_key, name, sort_order')
+        .order('sort_order')
+
+      if (tiersErr) return jsonRes({ error: tiersErr.message }, 500)
+      return jsonRes({ tiers: tiers || [] })
+    }
+
+    // =========================================================================
     // Action: list-feature-flags
     // =========================================================================
     if (action === 'list-feature-flags') {

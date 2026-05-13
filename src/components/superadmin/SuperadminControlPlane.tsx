@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -315,6 +316,12 @@ function WorkspacesTab() {
   const [deleteConfirmName, setDeleteConfirmName] = useState('');
   const [recoveryTarget, setRecoveryTarget] = useState<Workspace | null>(null);
   const [recoveryReason, setRecoveryReason] = useState('');
+  const [tierTarget, setTierTarget] = useState<Workspace | null>(null);
+  const [tierTargetCurrent, setTierTargetCurrent] = useState<string | null>(null);
+  const [tierChoice, setTierChoice] = useState('');
+  const [tierReason, setTierReason] = useState('');
+  const [tiers, setTiers] = useState<Array<{ tier_key: string; name: string }>>([]);
+  const [workspaceTierMap, setWorkspaceTierMap] = useState<Map<string, string>>(new Map());
   const [mutating, setMutating] = useState(false);
 
   const load = useCallback(async () => {
@@ -351,6 +358,24 @@ function WorkspacesTab() {
         };
       });
       setWorkspaces(flat);
+
+      // Fetch tier list (for the change-tier dropdown) + per-workspace current
+      // tier (for the new "Tier" column). Both via the superadmin-hub edge fn
+      // and the workspace_active_tier view (which honors RLS — platform admin
+      // policy on tenant_subscriptions allows full read).
+      const wsIds = flat.map((w) => w.id).filter(Boolean);
+      const [{ data: tiersRes }, { data: tierRows }] = await Promise.all([
+        supabase.functions.invoke('superadmin-hub', { body: { action: 'list-tiers' } }),
+        wsIds.length > 0
+          ? supabase.from('workspace_active_tier').select('workspace_id, tier_key').in('workspace_id', wsIds)
+          : Promise.resolve({ data: [] as Array<{ workspace_id: string; tier_key: string }> }),
+      ]);
+      setTiers(((tiersRes as { tiers?: Array<{ tier_key: string; name: string }> })?.tiers) ?? []);
+      const tmap = new Map<string, string>();
+      for (const r of (tierRows ?? []) as Array<{ workspace_id: string; tier_key: string }>) {
+        tmap.set(r.workspace_id, r.tier_key);
+      }
+      setWorkspaceTierMap(tmap);
     } catch {
       setError(true);
     } finally {
@@ -361,6 +386,51 @@ function WorkspacesTab() {
   useEffect(() => {
     load();
   }, [load]);
+
+  const openChangeTier = (ws: Workspace) => {
+    const current = workspaceTierMap.get(ws.id) ?? '';
+    setTierTarget(ws);
+    setTierTargetCurrent(current || null);
+    setTierChoice(current);
+    setTierReason('');
+  };
+
+  const handleChangeTier = async () => {
+    if (!tierTarget || !tierChoice) return;
+    if (tierChoice === tierTargetCurrent) {
+      // No-op — pre-empt a useless audit log entry.
+      setTierTarget(null);
+      return;
+    }
+    setMutating(true);
+    try {
+      const { data: res, error: err } = await supabase.functions.invoke('superadmin-hub', {
+        body: {
+          action: 'change-workspace-tier',
+          workspace_id: tierTarget.id,
+          tier_key: tierChoice,
+          reason: tierReason || null,
+        },
+      });
+      if (err) throw err;
+      const payload = res as { ok?: boolean; error?: string; from_tier_key?: string; to_tier_key?: string } | null;
+      if (payload?.error) throw new Error(payload.error);
+      toast.success(t('superadmin.ws_tier_change_success', {
+        from: payload?.from_tier_key || tierTargetCurrent || '?',
+        to: payload?.to_tier_key || tierChoice,
+      }));
+      setTierTarget(null);
+      setTierTargetCurrent(null);
+      setTierChoice('');
+      setTierReason('');
+      await load();
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      toast.error(t('superadmin.ws_tier_change_error') + ': ' + msg);
+    } finally {
+      setMutating(false);
+    }
+  };
 
   const filtered = workspaces.filter((w) => {
     if (!showArchived && w.status === 'archived') return false;
@@ -466,6 +536,7 @@ function WorkspacesTab() {
           <TableHeader>
             <TableRow>
               <TableHead>{t('superadmin.ws_col_name')}</TableHead>
+              <TableHead>{t('superadmin.ws_col_tier')}</TableHead>
               <TableHead>{t('superadmin.ws_col_locale')}</TableHead>
               <TableHead className="hidden md:table-cell">{t('superadmin.ws_col_timezone')}</TableHead>
               <TableHead className="text-right">{t('superadmin.ws_col_members')}</TableHead>
@@ -477,14 +548,29 @@ function WorkspacesTab() {
           <TableBody>
             {filtered.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                   {t('common.empty')}
                 </TableCell>
               </TableRow>
             ) : (
-              filtered.map((ws) => (
+              filtered.map((ws) => {
+                const wsTierKey = workspaceTierMap.get(ws.id) ?? null;
+                const tierLabel = wsTierKey ? (tiers.find(x => x.tier_key === wsTierKey)?.name || wsTierKey) : null;
+                const tierKlass = !wsTierKey
+                  ? 'bg-muted text-muted-foreground border-dashed'
+                  : wsTierKey === 'freemium'
+                  ? 'bg-muted text-muted-foreground border-muted-foreground/20'
+                  : wsTierKey === 'pro'
+                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300 border-blue-300'
+                  : 'bg-amber-100 text-amber-900 dark:bg-amber-900/30 dark:text-amber-200 border-amber-400';
+                return (
                 <TableRow key={ws.id}>
                   <TableCell className="font-medium">{ws.name}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className={`text-[10px] uppercase tracking-wide font-medium ${tierKlass}`}>
+                      {tierLabel ?? t('superadmin.ws_tier_unknown')}
+                    </Badge>
+                  </TableCell>
                   <TableCell>{ws.locale}</TableCell>
                   <TableCell className="hidden md:table-cell text-sm text-muted-foreground">{ws.timezone}</TableCell>
                   <TableCell className="text-right">{ws.member_count}</TableCell>
@@ -498,6 +584,9 @@ function WorkspacesTab() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openChangeTier(ws)}>
+                          {t('superadmin.ws_action_change_tier')}
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleArchiveToggle(ws)}>
                           {ws.status === 'archived' ? t('superadmin.ws_action_unarchive') : t('superadmin.ws_action_archive')}
                         </DropdownMenuItem>
@@ -514,11 +603,85 @@ function WorkspacesTab() {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>
       </div>
+
+      {/* Change-tier dialog — superadmin-only writes; routes through
+          superadmin_change_workspace_tier RPC which re-checks the role
+          server-side and writes platform_audit_events. */}
+      <Dialog
+        open={!!tierTarget}
+        onOpenChange={(o) => {
+          if (!o && !mutating) {
+            setTierTarget(null);
+            setTierTargetCurrent(null);
+            setTierChoice('');
+            setTierReason('');
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {t('superadmin.ws_tier_change_title')}
+              {tierTarget ? ` — ${tierTarget.name}` : ''}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <p className="text-xs text-muted-foreground">
+              {t('superadmin.ws_tier_change_description', { current: tierTargetCurrent ?? t('superadmin.ws_tier_unknown') })}
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="ws-tier-choice">{t('superadmin.ws_tier_select_label')}</Label>
+              <Select value={tierChoice} onValueChange={setTierChoice}>
+                <SelectTrigger id="ws-tier-choice"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {tiers.map((ti) => (
+                    <SelectItem key={ti.tier_key} value={ti.tier_key}>
+                      {ti.name} ({ti.tier_key}){ti.tier_key === tierTargetCurrent ? ` — ${t('superadmin.ws_tier_current_marker')}` : ''}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="ws-tier-reason">{t('superadmin.ws_tier_reason_label')}</Label>
+              <Input
+                id="ws-tier-reason"
+                value={tierReason}
+                onChange={(e) => setTierReason(e.target.value)}
+                placeholder={t('superadmin.ws_tier_reason_placeholder')}
+              />
+              <p className="text-[11px] text-muted-foreground">
+                {t('superadmin.ws_tier_reason_hint')}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => { setTierTarget(null); setTierTargetCurrent(null); setTierChoice(''); setTierReason(''); }}
+              disabled={mutating}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              onClick={handleChangeTier}
+              disabled={mutating || !tierChoice || tierChoice === tierTargetCurrent}
+            >
+              {mutating ? (
+                <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> {t('superadmin.ws_tier_change_saving')}</>
+              ) : (
+                t('superadmin.ws_tier_change_confirm')
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Recovery mode dialog */}
       <Dialog open={!!recoveryTarget} onOpenChange={(o) => { if (!o) { setRecoveryTarget(null); setRecoveryReason(''); } }}>
