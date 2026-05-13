@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { AchievementsPanel } from '@/components/engagement/AchievementsPanel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -370,6 +371,14 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
             })}
           </CardContent>
         </Card>
+      )}
+
+      {/* Gamification (Top-20 Rank 14, v3.18.0). Renders only if the
+          membership exists; respects per-workspace + per-member opt-out via
+          the engagement_record_event RPC, but the read panel itself is shown
+          to encourage mastery (locked badges visible). */}
+      {membershipId && (
+        <AchievementsPanel workspaceId={workspaceId} membershipId={membershipId} />
       )}
 
       {tasks.length === 0 && requests.length === 0 && quotas.length === 0 && !attendance && (
