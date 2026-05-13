@@ -147,6 +147,68 @@ const csvLine = arr => arr.map(csvCell).join(',');
   console.log(`features.csv: ${features.length} rows`);
 }
 
+// --- features.json ----------------------------------------------------------
+// Programmatic consumers (FeatureService client, marketing tooling) want a
+// proper JSON shape rather than re-parsing the CSV with its semicolon-joined
+// dependency lists.
+{
+  const json = features.map((f) => ({
+    feature_key: f.feature_key,
+    name: f.name,
+    module: f.module,
+    description: f.description,
+    fiscal_weight: f.fiscal_weight,
+    status: f.status,
+    value_score: f.value_score ? Number(f.value_score) : null,
+    necessity: f.necessity || null,
+    created_in_version: f.created_in_version || null,
+    estimated_dev_cost: f.estimated_dev_cost || null,
+    dependencies: f.dependencies,
+    dependents: dependents.get(f.feature_key) || [],
+    tiers: {
+      freemium: tierSets.freemium.has(f.feature_key),
+      pro: tierSets.pro.has(f.feature_key),
+      enterprise: tierSets.enterprise.has(f.feature_key),
+    },
+  }));
+  fs.writeFileSync(path.join(outDir, 'features.json'), JSON.stringify(json, null, 2) + '\n');
+  console.log(`features.json: ${features.length} entries`);
+}
+
+// --- pricing_matrix.csv -----------------------------------------------------
+// Phase 10 fiscal tagging — each feature gets a tag (core/pro/enterprise/addon)
+// derived from its tier membership. Addons override tier mapping.
+{
+  // addon_key per feature_key (a feature may appear in multiple addons; first wins)
+  const addonByFeature = new Map();
+  for (const r of addonRows) {
+    if (!addonByFeature.has(r.feature_key)) addonByFeature.set(r.feature_key, r.addon_key);
+  }
+  const fiscalTag = (key) => {
+    if (addonByFeature.has(key)) return 'addon';
+    if (tierSets.freemium.has(key)) return 'core';
+    if (tierSets.pro.has(key)) return 'pro';
+    if (tierSets.enterprise.has(key)) return 'enterprise';
+    return 'unassigned';
+  };
+  const header = ['feature_key','module','fiscal_tag','addon_key','fiscal_weight','value_score','necessity','suggested_price_hint'];
+  const lines = [header.join(',')];
+  // Pricing hint heuristic: weight * tier multiplier (relative units, not currency).
+  // core=1x, pro=2x, enterprise=4x, addon=5x. Multiplied by value_score/10.
+  const tierMultiplier = { core: 1, pro: 2, enterprise: 4, addon: 5, unassigned: 0 };
+  for (const f of features) {
+    const tag = fiscalTag(f.feature_key);
+    const v = f.value_score ? Number(f.value_score) : 5;
+    const hint = (tierMultiplier[tag] * v / 10).toFixed(2);
+    lines.push(csvLine([
+      f.feature_key, f.module, tag, addonByFeature.get(f.feature_key) || '',
+      f.fiscal_weight, f.value_score, f.necessity, hint,
+    ]));
+  }
+  fs.writeFileSync(path.join(outDir, 'pricing_matrix.csv'), lines.join('\n') + '\n');
+  console.log(`pricing_matrix.csv: ${features.length} rows`);
+}
+
 // --- dependency_matrix.csv --------------------------------------------------
 {
   const header = ['feature_key','module','fiscal_weight','value_score','necessity','depends_on','dependents'];
