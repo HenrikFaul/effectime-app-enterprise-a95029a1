@@ -100,8 +100,18 @@ export function PlatformAuditLogTab() {
 
       setRows(enriched);
       setTotalCount(count ?? 0);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+    } catch (e: unknown) {
+      // PostgrestError is a plain object, not an Error instance — String(e)
+      // would produce "[object Object]". Extract message/code/details explicitly.
+      let msg = '';
+      if (e instanceof Error) {
+        msg = e.message;
+      } else if (e && typeof e === 'object') {
+        const obj = e as { message?: string; details?: string; hint?: string; code?: string };
+        msg = obj.message || obj.details || obj.hint || obj.code || JSON.stringify(e);
+      } else {
+        msg = String(e);
+      }
       setError(msg);
     } finally {
       setLoading(false);
