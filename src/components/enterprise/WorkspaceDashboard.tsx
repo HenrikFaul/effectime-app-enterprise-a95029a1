@@ -81,6 +81,8 @@ import { SkipToContent } from '@/components/shell/AppShell';
 import { useWorkspaceNavLayout } from '@/hooks/useWorkspaceNavLayout';
 import { AnalyticsDashboard } from './analytics/AnalyticsDashboard';
 import { DeveloperPortal } from './developer/DeveloperPortal';
+import { FeatureGate } from '@/components/feature-gate/FeatureGate';
+import { LockedFeatureNotice } from '@/components/feature-gate/LockedFeatureNotice';
 import { WellbeingScoreCard } from './wellbeing/WellbeingScoreCard';
 import { SecurityCenter } from './security/SecurityCenter';
 
@@ -227,6 +229,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
       >
         {layout === 'sidebar' && (
           <WorkspaceSidebar
+            workspaceId={workspace.id}
             workspaceName={workspace.name}
             activeTab={activeTab}
             onTabChange={setActiveTab}
@@ -447,19 +450,37 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
 
             {isAdmin && (
               <TabsContent value="analytics" className="space-y-4">
-                <AnalyticsDashboard workspaceId={workspace.id} isAdmin={isAdmin} />
+                <FeatureGate
+                  workspaceId={workspace.id}
+                  feature="executive_dashboard"
+                  fallback={<LockedFeatureNotice feature="executive_dashboard" />}
+                >
+                  <AnalyticsDashboard workspaceId={workspace.id} isAdmin={isAdmin} />
+                </FeatureGate>
               </TabsContent>
             )}
 
             {isAdmin && (
               <TabsContent value="developer" className="space-y-4">
-                <DeveloperPortal workspaceId={workspace.id} userId={userId} />
+                <FeatureGate
+                  workspaceId={workspace.id}
+                  feature="open_api"
+                  fallback={<LockedFeatureNotice feature="open_api" />}
+                >
+                  <DeveloperPortal workspaceId={workspace.id} userId={userId} />
+                </FeatureGate>
               </TabsContent>
             )}
 
             {isAdmin && (
               <TabsContent value="security" className="space-y-4">
-                <SecurityCenter workspaceId={workspace.id} userId={userId} isAdmin={isAdmin} />
+                <FeatureGate
+                  workspaceId={workspace.id}
+                  feature="soc2_iso"
+                  fallback={<LockedFeatureNotice feature="soc2_iso" />}
+                >
+                  <SecurityCenter workspaceId={workspace.id} userId={userId} isAdmin={isAdmin} />
+                </FeatureGate>
               </TabsContent>
             )}
 

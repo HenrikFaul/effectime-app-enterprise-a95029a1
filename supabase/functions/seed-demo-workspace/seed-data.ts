@@ -893,6 +893,51 @@ export const DEFAULT_SEED_QUANTITIES = {
   ical_tokens:            4,
 };
 
+// Per-tier seed sizing. Freemium gets a minimal walkthrough (members + basic
+// leave flow), Pro adds projects/skills/Gantt, Enterprise is the full catalog.
+// Unset keys fall back to DEFAULT_SEED_QUANTITIES.
+export const TIER_SEED_OVERRIDES: Record<string, Partial<typeof DEFAULT_SEED_QUANTITIES>> = {
+  freemium: {
+    members:                6,
+    offices:                1,
+    teams:                  1,
+    holidays:               4,
+    skills:                 3,
+    job_families:           2,
+    leadership_levels:      3,
+    contract_types:         2,
+    industries:             1,
+    work_categories:        1,
+    org_units:              1,
+    projects:               0,
+    daily_rules:            1,
+    office_coverage_rules:  1,
+    approval_chains:        1,
+    rule_templates:         1,
+    reports:                1,
+    scenarios:              0,
+    access_systems:         0,
+    onboarding_templates:   0,
+    role_definitions:       1,
+    member_templates:       1,
+    translation_overrides:  0,
+    agile_issues:           0,
+    ical_tokens:            1,
+  },
+  pro: {
+    members:               12,
+    offices:                2,
+    teams:                  3,
+    skills:                 8,
+    projects:               2,
+    agile_issues:          12,
+    scenarios:              1,
+    access_systems:         1,
+    onboarding_templates:   1,
+  },
+  enterprise: {},  // use DEFAULT_SEED_QUANTITIES verbatim
+};
+
 // ── Q. CÉLOK / EREDMÉNYEK (one-to-one beszélgetésekből) ─────────────────────
 // `assignee_name` segítségével rendelődnek hozzá a megfelelő demo personához.
 // Az index.ts a memberById map alapján keres rá.

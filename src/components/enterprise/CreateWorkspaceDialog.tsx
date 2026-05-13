@@ -138,9 +138,9 @@ export function CreateWorkspaceDialog({ open, onOpenChange, userId: _userId, onC
             />
           </div>
           <div>
-            <Label htmlFor="ws-tier">Előfizetési csomag (Tier)</Label>
+            <Label htmlFor="ws-tier">{t('create_workspace.tier_label')}</Label>
             <Select value={tierKey} onValueChange={setTierKey} disabled={busy || tiers.length === 0}>
-              <SelectTrigger id="ws-tier"><SelectValue placeholder="Válassz csomagot" /></SelectTrigger>
+              <SelectTrigger id="ws-tier"><SelectValue placeholder={t('create_workspace.tier_placeholder')} /></SelectTrigger>
               <SelectContent>
                 {tiers.map(tier => (
                   <SelectItem key={tier.id} value={tier.tier_key}>{tier.name}</SelectItem>
@@ -148,7 +148,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange, userId: _userId, onC
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground mt-1">
-              A munkaterület csak a kiválasztott csomaghoz tartozó funkciókat fogja látni.
+              {t('create_workspace.tier_hint')}
             </p>
           </div>
 
