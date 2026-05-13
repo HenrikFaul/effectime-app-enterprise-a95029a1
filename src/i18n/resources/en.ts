@@ -1856,6 +1856,8 @@ const en = {
     tier_label: 'Subscription plan (Tier)',
     tier_placeholder: 'Select a plan',
     tier_hint: 'The workspace will only see features included in the selected plan.',
+    tier_required: 'Please pick a subscription plan before creating the workspace.',
+    tier_mismatch_error: 'WARNING: workspace was created with the wrong tier (you picked "{{requested}}", got "{{actual}}"). Please contact a platform admin to fix this.',
   },
   feature_gate: {
     locked_title: 'This feature is not in your plan',

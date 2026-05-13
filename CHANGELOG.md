@@ -1,3 +1,107 @@
+## 2026-05-13 — v3.17.1 STRICT tier_key: silent freemium fallback eliminated
+
+### The follow-up bug to v3.17.0
+
+After v3.17.0 shipped (tier badge + superadmin change-tier UI), the user
+reported a screenshot: they selected **Enterprise** in the workspace
+creation dialog, the workspace was created, and the badge on both the
+picker card and dashboard header showed **FREEMIUM**.
+
+Looking at the DB for the user's recent creates (20:50–20:53 today):
+- 20:50:38 → tier=**enterprise** ✓
+- 20:51:20 → tier=freemium ✗
+- 20:51:58 → tier=freemium ✗
+- 20:52:28 → tier=freemium ✗
+- 20:53:17 → tier=freemium ✗ ("enterpriese" — the one in the screenshot)
+
+Same user, same dialog code, same browser session — sometimes correct,
+sometimes not. The tier was clearly getting LOST somewhere on the way
+from the dropdown to the RPC.
+
+### Root cause: silent fallback in the RPC
+
+`public.create_workspace_with_owner(_name, _description, _tier_key, _seats)`
+had `_tier_key text DEFAULT 'freemium'` and inside:
+
+```sql
+SELECT id INTO _tier_id FROM public.tiers WHERE tier_key = COALESCE(_tier_key, 'freemium') LIMIT 1;
+IF _tier_id IS NULL THEN
+  SELECT id INTO _tier_id FROM public.tiers ORDER BY sort_order LIMIT 1;  -- still freemium
+END IF;
+```
+
+If `_tier_key` arrived as NULL / empty / unknown for ANY reason (PostgREST
+parameter binding drop, stale closure in the React Select, a typo, etc.),
+the function silently picked **freemium** instead of failing loudly.
+The user had no way to know their selection was lost — they'd see a
+FREEMIUM workspace appear, assume the dropdown didn't work, retry, and
+sometimes hit a different code path that did work.
+
+### Fix (v3.17.1)
+
+**Server side — strict tier_key contract.** The function now:
+- Accepts `_tier_key text DEFAULT NULL` (no fallback default).
+- Normalizes (lowercase + trim).
+- **Raises an exception** if the normalized value is empty or unknown,
+  with a clear message listing available tier_keys.
+- Stores the resolved tier_key + the raw input in the subscription's
+  metadata for forensic auditing.
+
+No silent freemium ever again — the caller MUST pass a valid tier_key
+or the whole call fails atomically (no half-created workspace).
+
+**Client side — post-create tier verification.** After both create paths
+(`handleCreate` direct RPC and `handleCreateDemo` via seed-demo-workspace),
+the dialog now:
+1. Reads the new workspace's actual tier from `workspace_active_tier`.
+2. Compares to the requested tier_key.
+3. If they differ, surfaces a loud `WARNING: workspace was created with
+   the wrong tier (you picked "X", got "Y"). Please contact a platform
+   admin to fix this.` toast — instead of silently entering a wrong-tier
+   workspace.
+
+This is belt-and-braces — even if a future RPC regression silently
+downgrades again, the client catches it in the same request cycle.
+
+### Files changed
+
+- `supabase/migrations/…create_workspace_with_owner_strict_tier…` —
+  applied to remote DB via MCP. RPC body updated; signature changed
+  (`_tier_key DEFAULT NULL` instead of `'freemium'`).
+- `src/components/enterprise/CreateWorkspaceDialog.tsx` — post-create
+  verification in both `handleCreate` and `handleCreateDemo`. Pre-check
+  for empty tier (defensive, server enforces too).
+- `src/i18n/resources/en.ts`, `src/i18n/resources/hu.ts` — 2 new keys
+  (`create_workspace.tier_required`, `create_workspace.tier_mismatch_error`).
+
+### Backwards compatibility
+
+The signature default changed from `'freemium'` to `NULL`. Any current
+caller that omits `_tier_key` would now get an exception. Audit of
+callers:
+- `CreateWorkspaceDialog.handleCreate` — always sends `_tier_key`. ✓
+- `seed-demo-workspace` edge function — always sends `_tier_key`. ✓
+- No DB-side caller exists (verified via the v3.15.4 audit).
+
+So the breaking change has no live consumers.
+
+### Pre-existing wrong-tier workspaces
+
+The 4 workspaces incorrectly created as freemium today (20:51:20,
+20:51:58, 20:52:28, 20:53:17 — including "enterpriese") have NOT been
+auto-corrected by this release. Use the new Superadmin → Workspaces →
+"Change tier…" action (shipped in v3.17.0) to set them to the intended
+tier. Each change writes a `platform_audit_events` row for the trail.
+
+### Verification
+
+- `npx tsc --noEmit` → 0 errors.
+- `npx vitest run` → 146/146 passing.
+- DB: `pg_get_functiondef('create_workspace_with_owner'::regproc)`
+  returns the strict body with `RAISE EXCEPTION` on null/unknown.
+
+---
+
 ## 2026-05-13 — v3.17.0 Workspace tier persistence + visible badge + superadmin-only change
 
 ### The customer-facing concern

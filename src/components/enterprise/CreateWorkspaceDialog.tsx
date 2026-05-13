@@ -45,30 +45,61 @@ export function CreateWorkspaceDialog({ open, onOpenChange, userId: _userId, onC
       toast.error(t('create_workspace.name_required'));
       return;
     }
+    if (!tierKey) {
+      // Defensive: the strict v3.17.1 RPC will reject this server-side too,
+      // but a client-side guard saves a network round-trip and gives a
+      // localized error message.
+      toast.error(t('create_workspace.tier_required'));
+      return;
+    }
     setLoading(true);
     try {
-      const { error } = await supabase.rpc('create_workspace_with_owner', {
+      const { data: newWorkspaceId, error } = await supabase.rpc('create_workspace_with_owner', {
         _name: name.trim(),
         _description: description.trim() || null,
         _tier_key: tierKey,
       });
 
       if (error) throw error;
+      if (!newWorkspaceId) throw new Error('Workspace ID not returned');
 
-      toast.success(t('create_workspace.created_toast'));
+      // POST-CREATE TIER VERIFICATION
+      // The function is strict (v3.17.1+) so a wrong tier_key would have
+      // raised. But verifying once more end-to-end against the source of
+      // truth (workspace_active_tier view) protects against any future
+      // regression in the function body or PostgREST parameter binding.
+      const { data: tierRow } = await supabase
+        .from('workspace_active_tier')
+        .select('tier_key')
+        .eq('workspace_id', newWorkspaceId)
+        .maybeSingle();
+      const actualTier = (tierRow as { tier_key?: string } | null)?.tier_key;
+      if (actualTier && actualTier !== tierKey) {
+        // Tier mismatch — surface immediately so the user knows something
+        // went wrong instead of silently entering a wrong-tier workspace.
+        toast.error(t('create_workspace.tier_mismatch_error', { requested: tierKey, actual: actualTier }));
+      } else {
+        toast.success(t('create_workspace.created_toast'));
+      }
+
       setName('');
       setDescription('');
       onOpenChange(false);
       onCreated();
     } catch (err: unknown) {
-      console.error(err);
-      toast.error(t('create_workspace.creation_error'));
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[CreateWorkspaceDialog] create failed', err);
+      toast.error(t('create_workspace.creation_error') + (msg ? `: ${msg}` : ''));
     } finally {
       setLoading(false);
     }
   };
 
   const handleCreateDemo = async () => {
+    if (!tierKey) {
+      toast.error(t('create_workspace.tier_required'));
+      return;
+    }
     setSeedingDemo(true);
     const toastId = toast.loading(t('create_workspace.demo_creating_toast'));
     try {
@@ -80,10 +111,30 @@ export function CreateWorkspaceDialog({ open, onOpenChange, userId: _userId, onC
         },
       });
       if (error) throw error;
-      const payload = data as { ok?: boolean; error?: string; summary?: Record<string, number>; members_created?: number } | null;
+      const payload = data as { ok?: boolean; error?: string; summary?: Record<string, number>; members_created?: number; workspace_id?: string } | null;
       if (!payload?.ok) {
         throw new Error(payload?.error ?? t('create_workspace.demo_unknown_error'));
       }
+
+      // POST-CREATE TIER VERIFICATION (same as handleCreate). If seed-demo-
+      // workspace returns a workspace_id, fetch its actual tier and compare
+      // against what the user selected. A mismatch surfaces a loud error
+      // instead of letting the user enter a wrong-tier demo workspace.
+      const wsId = payload.workspace_id;
+      if (wsId) {
+        const { data: tierRow } = await supabase
+          .from('workspace_active_tier')
+          .select('tier_key')
+          .eq('workspace_id', wsId)
+          .maybeSingle();
+        const actualTier = (tierRow as { tier_key?: string } | null)?.tier_key;
+        if (actualTier && actualTier !== tierKey) {
+          toast.error(t('create_workspace.tier_mismatch_error', { requested: tierKey, actual: actualTier }), { id: toastId });
+          setSeedingDemo(false);
+          return;
+        }
+      }
+
       const s = payload.summary ?? {};
       const memberCount = s.members ?? payload.members_created ?? 0;
       toast.success(
@@ -97,7 +148,7 @@ export function CreateWorkspaceDialog({ open, onOpenChange, userId: _userId, onC
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.error('[CreateWorkspaceDialog] demo seed failed', err);
-      toast.error(t('create_workspace.demo_creation_error'), { id: toastId });
+      toast.error(t('create_workspace.demo_creation_error') + (msg ? `: ${msg}` : ''), { id: toastId });
     } finally {
       setSeedingDemo(false);
     }

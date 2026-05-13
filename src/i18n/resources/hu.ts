@@ -1844,6 +1844,8 @@ const hu = {
     tier_label: 'Előfizetési csomag (Tier)',
     tier_placeholder: 'Válassz csomagot',
     tier_hint: 'A munkaterület csak a kiválasztott csomaghoz tartozó funkciókat fogja látni.',
+    tier_required: 'Kérlek válassz csomagot a munkaterület létrehozása előtt.',
+    tier_mismatch_error: 'FIGYELEM: a munkaterület rossz csomaggal jött létre (te „{{requested}}"-et választottál, de „{{actual}}" lett). Lépj kapcsolatba a platform adminnal.',
   },
   feature_gate: {
     locked_title: 'Ez a funkció nem szerepel az előfizetésedben',
