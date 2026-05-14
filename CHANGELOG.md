@@ -1,3 +1,74 @@
+## 2026-05-14 — v3.31.0 Candidate Scheduling / ATS bridge (Top-20 Rank 20)
+
+Promotes Rank 20 from MISSING → DONE for the core internal pipeline.
+ATS provider adapters (Greenhouse / Lever / Workable) deferred to v3.31.1+.
+
+### DB (Supabase MCP migration `v3_31_0_candidate_scheduling`)
+- `candidates` table — internal pipeline with status enum (new → screening → interview → offer → hired/rejected/withdrawn) + optional ATS provider linkage.
+- `interview_slots` table — multi-interviewer slots with `booking_token` for the public self-booking URL.
+- `ats_integrations` table — per-workspace provider config (Greenhouse, Lever, Workable). Owner-only RLS.
+- `candidate_interview_slot_eligible()` STABLE helper — rejects a slot if any interviewer is on approved leave that day OR already in another booked slot that overlaps.
+- 4 SECURITY DEFINER RPCs:
+  - `candidate_create_slot(workspace_id, start, end, interviewer_ids, notes)` — owner/RA, eligibility-checked.
+  - `candidate_self_book(token, name, email)` — **public RPC (anon + authenticated)** — upserts candidate, locks slot.
+  - `candidate_generate_onboarding(workspace_id, candidate_id, start_date)` — marks hired + instantiates default onboarding template.
+
+### Feature catalog + tier mapping
+- 4 new feature_keys: `candidate_pipeline`, `candidate_self_booking`,
+  `candidate_onboarding_wizard`, `candidate_ats_integration`. All Pro + Enterprise.
+
+### Frontend
+- New routes: `/book/:token` (public) and the recruiting panel inside the existing workspace Reports tab.
+- `src/hooks/useCandidates.ts` (4 hooks + 4 RPC helpers).
+- `src/components/candidates/RecruitingPanel.tsx` — pipeline list with status badges + interview slot creator + booking-URL copier + one-click hire-and-onboard.
+- `src/pages/CandidateBook.tsx` — public booking page (no auth). Renders the token's slot details, captures name+email, confirms.
+
+### Localization
+- 27 new keys in `recruiting.*` + 10 new keys in new `book.*` namespace × 5 locales = 185 strings.
+
+### Deferred
+- ATS adapter edge functions (Greenhouse / Lever / Workable / SmartRecruiters).
+- Calendar invite generation (uses existing M365/Google integration; wiring is the next polish PR).
+- Outcome-rating UI for completed slots.
+
+---
+
+## 2026-05-14 — v3.25.0 Reseller portal & white-label (Top-20 Rank 4)
+
+Promotes Rank 4 from PARTIAL (BrandingManager only) → DONE for B2B2B
+provisioning + theme editor + portfolio dashboard. Stripe Connect
+payout automation deferred to v3.25.1+.
+
+### DB (Supabase MCP migration `v3_25_0_reseller_platform_retry`)
+- `resellers` table — name + slug + theme_config + custom_domain + revenue_share_pct + stripe_connect_account_id.
+- `reseller_admins` table — user → reseller many-to-many membership with role (admin / viewer).
+- `enterprise_workspaces.reseller_id` (new column, nullable; direct workspaces = NULL).
+- `is_reseller_admin(reseller_id, user_id)` SECURITY DEFINER helper.
+- 3 SECURITY DEFINER RPCs:
+  - `reseller_provision_workspace(reseller_id, name, description, tier_key, seats)` — wraps `create_workspace_with_owner` then tags the new workspace with `reseller_id`.
+  - `reseller_update_theme(reseller_id, theme_config jsonb)` — edits brand color + logo.
+  - `reseller_get_usage(reseller_id)` — portfolio dashboard data (total + active workspaces, total members, per-workspace tier + member count).
+
+### Feature catalog + tier mapping
+- 3 new feature_keys: `reseller_portal`, `reseller_theme`, `reseller_revenue_share`.
+- Mapped to **Enterprise tier only** (reseller capability is a platform-tier capability).
+
+### Frontend
+- New route `/reseller` (auth required; RLS scopes visibility to `reseller_admins` rows).
+- `src/hooks/useReseller.ts` (2 hooks + 3 RPC helpers).
+- `src/components/reseller/ResellerPortal.tsx` — multi-reseller picker + portfolio dashboard with 3 KPI cards + per-workspace list + provision-new-workspace form + theme editor + revenue share info.
+- `src/pages/Reseller.tsx` — page wrapper.
+
+### Localization
+- 32 new keys in `reseller.*` namespace × 5 locales = 160 strings.
+
+### Deferred
+- Stripe Connect account linkage + automated payouts (record-keeping only in v3.25.0).
+- Custom-domain SSL provisioning.
+- Reseller-injected theme at runtime via CSS variables (current MVP saves the config; full runtime injection is the next polish PR).
+
+---
+
 ## 2026-05-14 — v3.29.0 Predictive Analytics engine (Top-20 Rank 3)
 
 Promotes Rank 3 from PARTIAL → DONE: existing AnalyticsDashboard kept;

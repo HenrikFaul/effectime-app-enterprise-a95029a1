@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { NPSSurvey } from '@/components/customer-success/NPSSurvey';
 import { ComplianceDashboard } from '@/components/compliance/ComplianceDashboard';
 import { DocumentGeneratorPanel } from '@/components/documents/DocumentGeneratorPanel';
+import { RecruitingPanel } from '@/components/candidates/RecruitingPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft, LogOut, Building2, GitMerge, CircleHelp, Clock, LayoutDashboard, TrendingUp, Code2, CreditCard, ShieldCheck } from 'lucide-react';
@@ -480,6 +481,15 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                   fallback={<LockedFeatureNotice feature="document_generator" />}
                 >
                   <DocumentGeneratorPanel workspaceId={workspace.id} />
+                </FeatureGate>
+                {/* Candidate / ATS (Top-20 Rank 20, v3.31.0). Gated by
+                    candidate_pipeline feature_key. */}
+                <FeatureGate
+                  workspaceId={workspace.id}
+                  feature="candidate_pipeline"
+                  fallback={<LockedFeatureNotice feature="candidate_pipeline" />}
+                >
+                  <RecruitingPanel workspaceId={workspace.id} />
                 </FeatureGate>
               </TabsContent>
             )}
