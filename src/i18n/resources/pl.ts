@@ -1031,6 +1031,8 @@ const pl = {
     invite_failed: 'Wysyłanie zaproszenia nie powiodło się',
     invite_email_invalid: 'Podaj prawidłowy adres e-mail',
     invite_name_required: 'Podaj imię i nazwisko członka',
+    invite_name_placeholder: 'Jan Kowalski',
+    invite_email_placeholder: 'kolega@firma.pl',
     invite_already_member: 'Ten adres e-mail jest już zaproszony',
     invite_email_failed: 'Zaproszenie utworzone, ale wysłanie e-maila nie powiodło się',
     invite_template_label: 'Wypełnij z szablonu',

@@ -905,6 +905,8 @@ const en = {
     invite_failed: 'Failed to send invitation',
     invite_email_invalid: 'Please enter a valid email address',
     invite_name_required: 'Please enter the member\'s name',
+    invite_name_placeholder: 'John Doe',
+    invite_email_placeholder: 'colleague@company.com',
     invite_already_member: 'This email is already invited',
     invite_email_failed: 'Invitation created but email could not be sent',
     invite_template_label: 'Fill from template',

@@ -80,30 +80,51 @@ Deno.serve(async (req) => {
         const csv = buildCsv(columns, rows);
         const html = buildHtml(report.name, report.description, columns, rows);
 
-        // Send to each recipient
+        // Send to each recipient. Track per-recipient failures so we never
+        // mark the schedule 'success' when some emails actually failed
+        // (B-22 / HIBA-074 silent-partial-success pattern).
+        const failedRecipients: string[] = [];
         for (const recipient of sch.recipients) {
-          await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${serviceKey}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              to: recipient,
-              subject: `📊 ${report.name} — ${formatDate(now)}`,
-              html,
-              attachments: [{
-                filename: `${slugify(report.name)}-${formatDate(now)}.csv`,
-                content: btoa(unescape(encodeURIComponent(csv))),
-                contentType: 'text/csv',
-              }],
-              template_name: 'scheduled_report',
-            }),
-          }).catch(err => console.error('Email send error:', err));
+          try {
+            const sendRes = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${serviceKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                to: recipient,
+                subject: `📊 ${report.name} — ${formatDate(now)}`,
+                html,
+                attachments: [{
+                  filename: `${slugify(report.name)}-${formatDate(now)}.csv`,
+                  content: btoa(unescape(encodeURIComponent(csv))),
+                  contentType: 'text/csv',
+                }],
+                template_name: 'scheduled_report',
+              }),
+            });
+            if (!sendRes.ok) {
+              failedRecipients.push(recipient);
+              console.error(`[send-scheduled-reports] recipient=${recipient} status=${sendRes.status}`);
+            }
+          } catch (err) {
+            failedRecipients.push(recipient);
+            console.error(`[send-scheduled-reports] recipient=${recipient} threw:`, err);
+          }
         }
 
-        await markRun(admin, sch.id, 'success', null);
-        results.push({ id: sch.id, recipients: sch.recipients.length, rows: rows.length });
+        const recipientsCount = sch.recipients.length;
+        const failedCount = failedRecipients.length;
+        if (failedCount === 0) {
+          await markRun(admin, sch.id, 'success', null);
+        } else if (failedCount === recipientsCount) {
+          await markRun(admin, sch.id, 'error', `All recipients failed: ${failedRecipients.join(', ').slice(0, 250)}`);
+        } else {
+          await markRun(admin, sch.id, 'partial_failure',
+            `${failedCount}/${recipientsCount} recipients failed: ${failedRecipients.join(', ').slice(0, 250)}`);
+        }
+        results.push({ id: sch.id, recipients: recipientsCount, failed: failedCount, rows: rows.length });
       } catch (e) {
         console.error(`Schedule ${sch.id} failed:`, e);
         await markRun(admin, sch.id, 'error', (e as Error).message);

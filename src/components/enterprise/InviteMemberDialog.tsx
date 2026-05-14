@@ -85,6 +85,9 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
 
   useEffect(() => {
     if (!open) return;
+    // v3.33.1 — guard every setState behind a cancelled flag (LESSON-CLEANUP-001).
+    // Closing the dialog mid-fetch must not set state on an unmounted component.
+    let cancelled = false;
     Promise.all([
       supabase.from('enterprise_offices').select('id, name, city').eq('workspace_id', workspaceId).order('name'),
       supabase.from('enterprise_member_templates').select('*').eq('workspace_id', workspaceId).order('template_name'),
@@ -95,6 +98,7 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
       (supabase as any).from('enterprise_leadership_levels').select('id, label, code').eq('workspace_id', workspaceId).is('archived_at', null).order('sort_order'),
       (supabase as any).from('enterprise_memberships').select('id, user_id').eq('workspace_id', workspaceId).eq('status', 'active'),
     ]).then(async ([officeRes, templateRes, memberRes, allocRes, ouRes, ctRes, llRes, msRes]) => {
+      if (cancelled) return;
       setOffices((officeRes.data as Office[]) || []);
       setTemplates((templateRes.data as MemberTemplate[]) || []);
       const roleSet = new Set<string>();
@@ -113,13 +117,26 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
           .from('profiles')
           .select('user_id, display_name')
           .in('user_id', userIds);
+        if (cancelled) return;
         const nameMap = new Map((profs || []).map((p: any) => [p.user_id, p.display_name || 'Unknown']));
         setManagers(ms.map((m: any) => ({ id: m.id, user_id: m.user_id, display_name: nameMap.get(m.user_id) || 'Unknown' })));
       } else {
         setManagers([]);
       }
     });
+    return () => {
+      cancelled = true;
+    };
   }, [open, workspaceId]);
+
+  // Mode-toggle helper: switching invite ↔ create resets password fields
+  // so a half-typed password never leaks across modes (B-11).
+  const handleModeChange = (next: 'invite' | 'create') => {
+    setMode(next);
+    setPassword('');
+    setPasswordConfirm('');
+    setShowPassword(false);
+  };
 
   const applyTemplate = (templateId: string) => {
     const tmpl = templates.find(t => t.id === templateId);
@@ -393,7 +410,7 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
         <div className="inline-flex rounded-md border bg-background overflow-hidden self-start text-xs w-full">
           <button
             type="button"
-            onClick={() => setMode('invite')}
+            onClick={() => handleModeChange('invite')}
             className={`flex-1 px-3 py-1.5 inline-flex items-center justify-center gap-1.5 ${
               mode === 'invite' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
             }`}
@@ -402,7 +419,7 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
           </button>
           <button
             type="button"
-            onClick={() => setMode('create')}
+            onClick={() => handleModeChange('create')}
             className={`flex-1 px-3 py-1.5 inline-flex items-center justify-center gap-1.5 ${
               mode === 'create' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
             }`}
@@ -440,11 +457,11 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label htmlFor="inv-name">{tt('members.invite_name')} *</Label>
-              <Input id="inv-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder="Kovács János" />
+              <Input id="inv-name" value={displayName} onChange={(e) => setDisplayName(e.target.value)} placeholder={tt('members.invite_name_placeholder')} />
             </div>
             <div>
               <Label htmlFor="inv-email">{tt('members.invite_email')} *</Label>
-              <Input id="inv-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="kolléga@cég.hu" />
+              <Input id="inv-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder={tt('members.invite_email_placeholder')} />
             </div>
           </div>
 

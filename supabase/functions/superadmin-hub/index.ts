@@ -103,6 +103,28 @@ Deno.serve(async (req: Request) => {
 
     if (!action) return jsonRes({ error: 'action is required' }, 400)
 
+    // ── 3a. Audit-log every superadmin action (B-23 / LESSON-TIER-001) ───────
+    // Required by v3.17.0 audit-trail spec: every privileged action must
+    // produce a platform_audit_events row. Fire-and-forget so audit-write
+    // latency doesn't bottleneck the action, but log failures so a missing
+    // audit row is visible operationally.
+    const auditTargetId =
+      (body.workspace_id as string | undefined)
+      ?? (body.flag_id as string | undefined)
+      ?? (body.target_function as string | undefined)
+      ?? null
+    admin.from('platform_audit_events').insert({
+      actor_id: user.id,
+      action: `superadmin_hub.${action}`,
+      target_type: 'edge_function',
+      target_id: auditTargetId,
+      metadata: { body },
+    }).then(({ error: auditError }) => {
+      if (auditError) {
+        console.error('[superadmin-hub] audit insert failed', auditError)
+      }
+    })
+
     // =========================================================================
     // Action: platform-overview
     // =========================================================================
