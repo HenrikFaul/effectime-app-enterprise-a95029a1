@@ -4143,6 +4143,24 @@ const cs = {
     confirmed_at: 'Váš pohovor je naplánován na {{start}} (do {{end}}).',
     confirmation_email_sent: 'Potvrzovací e-mail bude brzy odeslán.',
   },
+  ai_copilot: {
+    title: 'AI plánovací Copilot',
+    powered_by: 'Claude Sonnet',
+    empty_prompt: 'Zeptejte se na otázku ohledně plánování v přirozeném jazyce — např. "Jak vypadá přesčas příští měsíc, když Alice půjde na dovolenou?"',
+    placeholder: 'Zeptejte se na cokoli o plánování, pokrytí nebo organizaci pracovního prostoru…',
+    role_you: 'Vy',
+    role_assistant: 'Copilot',
+    send: 'Zeptat se',
+    thinking: 'Přemýšlí…',
+    error: 'Chyba copilota',
+    not_configured: 'AI copilot zatím není pro tento pracovní prostor nakonfigurován.',
+    confidence: 'Jistota: {{pct}}%',
+    recommendations: 'Doporučení',
+    warnings: 'Varování',
+    requires_human_review: 'Doporučena kontrola manažerem',
+    tokens_used: '{{input}} in / {{output}} out tokenů',
+    privacy_note: 'Posílá se pouze agregovaný kontext — žádná jména, žádné PII. Pouze tarif Enterprise.',
+  },
 } as const;
 
 export default cs;

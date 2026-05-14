@@ -4143,6 +4143,24 @@ const pl = {
     confirmed_at: 'Twój wywiad jest zaplanowany na {{start}} (do {{end}}).',
     confirmation_email_sent: 'E-mail potwierdzający zostanie wysłany wkrótce.',
   },
+  ai_copilot: {
+    title: 'AI Copilot harmonogramu',
+    powered_by: 'Claude Sonnet',
+    empty_prompt: 'Zadaj pytanie o harmonogram w naturalnym języku — np. "Jak będzie wyglądać praca w nadgodzinach w przyszłym miesiącu, jeśli Alicja pójdzie na urlop?"',
+    placeholder: 'Zapytaj o cokolwiek dotyczącego harmonogramu, pokrycia lub planowania obszaru roboczego…',
+    role_you: 'Ty',
+    role_assistant: 'Copilot',
+    send: 'Zapytaj',
+    thinking: 'Myśli…',
+    error: 'Błąd copilota',
+    not_configured: 'Copilot AI nie jest jeszcze skonfigurowany dla tego obszaru roboczego.',
+    confidence: 'Pewność: {{pct}}%',
+    recommendations: 'Rekomendacje',
+    warnings: 'Ostrzeżenia',
+    requires_human_review: 'Zalecana weryfikacja przez menedżera',
+    tokens_used: '{{input}} we / {{output}} wy tokenów',
+    privacy_note: 'Wysyłany jest tylko zagregowany kontekst — bez nazwisk, bez PII. Tylko plan Enterprise.',
+  },
 } as const;
 
 export default pl;

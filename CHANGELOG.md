@@ -1,3 +1,112 @@
+## 2026-05-14 — v3.28.0 DACH/CEE locale scaffolds (Top-20 Rank 16)
+
+Promotes Rank 16 from PARTIAL (5 locales done) → DONE for scaffold +
+infrastructure. Professional translation of de/at/ro is a content task
+tracked outside the repo.
+
+### What ships
+- `src/i18n/resources/de.ts` (German), `at.ts` (Austrian German),
+  `ro.ts` (Romanian) — full scaffolds copied from `en.ts` so every
+  key exists in every locale. Runtime falls back to English values
+  until each key is translated.
+- `src/i18n/locales.ts` — added 3 entries to `SUPPORTED_LOCALES` +
+  `LOCALE_LABEL` (native name + English name + flag).
+- `src/i18n/I18nProvider.tsx` — imports + registers the 3 new bundles.
+
+### Why scaffolds, not full translations
+A complete professional translation of 4000+ keys × 3 locales is a
+content task that needs native-speaker review (legal terminology,
+HR-domain phrasing, jurisdiction-specific wording for ArbZG / AVRAG).
+Shipping scaffolds with English fallback lets the UI render in the
+selected locale today and ramps up quality as translations land.
+
+### Effectime is now displayable in 8 locales
+- en (English) — source-of-truth
+- hu (Magyar) — full translation
+- cs (Čeština) — full translation
+- sk (Slovenčina) — full translation
+- pl (Polski) — full translation
+- **de (Deutsch) — scaffold, en fallback**
+- **at (Österreichisches Deutsch) — scaffold, en fallback**
+- **ro (Română) — scaffold, en fallback**
+
+### Deferred
+- Professional translation pass for de/at/ro (~4000 keys × 3 locales).
+- AT-specific terminology variants (currently identical to DE; should
+  diverge on §3 ArbZG vs §11 AZG wording, "Vollzeit" usage, etc.).
+
+---
+
+## 2026-05-14 — v3.27.0 AI Scheduling Copilot (Top-20 Rank 1)
+
+The headline AI feature from the Value-Rocket strategy. Per the doc,
+this is the +€800k-1.35M valuation lever — AI-native products trade
+at 2-3× premiums to feature-equivalent non-AI products.
+
+Promotes Rank 1 from MISSING (catalog ready, no UI) → DONE.
+
+### Design choice
+Same template-first-AI-second pattern as v3.26 / v3.20: the UI works
+without `ANTHROPIC_API_KEY` (returns "configure key" fallback message
+in the assistant role), and lights up with real Claude analysis once
+the secret is configured.
+
+Tool-use loop with iterative function-calling and Supabase Realtime
+streaming are deferred to v3.27.1+ to keep the MVP shippable; the
+current model uses eager context loading + single Claude call.
+
+### DB (Supabase MCP migration `v3_27_0_ai_copilot`)
+- `ai_copilot_conversations` table (per-user session container).
+- `ai_copilot_messages` table (role: user/assistant/system/tool_result,
+  with structured_plan jsonb, model name, input/output token counts).
+- `ai_copilot_rate_limits` table (20 requests/hour/user per the
+  strategy doc rate-limit constraint).
+- `ai_copilot_start_conversation` SECURITY DEFINER RPC.
+
+### Edge function deployed: `ai-copilot`
+1. Authenticates the caller as an active workspace member.
+2. Enforces the 20/hour rate limit.
+3. Eager-loads workspace context: member roles + locations + capacity,
+   open + approved leave next 90d, shift count next 90d, unresolved
+   compliance violations.
+4. Calls Claude Sonnet 4.6 (default) with a strict JSON-output
+   system prompt — analysis + recommendations + warnings +
+   confidence + requires_human_review.
+5. Persists the assistant message + structured plan; records the
+   rate-limit hit.
+
+**Privacy:** only aggregate context is sent to Claude (counts, role
+breakdowns, leave summary). No member names, no PII. Per the strategy
+doc's privacy-first stance.
+
+### Feature catalog + tier mapping
+- 2 new feature_keys: `ai_copilot_chat`, `ai_copilot_history`.
+- **Enterprise tier only** (AI is the headline premium feature).
+
+### Frontend
+- `src/hooks/useAiCopilot.ts`.
+- `src/components/ai-copilot/CopilotPanel.tsx` — chat-style UI with
+  message history (user msgs right-aligned, assistant left, model name
+  inline), structured plan rendering (analysis text + recommendations
+  bullets + warning callout + confidence badge), Send button with
+  loading state, token usage counter, privacy reminder.
+- Wired inside the Calendar tab via FeatureGate.
+
+### Localization
+- 15 new keys in `ai_copilot.*` namespace × 5 locales = 75 strings.
+  (de/at/ro inherit via fallback until scaffolds are translated.)
+
+### Deferred (v3.27.1+)
+- Tool-use loop: let Claude call `check_conflicts`, `get_capacity`,
+  `list_leave_requests`, `list_shifts` as functions instead of eager
+  loading. Claude's tool-use API supports this.
+- Realtime streaming via Supabase Realtime channel
+  `copilot:{conversation_id}` — currently single response.
+- "Apply Plan" button to execute Claude's recommendations against the
+  existing schedule mutation hooks. Requires careful guardrails.
+
+---
+
 ## 2026-05-14 — v3.31.0 Candidate Scheduling / ATS bridge (Top-20 Rank 20)
 
 Promotes Rank 20 from MISSING → DONE for the core internal pipeline.
