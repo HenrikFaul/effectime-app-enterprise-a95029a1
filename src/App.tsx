@@ -22,6 +22,7 @@ import Unsubscribe from "./pages/Unsubscribe";
 import Reseller from "./pages/Reseller";
 import CandidateBook from "./pages/CandidateBook";
 import NotFound from "./pages/NotFound";
+import { InstallPwaPrompt } from "@/components/pwa/InstallPwaPrompt";
 
 const queryClient = new QueryClient();
 const HASH_ROUTE_QUERY_KEYS = new Set(['redirect', 'oauth', 'email_activation_token', 'select', 'tab', 'ws', 'invite']);
@@ -152,6 +153,7 @@ const App = () => (
                 <Toaster />
                 <Sonner />
                 <HelpDrawer />
+                <InstallPwaPrompt />
                 <HashRouteBridge />
                 <OAuthCallbackGuard>
                   <HashRouter>
