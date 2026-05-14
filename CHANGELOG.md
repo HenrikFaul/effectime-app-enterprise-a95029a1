@@ -1,3 +1,75 @@
+## 2026-05-14 — v3.33.0 Direct user creation + tier-filtered role permissions
+
+Two user-requested capabilities shipped together.
+
+### Task 1 — Create user directly (no email)
+
+InviteMemberDialog now has a **mode toggle**: "Invite by email" vs.
+"Create user directly". The create path:
+- Admin sets an initial password.
+- No email is sent to the new user.
+- Server-side password policy: **min 10 chars, ≥1 uppercase, ≥1
+  lowercase, ≥1 digit, ≥1 special char**.
+- Live policy checklist in the UI (green checks as the password
+  satisfies each rule).
+- Confirm-password field with live mismatch warning.
+- Show/hide password toggle.
+- New user can change their password later from their profile.
+
+#### DB
+- `validate_password_policy(text)` IMMUTABLE Postgres function returns
+  `{ok, failures[]}` for any password — used both server-side
+  (defense-in-depth) and as the source-of-truth for the JS validator
+  in `src/lib/security/passwordPolicy.ts`.
+
+#### Edge function deployed: `create-workspace-user`
+- Authorize: caller must be active owner / resourceAssistant.
+- Validate password policy server-side.
+- Detect existing auth user by email — if found, attaches them as a
+  new workspace member without overwriting their password.
+- Otherwise creates a fresh auth.user via admin SDK with
+  `email_confirm: true` + the admin-set password.
+- Upserts profile + creates membership + writes
+  `enterprise_audit_events` row with `enterprise.member.create_direct` action.
+
+### Task 2 — Tier-filtered role permissions
+
+The role-permission tree in workspace Settings now shows ONLY
+permissions whose features are actually available in the workspace's
+active subscription tier. Permissions controlling features NOT in the
+tier are hidden, with a notice showing how many are hidden.
+
+#### DB
+- `enterprise_feature_catalog.tier_feature_keys text[]` new column —
+  maps each UI permission slot to one or more `features.feature_key`
+  entries. Empty array = system permission (always visible).
+- Seeded mappings for all 23 existing catalog entries
+  (calendar → calendar_monthly+filters+annual_view, audit →
+  audit_log+compliance_engine, reports → run_report+scheduled_reports+
+  executive_dashboard, etc.).
+- `workspace_permission_catalog(workspace_id)` STABLE SECURITY DEFINER
+  RPC — returns the catalog with a `visible boolean` flag computed
+  against the workspace's active tier_features. Members only.
+
+#### Frontend
+- `useEnterprisePermissions` calls the new RPC, falls back to the
+  legacy direct table SELECT if the RPC returns empty (older workspaces
+  without a tier mapping yet).
+- `RolePermissionManager` displays an amber notice when ≥1 permission
+  slot is hidden: "N permission slots hidden because the features
+  they control are not in this workspace's subscription tier."
+
+### Localization
+- 20 new keys in `members.*` namespace × 5 locales = 100 strings.
+- 1 new key in new `role_permission.*` namespace × 5 locales = 5 strings.
+- de/at/ro inherit via runtime fallback to English.
+
+### Verification
+- `npx tsc --noEmit` → 0 errors.
+- `npx vitest run` → 146/146 passing.
+
+---
+
 ## 2026-05-14 — v3.32.0 Mobile PWA + Offline scaffold (Top-20 Rank 7)
 
 Promotes Rank 7 from MISSING → DONE for the PWA installable scaffold.

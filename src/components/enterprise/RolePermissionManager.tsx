@@ -37,7 +37,7 @@ const ACCESS_ICONS: Record<AccessLevel, React.ReactNode> = {
 
 export function RolePermissionManager({ workspaceId, userRole }: Props) {
   const { t } = useI18n();
-  const { roles, permissions, featureTree, loading, refetch, getAccess } = useEnterprisePermissions(workspaceId);
+  const { roles, permissions, featureTree, hiddenByTier, loading, refetch, getAccess } = useEnterprisePermissions(workspaceId);
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [showAddRole, setShowAddRole] = useState(false);
   const [newRoleName, setNewRoleName] = useState('');
@@ -176,6 +176,13 @@ export function RolePermissionManager({ workspaceId, userRole }: Props) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* v3.33.0 — surface that the visible permission slots are filtered
+            to those available in the workspace's active subscription tier. */}
+        {hiddenByTier > 0 && (
+          <div className="rounded-md border border-amber-300 bg-amber-50 dark:bg-amber-950/30 px-3 py-2 text-xs text-amber-900 dark:text-amber-200">
+            {t('role_permission.hidden_by_tier_notice', { count: hiddenByTier })}
+          </div>
+        )}
         <div className="space-y-1.5">
           {roles.map(role => (
             <div
