@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { PredictiveAnalyticsPanel } from '@/components/analytics/PredictiveAnalyticsPanel';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -363,6 +364,11 @@ export function AnalyticsDashboard({ workspaceId, isAdmin }: Props) {
 
   return (
     <div className="space-y-6 p-4">
+      {/* Predictive analytics (Top-20 Rank 3, v3.29.0): forecast + risk
+          + heatmap. Shown above the legacy KPI cards because forecasting is
+          the headline value-add of the analytics tier. */}
+      <PredictiveAnalyticsPanel workspaceId={workspaceId} />
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>

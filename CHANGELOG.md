@@ -1,3 +1,289 @@
+## 2026-05-14 — v3.29.0 Predictive Analytics engine (Top-20 Rank 3)
+
+Promotes Rank 3 from PARTIAL → DONE: existing AnalyticsDashboard kept;
+this release adds the forecasting + risk-scoring layer that turns Effectime
+from "scheduling tool" to "workforce intelligence platform" per the strategy doc.
+
+### DB (Supabase MCP migration `v3_29_0_predictive_analytics`)
+- `enterprise_workspaces.salary_band_config jsonb` column for labor-cost modeling.
+- 3 new SECURITY DEFINER RPCs (all manager / admin only):
+  - `analytics_labor_cost_forecast(workspace_id, months_ahead)` — N-month
+    projection by member × salary band, adjusted by approved-leave fraction.
+  - `analytics_absence_risk_scores(workspace_id)` — per-member 0-100
+    risk score from 180-day + 365-day leave patterns + sick-leave frequency.
+  - `analytics_coverage_risk_heatmap(workspace_id, days_ahead)` — daily
+    green/yellow/red projection for the next N days based on approved +
+    pending leave fraction.
+
+### Feature catalog + tier mapping
+- 3 new feature_keys: `analytics_labor_cost_forecast`,
+  `analytics_absence_risk`, `analytics_coverage_heatmap`. All Pro + Enterprise.
+
+### Frontend
+- `src/hooks/usePredictiveAnalytics.ts` (3 hooks).
+- `src/components/analytics/PredictiveAnalyticsPanel.tsx` — 3 sections:
+  - Labor cost bar-chart (6 months, EUR-formatted).
+  - Top absence-risk members (color-coded badges).
+  - 90-day coverage heatmap (week × day grid, green/yellow/red cells).
+- Wired into existing `AnalyticsDashboard` above the legacy KPI cards.
+
+### Localization
+- 10 new keys merged into existing `analytics.*` namespace × 5 locales = 50 strings.
+
+### Deferred
+- pg_cron refresh of materialized views (currently RPCs compute on-demand).
+- ML-based absence pattern detection (current model is rule-based; per
+  the strategy doc's privacy-first stance, no PII is sent to external ML services).
+
+---
+
+## 2026-05-14 — v3.26.0 AI Document Generator (Top-20 Rank 18)
+
+Promotes Rank 18 from MISSING → DONE.
+
+### Approach
+**Template-based core + optional Claude polish.** Pure template
+substitution works without ANY external API; AI polish is gated on
+`ANTHROPIC_API_KEY` being configured in Supabase function secrets and
+degrades gracefully when unset.
+
+### DB (Supabase MCP migration `v3_26_0_document_generator`)
+- `document_templates` table — system + workspace templates with
+  HTML body, variable list, doc_type, language.
+- `generated_documents` table — append-only generation log with
+  content + context + status (draft/final/sent/signed).
+- `document_substitute(body_html, vars jsonb)` IMMUTABLE helper —
+  `{{key}}` token replacement.
+- `document_generate(workspace_id, template_id, membership_id,
+  extra_vars, subject)` SECURITY DEFINER RPC — auto-populates
+  workspace + member context, runs substitution, writes the row.
+- 5 seeded system templates: leave_approval (en, hu),
+  employment_addendum, overtime_consent, working_time_summary.
+
+### Edge function deployed: `document-ai-polish`
+- Calls `claude-haiku-4-5` if `ANTHROPIC_API_KEY` is set; returns
+  unchanged content + `ai_available: false` + hint otherwise.
+- Authorizes the caller as an active workspace member.
+
+### Feature catalog + tier mapping
+- 3 new feature_keys: `document_templates`, `document_generator`,
+  `document_ai_polish`. Pro + Enterprise.
+
+### Frontend
+- `src/hooks/useDocumentGenerator.ts` — useDocumentTemplates,
+  useGeneratedDocuments + `generateDocument` + `polishDocumentWithAi` helpers.
+- `src/components/documents/DocumentGeneratorPanel.tsx` — template
+  picker, extras JSON input, generate button, Sparkles AI polish button,
+  HTML preview pane, recent-documents list.
+- Wired inside the Reports tab via FeatureGate.
+
+### Localization
+- 17 new keys × 5 locales = 85 strings in new `documents.*` namespace.
+
+### Deferred
+- WYSIWYG template editor (TipTap/Quill) — admins currently write HTML directly.
+- E-signature integration (DocuSign / Scrive) — flagged status `signed` exists; UX TBD.
+- PDF rendering of generated documents — content_html is preserved; pdf path is the next polish.
+
+---
+
+## 2026-05-14 — v3.24.0 Public REST API gateway + webhook dispatcher (Top-20 Rank 9)
+
+Promotes Rank 9 from PARTIAL → DONE for read endpoints + webhook delivery.
+
+### Edge functions deployed
+- **`public-api`** — Bearer-token authenticated REST gateway.
+  - Auth: `sha256hex` of raw key matched against `enterprise_api_keys.key_hash`.
+  - Rate limit: 1000 req/hour per key (in-memory sliding window; resets on cold start).
+  - Routes: `GET /v1/health`, `GET /v1/employees`, `GET /v1/schedules`, `GET /v1/leave-requests`.
+  - Response envelope: `{ data, meta: { request_id, count } }`.
+  - Logs every request to `enterprise_api_usage_logs`; updates `enterprise_api_keys.last_used_at`.
+- **`webhook-dispatcher`** — drains `enterprise_webhook_deliveries` (status pending/retrying).
+  - Signs payload with `HMAC-SHA256(secret, body)` → `X-Effectime-Signature: sha256=<hex>` header.
+  - Also sets `X-Effectime-Event` + `X-Effectime-Delivery-Id` headers.
+  - 10-second timeout per delivery; retries up to 3 times via `webhook_record_delivery` RPC.
+  - Platform-admin-gated (defense against accidental DoS / spam).
+
+### DB
+- `enterprise_api_keys.key_prefix` column (display the first chars of a key after creation).
+- `enterprise_webhook_deliveries` table (per-event delivery rows with attempt count, last response code/body/error).
+- `webhook_emit(workspace_id, event_type, payload)` RPC — workspace-member-callable, fans the event out to all active matching subscriptions.
+- `webhook_record_delivery(delivery_id, status_code, body, error)` RPC — dispatcher-only (admin role).
+
+### Feature catalog + tier mapping
+- 2 new feature_keys: `public_api_gateway`, `webhook_dispatcher`. Pro + Enterprise.
+
+### Frontend
+- `src/components/integrations/PublicApiGatewayPanel.tsx` — docs surface
+  with copy-to-clipboard curl examples, base URL display, rate-limit
+  notice, webhook signature contract.
+- Wired into DeveloperPortal as a new "API gateway" tab.
+
+### Localization
+- 13 keys × 5 locales (en, hu, cs, sk, pl) = 65 strings in new `integrations.*` namespace.
+- 4 common helper keys (`copied`, `copy_failed`, `copied_to_clipboard`, `more`) × 5 locales.
+
+### Deferred
+- pg_cron schedule for the dispatcher (currently invoke manually).
+- POST/PUT/DELETE write endpoints in the public-api gateway.
+- OpenAPI spec auto-generation from Zod schemas.
+- Webhook subscription management UI (current DB tables + RPCs support it; UI is in the existing DeveloperPortal Webhooks tab).
+
+---
+
+## 2026-05-14 — v3.23.0 Wellbeing scoring engine completion (Top-20 Rank 8)
+
+Promotes Rank 8 from PARTIAL → DONE.
+
+### DB (Supabase MCP migration `v3_23_0_wellbeing_engine`)
+- `enterprise_workspaces.wellbeing_weights jsonb` — per-workspace component weight overrides.
+- `wellbeing_get_weights(workspace_id)` STABLE helper — returns effective weights with defaults.
+- `wellbeing_calculate_scores(workspace_id)` RPC — for each active member:
+  - Component A (30% weight): overtime ratio from attendance_segments (last 90 days).
+  - Component B (25% weight): weekend density (Sat/Sun shifts ÷ total shifts).
+  - Component C (20% weight): leave utilization (days used ÷ days accrued, last 365 days).
+  - Components D+E (25%): schedule stability + recovery placeholders at neutral 70pts (next polish).
+  - Inserts `wellbeing_scores` row + fires `wellbeing_alerts` on threshold crossings:
+    - score < 40 → `low_wellbeing_score` (severity high).
+    - score 40-60 with >20% overtime → `overtime_warning` (severity medium).
+
+### Feature catalog + tier mapping
+- 1 new feature_key: `wellbeing_engine_run`. Mapped to Pro + Enterprise.
+  Depends on `burnout_engine`.
+
+### Frontend
+- `src/hooks/useWellbeing.ts` — useLatestWellbeingScores,
+  useOpenWellbeingAlerts + `recalculateWellbeingScores` helper.
+- `src/components/wellbeing/WellbeingRecalculateCard.tsx` — engine
+  card with green/yellow/red distribution + recalculate button + open
+  alerts preview. Wired into the existing WellbeingDashboard above the
+  summary row.
+
+### Localization
+- 8 new keys added INTO the existing `wellbeing.*` namespace
+  (engine_title, last_run, avg_score, bucket_green/yellow/red,
+  open_alerts, alert_low_wellbeing_score, alert_overtime_warning).
+- All 5 locales (en, hu, cs, sk, pl) — total 40 strings.
+
+### Deferred
+- Weekly pg_cron auto-calculation.
+- Schedule-stability component (needs schedule-change tracking).
+- Recovery component (needs cross-shift gap analysis).
+- Per-member trend sparkline UI (data exists in `wellbeing_scores`).
+
+---
+
+## 2026-05-14 — v3.22.0 GPS / NFC / QR Clock-In engine (Top-20 Rank 10)
+
+Promotes Rank 10 from MISSING (catalog ready) → DONE.
+
+### DB (Supabase MCP migration `v3_22_0_clock_in_engine`)
+- `clock_events` — append-only attendance log (workspace + member +
+  event_type + method + geofence coordinates + verified flag + raw_data).
+- `qr_clock_sessions` — rotating QR codes (60-second TTL by default;
+  manager-only generation).
+- 4 new columns on `enterprise_offices`: `geofence_lat`, `geofence_lng`,
+  `geofence_radius_m` (default 150m), `clock_in_nfc_tag`.
+- `haversine_km()` IMMUTABLE helper for geofence distance.
+- `clock_generate_qr(office_id, ttl_seconds)` — manager-gated rotating
+  QR generator. Returns the code + expires_at.
+- `clock_event(workspace_id, event_type, method, lat, lng, qr_code,
+  nfc_tag, office_id)` — main RPC. Per-method validation:
+  - **GPS**: finds nearest geofenced office in workspace; verified only
+    if within radius. Anti-spoof: server-side distance check.
+  - **QR**: validates against unexpired `qr_clock_sessions` row.
+  - **NFC**: validates against `enterprise_offices.clock_in_nfc_tag`.
+  - **Manual**: always unverified; flagged for manager review.
+
+### Feature catalog + tier mapping
+- 4 new feature_keys: `clock_in_gps`, `clock_in_qr`, `clock_in_nfc`,
+  `clock_in_board`. All routed to `/w/:workspaceId`. Dependencies:
+  GPS/QR/NFC each depend on `attendance_log`; board depends on all 3.
+- Mapped to **Pro + Enterprise**. Freemium excluded (mobile-first
+  attendance is a paying-customer feature; the strategy doc positions
+  this as the $4.2B hardware-replacement market).
+
+### Frontend
+- `src/hooks/useClockIn.ts` — `useTodayClockEvents`,
+  `useLiveAttendance` + `clockEvent` + `generateQrSession` helpers.
+- `src/components/clock/ClockInPanel.tsx` — mobile-first panel with:
+  - Big tabular live clock (updates every second).
+  - Method selector (GPS / QR / NFC / Manual).
+  - GPS reads `navigator.geolocation` and sends lat+lng to the RPC.
+  - Today's timeline with verified/unverified icons.
+  - Hours-worked counter (sums clock-in/out pairs).
+- Wired into `EmployeeDashboard` (self-service portal) so any member
+  sees their clock-in panel on their personal page.
+
+### Localization
+- 19 keys × 5 locales (en, hu, cs, sk, pl) = 95 strings.
+
+### Deferred (v3.22.1+)
+- Live attendance board for managers (`clock_in_board` feature_key
+  exists; the manager-facing component is the next polish PR).
+- Capacitor native NFC plugin wiring (currently NFC tag is entered as
+  text; native NFC requires `@capacitor/nfc` which depends on the PWA
+  scaffold from Rank 7 / v3.32).
+- Camera-based QR scanner (currently QR code is entered as text;
+  Capacitor BarCodeScanner integration also depends on PWA scaffold).
+
+---
+
+## 2026-05-14 — v3.21.0 Shift Marketplace (Top-20 Rank 12)
+
+Promotes Rank 12 from PARTIAL (SubstituteInbox only) → DONE.
+
+### DB (Supabase MCP migration `v3_21_0_shift_marketplace`)
+- `shift_trade_offers` — open/accepted/cancelled/expired/approved/rejected.
+- `shift_trade_acceptances` — pending/approved/rejected/superseded.
+- `enterprise_workspaces.shift_trade_auto_approve` (new column, default
+  false) — workspace policy to skip manager approval for same-skill
+  trades.
+- `shift_trade_is_eligible(membership_id, shift_assignment_id)` STABLE
+  helper — checks workspace match, active status, not-own-shift,
+  not-on-approved-leave-that-day, no-conflicting-shift-that-day.
+- 4 SECURITY DEFINER RPCs (sole writers):
+  - `shift_trade_offer(shift_assignment_id, reason, expires_at)` —
+    only the assigned member may offer their own shift. Prevents
+    duplicate open offers.
+  - `shift_trade_accept(offer_id)` — validates eligibility; first to
+    accept marks offer 'accepted'; auto-approves if workspace policy
+    permits.
+  - `shift_trade_decide(acceptance_id, approved, notes)` — manager
+    approves → reassigns `enterprise_shift_assignments.membership_id`
+    + supersedes other pending acceptances + marks offer 'approved'.
+    Manager rejects → offer goes back to 'open' so other pending
+    acceptances can be evaluated.
+  - `shift_trade_cancel(offer_id)` — offering member or manager
+    cancels.
+
+### Feature catalog + tier mapping
+- 3 new feature_keys: `shift_marketplace_offer`,
+  `shift_marketplace_browse`, `shift_marketplace_auto_approve`.
+- Mapped to **Pro + Enterprise** only. Freemium excluded.
+
+### Frontend
+- `src/hooks/useShiftMarketplace.ts` — `useOpenTradeOffers`,
+  `useMyTradeOffers`, `usePendingAcceptances` + 4 RPC helpers.
+- `src/components/shift-marketplace/ShiftMarketplacePanel.tsx` — tab
+  switcher (Available / My offers) + per-offer card with status badge
+  (color-coded by status) + Accept/Cancel actions.
+- Wired into `EmployeeDashboard` (self-service area).
+
+### Localization
+- 18 keys × 5 locales = 90 strings.
+
+### Deferred (v3.21.1+)
+- Manager approval queue inside `ApprovalInbox` (currently the RPC
+  exists but a dedicated manager UI for `shift_trade_decide` is the
+  next polish PR).
+- Push notification on offer creation (depends on Rank 7 PWA/FCM).
+- Eligibility checks beyond date conflicts (skill match, hours budget,
+  site authorization) — the schema supports it; the helper is currently
+  conservative.
+
+---
+
 ## 2026-05-13 — v3.20.0 GDPR / WTD Compliance Engine (Top-20 Rank 13)
 
 Promotes Rank 13 from MISSING (catalog ready) → DONE.

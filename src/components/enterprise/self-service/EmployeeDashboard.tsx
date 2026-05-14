@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AchievementsPanel } from '@/components/engagement/AchievementsPanel';
 import { OnboardingChecklist } from '@/components/customer-success/OnboardingChecklist';
+import { ClockInPanel } from '@/components/clock/ClockInPanel';
+import { ShiftMarketplacePanel } from '@/components/shift-marketplace/ShiftMarketplacePanel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -389,6 +391,20 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
           else if (key === 'member_skill_added') onNavigateTab?.('resources');
         }}
       />
+
+      {/* Clock in / out (Top-20 Rank 10, v3.22.0). GPS/QR/NFC method
+          selector + big live clock + today's timeline. Mobile-first
+          design for the deskless-worker persona. */}
+      {membershipId && (
+        <ClockInPanel workspaceId={workspaceId} membershipId={membershipId} />
+      )}
+
+      {/* Shift marketplace (Top-20 Rank 12, v3.21.0). Browse open offers
+          + see status of your own offered shifts. Manager approval queue
+          lives in the regular Approvals tab. */}
+      {membershipId && (
+        <ShiftMarketplacePanel workspaceId={workspaceId} membershipId={membershipId} />
+      )}
 
       {/* Gamification (Top-20 Rank 14, v3.18.0). Renders only if the
           membership exists; respects per-workspace + per-member opt-out via
