@@ -7,6 +7,7 @@ import { NPSSurvey } from '@/components/customer-success/NPSSurvey';
 import { ComplianceDashboard } from '@/components/compliance/ComplianceDashboard';
 import { DocumentGeneratorPanel } from '@/components/documents/DocumentGeneratorPanel';
 import { RecruitingPanel } from '@/components/candidates/RecruitingPanel';
+import { CopilotPanel } from '@/components/ai-copilot/CopilotPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft, LogOut, Building2, GitMerge, CircleHelp, Clock, LayoutDashboard, TrendingUp, Code2, CreditCard, ShieldCheck } from 'lucide-react';
@@ -375,6 +376,15 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
 
             {hasCalendarAccess && (
               <TabsContent value="calendar" className="space-y-3">
+                {/* AI Scheduling Copilot (Top-20 Rank 1, v3.27.0). Enterprise-tier
+                    only. Gracefully degrades when ANTHROPIC_API_KEY is unset. */}
+                <FeatureGate
+                  workspaceId={workspace.id}
+                  feature="ai_copilot_chat"
+                  fallback={<LockedFeatureNotice feature="ai_copilot_chat" />}
+                >
+                  <CopilotPanel workspaceId={workspace.id} />
+                </FeatureGate>
                 <Tabs defaultValue="calendar-main" className="space-y-3">
                   <TabsList className="sticky top-[calc(var(--ws-header-h)_+_var(--ws-main-tabs-h))] z-10 grid grid-cols-4 w-full h-auto !bg-background border-b rounded-none shadow-sm">
                     <TabsTrigger value="calendar-main">{t('ws_nav.cal_main')}</TabsTrigger>

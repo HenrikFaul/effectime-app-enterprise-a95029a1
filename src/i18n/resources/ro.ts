@@ -1,7 +1,9 @@
-// English translation bundle. Keys are dotted; namespaces are top-level keys.
-// Adding a new key: add it here AND in hu.ts (Hungarian fallback to English is allowed).
+// Romanian translation bundle. SCAFFOLD STATUS: copied from en.ts on 2026-05-14 (v3.28.0).
+// Română — currently a scaffold copied from English. Strings need professional translation. The runtime falls back to English for keys with no Romanian translation.
+// To add a real translation: replace English string values with the target-language equivalent.
+// Keep keys identical to en.ts; missing keys fall back to English at runtime.
 
-const en = {
+const ro = {
   common: {
     copied_to_clipboard: 'Copied to clipboard',
     copy_failed: 'Copy failed',
@@ -4392,5 +4394,5 @@ const en = {
   },
 } as const;
 
-export default en;
+export default ro;
 export type EnglishBundle = typeof en;

@@ -11,6 +11,9 @@ import hu from './resources/hu';
 import cs from './resources/cs';
 import sk from './resources/sk';
 import pl from './resources/pl';
+import de from './resources/de';
+import at from './resources/at';
+import ro from './resources/ro';
 
 type Bundle = typeof en;
 
@@ -22,6 +25,11 @@ const BUNDLES: Record<string, Bundle> = {
   cs: cs as unknown as Bundle,
   sk: sk as unknown as Bundle,
   pl: pl as unknown as Bundle,
+  // v3.28.0 DACH/CEE scaffolds — currently fall back to English string
+  // values; replace with professional translations to activate.
+  de: de as unknown as Bundle,
+  at: at as unknown as Bundle,
+  ro: ro as unknown as Bundle,
 };
 
 interface I18nContextValue {

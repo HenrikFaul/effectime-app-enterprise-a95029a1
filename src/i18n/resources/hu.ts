@@ -4360,6 +4360,24 @@ const hu = {
     confirmed_at: 'Az interjúd időpontja: {{start}} (eddig: {{end}}).',
     confirmation_email_sent: 'A megerősítő e-mailt rövidesen elküldjük.',
   },
+  ai_copilot: {
+    title: 'AI ütemezési Copilot',
+    powered_by: 'Claude Sonnet',
+    empty_prompt: 'Tegyél fel egy ütemezési kérdést természetes nyelven — pl. "Hogyan alakul a túlóra a jövő hónapban, ha Alíz szabadságra megy?"',
+    placeholder: 'Kérdezz bármit a munkaterület ütemezéséről, lefedettségéről vagy tervezéséről…',
+    role_you: 'Te',
+    role_assistant: 'Copilot',
+    send: 'Kérdezés',
+    thinking: 'Gondolkodik…',
+    error: 'Copilot hiba',
+    not_configured: 'Az AI copilot még nincs konfigurálva ehhez a munkaterülethez.',
+    confidence: 'Bizonyosság: {{pct}}%',
+    recommendations: 'Ajánlások',
+    warnings: 'Figyelmeztetések',
+    requires_human_review: 'Vezetői felülvizsgálat ajánlott',
+    tokens_used: '{{input}} be / {{output}} ki token',
+    privacy_note: 'Csak aggregált kontextus megy — nincs név, nincs PII. Csak Enterprise csomag.',
+  },
 } as const;
 
 export default hu;
