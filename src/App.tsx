@@ -19,6 +19,8 @@ import Admin from "./pages/Admin";
 import Superadmin from "./pages/Superadmin";
 import Enterprise from "./pages/Enterprise";
 import Unsubscribe from "./pages/Unsubscribe";
+import Reseller from "./pages/Reseller";
+import CandidateBook from "./pages/CandidateBook";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -165,6 +167,8 @@ const App = () => (
                       <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
                       <Route path="/superadmin" element={<ProtectedRoute><Superadmin /></ProtectedRoute>} />
                       <Route path="/unsubscribe" element={<Unsubscribe />} />
+                      <Route path="/reseller" element={<ProtectedRoute><Reseller /></ProtectedRoute>} />
+                      <Route path="/book/:token" element={<CandidateBook />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </HashRouter>
