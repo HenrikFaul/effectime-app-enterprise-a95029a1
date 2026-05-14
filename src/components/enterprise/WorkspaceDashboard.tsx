@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { NPSSurvey } from '@/components/customer-success/NPSSurvey';
+import { ComplianceDashboard } from '@/components/compliance/ComplianceDashboard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft, LogOut, Building2, GitMerge, CircleHelp, Clock, LayoutDashboard, TrendingUp, Code2, CreditCard, ShieldCheck } from 'lucide-react';
@@ -222,6 +224,12 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   return (
     <SidebarProvider>
       <SkipToContent />
+      {/* Customer Success NPS floating banner (Top-20 Rank 17, v3.19.0).
+          Renders only if the current user has an unanswered survey row in
+          customer_success_nps_surveys; otherwise it's null. Trigger creation
+          lives in cs_trigger_nps RPC (called from onboarding-complete or a
+          future scheduled job). */}
+      <NPSSurvey workspaceId={workspace.id} userId={userId} />
       <div
         className="min-h-screen flex w-full bg-background"
         style={{
@@ -450,6 +458,17 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
             {(canView('reports') || canView('audit') || canView('export')) && (
               <TabsContent value="reports-audit" data-help-region="workspace.reports">
                 <ReportsAndAuditTab workspaceId={workspace.id} userId={userId} />
+                {/* Compliance dashboard (Top-20 Rank 13, v3.20.0) — Pro+ feature,
+                    rendered inside the Reports tab so owners can run WTD checks
+                    alongside other reporting. Gated by feature_key so Freemium
+                    workspaces see a locked-feature notice. */}
+                <FeatureGate
+                  workspaceId={workspace.id}
+                  feature="compliance_engine"
+                  fallback={<LockedFeatureNotice feature="compliance_engine" />}
+                >
+                  <ComplianceDashboard workspaceId={workspace.id} />
+                </FeatureGate>
               </TabsContent>
             )}
 
