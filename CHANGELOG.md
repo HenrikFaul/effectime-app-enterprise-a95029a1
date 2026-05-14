@@ -1,3 +1,87 @@
+## 2026-05-14 — v3.32.0 Mobile PWA + Offline scaffold (Top-20 Rank 7)
+
+Promotes Rank 7 from MISSING → DONE for the PWA installable scaffold.
+Full Workbox + vite-plugin-pwa + IndexedDB write queue + FCM push are
+explicitly deferred to v3.32.1+ when the build pipeline is upgraded.
+
+### What ships
+- `public/manifest.webmanifest` — full PWA manifest with icons,
+  start_url, theme_color, two app shortcuts (Clock in / Leave request).
+- `public/sw.js` — hand-written Service Worker with 3 strategies:
+  - **CacheFirst** for static assets (js/css/woff/svg/png/ico).
+  - **NetworkFirst with cache fallback** for navigation requests.
+  - **Bypass** for Supabase auth / edge / realtime so live sessions
+    are never cached.
+- `src/lib/pwa/registerSW.ts` — registers `/sw.js` at app startup
+  (skipped on localhost to avoid dev-mode caching headaches).
+  Captures `beforeinstallprompt` for the install button.
+- `src/components/pwa/InstallPwaPrompt.tsx` — floating bottom-right
+  "Install app" banner shown when:
+  1. Browser fired `beforeinstallprompt` (Chromium-based).
+  2. Not already standalone (added to home screen).
+  3. Not dismissed within last 30 days.
+- `index.html` — added `<link rel="manifest">`, `theme-color`, and
+  Apple PWA meta tags.
+- `src/main.tsx` — calls `captureInstallPrompt()` + `registerEffectimeServiceWorker()` at boot.
+
+### Why hand-written SW (not vite-plugin-pwa yet)
+Adding `vite-plugin-pwa` modifies the Vite build output. Out of scope
+for a single-session deliverable. The hand-written SW gives us
+installability + basic offline now; the Workbox + auto-precaching
+upgrade lands in v3.32.1+.
+
+### Localization
+- 3 new keys in `pwa.*` namespace × 5 locales = 15 strings.
+
+### Deferred (v3.32.1+)
+- `vite-plugin-pwa` integration + Workbox auto-precache manifest.
+- IndexedDB write queue for offline submissions (leave requests, clock-in events).
+- Firebase Cloud Messaging push notifications.
+- Native Capacitor plugins (NFC, biometric auth) — Capacitor itself is already in package.json.
+
+---
+
+## 2026-05-14 — v3.30.0 Plugin Marketplace (Top-20 Rank 19)
+
+Promotes Rank 19 from MISSING → DONE for the marketplace MVP. Full
+sandboxed plugin runtime + plugin SDK npm package deferred to v3.30.1+.
+
+### DB (Supabase MCP migration `v3_30_0_plugin_marketplace`)
+- `marketplace_plugins` table — system-wide catalog with status
+  (pending/approved/published/rejected/archived), category, manifest
+  jsonb, install_count, pricing_model.
+- `workspace_installed_plugins` table — per-workspace install + config
+  + enabled flag.
+- `plugin_webhook_events` table — append-only event-dispatch log
+  (delivered flag + attempts + last response).
+- 4 SECURITY DEFINER RPCs:
+  - `marketplace_submit_plugin(slug, name, description, category, manifest, icon_url, pricing)` — authenticated developer submits.
+  - `marketplace_set_plugin_status(plugin_id, status)` — platform admin only (approve / reject / publish).
+  - `marketplace_install_plugin(workspace_id, plugin_id, config)` — workspace owner only. Auto-bumps install_count.
+  - `marketplace_uninstall_plugin(installed_id)` — workspace owner only.
+- 2 seeded sample plugins: `slack-leave-notify`, `birthday-bot`.
+
+### Feature catalog + tier mapping
+- 3 new feature_keys: `plugin_marketplace_browse`, `plugin_install`,
+  `plugin_developer_submission`. **Enterprise tier only** (per the
+  strategy doc this is a platform-tier capability).
+
+### Frontend
+- `src/hooks/usePluginMarketplace.ts` (3 hooks + 3 RPC helpers).
+- `src/components/marketplace/PluginMarketplacePanel.tsx` — browse +
+  category filter + search + per-plugin install/uninstall card.
+- Wired inside the Settings tab via FeatureGate.
+
+### Localization
+- 18 new keys in `marketplace.*` namespace × 5 locales = 90 strings.
+
+### Deferred (v3.30.1+)
+- Sandboxed plugin runtime with scoped API keys (depends on Rank 9 API platform deepening).
+- `@effectime/plugin-sdk` npm package with TypeScript types + CLI.
+- Webhook dispatcher edge function (HMAC-SHA256 signed payloads + exponential retry).
+
+---
+
 ## 2026-05-14 — v3.28.0 DACH/CEE locale scaffolds (Top-20 Rank 16)
 
 Promotes Rank 16 from PARTIAL (5 locales done) → DONE for scaffold +

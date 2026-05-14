@@ -1,0 +1,41 @@
+{
+  "name": "Effectime — Workforce Intelligence",
+  "short_name": "Effectime",
+  "description": "Enterprise workforce, leave, and capacity planning",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#0ea5e9",
+  "lang": "en",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/effectime-favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["business", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Clock in",
+      "short_name": "Clock in",
+      "url": "/#/app?tab=my-portal",
+      "icons": [{ "src": "/effectime-favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Leave request",
+      "short_name": "Leave",
+      "url": "/#/app?tab=requests",
+      "icons": [{ "src": "/effectime-favicon.svg", "sizes": "any" }]
+    }
+  ]
+}

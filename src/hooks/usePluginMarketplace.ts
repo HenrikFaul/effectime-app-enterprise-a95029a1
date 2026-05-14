@@ -1,0 +1,97 @@
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+
+/**
+ * Plugin marketplace hooks (Top-20 Rank 19, v3.30.0).
+ *
+ * MVP: browse published plugins, install per-workspace, manage config.
+ * Sandboxed runtime + plugin SDK npm package deferred to v3.30.1+.
+ */
+
+export interface MarketplacePlugin {
+  id: string;
+  slug: string;
+  name: string;
+  version: string;
+  description: string | null;
+  icon_url: string | null;
+  category: 'integration' | 'analytics' | 'compliance' | 'vertical' | 'automation' | 'other';
+  author_name: string | null;
+  manifest: Record<string, unknown>;
+  status: 'pending' | 'approved' | 'published' | 'rejected' | 'archived';
+  install_count: number;
+  pricing_model: 'free' | 'one_time' | 'subscription' | 'revenue_share';
+}
+
+export interface WorkspaceInstalledPlugin {
+  id: string;
+  workspace_id: string;
+  plugin_id: string;
+  config: Record<string, unknown>;
+  enabled: boolean;
+  installed_at: string;
+}
+
+export function useMarketplacePlugins() {
+  return useQuery({
+    queryKey: ['marketplace', 'plugins'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('marketplace_plugins')
+        .select('id, slug, name, version, description, icon_url, category, author_name, manifest, status, install_count, pricing_model')
+        .order('install_count', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as MarketplacePlugin[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useInstalledPlugins(workspaceId: string | null | undefined) {
+  return useQuery({
+    queryKey: ['marketplace', 'installed', workspaceId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('workspace_installed_plugins')
+        .select('id, workspace_id, plugin_id, config, enabled, installed_at')
+        .eq('workspace_id', workspaceId as string)
+        .order('installed_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as WorkspaceInstalledPlugin[];
+    },
+    enabled: !!workspaceId,
+    staleTime: 60 * 1000,
+  });
+}
+
+export async function submitPlugin(args: {
+  slug: string; name: string; description: string;
+  category: MarketplacePlugin['category'];
+  manifest: Record<string, unknown>;
+  iconUrl?: string;
+  pricing?: MarketplacePlugin['pricing_model'];
+}) {
+  const { data, error } = await supabase.rpc('marketplace_submit_plugin', {
+    _slug: args.slug, _name: args.name, _description: args.description,
+    _category: args.category, _manifest: args.manifest,
+    _icon_url: args.iconUrl ?? null, _pricing: args.pricing ?? 'free',
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function installPlugin(workspaceId: string, pluginId: string, config: Record<string, unknown> = {}) {
+  const { data, error } = await supabase.rpc('marketplace_install_plugin', {
+    _workspace_id: workspaceId, _plugin_id: pluginId, _config: config,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function uninstallPlugin(installedId: string) {
+  const { data, error } = await supabase.rpc('marketplace_uninstall_plugin', {
+    _installed_id: installedId,
+  });
+  if (error) throw error;
+  return data as { ok: boolean };
+}

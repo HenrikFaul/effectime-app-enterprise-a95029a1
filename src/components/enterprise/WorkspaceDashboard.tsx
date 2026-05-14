@@ -8,6 +8,7 @@ import { ComplianceDashboard } from '@/components/compliance/ComplianceDashboard
 import { DocumentGeneratorPanel } from '@/components/documents/DocumentGeneratorPanel';
 import { RecruitingPanel } from '@/components/candidates/RecruitingPanel';
 import { CopilotPanel } from '@/components/ai-copilot/CopilotPanel';
+import { PluginMarketplacePanel } from '@/components/marketplace/PluginMarketplacePanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft, LogOut, Building2, GitMerge, CircleHelp, Clock, LayoutDashboard, TrendingUp, Code2, CreditCard, ShieldCheck } from 'lucide-react';
@@ -543,6 +544,16 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
             {canView('settings') && (
               <TabsContent value="settings" data-help-region="workspace.settings">
                 <WorkspaceSettings workspace={workspace} userRole={userRole} userId={userId} onRefresh={onRefresh} canViewPermissionConfig={userRole === 'owner' || canView('permission_config')} canViewLayoutSetting={userRole === 'owner' || canView('layout_setting')} />
+                {/* Plugin marketplace (Top-20 Rank 19, v3.30.0). Workspace
+                    owner only; RPCs enforce. Enterprise tier required via
+                    FeatureGate. */}
+                <FeatureGate
+                  workspaceId={workspace.id}
+                  feature="plugin_marketplace_browse"
+                  fallback={<LockedFeatureNotice feature="plugin_marketplace_browse" />}
+                >
+                  <PluginMarketplacePanel workspaceId={workspace.id} />
+                </FeatureGate>
               </TabsContent>
             )}
               </div>
