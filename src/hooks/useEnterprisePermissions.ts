@@ -107,19 +107,37 @@ export function useEnterprisePermissions(workspaceId: string, userRoleKey?: stri
   const [roles, setRoles] = useState<RoleDefinition[]>([]);
   const [permissions, setPermissions] = useState<RolePermission[]>([]);
   const [featureTree, setFeatureTree] = useState<FeatureNode[]>([]);
+  const [hiddenByTier, setHiddenByTier] = useState<number>(0);
   const [loading, setLoading] = useState(true);
 
   const fetch = useCallback(async () => {
     setLoading(true);
+    // v3.33.0 — Use workspace_permission_catalog RPC which returns the same
+    // shape as enterprise_feature_catalog PLUS a `visible` flag that filters
+    // each permission slot against the workspace's active tier_features.
+    // Slots whose mapped tier_feature_keys are NOT in the tier are hidden
+    // (visible=false); admin/system slots (empty tier_feature_keys[]) are
+    // always visible.
     const [{ data: rd }, { data: rp }, catalogRes] = await Promise.all([
       supabase.from('enterprise_role_definitions').select('*').eq('workspace_id', workspaceId).order('sort_order'),
       supabase.from('enterprise_role_permissions').select('*').eq('workspace_id', workspaceId),
-      (supabase as any).from('enterprise_feature_catalog').select('feature_key, display_name, parent_key, sort_order'),
+      (supabase as any).rpc('workspace_permission_catalog', { _workspace_id: workspaceId }),
     ]);
     setRoles((rd as any[]) || []);
     setPermissions((rp as any[]) || []);
-    const catalogRows = (catalogRes.data as any[]) || [];
-    setFeatureTree(catalogRows.length > 0 ? buildTree(catalogRows) : []);
+    const allCatalog = (catalogRes.data as any[]) || [];
+    const visibleCatalog = allCatalog.filter((r) => r.visible !== false);
+    setHiddenByTier(allCatalog.length - visibleCatalog.length);
+    // Fallback to enterprise_feature_catalog if the RPC returned empty (e.g.
+    // older workspaces without a tier mapping yet) — preserves prior behavior.
+    if (visibleCatalog.length === 0) {
+      const fallback = await (supabase as any)
+        .from('enterprise_feature_catalog')
+        .select('feature_key, display_name, parent_key, sort_order');
+      setFeatureTree((fallback.data as any[])?.length > 0 ? buildTree(fallback.data as any[]) : []);
+    } else {
+      setFeatureTree(buildTree(visibleCatalog));
+    }
     setLoading(false);
   }, [workspaceId]);
 
@@ -141,5 +159,5 @@ export function useEnterprisePermissions(workspaceId: string, userRoleKey?: stri
   const canEdit = useCallback((featureKey: string): boolean => hasAccess(featureKey, 'edit'), [hasAccess]);
   const canView = useCallback((featureKey: string): boolean => hasAccess(featureKey, 'readonly'), [hasAccess]);
 
-  return { roles, permissions, featureTree, loading, refetch: fetch, getAccess, hasAccess, canEdit, canView };
+  return { roles, permissions, featureTree, hiddenByTier, loading, refetch: fetch, getAccess, hasAccess, canEdit, canView };
 }
