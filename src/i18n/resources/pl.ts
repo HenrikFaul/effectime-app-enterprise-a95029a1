@@ -3,6 +3,9 @@
 
 const pl = {
   common: {
+    copied_to_clipboard: 'Skopiowano do schowka',
+    copy_failed: 'Kopiowanie nie powiodło się',
+    more: 'więcej',
     later: 'Później',
     dismiss: 'Zamknij',
     save: 'Zapisz',
@@ -3624,6 +3627,14 @@ const pl = {
     load_error: 'Nie można załadować stanu integracji',
   },
   wellbeing: {
+    alert_overtime_warning: 'Ostrzeżenie o nadgodzinach',
+    alert_low_wellbeing_score: 'Niski wellbeing',
+    open_alerts: 'Otwarte alerty',
+    bucket_red: 'Ryzyko (<40)',
+    bucket_yellow: 'Obserwacja (40-69)',
+    bucket_green: 'W normie (70+)',
+    avg_score: 'Średnia',
+    engine_title: 'Silnik oceny wellbeingu',
     dashboard_title: 'Dobrostan zespołu',
     recalculate_btn: 'Przelicz wyniki',
     recalculating: 'Przeliczanie…',
@@ -4006,6 +4017,21 @@ const pl = {
     today_timeline: 'Dzisiejsze zdarzenia',
     event_clock_in: 'wejście',
     event_clock_out: 'wyjście',
+  },
+  integrations: {
+    api_gateway_title: 'Publiczne REST API',
+    api_base_url: 'Bazowy URL',
+    api_endpoints: 'Dostępne końcówki',
+    api_endpoint_health: 'Zwraca obszar roboczy + nazwę klucza do testowania połączenia.',
+    api_endpoint_employees: 'Lista aktywnych członków obszaru roboczego.',
+    api_endpoint_schedules: 'Lista przypisań zmian.',
+    api_endpoint_leave_requests: 'Lista wniosków urlopowych.',
+    api_rate_limit_title: 'Limit szybkości',
+    api_rate_limit_desc: '1000 żądań / godzinę / klucz API. Przekroczone żądania zwracają HTTP 429.',
+    webhook_title: 'Umowa webhooka',
+    webhook_desc: 'Po wystąpieniu zdarzenia (np. leave.approved) Effectime POSTuje podpisany payload na twój URL. Sprawdź podpis sekretem subskrypcji.',
+    webhook_signature_title: 'Nagłówki',
+    webhook_retry_hint: 'Ponowienia: do 3 prób z wykładniczym opóźnieniem. Po 3 niepowodzeniach dostawa jest oznaczona jako failed.',
   },
 } as const;
 

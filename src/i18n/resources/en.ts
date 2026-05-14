@@ -3,6 +3,9 @@
 
 const en = {
   common: {
+    copied_to_clipboard: 'Copied to clipboard',
+    copy_failed: 'Copy failed',
+    more: 'more',
     later: 'Later',
     dismiss: 'Dismiss',
     save: 'Save',
@@ -3834,6 +3837,14 @@ const en = {
     load_error: 'Could not load integration status',
   },
   wellbeing: {
+    alert_overtime_warning: 'Overtime warning',
+    alert_low_wellbeing_score: 'Low wellbeing',
+    open_alerts: 'Open alerts',
+    bucket_red: 'At risk (<40)',
+    bucket_yellow: 'Watch (40-69)',
+    bucket_green: 'Healthy (70+)',
+    avg_score: 'Avg score',
+    engine_title: 'Wellbeing scoring engine',
     dashboard_title: 'Team wellbeing',
     recalculate_btn: 'Recalculate scores',
     recalculating: 'Recalculating…',
@@ -4235,6 +4246,21 @@ const en = {
     today_timeline: 'Today\'s events',
     event_clock_in: 'in',
     event_clock_out: 'out',
+  },
+  integrations: {
+    api_gateway_title: 'Public REST API',
+    api_base_url: 'Base URL',
+    api_endpoints: 'Available endpoints',
+    api_endpoint_health: 'Returns workspace + key name for connection testing.',
+    api_endpoint_employees: 'List active workspace members.',
+    api_endpoint_schedules: 'List shift assignments.',
+    api_endpoint_leave_requests: 'List leave requests.',
+    api_rate_limit_title: 'Rate limit',
+    api_rate_limit_desc: '1000 requests / hour / API key. Exceeded requests return HTTP 429.',
+    webhook_title: 'Webhook contract',
+    webhook_desc: 'When a workspace event fires (e.g. leave.approved), Effectime POSTs a signed payload to your subscribed URL. You verify the signature with your subscription secret.',
+    webhook_signature_title: 'Headers',
+    webhook_retry_hint: 'Retries: up to 3 attempts with exponential backoff. After 3 failures the delivery is marked failed.',
   },
 } as const;
 

@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useI18n } from '@/i18n/I18nProvider';
+import { WellbeingRecalculateCard } from '@/components/wellbeing/WellbeingRecalculateCard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -479,6 +480,10 @@ export function WellbeingDashboard({ workspaceId, isAdmin }: Props) {
           </Button>
         )}
       </div>
+
+      {/* New v3.23.0 engine card: distribution + recalculate + open-alerts.
+          Provides a faster "run now" path than the legacy button above. */}
+      <WellbeingRecalculateCard workspaceId={workspaceId} />
 
       {/* Summary row */}
       <div className="grid grid-cols-3 gap-4">

@@ -1,3 +1,89 @@
+## 2026-05-14 — v3.24.0 Public REST API gateway + webhook dispatcher (Top-20 Rank 9)
+
+Promotes Rank 9 from PARTIAL → DONE for read endpoints + webhook delivery.
+
+### Edge functions deployed
+- **`public-api`** — Bearer-token authenticated REST gateway.
+  - Auth: `sha256hex` of raw key matched against `enterprise_api_keys.key_hash`.
+  - Rate limit: 1000 req/hour per key (in-memory sliding window; resets on cold start).
+  - Routes: `GET /v1/health`, `GET /v1/employees`, `GET /v1/schedules`, `GET /v1/leave-requests`.
+  - Response envelope: `{ data, meta: { request_id, count } }`.
+  - Logs every request to `enterprise_api_usage_logs`; updates `enterprise_api_keys.last_used_at`.
+- **`webhook-dispatcher`** — drains `enterprise_webhook_deliveries` (status pending/retrying).
+  - Signs payload with `HMAC-SHA256(secret, body)` → `X-Effectime-Signature: sha256=<hex>` header.
+  - Also sets `X-Effectime-Event` + `X-Effectime-Delivery-Id` headers.
+  - 10-second timeout per delivery; retries up to 3 times via `webhook_record_delivery` RPC.
+  - Platform-admin-gated (defense against accidental DoS / spam).
+
+### DB
+- `enterprise_api_keys.key_prefix` column (display the first chars of a key after creation).
+- `enterprise_webhook_deliveries` table (per-event delivery rows with attempt count, last response code/body/error).
+- `webhook_emit(workspace_id, event_type, payload)` RPC — workspace-member-callable, fans the event out to all active matching subscriptions.
+- `webhook_record_delivery(delivery_id, status_code, body, error)` RPC — dispatcher-only (admin role).
+
+### Feature catalog + tier mapping
+- 2 new feature_keys: `public_api_gateway`, `webhook_dispatcher`. Pro + Enterprise.
+
+### Frontend
+- `src/components/integrations/PublicApiGatewayPanel.tsx` — docs surface
+  with copy-to-clipboard curl examples, base URL display, rate-limit
+  notice, webhook signature contract.
+- Wired into DeveloperPortal as a new "API gateway" tab.
+
+### Localization
+- 13 keys × 5 locales (en, hu, cs, sk, pl) = 65 strings in new `integrations.*` namespace.
+- 4 common helper keys (`copied`, `copy_failed`, `copied_to_clipboard`, `more`) × 5 locales.
+
+### Deferred
+- pg_cron schedule for the dispatcher (currently invoke manually).
+- POST/PUT/DELETE write endpoints in the public-api gateway.
+- OpenAPI spec auto-generation from Zod schemas.
+- Webhook subscription management UI (current DB tables + RPCs support it; UI is in the existing DeveloperPortal Webhooks tab).
+
+---
+
+## 2026-05-14 — v3.23.0 Wellbeing scoring engine completion (Top-20 Rank 8)
+
+Promotes Rank 8 from PARTIAL → DONE.
+
+### DB (Supabase MCP migration `v3_23_0_wellbeing_engine`)
+- `enterprise_workspaces.wellbeing_weights jsonb` — per-workspace component weight overrides.
+- `wellbeing_get_weights(workspace_id)` STABLE helper — returns effective weights with defaults.
+- `wellbeing_calculate_scores(workspace_id)` RPC — for each active member:
+  - Component A (30% weight): overtime ratio from attendance_segments (last 90 days).
+  - Component B (25% weight): weekend density (Sat/Sun shifts ÷ total shifts).
+  - Component C (20% weight): leave utilization (days used ÷ days accrued, last 365 days).
+  - Components D+E (25%): schedule stability + recovery placeholders at neutral 70pts (next polish).
+  - Inserts `wellbeing_scores` row + fires `wellbeing_alerts` on threshold crossings:
+    - score < 40 → `low_wellbeing_score` (severity high).
+    - score 40-60 with >20% overtime → `overtime_warning` (severity medium).
+
+### Feature catalog + tier mapping
+- 1 new feature_key: `wellbeing_engine_run`. Mapped to Pro + Enterprise.
+  Depends on `burnout_engine`.
+
+### Frontend
+- `src/hooks/useWellbeing.ts` — useLatestWellbeingScores,
+  useOpenWellbeingAlerts + `recalculateWellbeingScores` helper.
+- `src/components/wellbeing/WellbeingRecalculateCard.tsx` — engine
+  card with green/yellow/red distribution + recalculate button + open
+  alerts preview. Wired into the existing WellbeingDashboard above the
+  summary row.
+
+### Localization
+- 8 new keys added INTO the existing `wellbeing.*` namespace
+  (engine_title, last_run, avg_score, bucket_green/yellow/red,
+  open_alerts, alert_low_wellbeing_score, alert_overtime_warning).
+- All 5 locales (en, hu, cs, sk, pl) — total 40 strings.
+
+### Deferred
+- Weekly pg_cron auto-calculation.
+- Schedule-stability component (needs schedule-change tracking).
+- Recovery component (needs cross-shift gap analysis).
+- Per-member trend sparkline UI (data exists in `wellbeing_scores`).
+
+---
+
 ## 2026-05-14 — v3.22.0 GPS / NFC / QR Clock-In engine (Top-20 Rank 10)
 
 Promotes Rank 10 from MISSING (catalog ready) → DONE.

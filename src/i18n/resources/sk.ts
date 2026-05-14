@@ -3,6 +3,9 @@
 
 const sk = {
   common: {
+    copied_to_clipboard: 'Skopírované do schránky',
+    copy_failed: 'Kopírovanie zlyhalo',
+    more: 'ďalšie',
     later: 'Neskôr',
     dismiss: 'Zavrieť',
     save: 'Uložiť',
@@ -3624,6 +3627,14 @@ const sk = {
     load_error: 'Stav integrácie sa nedá načítať',
   },
   wellbeing: {
+    alert_overtime_warning: 'Varovanie o nadčasoch',
+    alert_low_wellbeing_score: 'Nízky wellbeing',
+    open_alerts: 'Otvorené upozornenia',
+    bucket_red: 'Riziko (<40)',
+    bucket_yellow: 'Sledovať (40-69)',
+    bucket_green: 'V poriadku (70+)',
+    avg_score: 'Priemer',
+    engine_title: 'Engine na hodnotenie wellbeingu',
     dashboard_title: 'Pohoda tímu',
     recalculate_btn: 'Prepočítať skóre',
     recalculating: 'Prepočítavanie…',
@@ -4006,6 +4017,21 @@ const sk = {
     today_timeline: 'Dnešné udalosti',
     event_clock_in: 'príchod',
     event_clock_out: 'odchod',
+  },
+  integrations: {
+    api_gateway_title: 'Verejné REST API',
+    api_base_url: 'Základná URL',
+    api_endpoints: 'Dostupné koncové body',
+    api_endpoint_health: 'Vráti pracovný priestor + meno kľúča pre test pripojenia.',
+    api_endpoint_employees: 'Zoznam aktívnych členov pracovného priestoru.',
+    api_endpoint_schedules: 'Zoznam priradení zmien.',
+    api_endpoint_leave_requests: 'Zoznam žiadostí o dovolenku.',
+    api_rate_limit_title: 'Limit rýchlosti',
+    api_rate_limit_desc: '1000 požiadaviek / hodinu / API kľúč. Prekročené požiadavky vracajú HTTP 429.',
+    webhook_title: 'Zmluva webhooku',
+    webhook_desc: 'Pri udalosti v pracovnom priestore (napr. leave.approved) Effectime POSTuje podpísané dáta na vašu URL. Podpis overte tajným kľúčom predplatného.',
+    webhook_signature_title: 'Hlavičky',
+    webhook_retry_hint: 'Opakovanie: až 3 pokusy s exponenciálnym spomalením. Po 3 zlyhaniach je doručenie označené ako failed.',
   },
 } as const;
 

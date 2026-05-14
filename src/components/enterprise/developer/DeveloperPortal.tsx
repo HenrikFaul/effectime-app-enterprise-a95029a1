@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PublicApiGatewayPanel } from '@/components/integrations/PublicApiGatewayPanel';
 import {
   Dialog,
   DialogContent,
@@ -392,7 +393,16 @@ export function DeveloperPortal({ workspaceId, userId }: Props) {
             <Webhook className="h-3.5 w-3.5" />
             {t('developer.tab_webhooks')}
           </TabsTrigger>
+          <TabsTrigger value="gateway" className="flex items-center gap-1.5">
+            {/* Top-20 Rank 9 (v3.24.0): public REST gateway docs surface. */}
+            <Key className="h-3.5 w-3.5" />
+            {t('integrations.api_gateway_title')}
+          </TabsTrigger>
         </TabsList>
+
+        <TabsContent value="gateway" className="space-y-4 mt-4">
+          <PublicApiGatewayPanel />
+        </TabsContent>
 
         {/* ── API Keys Tab ────────────────────────────────────────────────── */}
         <TabsContent value="api_keys" className="space-y-4 mt-4">

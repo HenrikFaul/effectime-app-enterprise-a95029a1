@@ -3,6 +3,9 @@
 
 const hu = {
   common: {
+    copied_to_clipboard: 'Vágólapra másolva',
+    copy_failed: 'Másolás sikertelen',
+    more: 'továbbiak',
     later: 'Később',
     dismiss: 'Bezárás',
     save: 'Mentés',
@@ -3822,6 +3825,14 @@ const hu = {
     load_error: 'Az integráció állapota nem tölthető be',
   },
   wellbeing: {
+    alert_overtime_warning: 'Túlóra figyelmeztetés',
+    alert_low_wellbeing_score: 'Alacsony jóllét',
+    open_alerts: 'Nyitott riasztások',
+    bucket_red: 'Veszélyben (<40)',
+    bucket_yellow: 'Figyelendő (40-69)',
+    bucket_green: 'Egészséges (70+)',
+    avg_score: 'Átlag',
+    engine_title: 'Jóllét értékelő motor',
     dashboard_title: 'Csapat jólléte',
     recalculate_btn: 'Pontszámok újraszámítása',
     recalculating: 'Újraszámítás…',
@@ -4223,6 +4234,21 @@ const hu = {
     today_timeline: 'Mai események',
     event_clock_in: 'be',
     event_clock_out: 'ki',
+  },
+  integrations: {
+    api_gateway_title: 'Nyilvános REST API',
+    api_base_url: 'Bázis URL',
+    api_endpoints: 'Elérhető végpontok',
+    api_endpoint_health: 'Munkaterület + kulcsnév visszaadása kapcsolat-teszteléshez.',
+    api_endpoint_employees: 'Aktív munkaterület-tagok listája.',
+    api_endpoint_schedules: 'Műszak-hozzárendelések listája.',
+    api_endpoint_leave_requests: 'Szabadságkérelmek listája.',
+    api_rate_limit_title: 'Sebességkorlát',
+    api_rate_limit_desc: '1000 kérés / óra / API-kulcs. A túllépett kérések HTTP 429 választ adnak.',
+    webhook_title: 'Webhook szerződés',
+    webhook_desc: 'Munkaterület-esemény esetén (pl. leave.approved) az Effectime aláírt payload-ot POSTol a feliratkozott URL-re. Az aláírást a saját feliratkozási kulccsal ellenőrizd.',
+    webhook_signature_title: 'Fejlécek',
+    webhook_retry_hint: 'Újraküldés: legfeljebb 3 próbálkozás exponenciális visszalépéssel. 3 hibás kézbesítés után „failed”.',
   },
 } as const;
 
