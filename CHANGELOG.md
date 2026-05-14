@@ -1,3 +1,92 @@
+## 2026-05-14 — v3.29.0 Predictive Analytics engine (Top-20 Rank 3)
+
+Promotes Rank 3 from PARTIAL → DONE: existing AnalyticsDashboard kept;
+this release adds the forecasting + risk-scoring layer that turns Effectime
+from "scheduling tool" to "workforce intelligence platform" per the strategy doc.
+
+### DB (Supabase MCP migration `v3_29_0_predictive_analytics`)
+- `enterprise_workspaces.salary_band_config jsonb` column for labor-cost modeling.
+- 3 new SECURITY DEFINER RPCs (all manager / admin only):
+  - `analytics_labor_cost_forecast(workspace_id, months_ahead)` — N-month
+    projection by member × salary band, adjusted by approved-leave fraction.
+  - `analytics_absence_risk_scores(workspace_id)` — per-member 0-100
+    risk score from 180-day + 365-day leave patterns + sick-leave frequency.
+  - `analytics_coverage_risk_heatmap(workspace_id, days_ahead)` — daily
+    green/yellow/red projection for the next N days based on approved +
+    pending leave fraction.
+
+### Feature catalog + tier mapping
+- 3 new feature_keys: `analytics_labor_cost_forecast`,
+  `analytics_absence_risk`, `analytics_coverage_heatmap`. All Pro + Enterprise.
+
+### Frontend
+- `src/hooks/usePredictiveAnalytics.ts` (3 hooks).
+- `src/components/analytics/PredictiveAnalyticsPanel.tsx` — 3 sections:
+  - Labor cost bar-chart (6 months, EUR-formatted).
+  - Top absence-risk members (color-coded badges).
+  - 90-day coverage heatmap (week × day grid, green/yellow/red cells).
+- Wired into existing `AnalyticsDashboard` above the legacy KPI cards.
+
+### Localization
+- 10 new keys merged into existing `analytics.*` namespace × 5 locales = 50 strings.
+
+### Deferred
+- pg_cron refresh of materialized views (currently RPCs compute on-demand).
+- ML-based absence pattern detection (current model is rule-based; per
+  the strategy doc's privacy-first stance, no PII is sent to external ML services).
+
+---
+
+## 2026-05-14 — v3.26.0 AI Document Generator (Top-20 Rank 18)
+
+Promotes Rank 18 from MISSING → DONE.
+
+### Approach
+**Template-based core + optional Claude polish.** Pure template
+substitution works without ANY external API; AI polish is gated on
+`ANTHROPIC_API_KEY` being configured in Supabase function secrets and
+degrades gracefully when unset.
+
+### DB (Supabase MCP migration `v3_26_0_document_generator`)
+- `document_templates` table — system + workspace templates with
+  HTML body, variable list, doc_type, language.
+- `generated_documents` table — append-only generation log with
+  content + context + status (draft/final/sent/signed).
+- `document_substitute(body_html, vars jsonb)` IMMUTABLE helper —
+  `{{key}}` token replacement.
+- `document_generate(workspace_id, template_id, membership_id,
+  extra_vars, subject)` SECURITY DEFINER RPC — auto-populates
+  workspace + member context, runs substitution, writes the row.
+- 5 seeded system templates: leave_approval (en, hu),
+  employment_addendum, overtime_consent, working_time_summary.
+
+### Edge function deployed: `document-ai-polish`
+- Calls `claude-haiku-4-5` if `ANTHROPIC_API_KEY` is set; returns
+  unchanged content + `ai_available: false` + hint otherwise.
+- Authorizes the caller as an active workspace member.
+
+### Feature catalog + tier mapping
+- 3 new feature_keys: `document_templates`, `document_generator`,
+  `document_ai_polish`. Pro + Enterprise.
+
+### Frontend
+- `src/hooks/useDocumentGenerator.ts` — useDocumentTemplates,
+  useGeneratedDocuments + `generateDocument` + `polishDocumentWithAi` helpers.
+- `src/components/documents/DocumentGeneratorPanel.tsx` — template
+  picker, extras JSON input, generate button, Sparkles AI polish button,
+  HTML preview pane, recent-documents list.
+- Wired inside the Reports tab via FeatureGate.
+
+### Localization
+- 17 new keys × 5 locales = 85 strings in new `documents.*` namespace.
+
+### Deferred
+- WYSIWYG template editor (TipTap/Quill) — admins currently write HTML directly.
+- E-signature integration (DocuSign / Scrive) — flagged status `signed` exists; UX TBD.
+- PDF rendering of generated documents — content_html is preserved; pdf path is the next polish.
+
+---
+
 ## 2026-05-14 — v3.24.0 Public REST API gateway + webhook dispatcher (Top-20 Rank 9)
 
 Promotes Rank 9 from PARTIAL → DONE for read endpoints + webhook delivery.
