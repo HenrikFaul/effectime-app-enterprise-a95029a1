@@ -1,3 +1,114 @@
+## 2026-05-14 — v3.22.0 GPS / NFC / QR Clock-In engine (Top-20 Rank 10)
+
+Promotes Rank 10 from MISSING (catalog ready) → DONE.
+
+### DB (Supabase MCP migration `v3_22_0_clock_in_engine`)
+- `clock_events` — append-only attendance log (workspace + member +
+  event_type + method + geofence coordinates + verified flag + raw_data).
+- `qr_clock_sessions` — rotating QR codes (60-second TTL by default;
+  manager-only generation).
+- 4 new columns on `enterprise_offices`: `geofence_lat`, `geofence_lng`,
+  `geofence_radius_m` (default 150m), `clock_in_nfc_tag`.
+- `haversine_km()` IMMUTABLE helper for geofence distance.
+- `clock_generate_qr(office_id, ttl_seconds)` — manager-gated rotating
+  QR generator. Returns the code + expires_at.
+- `clock_event(workspace_id, event_type, method, lat, lng, qr_code,
+  nfc_tag, office_id)` — main RPC. Per-method validation:
+  - **GPS**: finds nearest geofenced office in workspace; verified only
+    if within radius. Anti-spoof: server-side distance check.
+  - **QR**: validates against unexpired `qr_clock_sessions` row.
+  - **NFC**: validates against `enterprise_offices.clock_in_nfc_tag`.
+  - **Manual**: always unverified; flagged for manager review.
+
+### Feature catalog + tier mapping
+- 4 new feature_keys: `clock_in_gps`, `clock_in_qr`, `clock_in_nfc`,
+  `clock_in_board`. All routed to `/w/:workspaceId`. Dependencies:
+  GPS/QR/NFC each depend on `attendance_log`; board depends on all 3.
+- Mapped to **Pro + Enterprise**. Freemium excluded (mobile-first
+  attendance is a paying-customer feature; the strategy doc positions
+  this as the $4.2B hardware-replacement market).
+
+### Frontend
+- `src/hooks/useClockIn.ts` — `useTodayClockEvents`,
+  `useLiveAttendance` + `clockEvent` + `generateQrSession` helpers.
+- `src/components/clock/ClockInPanel.tsx` — mobile-first panel with:
+  - Big tabular live clock (updates every second).
+  - Method selector (GPS / QR / NFC / Manual).
+  - GPS reads `navigator.geolocation` and sends lat+lng to the RPC.
+  - Today's timeline with verified/unverified icons.
+  - Hours-worked counter (sums clock-in/out pairs).
+- Wired into `EmployeeDashboard` (self-service portal) so any member
+  sees their clock-in panel on their personal page.
+
+### Localization
+- 19 keys × 5 locales (en, hu, cs, sk, pl) = 95 strings.
+
+### Deferred (v3.22.1+)
+- Live attendance board for managers (`clock_in_board` feature_key
+  exists; the manager-facing component is the next polish PR).
+- Capacitor native NFC plugin wiring (currently NFC tag is entered as
+  text; native NFC requires `@capacitor/nfc` which depends on the PWA
+  scaffold from Rank 7 / v3.32).
+- Camera-based QR scanner (currently QR code is entered as text;
+  Capacitor BarCodeScanner integration also depends on PWA scaffold).
+
+---
+
+## 2026-05-14 — v3.21.0 Shift Marketplace (Top-20 Rank 12)
+
+Promotes Rank 12 from PARTIAL (SubstituteInbox only) → DONE.
+
+### DB (Supabase MCP migration `v3_21_0_shift_marketplace`)
+- `shift_trade_offers` — open/accepted/cancelled/expired/approved/rejected.
+- `shift_trade_acceptances` — pending/approved/rejected/superseded.
+- `enterprise_workspaces.shift_trade_auto_approve` (new column, default
+  false) — workspace policy to skip manager approval for same-skill
+  trades.
+- `shift_trade_is_eligible(membership_id, shift_assignment_id)` STABLE
+  helper — checks workspace match, active status, not-own-shift,
+  not-on-approved-leave-that-day, no-conflicting-shift-that-day.
+- 4 SECURITY DEFINER RPCs (sole writers):
+  - `shift_trade_offer(shift_assignment_id, reason, expires_at)` —
+    only the assigned member may offer their own shift. Prevents
+    duplicate open offers.
+  - `shift_trade_accept(offer_id)` — validates eligibility; first to
+    accept marks offer 'accepted'; auto-approves if workspace policy
+    permits.
+  - `shift_trade_decide(acceptance_id, approved, notes)` — manager
+    approves → reassigns `enterprise_shift_assignments.membership_id`
+    + supersedes other pending acceptances + marks offer 'approved'.
+    Manager rejects → offer goes back to 'open' so other pending
+    acceptances can be evaluated.
+  - `shift_trade_cancel(offer_id)` — offering member or manager
+    cancels.
+
+### Feature catalog + tier mapping
+- 3 new feature_keys: `shift_marketplace_offer`,
+  `shift_marketplace_browse`, `shift_marketplace_auto_approve`.
+- Mapped to **Pro + Enterprise** only. Freemium excluded.
+
+### Frontend
+- `src/hooks/useShiftMarketplace.ts` — `useOpenTradeOffers`,
+  `useMyTradeOffers`, `usePendingAcceptances` + 4 RPC helpers.
+- `src/components/shift-marketplace/ShiftMarketplacePanel.tsx` — tab
+  switcher (Available / My offers) + per-offer card with status badge
+  (color-coded by status) + Accept/Cancel actions.
+- Wired into `EmployeeDashboard` (self-service area).
+
+### Localization
+- 18 keys × 5 locales = 90 strings.
+
+### Deferred (v3.21.1+)
+- Manager approval queue inside `ApprovalInbox` (currently the RPC
+  exists but a dedicated manager UI for `shift_trade_decide` is the
+  next polish PR).
+- Push notification on offer creation (depends on Rank 7 PWA/FCM).
+- Eligibility checks beyond date conflicts (skill match, hours budget,
+  site authorization) — the schema supports it; the helper is currently
+  conservative.
+
+---
+
 ## 2026-05-13 — v3.20.0 GDPR / WTD Compliance Engine (Top-20 Rank 13)
 
 Promotes Rank 13 from MISSING (catalog ready) → DONE.
