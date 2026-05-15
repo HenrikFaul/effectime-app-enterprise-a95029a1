@@ -59,13 +59,19 @@ export function AuditLog({ workspaceId }: Props) {
       query = query.like('action', `${actionFilter}%`);
     }
 
-    const { data } = await query;
+    const { data, error: eventsErr } = await query;
+    if (eventsErr) {
+      console.error('[AuditLog] Failed to fetch events:', eventsErr.message);
+      setLoading(false);
+      return;
+    }
     const items = (data as any[]) || [];
     setEvents(items);
 
     const userIds = [...new Set([...items.map(e => e.actor_id), ...items.filter(e => e.affected_user_id).map(e => e.affected_user_id)])];
     if (userIds.length > 0) {
-      const { data: profileData } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);
+      const { data: profileData, error: profileErr } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);
+      if (profileErr) console.error('[AuditLog] Failed to fetch profiles:', profileErr.message);
       const map: Record<string, string> = {};
       (profileData || []).forEach((p: any) => { map[p.user_id] = p.display_name || t('audit_log.actor_unknown'); });
       setProfiles(map);

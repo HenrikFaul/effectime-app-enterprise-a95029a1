@@ -1201,3 +1201,31 @@ if (!rows || rows.length === 0) return jsonRes({ error: 'Already locked' }, 409)
 **Problem**: Constants defined at module level cannot call `t()` because `t()` requires the React context. The array was hardcoded in Hungarian, violating the localization mandate for all 7 other locales.
 **Fix**: Removed the module-level constant. Added `weekdayLabels` as a `useMemo` inside the component that calls `t('leave_calendar.weekday_*')` for each of 7 keys. Added all 9 new i18n keys to all 8 locale files.
 **Pattern**: Any user-visible string that appears in a module-level constant is a localization gap. Always move such strings inside the component scope where `t()` is available, or define them as i18n keys.
+
+## ➕ APPEND — 2026-05-15 Supabase error-visibility sweep (v3.33.6)
+
+### [LESSON-SUPABASE-SDK-087]: Every `.select()` destructure in a component must include `.error` and early-return
+**Context**: AuditLog, ApprovalInbox, LeaveCalendar, WorkspaceDashboard fetchData.
+**Problem**: All four components used `const { data } = await supabase.from(...)...` without checking `.error`. On any DB-level failure (RLS rejection, constraint, network), `data` is `null`, items array becomes `[]`, and the UI silently shows "no results" instead of an error state.
+**Fix**: `const { data, error } = await ...; if (error) { console.error(...); return; }` in every case.
+**Pattern**: The Supabase JS client contract is explicit: errors come via `{ error }`, not via thrown exceptions. ALWAYS destructure both.
+
+### [LESSON-SUPABASE-SDK-088]: Check `.error` on all mutation operations (insert/update/delete) even fire-and-forget paths
+**Context**: RolePermissionManager insert/update/delete, ApprovalInbox bulk operations.
+**Problem**: `await supabase.from('table').insert(...)` with no error check means RLS rejections, constraint violations, and schema mismatches are completely invisible — no log, no user feedback.
+**Fix**: Destructure `{ error }`, log on failure. For UX-critical paths, surface to the user via toast.
+
+### [LESSON-POLLING-001]: Extract interval callback to a named function and check errors in all paths
+**Context**: WorkspaceDashboard recovery_mode polling.
+**Problem**: Two copies of the same async code (initial fetch + setInterval callback) had inconsistent error handling and relied on shared state. Copying code into interval callbacks is a regression trap.
+**Fix**: Extract to a named `pollX()` function. Both the initial call and the interval call invoke the same function. Errors are checked in one place.
+
+### [LESSON-RPC-001]: Distinguish RPC operational failure from authorization denial
+**Context**: sync-holidays `has_enterprise_role` RPC.
+**Problem**: `const { data: roleCheck } = await supabaseAdmin.rpc(...)` without error check means RPC unavailability is treated the same as "user is not authorized" (returns falsy). The user gets a 403 Forbidden when the real issue is a 500 server error.
+**Fix**: Check `{ error: roleErr }` on RPC calls. Return 500 on RPC failure, 403 on explicit denial.
+
+### [LESSON-LOCALE-002]: Never use Hungarian as an English fallback — hardcode 'Unknown', not 'Ismeretlen'
+**Context**: capacityEngine.ts, run-report edge function.
+**Problem**: `'Ismeretlen'` is the Hungarian word for "Unknown". Using it as a fallback in a shared library means all non-Hungarian users see Hungarian text in display_name fallbacks.
+**Fix**: Use `'Unknown'` (English) as the universal fallback for missing display names in library/engine code. Let UI layers apply i18n on top.

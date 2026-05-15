@@ -1,3 +1,45 @@
+## 2026-05-15 — v3.33.6 Supabase error-visibility sweep
+
+Bug-fix release. No new features.
+
+### AuditLog.tsx
+- Added `{error}` checks on the events query and the profiles enrichment query; early return + log on failure.
+
+### RolePermissionManager.tsx
+- Default-permissions insert now checks + logs error.
+- Role delete now checks + guards both delete operations.
+- Permission update/insert now checks error and returns early on failure.
+
+### ApprovalInbox.tsx
+- Main leave-requests query now checks + logs error and returns early.
+- Bulk approval/rejection now checks error per item (logs, continues).
+
+### WorkspaceDashboard.tsx
+- `fetchMyMembership` Promise.all destructures and logs errors from all three queries.
+- Recovery-mode polling extracted to named `pollRecoveryMode()` function; both initial + interval calls check + log errors.
+
+### LeaveCalendar.tsx
+- All 6 parallel queries in `fetchData()` now log errors on failure.
+- Profiles enrichment query now checks + logs error.
+
+### useWorkspaceSectionState.ts
+- `loadFor()` now checks `{error}` and returns early with `console.error` on failure (was: silent empty map).
+
+### capacityEngine.ts
+- Hardcoded `'Ismeretlen'` (Hungarian) fallback replaced with `'Unknown'`.
+
+### run-report (edge function)
+- Profile enrichment in membership reports now checks `{error}` and logs failure.
+- Hardcoded `'Ismeretlen'` fallback replaced with `'Unknown'`.
+
+### sync-holidays (edge function)
+- `has_enterprise_role` RPC error now returns 500 instead of being silently treated as 403.
+- Holiday duplicate-check error now throws (was: silently proceeds).
+- Individual insert failures now logged (was: silently skipped without logging).
+- `holidays_last_sync_at` update now checks + logs error.
+
+---
+
 ## 2026-05-15 — v3.33.5 Edge-function data integrity, TOCTOU hardening, and localization fixes
 
 Bug-fix release. No new features.
