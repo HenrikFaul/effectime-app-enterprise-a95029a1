@@ -3270,6 +3270,7 @@ const ro = {
     mode_visual: 'Filtru vizual',
     filter_work_item_type: 'Tipul elementului de lucru',
     filter_state: 'Stare',
+    filter_priority: 'Prioritate',
     filter_assignee: 'Atribuit',
     filter_iteration: 'Cale iterație',
     filter_date_created: 'Data creării',
@@ -3431,6 +3432,8 @@ const ro = {
     btn_show_used_only: 'Doar utilizate',
     btn_show_all_fields: 'Toate câmpurile',
     btn_select_all_used: 'Selectează toate utilizate',
+    btn_select_all_visible: 'Selectează tot',
+    btn_deselect_all: 'Deselectează tot',
     used_hint: '(din cache)',
   },
   agile_panel: {

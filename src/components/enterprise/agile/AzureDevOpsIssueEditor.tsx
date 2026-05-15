@@ -160,10 +160,16 @@ export function AzureDevOpsIssueEditor({ open, onOpenChange, integration, workIt
         },
       });
       const payload = data as { ok?: boolean; users?: AssignableUser[] };
-      setUsers(payload?.users ?? []);
+      const loaded = payload?.users ?? [];
+      // Ensure the current assignee is always in the list so the Select shows their display name
+      setUsers((prev) => {
+        const currentEmail = issue?.assignee_email;
+        if (!currentEmail || loaded.some(u => u.email === currentEmail)) return loaded;
+        return [{ display_name: issue?.assignee_name ?? currentEmail, email: currentEmail, account_id: null }, ...loaded];
+      });
     }, 400);
     return () => clearTimeout(timer);
-  }, [open, workItemId, integration.id, userQuery]);
+  }, [open, workItemId, integration.id, userQuery, issue?.assignee_email]);
 
   const handleSave = async () => {
     if (!issue || !workItemId) return;

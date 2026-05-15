@@ -3288,6 +3288,7 @@ const en = {
     mode_visual: 'Visual filter',
     filter_work_item_type: 'Work item type',
     filter_state: 'State',
+    filter_priority: 'Priority',
     filter_assignee: 'Assigned to',
     filter_iteration: 'Iteration path',
     filter_date_created: 'Created date',
@@ -3449,6 +3450,8 @@ const en = {
     btn_show_used_only: 'Used only',
     btn_show_all_fields: 'All fields',
     btn_select_all_used: 'Select all used',
+    btn_select_all_visible: 'Select all',
+    btn_deselect_all: 'Deselect all',
     used_hint: '(based on cached issues)',
   },
   agile_panel: {

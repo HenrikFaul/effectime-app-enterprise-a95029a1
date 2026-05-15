@@ -3276,6 +3276,7 @@ const hu = {
     mode_visual: 'Vizuális szűrő',
     filter_work_item_type: 'Munkaelem típusa',
     filter_state: 'Státusz',
+    filter_priority: 'Prioritás',
     filter_assignee: 'Felelős',
     filter_iteration: 'Iteráció útvonal',
     filter_date_created: 'Létrehozás dátuma',
@@ -3437,6 +3438,8 @@ const hu = {
     btn_show_used_only: 'Csak használt',
     btn_show_all_fields: 'Összes mező',
     btn_select_all_used: 'Összes használt kijelölése',
+    btn_select_all_visible: 'Összes kijelölése',
+    btn_deselect_all: 'Kijelölés törlése',
     used_hint: '(gyorsítótár alapján)',
   },
   agile_panel: {

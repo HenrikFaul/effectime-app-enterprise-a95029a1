@@ -31,12 +31,15 @@ interface UserOption {
 
 interface BacklogFilterBuilderProps {
   integration: IntegrationMini;
-  /** All field metadata for this integration (loaded by BacklogBrowser) */
   fieldMeta: FieldMeta[];
-  /** The field IDs the user has selected in the Fields tab */
   selectedFieldIds: string[];
   onSearch: (query: string) => void;
   loading: boolean;
+  /** Fallback options derived from cached issues when fieldMeta has no type/state data */
+  cachedIssueTypes?: string[];
+  cachedStates?: string[];
+  cachedPriorities?: string[];
+  cachedIterationPaths?: string[];
 }
 
 export function BacklogFilterBuilder({
@@ -45,10 +48,15 @@ export function BacklogFilterBuilder({
   selectedFieldIds,
   onSearch,
   loading,
+  cachedIssueTypes = [],
+  cachedStates = [],
+  cachedPriorities = [],
+  cachedIterationPaths = [],
 }: BacklogFilterBuilderProps) {
   const { t } = useI18n();
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
   const [selectedStates, setSelectedStates] = useState<Set<string>>(new Set());
+  const [selectedPriorities, setSelectedPriorities] = useState<Set<string>>(new Set());
   const [selectedAssignees, setSelectedAssignees] = useState<Set<string>>(new Set());
   const [iterationPath, setIterationPath] = useState<string>('');
   const [dateFrom, setDateFrom] = useState<string>('');
@@ -59,22 +67,31 @@ export function BacklogFilterBuilder({
 
   const isAdo = integration.provider === 'azure_devops';
 
-  // ── Derived values from field metadata ──────────────────────────────────────
+  // ── Derived values from field metadata (with cache fallbacks) ────────────────
   const workItemTypeFields = fieldMeta.filter(f => f.field_type === 'workitemtype');
   const allWorkItemTypeNames = workItemTypeFields.map(f => f.field_name);
   const allStates = [...new Set(
     workItemTypeFields.flatMap(f => ((f.schema as any)?.states ?? []) as string[])
   )].sort();
   const iterField = fieldMeta.find(f => f.field_id === 'ado.iterations');
-  const iterationPaths = ((iterField?.schema as any)?.paths ?? []) as string[];
+  const metaIterPaths = ((iterField?.schema as any)?.paths ?? []) as string[];
 
   const jiraTypeOptions: string[] = ((fieldMeta.find(f => f.field_id === 'jira.issuetypes')?.schema as any)?.options ?? [])
     .map((o: any) => (typeof o === 'string' ? o : (o.name ?? o))).filter(Boolean);
   const jiraStatusOptions: string[] = ((fieldMeta.find(f => f.field_id === 'jira.statuses')?.schema as any)?.options ?? [])
     .map((o: any) => (typeof o === 'string' ? o : (o.name ?? o))).filter(Boolean);
 
+  // Use cached data as fallback when fieldMeta-derived lists are empty
+  const typeOptions = isAdo
+    ? (allWorkItemTypeNames.length ? allWorkItemTypeNames : cachedIssueTypes)
+    : jiraTypeOptions;
+  const stateOptions = isAdo
+    ? (allStates.length ? allStates : cachedStates)
+    : jiraStatusOptions;
+  const iterPathOptions = metaIterPaths.length ? metaIterPaths : cachedIterationPaths;
+  const priorityOptions = cachedPriorities;
+
   // ── Decide which filter sections to show ────────────────────────────────────
-  // If nothing is selected yet → show all general sections (backward-compatible).
   const noSelection = selectedFieldIds.length === 0;
 
   const showTypeFilter = noSelection || (isAdo
@@ -84,6 +101,10 @@ export function BacklogFilterBuilder({
   const showStateFilter = noSelection || (isAdo
     ? selectedFieldIds.includes('System.State')
     : selectedFieldIds.some(id => id === 'jira.statuses' || id === 'status'));
+
+  const showPriorityFilter = noSelection || selectedFieldIds.some(
+    id => id === 'Microsoft.VSTS.Common.Priority' || id === 'priority',
+  );
 
   const showAssigneeFilter = noSelection || (isAdo
     ? selectedFieldIds.includes('System.AssignedTo')
@@ -126,6 +147,8 @@ export function BacklogFilterBuilder({
       conds.push(`[System.WorkItemType] IN (${[...selectedTypes].map(v => `'${v}'`).join(', ')})`);
     if (selectedStates.size > 0)
       conds.push(`[System.State] IN (${[...selectedStates].map(v => `'${v}'`).join(', ')})`);
+    if (selectedPriorities.size > 0)
+      conds.push(`[Microsoft.VSTS.Common.Priority] IN (${[...selectedPriorities].join(', ')})`);
     if (selectedAssignees.size > 0)
       conds.push(`[System.AssignedTo] IN (${[...selectedAssignees].map(v => `'${v}'`).join(', ')})`);
     if (iterationPath)
@@ -146,6 +169,8 @@ export function BacklogFilterBuilder({
       conds.push(`issuetype in (${[...selectedTypes].map(v => `"${v}"`).join(', ')})`);
     if (selectedStates.size > 0)
       conds.push(`status in (${[...selectedStates].map(v => `"${v}"`).join(', ')})`);
+    if (selectedPriorities.size > 0)
+      conds.push(`priority in (${[...selectedPriorities].map(v => `"${v}"`).join(', ')})`);
     if (selectedAssignees.size > 0)
       conds.push(`assignee in (${[...selectedAssignees].join(', ')})`);
     if (dateFrom) conds.push(`created >= "${dateFrom}"`);
@@ -164,12 +189,9 @@ export function BacklogFilterBuilder({
     return next;
   }
 
-  const typeOptions = isAdo ? allWorkItemTypeNames : jiraTypeOptions;
-  const stateOptions = isAdo ? allStates : jiraStatusOptions;
-
   const hasActiveFilters =
-    selectedTypes.size > 0 || selectedStates.size > 0 || selectedAssignees.size > 0 ||
-    iterationPath || dateFrom || dateTo || textFilter;
+    selectedTypes.size > 0 || selectedStates.size > 0 || selectedPriorities.size > 0 ||
+    selectedAssignees.size > 0 || iterationPath || dateFrom || dateTo || textFilter;
 
   return (
     <div className="space-y-4">
@@ -211,6 +233,25 @@ export function BacklogFilterBuilder({
         </div>
       )}
 
+      {/* ── Priority ── */}
+      {showPriorityFilter && priorityOptions.length > 0 && (
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">{t('backlog_browser.filter_priority')}</Label>
+          <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+            {priorityOptions.map((p) => (
+              <label key={p} className="flex items-center gap-1.5 cursor-pointer">
+                <Checkbox
+                  checked={selectedPriorities.has(p)}
+                  onCheckedChange={() => setSelectedPriorities(toggleSet(selectedPriorities, p))}
+                  className="h-3.5 w-3.5"
+                />
+                <span className="text-xs">{p}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* ── Assignee ── */}
       {showAssigneeFilter && (
         <div className="space-y-1.5">
@@ -243,7 +284,7 @@ export function BacklogFilterBuilder({
       )}
 
       {/* ── Iteration path (ADO only) ── */}
-      {showIterationFilter && iterationPaths.length > 0 && (
+      {showIterationFilter && iterPathOptions.length > 0 && (
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">{t('backlog_browser.filter_iteration')}</Label>
           <Select value={iterationPath} onValueChange={setIterationPath}>
@@ -252,7 +293,7 @@ export function BacklogFilterBuilder({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="">{t('backlog_browser.all_iterations')}</SelectItem>
-              {iterationPaths.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+              {iterPathOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
@@ -294,6 +335,11 @@ export function BacklogFilterBuilder({
           {[...selectedStates].map(v => (
             <Badge key={v} variant="secondary" className="text-[10px] gap-1 cursor-pointer" onClick={() => setSelectedStates(toggleSet(selectedStates, v))}>
               {v} <X className="h-2.5 w-2.5" />
+            </Badge>
+          ))}
+          {[...selectedPriorities].map(v => (
+            <Badge key={v} variant="secondary" className="text-[10px] gap-1 cursor-pointer" onClick={() => setSelectedPriorities(toggleSet(selectedPriorities, v))}>
+              P{v} <X className="h-2.5 w-2.5" />
             </Badge>
           ))}
           {[...selectedAssignees].map(v => (
