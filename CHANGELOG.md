@@ -1,3 +1,26 @@
+## 2026-05-15 — v3.35.0 Business Intelligence prompt architecture
+
+Adds a complete, production-grade BI prompt ecosystem to the repository (`business_intelligence/`). Follows the same self-governing toolkit model as `marketing/`, `growth_strategy/`, and `valuation/`. A `SYSTEM.md` master controller routes all BI tasks to 10 specialist prompt files covering the full BI lifecycle: metric definition → trend analysis → anomaly detection → root cause analysis → executive narrative → documentation.
+
+### business_intelligence/ (new folder — 15 files)
+- **SYSTEM.md**: Master controller defining persona, 6-step mandatory discovery protocol, Effectime BI domain taxonomy (8 measurement areas), routing table, 10-level rule precedence, mandatory output contract, anti-hallucination protocol, version-aware reasoning protocol, and quality gates checklist.
+- **prompts/bi_strategy.md**: BI philosophy, 3-tier measurement prioritization, leading/lagging indicator mapping, measurement framework design protocol, and Effectime-specific BI anti-patterns.
+- **prompts/kpi_analysis.md**: KPI definition protocol, performance baseline establishment, variance computation, statistical significance assessment, Effectime KPI reference catalog (20+ metrics across 5 domains), and variance explanation framework.
+- **prompts/trend_analysis.md**: Time window discipline, signal-from-noise separation (minimum data points, consistency thresholds), trend break detection, seasonality assessment, direction confidence scoring, and projection guidance.
+- **prompts/anomaly_detection.md**: 5-type anomaly taxonomy (statistical, business-logic, version-induced, seasonal, integration-induced), detection protocol, version-induced anomaly checklist, severity matrix.
+- **prompts/dashboard_interpretation.md**: Dashboard reading protocol, 6 common Effectime misinterpretations documented, chart type interpretation guide, dashboard health checklist.
+- **prompts/executive_summary.md**: Audience tier model (board/C-suite/HR/manager), 6-section mandatory summary structure, tone and style rules, bad-news handling protocol.
+- **prompts/data_quality.md**: 5-dimension quality assessment (completeness, consistency, currency, validity, provenance), quality scoring matrix, 7 Effectime-specific data quality patterns (RLS scope, multi-tenancy, soft-delete, integration gaps, survey bias).
+- **prompts/root_cause_analysis.md**: 6-cause-category RCA framework, evidence weighting protocol, cause-vs-symptom discipline, correlation-vs-causation 4-test protocol.
+- **prompts/segment_cohort_analysis.md**: 7-dimension segmentation framework, cohort analysis protocol, 3-funnel structure (recruitment, workspace onboarding, engagement activation), segment comparison methodology.
+- **prompts/bi_documentation.md**: 5 BI document types, repository evidence citation requirements, versioning naming conventions for BI artifacts, integration with marketing system and valuation toolkit.
+- **templates/bi_report_template.md**: 10-section standard BI report structure.
+- **templates/metric_definition_template.md**: 10-section canonical metric definition format including source, polarity, targets, exclusions, version history, and usage guidance.
+- **examples/usage_examples.md**: 15 copy-paste invocation patterns covering all common BI task types.
+
+### No application code changed
+Pure addition of prompt tooling. No DB migrations, no UI changes, no localization changes, no schema modifications.
+
 ## 2026-05-15 — v3.34.1 Agile backlog: auto-load, pagination, and used-field detection
 
 Backlog tab now auto-loads most-recent items on open (no blank state), adds a 10/20/50/100/ALL pagination bar, and the Fields tab gains a "Used" column showing which discovered fields have actual data in cached issues.
