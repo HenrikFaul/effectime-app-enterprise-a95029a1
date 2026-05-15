@@ -3,6 +3,33 @@ import { useI18n } from '@/i18n/I18nProvider';
 import { Activity, AlertTriangle, Users, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+// ── Cyberpunk helpers ────────────────────────────────────────────────────────
+
+const PRIORITY_NEON: Record<string, { fill: string; shadow: string; label: string }> = {
+  '1':        { fill: '#ff3b30', shadow: 'rgba(255,59,48,0.7)',   label: 'P1' },
+  'critical': { fill: '#ff3b30', shadow: 'rgba(255,59,48,0.7)',   label: 'P1' },
+  'highest':  { fill: '#ff3b30', shadow: 'rgba(255,59,48,0.7)',   label: 'P1' },
+  '2':        { fill: '#ff9f0a', shadow: 'rgba(255,159,10,0.7)',  label: 'P2' },
+  'high':     { fill: '#ff9f0a', shadow: 'rgba(255,159,10,0.7)',  label: 'P2' },
+  '3':        { fill: '#ffd60a', shadow: 'rgba(255,214,10,0.6)',  label: 'P3' },
+  'medium':   { fill: '#ffd60a', shadow: 'rgba(255,214,10,0.6)',  label: 'P3' },
+  '4':        { fill: '#34c759', shadow: 'rgba(52,199,89,0.6)',   label: 'P4' },
+  'low':      { fill: '#34c759', shadow: 'rgba(52,199,89,0.6)',   label: 'P4' },
+};
+const DEFAULT_NEON = { fill: '#818cf8', shadow: 'rgba(129,140,248,0.6)', label: '—' };
+
+function dotStyle(issue: Record<string, unknown>) {
+  const p = String(issue.priority ?? '').toLowerCase();
+  const n = PRIORITY_NEON[p] ?? DEFAULT_NEON;
+  return { background: n.fill, boxShadow: `0 0 5px ${n.shadow}, 0 0 10px ${n.shadow}` };
+}
+
+const DONE_STATUSES = new Set(['done', 'closed', 'resolved', 'completed', 'removed', 'accepted']);
+
+const NEXUS_SCANLINE = {
+  backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(99,102,241,0.04) 3px, rgba(99,102,241,0.04) 4px)',
+} as React.CSSProperties;
+
 interface BacklogInsightsProps {
   issues: Record<string, unknown>[];
   provider: 'jira' | 'azure_devops';
@@ -72,7 +99,26 @@ export function BacklogInsights({ issues }: BacklogInsightsProps) {
     const statusPairs = Object.entries(statusCounts).sort((a, b) => b[1] - a[1]).slice(0, 7);
     const topAssignees = Object.entries(assigneeCounts).sort((a, b) => b[1] - a[1]).slice(0, 8);
 
-    return { total, storyPoints, unassigned, highPriority, typePairs, statusPairs, topAssignees };
+    // ── NEXUS data ────────────────────────────────────────────────────────────
+    const doneCount = issues.filter(i => DONE_STATUSES.has(String(i.status ?? '').toLowerCase())).length;
+
+    // Group issues by type for dot matrix (sorted by count desc)
+    const issuesByType: { type: string; items: typeof issues }[] = typePairs.slice(0, 8).map(([type]) => ({
+      type,
+      items: issues.filter(i => (i.issue_type as string || 'Unknown') === type),
+    }));
+
+    // Priority distribution for signal bars
+    const prioBuckets: Record<string, { fill: string; shadow: string; label: string; count: number }> = {};
+    for (const issue of issues) {
+      const p = String(issue.priority ?? '').toLowerCase();
+      const n = PRIORITY_NEON[p] ?? DEFAULT_NEON;
+      if (!prioBuckets[n.label]) prioBuckets[n.label] = { ...n, count: 0 };
+      prioBuckets[n.label].count++;
+    }
+    const prioritySignal = Object.values(prioBuckets).sort((a, b) => a.label.localeCompare(b.label));
+
+    return { total, storyPoints, unassigned, highPriority, typePairs, statusPairs, topAssignees, doneCount, issuesByType, prioritySignal };
   }, [issues]);
 
   if (!stats) {
@@ -243,7 +289,168 @@ export function BacklogInsights({ issues }: BacklogInsightsProps) {
             </div>
           </div>
         )}
+
+        {/* ── NEXUS ──────────────────────────────────────────────────────────── */}
+        <NexusPanel stats={stats} />
       </div>
+    </div>
+  );
+}
+
+// ── NEXUS sub-component ──────────────────────────────────────────────────────
+
+interface NexusStats {
+  total: number;
+  doneCount: number;
+  issuesByType: { type: string; items: Record<string, unknown>[] }[];
+  prioritySignal: { fill: string; shadow: string; label: string; count: number }[];
+}
+
+function NexusPanel({ stats }: { stats: NexusStats }) {
+  const { t } = useI18n();
+  const { total, doneCount, issuesByType, prioritySignal } = stats;
+
+  // SVG completion arc
+  const R = 30;
+  const CIRC = 2 * Math.PI * R;
+  const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
+  const arcDash = (pct / 100) * CIRC;
+  // Start arc from top: dashoffset = CIRC/4
+  const arcOffset = CIRC / 4;
+
+  return (
+    <div className="rounded-xl overflow-hidden border border-indigo-500/25 bg-slate-950 relative">
+      {/* Scanline texture */}
+      <div className="absolute inset-0 pointer-events-none" style={NEXUS_SCANLINE} />
+
+      {/* Header bar */}
+      <div className="relative flex items-center justify-between px-3 py-2 border-b border-indigo-500/20">
+        <div className="flex items-center gap-2 font-mono text-[10px] text-cyan-400">
+          <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 animate-pulse" />
+          {t('backlog_insights.nexus_title')}
+        </div>
+        <span className="font-mono text-[9px] text-indigo-400/60">
+          {total} {t('backlog_insights.nexus_nodes')}
+        </span>
+      </div>
+
+      <div className="relative p-3 grid grid-cols-[auto_1fr] gap-4 items-start">
+        {/* Completion arc */}
+        <div className="flex flex-col items-center gap-1">
+          <div className="font-mono text-[9px] text-indigo-400/60 uppercase tracking-wider mb-1">
+            {t('backlog_insights.nexus_resolved')}
+          </div>
+          <div className="relative">
+            <svg width="84" height="84" viewBox="0 0 84 84">
+              {/* Outer decorative ring */}
+              <circle cx="42" cy="42" r="40" fill="none" stroke="rgba(99,102,241,0.08)" strokeWidth="1" />
+              {/* Track */}
+              <circle cx="42" cy="42" r={R} fill="none" stroke="rgba(99,102,241,0.15)" strokeWidth="6" />
+              {/* Progress arc */}
+              <circle
+                cx="42" cy="42" r={R}
+                fill="none"
+                stroke="url(#nexusArcGrad)"
+                strokeWidth="6"
+                strokeLinecap="round"
+                strokeDasharray={`${arcDash} ${CIRC}`}
+                strokeDashoffset={arcOffset}
+                style={{ transition: 'stroke-dasharray 1s ease' }}
+              />
+              <defs>
+                <linearGradient id="nexusArcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <stop offset="0%" stopColor="#06b6d4" />
+                  <stop offset="100%" stopColor="#818cf8" />
+                </linearGradient>
+              </defs>
+              {/* Inner tick marks */}
+              {[0, 90, 180, 270].map(deg => {
+                const rad = (deg * Math.PI) / 180;
+                const x1 = 42 + 36 * Math.cos(rad);
+                const y1 = 42 + 36 * Math.sin(rad);
+                const x2 = 42 + 38 * Math.cos(rad);
+                const y2 = 42 + 38 * Math.sin(rad);
+                return <line key={deg} x1={x1} y1={y1} x2={x2} y2={y2} stroke="rgba(99,102,241,0.3)" strokeWidth="1" />;
+              })}
+              {/* Center text */}
+              <text x="42" y="38" textAnchor="middle" fill="#e2e8f0" fontSize="14" fontWeight="700" fontFamily="monospace">{pct}%</text>
+              <text x="42" y="52" textAnchor="middle" fill="rgba(148,163,184,0.6)" fontSize="7" fontFamily="monospace">DONE</text>
+            </svg>
+          </div>
+          {/* Mini stats below arc */}
+          <div className="font-mono text-[9px] text-slate-500 text-center">
+            <span className="text-cyan-400">{doneCount}</span> / {total}
+          </div>
+        </div>
+
+        {/* Work Fabric dot matrix */}
+        <div className="min-w-0">
+          <div className="font-mono text-[9px] text-indigo-400/60 uppercase tracking-wider mb-2">
+            {t('backlog_insights.nexus_fabric')}
+          </div>
+          <div className="space-y-2">
+            {issuesByType.map(({ type, items }) => (
+              <div key={type} className="flex items-center gap-2 min-w-0">
+                <span
+                  className="font-mono text-[9px] text-slate-400 shrink-0 w-20 truncate text-right"
+                  title={type}
+                >
+                  {type}
+                </span>
+                <div className="w-px h-3 bg-indigo-500/30 shrink-0" />
+                <div className="flex flex-wrap gap-1">
+                  {items.slice(0, 30).map((issue, i) => (
+                    <div
+                      key={i}
+                      title={`${issue.external_key ?? '#'} ${String(issue.summary ?? '').slice(0, 40)}`}
+                      className="w-[7px] h-[7px] rounded-full cursor-help transition-transform hover:scale-150"
+                      style={dotStyle(issue)}
+                    />
+                  ))}
+                  {items.length > 30 && (
+                    <span className="font-mono text-[8px] text-indigo-400/50 leading-[7px]">+{items.length - 30}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Priority Signal bar */}
+      {prioritySignal.length > 0 && (
+        <div className="relative border-t border-indigo-500/15 px-3 py-2.5">
+          <div className="font-mono text-[9px] text-indigo-400/60 uppercase tracking-wider mb-2">
+            {t('backlog_insights.nexus_signal')}
+          </div>
+          <div className="flex items-end gap-3 h-8">
+            {prioritySignal.map(({ fill, shadow, label, count }) => {
+              const barPct = Math.max(8, (count / total) * 100);
+              return (
+                <div key={label} className="flex flex-col items-center gap-1">
+                  <span className="font-mono text-[8px]" style={{ color: fill }}>{count}</span>
+                  <div
+                    className="w-5 rounded-sm transition-all duration-700"
+                    style={{
+                      height: `${barPct * 0.22}rem`,
+                      background: fill,
+                      boxShadow: `0 0 6px ${shadow}, 0 0 12px ${shadow}`,
+                      minHeight: '6px',
+                    }}
+                  />
+                  <span className="font-mono text-[8px] text-slate-500">{label}</span>
+                </div>
+              );
+            })}
+            {/* Decorative grid lines */}
+            <div className="flex-1 flex flex-col justify-between h-full opacity-10 pb-4">
+              {[0, 1, 2].map(i => (
+                <div key={i} className="border-t border-indigo-400 w-full" />
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
