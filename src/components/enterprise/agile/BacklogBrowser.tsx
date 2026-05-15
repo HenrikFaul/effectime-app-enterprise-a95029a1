@@ -9,34 +9,103 @@ import { toast } from 'sonner';
 import { JiraIssueEditor } from './JiraIssueEditor';
 import { AzureDevOpsIssueEditor } from './AzureDevOpsIssueEditor';
 import { useI18n } from '@/i18n/I18nProvider';
-import { BacklogFilterBuilder } from './BacklogFilterBuilder';
+import { BacklogFilterBuilder, type FieldMeta } from './BacklogFilterBuilder';
 
 interface IntegrationMini {
   id: string;
   provider: 'jira' | 'azure_devops';
   base_url: string;
   project_key: string | null;
+  selected_field_ids: string[];
 }
 
-interface Issue {
-  external_key: string;
-  summary: string | null;
-  status: string | null;
-  assignee_name: string | null;
-  issue_type: string | null;
-  priority: string | null;
-  story_points: number | null;
-  url: string | null;
+// Maps ADO / Jira field reference names → enterprise_agile_issues column keys
+const FIELD_TO_COL: Record<string, string> = {
+  'System.WorkItemType': 'issue_type',
+  'System.State': 'status',
+  'System.AssignedTo': 'assignee_name',
+  'Microsoft.VSTS.Common.Priority': 'priority',
+  'Microsoft.VSTS.Scheduling.StoryPoints': 'story_points',
+  'System.IterationPath': 'iteration_path',
+  'System.AreaPath': 'area_path',
+  'System.Description': 'description',
+  'System.Tags': 'labels',
+  'System.CreatedDate': 'created_at',
+  'System.ChangedDate': 'external_updated_at',
+  'Microsoft.VSTS.Scheduling.DueDate': 'ado_due_date',
+  'Microsoft.VSTS.Common.ClosedDate': 'ado_closed_date',
+  'Microsoft.VSTS.Common.ActivatedDate': 'ado_activated_date',
+  'Microsoft.VSTS.Common.ClosedBy': 'ado_closed_by',
+  'Microsoft.VSTS.Common.ResolvedBy': 'ado_resolved_by',
+  'Microsoft.VSTS.Common.ResolvedDate': 'ado_resolved_date',
+  // Jira native fields
+  'assignee': 'assignee_name',
+  'status': 'status',
+  'issuetype': 'issue_type',
+  'priority': 'priority',
+  'story_points': 'story_points',
+  'labels': 'labels',
+  'description': 'description',
+  // Jira pseudo-fields
+  'jira.issuetypes': 'issue_type',
+  'jira.statuses': 'status',
+  'jira.labels': 'labels',
+};
+
+// These field IDs are for filter discovery only — they don't map to display columns
+const FILTER_ONLY_IDS = new Set([
+  'ado.iterations', 'jira.issuetypes', 'jira.statuses', 'jira.labels',
+  'jira.components', 'jira.project_name',
+]);
+const FILTER_ONLY_PREFIXES = ['ado.workitemtype.'];
+
+interface DynamicCol { fieldId: string; label: string; colKey: string; fieldType: string | null; }
+
+function buildDynamicCols(selectedIds: string[], allMeta: FieldMeta[]): DynamicCol[] {
+  const alwaysShown = new Set(['external_key', 'summary']);
+  const seen = new Set<string>(alwaysShown);
+  const cols: DynamicCol[] = [];
+  for (const id of selectedIds) {
+    if (FILTER_ONLY_IDS.has(id)) continue;
+    if (FILTER_ONLY_PREFIXES.some(p => id.startsWith(p))) continue;
+    const colKey = FIELD_TO_COL[id];
+    if (!colKey || seen.has(colKey)) continue;
+    seen.add(colKey);
+    const meta = allMeta.find(f => f.field_id === id);
+    cols.push({ fieldId: id, label: meta?.field_name ?? id, colKey, fieldType: meta?.field_type ?? null });
+  }
+  return cols;
 }
+
+// Fetch all these columns from cache so dynamic columns have data
+const CACHE_SELECT = [
+  'external_key', 'summary', 'status', 'assignee_name', 'assignee_email',
+  'issue_type', 'priority', 'story_points', 'url', 'iteration_path', 'area_path',
+  'description', 'labels', 'created_at', 'external_updated_at',
+].join(',');
 
 export function BacklogBrowser({ integration }: { integration: IntegrationMini }) {
   const { t } = useI18n();
+  const [mode, setMode] = useState<'wiql' | 'visual'>('visual');
   const [query, setQuery] = useState('');
-  const [issues, setIssues] = useState<Issue[]>([]);
+  const [issues, setIssues] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(false);
   const [editorKey, setEditorKey] = useState<string | null>(null);
   const [adoEditorId, setAdoEditorId] = useState<string | null>(null);
-  const [mode, setMode] = useState<'wiql' | 'visual'>('visual');
+  const [fieldMeta, setFieldMeta] = useState<FieldMeta[]>([]);
+
+  // Load ALL field metadata for this integration (used by dynamic cols + filter builder)
+  useEffect(() => {
+    supabase
+      .from('enterprise_agile_field_metadata')
+      .select('field_id,field_name,field_type,schema')
+      .eq('integration_id', integration.id)
+      .then(({ data }) => setFieldMeta((data ?? []) as FieldMeta[]));
+  }, [integration.id]);
+
+  const selectedFieldIds = integration.selected_field_ids ?? [];
+  const dynamicCols = buildDynamicCols(selectedFieldIds, fieldMeta);
+  const totalCols = 2 + dynamicCols.length + 1; // key + title + dynamic + action
 
   const placeholder =
     integration.provider === 'jira'
@@ -58,17 +127,14 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
   const loadFromCache = async () => {
     const { data } = await (supabase as any)
       .from('enterprise_agile_issues')
-      .select('external_key,summary,status,assignee_name,issue_type,priority,story_points,url')
+      .select(CACHE_SELECT)
       .eq('integration_id', integration.id)
       .order('last_synced_at', { ascending: false })
       .limit(200);
-    setIssues((data ?? []) as Issue[]);
+    setIssues((data ?? []) as Record<string, unknown>[]);
   };
 
-
-  useEffect(() => {
-    loadFromCache();
-  }, [integration.id]);
+  useEffect(() => { loadFromCache(); }, [integration.id]);
 
   const search = async (queryOverride?: string) => {
     const q = queryOverride ?? query;
@@ -81,7 +147,7 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
       if (!(data as any)?.ok) throw new Error((data as any)?.error ?? t('agile_boards.error_bad_response'));
       const remote = (data as any).issues ?? [];
       if (remote.length > 0) {
-        setIssues(remote);
+        setIssues(remote as Record<string, unknown>[]);
         toast.success(t('backlog_browser.tickets_loaded', { count: (data as any).count }));
       } else {
         await loadFromCache();
@@ -94,26 +160,27 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
     }
   };
 
+  const renderCell = (issue: Record<string, unknown>, col: DynamicCol) => {
+    const val = issue[col.colKey];
+    if (val == null || val === '') return <span className="text-muted-foreground">—</span>;
+    if (col.colKey === 'issue_type') return <Badge variant="outline" className="text-[10px]">{String(val)}</Badge>;
+    if (col.fieldType === 'dateTime' || ['created_at', 'external_updated_at'].includes(col.colKey) || col.colKey.includes('date')) {
+      try { return <span>{new Date(String(val)).toLocaleDateString()}</span>; } catch { /* fall through */ }
+    }
+    const str = String(val);
+    return <span title={str.length > 40 ? str : undefined}>{str.length > 40 ? str.slice(0, 38) + '…' : str}</span>;
+  };
+
   return (
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm">{t('backlog_browser.title')}</CardTitle>
           <div className="flex items-center gap-1 rounded-md border p-0.5">
-            <Button
-              variant={mode === 'visual' ? 'secondary' : 'ghost'}
-              size="sm"
-              className="h-6 gap-1 px-2 text-[10px]"
-              onClick={() => setMode('visual')}
-            >
+            <Button variant={mode === 'visual' ? 'secondary' : 'ghost'} size="sm" className="h-6 gap-1 px-2 text-[10px]" onClick={() => setMode('visual')}>
               <SlidersHorizontal className="h-3 w-3" /> {t('backlog_browser.mode_visual')}
             </Button>
-            <Button
-              variant={mode === 'wiql' ? 'secondary' : 'ghost'}
-              size="sm"
-              className="h-6 gap-1 px-2 text-[10px]"
-              onClick={() => setMode('wiql')}
-            >
+            <Button variant={mode === 'wiql' ? 'secondary' : 'ghost'} size="sm" className="h-6 gap-1 px-2 text-[10px]" onClick={() => setMode('wiql')}>
               <List className="h-3 w-3" /> {t('backlog_browser.mode_wiql')}
             </Button>
           </div>
@@ -121,16 +188,17 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
       </CardHeader>
       <CardContent className="space-y-3">
         {mode === 'visual' ? (
-          <BacklogFilterBuilder integration={integration} onSearch={search} loading={loading} />
+          <BacklogFilterBuilder
+            integration={integration}
+            fieldMeta={fieldMeta}
+            selectedFieldIds={selectedFieldIds}
+            onSearch={search}
+            loading={loading}
+          />
         ) : (
           <>
             <div className="flex gap-2">
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={placeholder}
-                className="h-8 text-xs font-mono"
-              />
+              <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={placeholder} className="h-8 text-xs font-mono" />
               <Button size="sm" onClick={() => search()} disabled={loading} className="gap-1">
                 {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
                 {t('backlog_browser.search')}
@@ -138,14 +206,7 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
             </div>
             <div className="flex flex-wrap gap-1.5">
               {presets.map((preset) => (
-                <Button
-                  key={preset.label}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-[10px]"
-                  onClick={() => setQuery(preset.q)}
-                >
+                <Button key={preset.label} type="button" variant="outline" size="sm" className="h-7 text-[10px]" onClick={() => setQuery(preset.q)}>
                   {preset.label}
                 </Button>
               ))}
@@ -158,99 +219,64 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
               {t('backlog_browser.cache_note')}
             </p>
             {integration.provider === 'jira' && (
-              <p className="text-[10px] text-muted-foreground">
-                {t('backlog_browser.tip')}
-              </p>
+              <p className="text-[10px] text-muted-foreground">{t('backlog_browser.tip')}</p>
             )}
           </>
         )}
 
-        <JiraIssueEditor
-          open={!!editorKey}
-          onOpenChange={(o) => !o && setEditorKey(null)}
-          integration={integration}
-          issueKey={editorKey}
-          onSaved={loadFromCache}
-        />
-        <AzureDevOpsIssueEditor
-          open={!!adoEditorId}
-          onOpenChange={(o) => !o && setAdoEditorId(null)}
-          integration={integration}
-          workItemId={adoEditorId}
-          onSaved={loadFromCache}
-        />
+        <JiraIssueEditor open={!!editorKey} onOpenChange={(o) => !o && setEditorKey(null)} integration={integration} issueKey={editorKey} onSaved={loadFromCache} />
+        <AzureDevOpsIssueEditor open={!!adoEditorId} onOpenChange={(o) => !o && setAdoEditorId(null)} integration={integration} workItemId={adoEditorId} onSaved={loadFromCache} />
 
-        <div className="border rounded-md overflow-hidden">
+        <div className="border rounded-md overflow-x-auto">
           <table className="w-full text-xs">
             <thead className="bg-muted/50">
               <tr>
-                <th className="text-left p-2">{t('backlog_browser.col_key')}</th>
+                <th className="text-left p-2 whitespace-nowrap">{t('backlog_browser.col_key')}</th>
                 <th className="text-left p-2">{t('backlog_browser.col_title')}</th>
-                <th className="text-left p-2">{t('backlog_browser.col_type')}</th>
-                <th className="text-left p-2">{t('backlog_browser.col_status')}</th>
-                <th className="text-left p-2">{t('backlog_browser.col_assignee')}</th>
-                <th className="text-left p-2">SP</th>
-                <th className="text-left p-2"></th>
+                {dynamicCols.map(col => (
+                  <th key={col.fieldId} className="text-left p-2 whitespace-nowrap text-[11px]">{col.label}</th>
+                ))}
+                <th className="text-left p-2 w-12"></th>
               </tr>
             </thead>
             <tbody>
               {issues.length === 0 && (
-                <tr><td colSpan={7} className="p-4 text-center text-muted-foreground">{t('backlog_browser.no_data')}</td></tr>
+                <tr><td colSpan={totalCols} className="p-4 text-center text-muted-foreground">{t('backlog_browser.no_data')}</td></tr>
               )}
-              {issues.map((i) => (
-                <tr key={i.external_key} className="border-t hover:bg-accent/30">
-                  <td className="p-2 font-mono">{i.external_key}</td>
-                  <td className="p-2">
+              {issues.map((issue) => (
+                <tr key={String(issue.external_key)} className="border-t hover:bg-accent/30">
+                  <td className="p-2 font-mono whitespace-nowrap">{String(issue.external_key)}</td>
+                  <td className="p-2 min-w-[180px] max-w-[320px]">
                     {integration.provider === 'jira' ? (
-                      <button
-                        type="button"
-                        onClick={() => setEditorKey(i.external_key)}
-                        className="text-left hover:text-primary hover:underline"
-                      >
-                        {i.summary}
-                      </button>
-                    ) : integration.provider === 'azure_devops' ? (
-                      <button
-                        type="button"
-                        onClick={() => setAdoEditorId(i.external_key)}
-                        className="text-left hover:text-primary hover:underline"
-                      >
-                        {i.summary}
+                      <button type="button" onClick={() => setEditorKey(String(issue.external_key))} className="text-left hover:text-primary hover:underline line-clamp-2">
+                        {String(issue.summary ?? '')}
                       </button>
                     ) : (
-                      i.summary
+                      <button type="button" onClick={() => setAdoEditorId(String(issue.external_key))} className="text-left hover:text-primary hover:underline line-clamp-2">
+                        {String(issue.summary ?? '')}
+                      </button>
                     )}
                   </td>
-                  <td className="p-2"><Badge variant="outline" className="text-[10px]">{i.issue_type}</Badge></td>
-                  <td className="p-2">{i.status}</td>
-                  <td className="p-2">{i.assignee_name ?? '—'}</td>
-                  <td className="p-2">{i.story_points ?? '—'}</td>
-                  <td className="p-2 flex items-center gap-2">
-                    {integration.provider === 'jira' && (
-                      <button
-                        type="button"
-                        onClick={() => setEditorKey(i.external_key)}
-                        className="text-muted-foreground hover:text-primary"
-                        title={t('agile_boards.edit_in_effectime')}
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </button>
-                    )}
-                    {integration.provider === 'azure_devops' && (
-                      <button
-                        type="button"
-                        onClick={() => setAdoEditorId(i.external_key)}
-                        className="text-muted-foreground hover:text-primary"
-                        title={t('agile_boards.edit_in_effectime')}
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </button>
-                    )}
-                    {i.url && (
-                      <a href={i.url} target="_blank" rel="noreferrer" className="text-primary hover:underline" title={t('backlog_browser.open_external')}>
-                        <ExternalLink className="h-3 w-3 inline" />
-                      </a>
-                    )}
+                  {dynamicCols.map(col => (
+                    <td key={col.fieldId} className="p-2 whitespace-nowrap">{renderCell(issue, col)}</td>
+                  ))}
+                  <td className="p-2">
+                    <div className="flex items-center gap-2">
+                      {integration.provider === 'jira' ? (
+                        <button type="button" onClick={() => setEditorKey(String(issue.external_key))} className="text-muted-foreground hover:text-primary" title={t('agile_boards.edit_in_effectime')}>
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                      ) : (
+                        <button type="button" onClick={() => setAdoEditorId(String(issue.external_key))} className="text-muted-foreground hover:text-primary" title={t('agile_boards.edit_in_effectime')}>
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                      )}
+                      {issue.url && (
+                        <a href={String(issue.url)} target="_blank" rel="noreferrer" className="text-primary hover:underline" title={t('backlog_browser.open_external')}>
+                          <ExternalLink className="h-3 w-3 inline" />
+                        </a>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))}

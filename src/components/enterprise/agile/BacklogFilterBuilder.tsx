@@ -13,9 +13,10 @@ interface IntegrationMini {
   id: string;
   provider: 'jira' | 'azure_devops';
   project_key: string | null;
+  selected_field_ids: string[];
 }
 
-interface FieldRow {
+export interface FieldMeta {
   field_id: string;
   field_name: string;
   field_type: string | null;
@@ -30,13 +31,22 @@ interface UserOption {
 
 interface BacklogFilterBuilderProps {
   integration: IntegrationMini;
+  /** All field metadata for this integration (loaded by BacklogBrowser) */
+  fieldMeta: FieldMeta[];
+  /** The field IDs the user has selected in the Fields tab */
+  selectedFieldIds: string[];
   onSearch: (query: string) => void;
   loading: boolean;
 }
 
-export function BacklogFilterBuilder({ integration, onSearch, loading }: BacklogFilterBuilderProps) {
+export function BacklogFilterBuilder({
+  integration,
+  fieldMeta,
+  selectedFieldIds,
+  onSearch,
+  loading,
+}: BacklogFilterBuilderProps) {
   const { t } = useI18n();
-  const [fieldMeta, setFieldMeta] = useState<FieldRow[]>([]);
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
   const [selectedStates, setSelectedStates] = useState<Set<string>>(new Set());
   const [selectedAssignees, setSelectedAssignees] = useState<Set<string>>(new Set());
@@ -47,91 +57,105 @@ export function BacklogFilterBuilder({ integration, onSearch, loading }: Backlog
   const [userOptions, setUserOptions] = useState<UserOption[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
 
-  useEffect(() => {
-    supabase
-      .from('enterprise_agile_field_metadata')
-      .select('field_id,field_name,field_type,schema')
-      .eq('integration_id', integration.id)
-      .then(({ data }) => setFieldMeta((data ?? []) as FieldRow[]));
-  }, [integration.id]);
+  const isAdo = integration.provider === 'azure_devops';
 
-  // Load users for ADO
+  // ── Derived values from field metadata ──────────────────────────────────────
+  const workItemTypeFields = fieldMeta.filter(f => f.field_type === 'workitemtype');
+  const allWorkItemTypeNames = workItemTypeFields.map(f => f.field_name);
+  const allStates = [...new Set(
+    workItemTypeFields.flatMap(f => ((f.schema as any)?.states ?? []) as string[])
+  )].sort();
+  const iterField = fieldMeta.find(f => f.field_id === 'ado.iterations');
+  const iterationPaths = ((iterField?.schema as any)?.paths ?? []) as string[];
+
+  const jiraTypeOptions: string[] = ((fieldMeta.find(f => f.field_id === 'jira.issuetypes')?.schema as any)?.options ?? [])
+    .map((o: any) => (typeof o === 'string' ? o : (o.name ?? o))).filter(Boolean);
+  const jiraStatusOptions: string[] = ((fieldMeta.find(f => f.field_id === 'jira.statuses')?.schema as any)?.options ?? [])
+    .map((o: any) => (typeof o === 'string' ? o : (o.name ?? o))).filter(Boolean);
+
+  // ── Decide which filter sections to show ────────────────────────────────────
+  // If nothing is selected yet → show all general sections (backward-compatible).
+  const noSelection = selectedFieldIds.length === 0;
+
+  const showTypeFilter = noSelection || (isAdo
+    ? selectedFieldIds.some(id => id.startsWith('ado.workitemtype.') || id === 'System.WorkItemType')
+    : selectedFieldIds.some(id => id === 'jira.issuetypes' || id === 'issuetype'));
+
+  const showStateFilter = noSelection || (isAdo
+    ? selectedFieldIds.includes('System.State')
+    : selectedFieldIds.some(id => id === 'jira.statuses' || id === 'status'));
+
+  const showAssigneeFilter = noSelection || (isAdo
+    ? selectedFieldIds.includes('System.AssignedTo')
+    : selectedFieldIds.includes('assignee'));
+
+  const showIterationFilter = isAdo && (noSelection || selectedFieldIds.some(
+    id => id === 'ado.iterations' || id === 'System.IterationPath',
+  ));
+
+  const showDateFilter = noSelection || selectedFieldIds.some(id => {
+    const meta = fieldMeta.find(f => f.field_id === id);
+    return meta?.field_type === 'dateTime' || (id.toLowerCase().includes('date') && meta != null);
+  });
+
+  const showTextFilter = noSelection || selectedFieldIds.some(
+    id => id === 'System.Title' || id === 'summary' ||
+      ['string', 'html', 'plainText'].includes(fieldMeta.find(f => f.field_id === id)?.field_type ?? ''),
+  );
+
+  // ── Load users when the assignee filter is visible ──────────────────────────
   useEffect(() => {
-    if (integration.provider !== 'azure_devops') return;
+    if (!showAssigneeFilter) return;
     setUsersLoading(true);
     supabase.functions.invoke('jira-devops-proxy', {
-      body: { action: 'search_assignable_users', integration_id: integration.id, params: { key: integration.project_key ?? '', query: '' } },
+      body: {
+        action: 'search_assignable_users',
+        integration_id: integration.id,
+        params: { key: integration.project_key ?? '', query: '' },
+      },
     }).then(({ data }) => {
       setUserOptions((data as any)?.users ?? []);
     }).catch(() => {}).finally(() => setUsersLoading(false));
-  }, [integration.id, integration.provider, integration.project_key]);
+  }, [integration.id, integration.provider, integration.project_key, showAssigneeFilter]);
 
-  // Derived data
-  const workItemTypes = fieldMeta.filter(f => f.field_type === 'workitemtype').map(f => f.field_name);
-  const allStates = [...new Set(
-    fieldMeta.filter(f => f.field_type === 'workitemtype')
-      .flatMap(f => (f.schema as any)?.states ?? [])
-  )].sort();
-  const iterationPaths = ((fieldMeta.find(f => f.field_id === 'ado.iterations')?.schema as any)?.paths ?? []) as string[];
-
-  // Jira-specific
-  const jiraIssueTypes = (fieldMeta.find(f => f.field_id === 'jira.issuetypes')?.schema as any)?.options ?? [];
-  const jiraStatuses = (fieldMeta.find(f => f.field_id === 'jira.statuses')?.schema as any)?.options ?? [];
-
+  // ── WIQL / JQL assembly ─────────────────────────────────────────────────────
   function buildAdoWiql(): string {
     const project = integration.project_key ?? 'Project';
-    const conditions: string[] = [`[System.TeamProject] = '${project}'`];
-    if (selectedTypes.size > 0) {
-      conditions.push(`[System.WorkItemType] IN (${[...selectedTypes].map(t2 => `'${t2}'`).join(', ')})`);
-    }
-    if (selectedStates.size > 0) {
-      conditions.push(`[System.State] IN (${[...selectedStates].map(s => `'${s}'`).join(', ')})`);
-    }
-    if (selectedAssignees.size > 0) {
-      conditions.push(`[System.AssignedTo] IN (${[...selectedAssignees].map(a => `'${a}'`).join(', ')})`);
-    }
-    if (iterationPath) {
-      conditions.push(`[System.IterationPath] UNDER '${iterationPath}'`);
-    }
-    if (dateFrom) {
-      conditions.push(`[System.CreatedDate] >= '${dateFrom}'`);
-    }
-    if (dateTo) {
-      conditions.push(`[System.CreatedDate] <= '${dateTo}'`);
-    }
-    if (textFilter) {
-      conditions.push(`[System.Title] CONTAINS '${textFilter.replace(/'/g, "''")}'`);
-    }
-    return `SELECT [System.Id] FROM WorkItems WHERE ${conditions.join(' AND ')} ORDER BY [System.ChangedDate] DESC`;
+    const conds: string[] = [`[System.TeamProject] = '${project}'`];
+    if (selectedTypes.size > 0)
+      conds.push(`[System.WorkItemType] IN (${[...selectedTypes].map(v => `'${v}'`).join(', ')})`);
+    if (selectedStates.size > 0)
+      conds.push(`[System.State] IN (${[...selectedStates].map(v => `'${v}'`).join(', ')})`);
+    if (selectedAssignees.size > 0)
+      conds.push(`[System.AssignedTo] IN (${[...selectedAssignees].map(v => `'${v}'`).join(', ')})`);
+    if (iterationPath)
+      conds.push(`[System.IterationPath] UNDER '${iterationPath}'`);
+    if (dateFrom)
+      conds.push(`[System.CreatedDate] >= '${dateFrom}'`);
+    if (dateTo)
+      conds.push(`[System.CreatedDate] <= '${dateTo}'`);
+    if (textFilter)
+      conds.push(`[System.Title] CONTAINS '${textFilter.replace(/'/g, "''")}'`);
+    return `SELECT [System.Id] FROM WorkItems WHERE ${conds.join(' AND ')} ORDER BY [System.ChangedDate] DESC`;
   }
 
   function buildJql(): string {
     const project = integration.project_key ?? 'PROJ';
-    const conditions: string[] = [`project = ${project}`];
-    if (selectedTypes.size > 0) {
-      conditions.push(`issuetype in (${[...selectedTypes].map(t2 => `"${t2}"`).join(', ')})`);
-    }
-    if (selectedStates.size > 0) {
-      conditions.push(`status in (${[...selectedStates].map(s => `"${s}"`).join(', ')})`);
-    }
-    if (selectedAssignees.size > 0) {
-      conditions.push(`assignee in (${[...selectedAssignees].join(', ')})`);
-    }
-    if (dateFrom) {
-      conditions.push(`created >= "${dateFrom}"`);
-    }
-    if (dateTo) {
-      conditions.push(`created <= "${dateTo}"`);
-    }
-    if (textFilter) {
-      conditions.push(`summary ~ "${textFilter}"`);
-    }
-    return conditions.join(' AND ') + ' ORDER BY updated DESC';
+    const conds: string[] = [`project = ${project}`];
+    if (selectedTypes.size > 0)
+      conds.push(`issuetype in (${[...selectedTypes].map(v => `"${v}"`).join(', ')})`);
+    if (selectedStates.size > 0)
+      conds.push(`status in (${[...selectedStates].map(v => `"${v}"`).join(', ')})`);
+    if (selectedAssignees.size > 0)
+      conds.push(`assignee in (${[...selectedAssignees].join(', ')})`);
+    if (dateFrom) conds.push(`created >= "${dateFrom}"`);
+    if (dateTo) conds.push(`created <= "${dateTo}"`);
+    if (textFilter) conds.push(`summary ~ "${textFilter}"`);
+    return conds.join(' AND ') + ' ORDER BY updated DESC';
   }
 
   function handleSearch() {
-    const query = integration.provider === 'azure_devops' ? buildAdoWiql() : buildJql();
-    onSearch(query);
+    onSearch(isAdo ? buildAdoWiql() : buildJql());
   }
 
   function toggleSet(set: Set<string>, value: string): Set<string> {
@@ -140,20 +164,21 @@ export function BacklogFilterBuilder({ integration, onSearch, loading }: Backlog
     return next;
   }
 
-  const isAdo = integration.provider === 'azure_devops';
+  const typeOptions = isAdo ? allWorkItemTypeNames : jiraTypeOptions;
+  const stateOptions = isAdo ? allStates : jiraStatusOptions;
 
-  // Jira: derive issue types and statuses from metadata
-  const jiraTypeOptions: string[] = jiraIssueTypes.map((o: any) => typeof o === 'string' ? o : o.name ?? o).filter(Boolean);
-  const jiraStatusOptions: string[] = jiraStatuses.map((o: any) => typeof o === 'string' ? o : o.name ?? o).filter(Boolean);
+  const hasActiveFilters =
+    selectedTypes.size > 0 || selectedStates.size > 0 || selectedAssignees.size > 0 ||
+    iterationPath || dateFrom || dateTo || textFilter;
 
   return (
     <div className="space-y-4">
-      {/* Work item type / Issue type */}
-      {(isAdo ? workItemTypes : jiraTypeOptions).length > 0 && (
+      {/* ── Work item type / Issue type ── */}
+      {showTypeFilter && typeOptions.length > 0 && (
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">{t('backlog_browser.filter_work_item_type')}</Label>
           <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-            {(isAdo ? workItemTypes : jiraTypeOptions).map((type: string) => (
+            {typeOptions.map((type) => (
               <label key={type} className="flex items-center gap-1.5 cursor-pointer">
                 <Checkbox
                   checked={selectedTypes.has(type)}
@@ -167,12 +192,12 @@ export function BacklogFilterBuilder({ integration, onSearch, loading }: Backlog
         </div>
       )}
 
-      {/* State / Status */}
-      {(isAdo ? allStates : jiraStatusOptions).length > 0 && (
+      {/* ── State / Status ── */}
+      {showStateFilter && stateOptions.length > 0 && (
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">{t('backlog_browser.filter_state')}</Label>
           <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-            {(isAdo ? allStates : jiraStatusOptions).map((state: string) => (
+            {stateOptions.map((state) => (
               <label key={state} className="flex items-center gap-1.5 cursor-pointer">
                 <Checkbox
                   checked={selectedStates.has(state)}
@@ -186,90 +211,101 @@ export function BacklogFilterBuilder({ integration, onSearch, loading }: Backlog
         </div>
       )}
 
-      {/* Assignee */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-medium">{t('backlog_browser.filter_assignee')}</Label>
-        {usersLoading ? (
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Loader2 className="h-3 w-3 animate-spin" /> {t('backlog_browser.loading_users')}
-          </div>
-        ) : userOptions.length > 0 ? (
-          <div className="flex flex-wrap gap-x-4 gap-y-1.5 max-h-32 overflow-y-auto border rounded p-2">
-            {userOptions.map((u, idx) => {
-              const label = u.display_name ?? u.email ?? u.account_id ?? `User ${idx}`;
-              const value = u.display_name ?? u.email ?? '';
-              return (
-                <label key={u.account_id ?? idx} className="flex items-center gap-1.5 cursor-pointer">
-                  <Checkbox
-                    checked={selectedAssignees.has(value)}
-                    onCheckedChange={() => value && setSelectedAssignees(toggleSet(selectedAssignees, value))}
-                    className="h-3.5 w-3.5"
-                  />
-                  <span className="text-xs">{label}</span>
-                </label>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-[10px] text-muted-foreground">{t('backlog_browser.no_users')}</p>
-        )}
-      </div>
+      {/* ── Assignee ── */}
+      {showAssigneeFilter && (
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">{t('backlog_browser.filter_assignee')}</Label>
+          {usersLoading ? (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" /> {t('backlog_browser.loading_users')}
+            </div>
+          ) : userOptions.length > 0 ? (
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5 max-h-32 overflow-y-auto border rounded p-2">
+              {userOptions.map((u, idx) => {
+                const label = u.display_name ?? u.email ?? `User ${idx}`;
+                const value = u.display_name ?? u.email ?? '';
+                return (
+                  <label key={u.account_id ?? idx} className="flex items-center gap-1.5 cursor-pointer">
+                    <Checkbox
+                      checked={selectedAssignees.has(value)}
+                      onCheckedChange={() => value && setSelectedAssignees(toggleSet(selectedAssignees, value))}
+                      className="h-3.5 w-3.5"
+                    />
+                    <span className="text-xs">{label}</span>
+                  </label>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-[10px] text-muted-foreground">{t('backlog_browser.no_users')}</p>
+          )}
+        </div>
+      )}
 
-      {/* Iteration path (ADO only) */}
-      {isAdo && iterationPaths.length > 0 && (
+      {/* ── Iteration path (ADO only) ── */}
+      {showIterationFilter && iterationPaths.length > 0 && (
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">{t('backlog_browser.filter_iteration')}</Label>
           <Select value={iterationPath} onValueChange={setIterationPath}>
-            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t('backlog_browser.all_iterations')} /></SelectTrigger>
+            <SelectTrigger className="h-8 text-xs">
+              <SelectValue placeholder={t('backlog_browser.all_iterations')} />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="">{t('backlog_browser.all_iterations')}</SelectItem>
-              {iterationPaths.map((p: string) => (
-                <SelectItem key={p} value={p}>{p}</SelectItem>
-              ))}
+              {iterationPaths.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>
       )}
 
-      {/* Date range */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-medium">{t('backlog_browser.filter_date_created')}</Label>
-        <div className="flex items-center gap-2">
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-8 text-xs w-40" />
-          <span className="text-xs text-muted-foreground">—</span>
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-8 text-xs w-40" />
+      {/* ── Date range ── */}
+      {showDateFilter && (
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">{t('backlog_browser.filter_date_created')}</Label>
+          <div className="flex items-center gap-2">
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-8 text-xs w-40" />
+            <span className="text-xs text-muted-foreground">—</span>
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-8 text-xs w-40" />
+          </div>
         </div>
-      </div>
+      )}
 
-      {/* Text search */}
-      <div className="space-y-1.5">
-        <Label className="text-xs font-medium">{t('backlog_browser.filter_text')}</Label>
-        <Input
-          value={textFilter}
-          onChange={(e) => setTextFilter(e.target.value)}
-          placeholder={t('backlog_browser.filter_text_placeholder')}
-          className="h-8 text-xs"
-        />
-      </div>
+      {/* ── Text search ── */}
+      {showTextFilter && (
+        <div className="space-y-1.5">
+          <Label className="text-xs font-medium">{t('backlog_browser.filter_text')}</Label>
+          <Input
+            value={textFilter}
+            onChange={(e) => setTextFilter(e.target.value)}
+            placeholder={t('backlog_browser.filter_text_placeholder')}
+            className="h-8 text-xs"
+          />
+        </div>
+      )}
 
-      {/* Active filters summary */}
-      {(selectedTypes.size > 0 || selectedStates.size > 0 || selectedAssignees.size > 0 || iterationPath || dateFrom || dateTo || textFilter) && (
+      {/* ── Active filter badges ── */}
+      {hasActiveFilters && (
         <div className="flex flex-wrap gap-1.5 pt-1">
-          {[...selectedTypes].map(t2 => (
-            <Badge key={t2} variant="secondary" className="text-[10px] gap-1 cursor-pointer" onClick={() => setSelectedTypes(toggleSet(selectedTypes, t2))}>
-              {t2} <X className="h-2.5 w-2.5" />
+          {[...selectedTypes].map(v => (
+            <Badge key={v} variant="secondary" className="text-[10px] gap-1 cursor-pointer" onClick={() => setSelectedTypes(toggleSet(selectedTypes, v))}>
+              {v} <X className="h-2.5 w-2.5" />
             </Badge>
           ))}
-          {[...selectedStates].map(s => (
-            <Badge key={s} variant="secondary" className="text-[10px] gap-1 cursor-pointer" onClick={() => setSelectedStates(toggleSet(selectedStates, s))}>
-              {s} <X className="h-2.5 w-2.5" />
+          {[...selectedStates].map(v => (
+            <Badge key={v} variant="secondary" className="text-[10px] gap-1 cursor-pointer" onClick={() => setSelectedStates(toggleSet(selectedStates, v))}>
+              {v} <X className="h-2.5 w-2.5" />
             </Badge>
           ))}
-          {[...selectedAssignees].map(a => (
-            <Badge key={a} variant="outline" className="text-[10px] gap-1 cursor-pointer" onClick={() => setSelectedAssignees(toggleSet(selectedAssignees, a))}>
-              @{a} <X className="h-2.5 w-2.5" />
+          {[...selectedAssignees].map(v => (
+            <Badge key={v} variant="outline" className="text-[10px] gap-1 cursor-pointer" onClick={() => setSelectedAssignees(toggleSet(selectedAssignees, v))}>
+              @{v} <X className="h-2.5 w-2.5" />
             </Badge>
           ))}
+          {iterationPath && (
+            <Badge variant="outline" className="text-[10px] gap-1 cursor-pointer" onClick={() => setIterationPath('')}>
+              {iterationPath} <X className="h-2.5 w-2.5" />
+            </Badge>
+          )}
         </div>
       )}
 
