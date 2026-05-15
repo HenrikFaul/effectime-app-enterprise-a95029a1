@@ -16,8 +16,6 @@ export interface WellbeingScoreRow {
   score: number;
   components: Record<string, unknown>;
   calculated_at: string;
-  period_start: string | null;
-  period_end: string | null;
 }
 
 export interface WellbeingAlertRow {
@@ -28,7 +26,7 @@ export interface WellbeingAlertRow {
   severity: 'low' | 'medium' | 'high';
   triggered_at: string;
   resolved_at: string | null;
-  metadata: Record<string, unknown>;
+  message: string | null;
 }
 
 export function useLatestWellbeingScores(workspaceId: string | null | undefined) {
@@ -40,7 +38,7 @@ export function useLatestWellbeingScores(workspaceId: string | null | undefined)
       // PostgREST cannot construct directly).
       const { data, error } = await supabase
         .from('wellbeing_scores')
-        .select('id, workspace_id, membership_id, score, components, calculated_at, period_start, period_end')
+        .select('id, workspace_id, membership_id, score, components, calculated_at')
         .eq('workspace_id', workspaceId as string)
         .order('calculated_at', { ascending: false })
         .limit(1000);
@@ -62,7 +60,7 @@ export function useOpenWellbeingAlerts(workspaceId: string | null | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('wellbeing_alerts')
-        .select('id, workspace_id, membership_id, alert_type, severity, triggered_at, resolved_at, metadata')
+        .select('id, workspace_id, membership_id, alert_type, severity, triggered_at, resolved_at, message')
         .eq('workspace_id', workspaceId as string)
         .is('resolved_at', null)
         .order('triggered_at', { ascending: false });

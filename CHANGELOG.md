@@ -1,3 +1,35 @@
+## 2026-05-15 — v3.33.5 Edge-function data integrity, TOCTOU hardening, and localization fixes
+
+Bug-fix release. No new features.
+
+### GDPR export schema fix (security-admin)
+- `enterprise_attendance_periods` and `wellbeing_scores` were queried with `user_id`; both tables use `membership_id`. GDPR exports were silently returning empty attendance and wellbeing arrays.
+
+### Wellbeing hook schema fix (useWellbeing)
+- Removed non-existent `period_start`, `period_end` from `wellbeing_scores` select.
+- Changed `metadata` → `message` in `wellbeing_alerts` select (correct column name per migration).
+
+### Payroll lock trust boundary + TOCTOU (payroll-export)
+- `locked_by` now uses `user.id` from the verified JWT (was: `body.userId` — trust boundary violation).
+- UPDATE now includes `.eq('status', 'open')` atomic guard; 0-row result returns 409 (was: check-then-act TOCTOU race).
+
+### Schedule run-status tracking (send-scheduled-reports)
+- `markRun()` now destructures `{ error }` from the Supabase update and logs failures (was: bare `await`, silent on DB errors).
+
+### Workspace delete audit ordering (superadmin-hub)
+- Audit row is now inserted before the workspace DELETE (was: after, risking FK failure from cascade).
+
+### Allocations error propagation (create-instant-enterprise-member)
+- `allocationsRes.error` is now checked and returns 500 (was: silently ignored).
+
+### LeaveCalendar localization (8 locales)
+- Removed hardcoded `WEEKDAY_LABELS` array with Hungarian abbreviations; replaced with `useMemo` + 7 i18n keys per locale.
+- Replaced `'Ismeretlen'` fallback with `t('leave_calendar.unknown')`.
+- Replaced `'Minden csapat'` label with `t('leave_calendar.all_teams')`.
+- All 9 new keys added to en, hu, de, at, cs, sk, pl, ro.
+
+---
+
 ## 2026-05-15 — v3.33.4 Password-policy parity + audit-log error-visibility fix
 
 Bug-fix release. No new features.

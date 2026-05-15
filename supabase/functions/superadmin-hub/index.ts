@@ -332,23 +332,23 @@ Deno.serve(async (req: Request) => {
           recovery_mode_reason: null,
         }
       } else if (action_type === 'delete') {
-        // Hard delete — cascades handle membership / audit cleanup at DB level
+        // Audit before delete: the workspace cascade would invalidate any FK
+        // on enterprise_audit_events if the insert happened after the delete.
+        const { error: auditErr } = await admin.from('enterprise_audit_events').insert({
+          workspace_id: workspace_id,
+          actor_id: user.id,
+          action: 'superadmin.workspace.delete',
+          metadata: { reason: reason ?? null },
+        })
+        if (auditErr) console.error('workspace-action delete audit failed:', auditErr.message)
+
+        // Hard delete — cascades handle membership cleanup at DB level
         const { error: delErr } = await admin
           .from('enterprise_workspaces')
           .delete()
           .eq('id', workspace_id)
 
         if (delErr) return jsonRes({ error: `Failed to delete workspace: ${delErr.message}` }, 500)
-
-        // Audit
-        await admin.from('enterprise_audit_events').insert({
-          workspace_id: workspace_id,
-          actor_id: user.id,
-          action: 'superadmin.workspace.delete',
-          metadata: { reason: reason ?? null },
-        }).then(({ error: auditErr }) => {
-          if (auditErr) console.error('workspace-action delete audit failed:', auditErr.message)
-        })
 
         return jsonRes({ success: true, action_type })
       }
