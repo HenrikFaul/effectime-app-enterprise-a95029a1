@@ -87,13 +87,13 @@ export function AgilePanel({ workspaceId, userId, isAdmin }: Props) {
 
       <Tabs value={tab} onValueChange={setTab} className="space-y-3">
         <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="browser" className="gap-1"><Search className="h-4 w-4" /> Backlog</TabsTrigger>
-          <TabsTrigger value="boards" className="gap-1"><KanbanSquare className="h-4 w-4" /> Boards</TabsTrigger>
+          <TabsTrigger value="browser" className="gap-1"><Search className="h-4 w-4" /> {t('agile_panel.tab_browser')}</TabsTrigger>
+          <TabsTrigger value="boards" className="gap-1"><KanbanSquare className="h-4 w-4" /> {t('agile_panel.tab_boards')}</TabsTrigger>
           <TabsTrigger value="writeback" className="gap-1"><PlusCircle className="h-4 w-4" /> {t('agile_panel.tab_writeback')}</TabsTrigger>
-          <TabsTrigger value="capacity" className="gap-1"><Gauge className="h-4 w-4" /> Capacity Fit</TabsTrigger>
+          <TabsTrigger value="capacity" className="gap-1"><Gauge className="h-4 w-4" /> {t('agile_panel.tab_capacity')}</TabsTrigger>
           <TabsTrigger value="fields" className="gap-1"><Database className="h-4 w-4" /> {t('agile_panel.tab_fields')}</TabsTrigger>
-          <TabsTrigger value="insights" className="gap-1"><BarChart3 className="h-4 w-4" /> Riportok</TabsTrigger>
-          <TabsTrigger value="connections" className="gap-1"><Plug className="h-4 w-4" /> Kapcsolatok</TabsTrigger>
+          <TabsTrigger value="insights" className="gap-1"><BarChart3 className="h-4 w-4" /> {t('agile_panel.tab_insights')}</TabsTrigger>
+          <TabsTrigger value="connections" className="gap-1"><Plug className="h-4 w-4" /> {t('agile_panel.tab_connections')}</TabsTrigger>
         </TabsList>
         <TabsContent value="browser">
           {active ? <BacklogBrowser integration={active} /> : <EmptyState />}

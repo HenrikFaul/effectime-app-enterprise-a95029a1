@@ -1,3 +1,40 @@
+## 2026-05-15 — v3.33.7 Azure DevOps full integration
+
+Feature release. Elevates Azure DevOps from stub to first-class parity with Jira.
+
+### supabase/functions/jira-devops-proxy/index.ts
+- `adoSyncProjectConfig`: discovers work item types + valid states, iteration paths (full tree), and all project fields — replaces stub that only called `adoDiscoverFields`.
+- `adoGetIssue`: fetches full work item with `$expand=All`, maps System/VSTS fields.
+- `adoGetStates`: returns valid state list for a given work item type.
+- `adoSearchIdentities`: two-strategy identity search (vssps.dev.azure.com primary, project team members fallback).
+- `adoUpdate`: expanded to handle description, priority, story_points, null-unassign.
+- Router: `get_issue`, `get_transitions`, `search_assignable_users` now fully support ADO; `update_issue` refreshes ADO cache after save; hardcoded Hungarian error strings replaced.
+
+### src/components/enterprise/agile/AzureDevOpsIssueEditor.tsx (new)
+- Full work item editor dialog: state dropdown, assignee identity search + select, iteration path datalist, priority (1–4), story points, description.
+- Mirrors JiraIssueEditor UX contract.
+
+### BacklogBrowser.tsx
+- ADO work item title and pencil icon now open AzureDevOpsIssueEditor.
+- Fixed hardcoded "Kulcs" → `t('backlog_browser.col_key')`, "Nincs adat" → `t('backlog_browser.no_data')`.
+
+### IssueWriteback.tsx
+- Work item type dropdown now populated for both Jira (`jira.issuetype.*`) and ADO (`ado.workitemtype.*`) from sync cache.
+- Iteration path datalist shown for ADO (create + update forms).
+- Sync config button now shown for both providers.
+- Removed hardcoded Hungarian string.
+
+### AgilePanel.tsx
+- All 7 tab labels now use `t()` — fixed hardcoded "Backlog", "Boards", "Capacity Fit", "Riportok", "Kapcsolatok".
+
+### i18n (all 8 locales)
+- New `ado_editor` namespace (35 keys).
+- `backlog_browser`: added `col_key`, `no_data`, `open_external`.
+- `issue_writeback`: added `no_cached_issue_types`, `label_iteration_path`, `sync_config_label`.
+- `agile_panel`: added `tab_browser`, `tab_boards`, `tab_capacity`, `tab_insights`, `tab_connections`.
+
+---
+
 ## 2026-05-15 — v3.33.6 Supabase error-visibility sweep
 
 Bug-fix release. No new features.

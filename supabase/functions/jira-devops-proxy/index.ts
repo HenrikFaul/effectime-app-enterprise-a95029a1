@@ -497,10 +497,13 @@ async function adoCreate(integ: IntegrationRow, payload: any) {
 
 async function adoUpdate(integ: IntegrationRow, id: string, payload: any) {
   const ops: any[] = [];
-  if (payload.summary) ops.push({ op: 'add', path: '/fields/System.Title', value: payload.summary });
-  if (payload.assignee_email) ops.push({ op: 'add', path: '/fields/System.AssignedTo', value: payload.assignee_email });
-  if (payload.iteration_path) ops.push({ op: 'add', path: '/fields/System.IterationPath', value: payload.iteration_path });
-  if (payload.status) ops.push({ op: 'add', path: '/fields/System.State', value: payload.status });
+  if (payload.summary != null) ops.push({ op: 'add', path: '/fields/System.Title', value: payload.summary });
+  if (payload.description != null) ops.push({ op: 'add', path: '/fields/System.Description', value: payload.description });
+  if (payload.assignee_email != null) ops.push({ op: 'add', path: '/fields/System.AssignedTo', value: payload.assignee_email });
+  if (payload.iteration_path != null) ops.push({ op: 'add', path: '/fields/System.IterationPath', value: payload.iteration_path });
+  if (payload.status != null) ops.push({ op: 'add', path: '/fields/System.State', value: payload.status });
+  if (payload.priority != null) ops.push({ op: 'add', path: '/fields/Microsoft.VSTS.Common.Priority', value: Number(payload.priority) });
+  if (payload.story_points != null) ops.push({ op: 'add', path: '/fields/Microsoft.VSTS.Scheduling.StoryPoints', value: payload.story_points });
   if (ops.length === 0) throw new Error('ADO update: no updatable fields provided in payload');
   const url = `${adoBase(integ)}/wit/workitems/${encodeURIComponent(id)}?api-version=7.0`;
   const r = await fetch(url, {
@@ -510,6 +513,161 @@ async function adoUpdate(integ: IntegrationRow, id: string, payload: any) {
   });
   if (!r.ok) throw new Error(`ADO update ${r.status}: ${(await r.text()).slice(0, 250)}`);
   return await r.json();
+}
+
+// ───── Azure DevOps extended helpers ─────
+
+function flattenIterationPaths(node: any, prefix: string): string[] {
+  const name = prefix ? `${prefix}\\${node.name}` : node.name;
+  const result: string[] = [name];
+  for (const child of node.children ?? []) {
+    result.push(...flattenIterationPaths(child, name));
+  }
+  return result;
+}
+
+async function adoSyncProjectConfig(integ: IntegrationRow) {
+  const base = adoBase(integ);
+  const hdr = { Authorization: authHeader(integ), Accept: 'application/json' };
+  const fields: any[] = [];
+
+  // Work item types with their valid states
+  const typesRes = await fetch(`${base}/wit/workitemtypes?api-version=7.0`, { headers: hdr });
+  if (!typesRes.ok) throw new Error(`ADO workitemtypes ${typesRes.status}: ${(await typesRes.text()).slice(0, 250)}`);
+  const typesData = await typesRes.json();
+  for (const wit of typesData.value ?? []) {
+    const stateNames = (wit.states ?? []).map((s: any) => s.name).filter(Boolean);
+    fields.push({
+      field_id: `ado.workitemtype.${wit.name}`,
+      field_name: wit.name,
+      field_type: 'workitemtype',
+      is_custom: false,
+      schema: { reference_name: wit.referenceName ?? null, states: stateNames, description: wit.description ?? null },
+    });
+  }
+
+  // Iteration paths via classification nodes
+  try {
+    const iterRes = await fetch(`${base}/wit/classificationnodes/Iterations?$depth=10&api-version=7.0`, { headers: hdr });
+    if (iterRes.ok) {
+      const iterData = await iterRes.json();
+      const iterPaths = flattenIterationPaths(iterData, '');
+      if (iterPaths.length > 0) {
+        fields.push({
+          field_id: 'ado.iterations',
+          field_name: 'Iterations',
+          field_type: 'iterations',
+          is_custom: false,
+          schema: { paths: iterPaths },
+        });
+      }
+    }
+  } catch (_) { /* best effort */ }
+
+  // All project fields
+  const fieldsRes = await fetch(`${base}/wit/fields?api-version=7.0`, { headers: hdr });
+  if (fieldsRes.ok) {
+    const fieldsData = await fieldsRes.json();
+    for (const f of fieldsData.value ?? []) {
+      fields.push({
+        field_id: f.referenceName,
+        field_name: f.name,
+        field_type: f.type ?? null,
+        is_custom: !!f.referenceName?.startsWith('Custom.'),
+        schema: { usage: f.usage ?? null },
+      });
+    }
+  }
+
+  return fields;
+}
+
+async function adoGetIssue(integ: IntegrationRow, id: string) {
+  const base = adoBase(integ);
+  const url = `${base}/wit/workitems/${encodeURIComponent(id)}?$expand=All&api-version=7.0`;
+  const r = await fetch(url, { headers: { Authorization: authHeader(integ), Accept: 'application/json' } });
+  if (!r.ok) throw new Error(`ADO workitem/${id} ${r.status}: ${(await r.text()).slice(0, 250)}`);
+  const wi = await r.json();
+  const f = wi.fields ?? {};
+  return {
+    external_key: String(wi.id),
+    external_id: String(wi.id),
+    summary: f['System.Title'] ?? null,
+    description: f['System.Description'] ?? '',
+    status: f['System.State'] ?? null,
+    assignee_email: f['System.AssignedTo']?.uniqueName ?? null,
+    assignee_name: f['System.AssignedTo']?.displayName ?? null,
+    issue_type: f['System.WorkItemType'] ?? null,
+    priority: f['Microsoft.VSTS.Common.Priority'] != null ? String(f['Microsoft.VSTS.Common.Priority']) : null,
+    iteration_path: f['System.IterationPath'] ?? null,
+    area_path: f['System.AreaPath'] ?? null,
+    story_points: f['Microsoft.VSTS.Scheduling.StoryPoints'] ?? null,
+    original_estimate_hours: f['Microsoft.VSTS.Scheduling.OriginalEstimate'] ?? null,
+    remaining_hours: f['Microsoft.VSTS.Scheduling.RemainingWork'] ?? null,
+    parent_id: f['System.Parent'] != null ? String(f['System.Parent']) : null,
+    created: f['System.CreatedDate'] ?? null,
+    updated: f['System.ChangedDate'] ?? null,
+    url: wi._links?.html?.href ?? null,
+    tags: f['System.Tags'] ?? null,
+  };
+}
+
+async function adoGetStates(integ: IntegrationRow, workItemType: string) {
+  const base = adoBase(integ);
+  const url = `${base}/wit/workitemtypes/${encodeURIComponent(workItemType)}?api-version=7.0`;
+  const r = await fetch(url, { headers: { Authorization: authHeader(integ), Accept: 'application/json' } });
+  if (!r.ok) return [];
+  const data = await r.json();
+  return (data.states ?? []).map((s: any) => ({ name: s.name, category: s.stateCategory ?? null }));
+}
+
+async function adoSearchIdentities(integ: IntegrationRow, query: string) {
+  const orgUrl = integ.base_url.replace(/\/$/, '');
+  const hdr = { Authorization: authHeader(integ), Accept: 'application/json' };
+  // Try vssps.dev.azure.com identity search
+  const vssps = orgUrl.replace('https://dev.azure.com', 'https://vssps.dev.azure.com');
+  const filterValue = query || '@';
+  try {
+    const identUrl = `${vssps}/_apis/identities?searchFilter=General&filterValue=${encodeURIComponent(filterValue)}&queryMembership=None&api-version=7.0`;
+    const r = await fetch(identUrl, { headers: hdr });
+    if (r.ok) {
+      const data = await r.json();
+      return (data.value ?? [])
+        .filter((u: any) => u.isActive && !u.isContainer)
+        .slice(0, 20)
+        .map((u: any) => ({
+          display_name: u.providerDisplayName ?? u.customDisplayName ?? null,
+          email: u.properties?.Mail?.['$value'] ?? u.uniqueName ?? null,
+          account_id: u.id ?? null,
+        }));
+    }
+  } catch (_) { /* fall through */ }
+
+  // Fallback: project team members
+  try {
+    const project = encodeURIComponent(integ.project_key ?? '');
+    const tr = await fetch(`${orgUrl}/_apis/projects/${project}/teams?api-version=7.0`, { headers: hdr });
+    if (tr.ok) {
+      const teamsData = await tr.json();
+      const users: any[] = [];
+      for (const team of (teamsData.value ?? []).slice(0, 3)) {
+        const mr = await fetch(`${orgUrl}/_apis/projects/${project}/teams/${encodeURIComponent(team.id)}/members?api-version=7.0`, { headers: hdr });
+        if (mr.ok) {
+          const md = await mr.json();
+          for (const m of md.value ?? []) {
+            users.push({ display_name: m.identity?.displayName ?? null, email: m.identity?.uniqueName ?? null, account_id: m.identity?.id ?? null });
+          }
+        }
+      }
+      const q = query.toLowerCase();
+      return users
+        .filter((u, i, a) => a.findIndex((x: any) => x.email === u.email) === i)
+        .filter((u) => !q || u.display_name?.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q))
+        .slice(0, 20);
+    }
+  } catch (_) { /* ignore */ }
+
+  return [];
 }
 
 // ───── Main ─────
@@ -586,7 +744,7 @@ Deno.serve(async (req) => {
         return jsonResponse({ ok: true, count: fields.length, fields });
       }
       case 'sync_project_config': {
-        const fields = isJira ? await jiraSyncProjectConfig(integ) : await adoDiscoverFields(integ);
+        const fields = isJira ? await jiraSyncProjectConfig(integ) : await adoSyncProjectConfig(integ);
         await admin.from('enterprise_agile_field_metadata').delete().eq('integration_id', integ.id);
         if (fields.length) {
           await admin.from('enterprise_agile_field_metadata').insert(fields.map((f: any) => ({
@@ -657,33 +815,73 @@ Deno.serve(async (req) => {
           } catch (e) {
             console.warn('[jira-devops-proxy] cache refresh after update_issue failed:', e instanceof Error ? e.message : String(e));
           }
+        } else {
+          try {
+            const fresh = await adoGetIssue(integ, key);
+            await admin.from('enterprise_agile_issues').upsert({
+              workspace_id: integ.workspace_id,
+              integration_id: integ.id,
+              provider,
+              project_key: integ.project_key,
+              external_key: fresh.external_key,
+              external_id: fresh.external_id,
+              summary: fresh.summary,
+              description: fresh.description,
+              status: fresh.status,
+              assignee_email: fresh.assignee_email,
+              assignee_name: fresh.assignee_name,
+              issue_type: fresh.issue_type,
+              priority: fresh.priority,
+              iteration_path: fresh.iteration_path,
+              story_points: fresh.story_points,
+              external_updated_at: fresh.updated,
+              url: fresh.url,
+              last_synced_at: new Date().toISOString(),
+            } as any, { onConflict: 'integration_id,external_key' as any });
+          } catch (e) {
+            console.warn('[jira-devops-proxy] ADO cache refresh after update_issue failed:', e instanceof Error ? e.message : String(e));
+          }
         }
         return jsonResponse({ ok: true, updated });
       }
       case 'get_issue': {
         const key = params?.key;
-        if (!key) return jsonResponse({ error: 'key/id kötelező' }, 400);
-        if (!isJira) return jsonResponse({ error: 'get_issue jelenleg csak Jira providerre támogatott' }, 400);
-        const [issue, transitions] = await Promise.all([
-          jiraGetIssue(integ, key),
-          jiraGetTransitions(integ, key).catch(() => []),
-        ]);
+        if (!key) return jsonResponse({ error: 'key/id required' }, 400);
+        if (isJira) {
+          const [issue, transitions] = await Promise.all([
+            jiraGetIssue(integ, key),
+            jiraGetTransitions(integ, key).catch(() => []),
+          ]);
+          await logSync(admin, integ, user.id, 'get_issue', 'success', { key });
+          return jsonResponse({ ok: true, issue, transitions });
+        }
+        const adoIssue = await adoGetIssue(integ, key);
+        const adoStates = adoIssue.issue_type
+          ? await adoGetStates(integ, adoIssue.issue_type).catch(() => [])
+          : [];
         await logSync(admin, integ, user.id, 'get_issue', 'success', { key });
-        return jsonResponse({ ok: true, issue, transitions });
+        return jsonResponse({ ok: true, issue: adoIssue, transitions: adoStates });
       }
       case 'get_transitions': {
         const key = params?.key;
-        if (!key) return jsonResponse({ error: 'key/id kötelező' }, 400);
-        if (!isJira) return jsonResponse({ error: 'get_transitions jelenleg csak Jira providerre támogatott' }, 400);
-        const transitions = await jiraGetTransitions(integ, key);
-        return jsonResponse({ ok: true, transitions });
+        if (!key) return jsonResponse({ error: 'key/id required' }, 400);
+        if (isJira) {
+          const transitions = await jiraGetTransitions(integ, key);
+          return jsonResponse({ ok: true, transitions });
+        }
+        const wi = await adoGetIssue(integ, key);
+        const states = wi.issue_type
+          ? await adoGetStates(integ, wi.issue_type).catch(() => [])
+          : [];
+        return jsonResponse({ ok: true, transitions: states });
       }
       case 'search_assignable_users': {
         const key = params?.key;
         const query = (params?.query ?? '').toString();
-        if (!key) return jsonResponse({ error: 'key/id kötelező' }, 400);
-        if (!isJira) return jsonResponse({ ok: true, users: [] });
-        const users = await jiraSearchAssignableUsers(integ, key, query);
+        if (!key) return jsonResponse({ error: 'key/id required' }, 400);
+        const users = isJira
+          ? await jiraSearchAssignableUsers(integ, key, query)
+          : await adoSearchIdentities(integ, query);
         return jsonResponse({ ok: true, users });
       }
       default:
