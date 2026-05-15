@@ -1,3 +1,25 @@
+## 2026-05-15 — v3.34.1 Agile backlog: auto-load, pagination, and used-field detection
+
+Backlog tab now auto-loads most-recent items on open (no blank state), adds a 10/20/50/100/ALL pagination bar, and the Fields tab gains a "Used" column showing which discovered fields have actual data in cached issues.
+
+### src/components/enterprise/agile/BacklogBrowser.tsx (modified)
+- **Auto-load on open**: `loadFromCache()` returns item count; if 0 → automatically fires the default query (most recent items) so the tab is never blank.
+- **Pagination**: `PAGE_OPTIONS` (10, 20, 50, 100, ALL=0); bottom bar with Select dropdown + "X items" counter; default = 10.
+- `pageSizeRef` (useRef) keeps `search()` and `loadFromCache()` stale-closure-safe.
+- `search()` respects current pageSize via `pageSizeRef.current`.
+- New i18n keys: `backlog_browser.page_size_label`, `page_size_all`, `showing_count`.
+
+### src/components/enterprise/agile/FieldDiscovery.tsx (modified)
+- **"Used" column**: queries `enterprise_agile_issues` for 200 cached rows; detects non-null columns + unique `issue_type` values; shows CheckCircle (green) / Circle (grey) per field.
+- `isUsed()` handles workitemtype pseudo-fields (matched by name in `issue_type` column) and `ado.iterations` pseudo-field.
+- **"Show used only" toggle**: hides fields with no cached data.
+- **"Select all used" button**: bulk-selects every detected used field.
+- Unused rows rendered at 70% opacity for visual hierarchy.
+- New i18n keys: `field_discovery.col_used`, `btn_show_used_only`, `btn_show_all_fields`, `btn_select_all_used`, `used_hint`.
+
+### src/i18n/resources/\*.ts (all 8 locales)
+- Added `backlog_browser.page_size_label/all/showing_count` and `field_discovery.col_used/btn_*` for en, hu, de, at, cs, sk, pl, ro.
+
 ## 2026-05-15 — v3.34.0 Agile integration: visual filter builder + field board selection
 
 Smart visual query builder for the Backlog tab plus checkbox-based field selection in the Fields tab, covering all 8 locales.

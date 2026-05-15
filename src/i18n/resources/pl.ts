@@ -3122,6 +3122,9 @@ const pl = {
     loading_users: 'Ładowanie użytkowników…',
     no_users: 'Nie znaleziono użytkowników',
     all_iterations: 'Wszystkie iteracje',
+    page_size_label: 'Na stronę',
+    page_size_all: 'Wszystkie',
+    showing_count: '{{count}} elementów',
   },
   issue_writeback: {
     bad_response: 'Nieprawidłowa odpowiedź',
@@ -3268,6 +3271,11 @@ const pl = {
     btn_save_selection: 'Zapisz wybór',
     selection_saved: 'Wybór zapisany',
     n_selected: '{{count}} zaznaczonych',
+    col_used: 'Używane',
+    btn_show_used_only: 'Tylko używane',
+    btn_show_all_fields: 'Wszystkie pola',
+    btn_select_all_used: 'Zaznacz wszystkie używane',
+    used_hint: '(z pamięci cache)',
   },
   agile_panel: {
     card_title: 'Integracja Agile (Jira / Azure DevOps)',

@@ -3122,6 +3122,9 @@ const sk = {
     loading_users: 'Načítavanie používateľov…',
     no_users: 'Žiadni používatelia nenájdení',
     all_iterations: 'Všetky iterácie',
+    page_size_label: 'Na stránku',
+    page_size_all: 'Všetko',
+    showing_count: '{{count}} položiek',
   },
   issue_writeback: {
     bad_response: 'Neplatná odpoveď',
@@ -3268,6 +3271,11 @@ const sk = {
     btn_save_selection: 'Uložiť výber',
     selection_saved: 'Výber uložený',
     n_selected: '{{count}} vybraných',
+    col_used: 'Použité',
+    btn_show_used_only: 'Len použité',
+    btn_show_all_fields: 'Všetky polia',
+    btn_select_all_used: 'Vybrať všetky použité',
+    used_hint: '(z cache záznamu)',
   },
   agile_panel: {
     card_title: 'Agile integrácia (Jira / Azure DevOps)',
