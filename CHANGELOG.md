@@ -1,3 +1,26 @@
+## 2026-05-15 — v3.33.9 Infrastructure gap closure (coverage rules view, email queue, 3 missing edge functions)
+
+Gap-closure release provisioning 2 missing DB objects and deploying 3 previously missing edge functions discovered during a comprehensive audit.
+
+### supabase/migrations/20260515080100_v3_33_9_coverage_rules_view_and_email_queue.sql (new)
+- **`enterprise_coverage_rules` VIEW**: read-only view over `enterprise_office_coverage_rules` (non-archived rows) with derived `applies_to` column (`skill` / `role` / `all`). Required by `AnalyticsDashboard.tsx` — was missing from DB entirely.
+- **`email_queue` table**: `id, recipient, subject, body_html, status (pending/sent/failed), created_at, sent_at, error`. RLS enabled; only `user_roles.role = 'admin'` may SELECT. Required by `superadmin-hub` email-queue-status widget — was missing from DB entirely.
+
+### supabase/functions/ai-copilot/index.ts (new, deployed v2)
+- Workforce planning AI copilot. Accepts `{ workspace_id, conversation_id, instruction, model? }`.
+- Builds live workspace context (member count, pending leave, upcoming shifts, open violations) and passes conversation history to Claude.
+- Graceful fallback when `ANTHROPIC_API_KEY` is absent (`ai_available: false`). Default model: `claude-sonnet-4-6`.
+- Persists messages to `ai_copilot_messages` with token usage and structured plan.
+
+### supabase/functions/create-workspace-user/index.ts (new, deployed v2)
+- Direct user provisioning: creates a Supabase auth user with a real password and adds an `enterprise_membership`.
+- Validates password via `validate_password_policy` RPC. Paginated `listUsers` detects duplicate emails. Rolls back auth user on membership failure.
+
+### supabase/functions/document-ai-polish/index.ts (new, deployed v2)
+- AI-powered HR document polisher. Accepts `{ document_id, instruction? }`, calls `claude-haiku-4-5-20251001`, persists polished HTML to `generated_documents`. Graceful fallback when no API key.
+
+---
+
 ## 2026-05-15 — v3.33.8 Deferred bug-fix batch (conflict engine, approval inbox, superadmin hub, ms365-sync, export heading)
 
 Bug-fix release addressing 5 of 6 known deferred items from the earlier audit.
