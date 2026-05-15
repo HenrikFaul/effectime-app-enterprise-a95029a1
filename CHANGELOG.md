@@ -1,3 +1,100 @@
+## 2026-05-15 — v3.33.3 Search-path hygiene sweep on remaining public functions
+
+Closes the `function_search_path_mutable` advisor warning for 10
+pre-existing `public` schema functions:
+
+- `candidate_interview_slot_eligible`
+- `document_substitute`
+- `enforce_data_retention` (SECURITY DEFINER)
+- `enterprise_decision_memory_set_due`
+- `haversine_km`
+- `set_hr_workflow_updated_at`
+- `set_webhook_updated_at`
+- `update_office_equipment_updated_at`
+- `update_office_min_staffing_updated_at`
+- `validate_password_policy`
+
+Each function was audited before edit: all references are either
+fully qualified to `public.*` or pg_catalog builtins. Adding
+`SET search_path TO 'public'` is non-functional hardening — same
+shape as the v3.33.2 fix on the new triggers.
+
+### Regression net
+The `search_path hygiene` block in `src/test/migrationInvariants.test.ts`
+now covers all 16 protected functions (6 v3.33.x + 10 retroactive).
+31 tests total, all green.
+
+### Out of scope
+6 advisor hits in non-public schemas (`syncfolk`, `plannermaster`)
+are owned by other subsystems.
+
+### DB migration on disk
+`20260515070039_v3_33_3_public_function_search_path_sweep.sql`
+(applied to remote in one `apply_migration` call).
+
+### Verification
+- `npx tsc --noEmit` → 0 errors.
+- `npx vitest run` → 177/177 passing (10 new).
+- Post-apply: all 10 functions now have `search_path=public` in `proconfig`.
+
+---
+
+## 2026-05-15 — v3.33.2 Hotfix: tier-change RPC marker + search_path
+
+Two regressions caught while continuing the v3.33.1 audit:
+
+### Fix 1 — `superadmin_change_workspace_tier` arms the immutability guard
+
+The v3.33.1 trigger `enforce_tier_id_immutability` blocks any
+`UPDATE tenant_subscriptions SET tier_id` unless the session-local
+setting `app.tier_change_rpc_active` equals `'true'`. The RPC body
+on the remote DB never set this — meaning every legitimate tier
+change in production would have failed once v3.33.1 went live.
+Caught by reading the live RPC body before any user hit the bug.
+The RPC now does `PERFORM set_config('app.tier_change_rpc_active', 'true', true)`
+before its UPDATE/INSERT.
+
+### Fix 2 — `SET search_path` on the 4 v3.33.1 functions
+
+`enforce_tier_id_immutability`, `validate_tier_feature_keys`,
+`validate_feature_dependencies`, `require_feature_id` all lacked
+`SET search_path TO 'public'`. Caught by the Supabase security
+advisor (`function_search_path_mutable`). Without it, an attacker
+who can manipulate session search_path can shadow `public.features`
+or `public.tenant_subscriptions` from inside the trigger context.
+All 4 functions now declare `SET search_path TO 'public'`.
+
+### Regression net — 21 new migration-invariant tests
+
+`src/test/migrationInvariants.test.ts` scans `supabase/migrations/`
+and asserts the LATEST definition of each protected object holds:
+
+- `create_workspace_with_owner` — strict `_tier_key` contract
+  (raises on NULL/unknown, no `ORDER BY sort_order` fallback,
+  arms the tier-change guard).
+- `enforce_tier_id_immutability` — exists, references the marker,
+  declares `SET search_path`.
+- `superadmin_change_workspace_tier` — calls
+  `PERFORM set_config('app.tier_change_rpc_active', 'true', true)`,
+  writes `platform_audit_events`.
+- `validate_tier_feature_keys` / `validate_feature_dependencies` —
+  use delta validation pattern (only NEW elements), declare
+  `SET search_path`.
+- All 6 v3.33.x-touched functions declare `SET search_path`.
+
+Every contributor running `npx vitest run` gets immediate feedback
+if a new migration silently weakens any of these invariants.
+
+### DB migration on disk
+`20260515002644_v3_33_2_tier_marker_and_search_path_hotfix.sql`
+(applied to remote in two `apply_migration` calls).
+
+### Verification
+- `npx tsc --noEmit` → 0 errors.
+- `npx vitest run` → 167/167 passing (21 new).
+
+---
+
 ## 2026-05-14 — v3.33.1 Stabilization pass: data-integrity + audit-trail hardening
 
 Bug-fix release. No new features. Reconciles MCP-only schema back to disk

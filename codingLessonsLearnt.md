@@ -1097,3 +1097,39 @@ A workspace-picker `useState('')` került a `if (selectedWorkspaceId) return <Wo
 - **Context**: `run-report/index.ts` contained a `wrapped = \`SELECT * FROM (${sql}) WHERE workspace_id = '${workspaceId}'\`` string that was never executed (the function always took the safer JS-builder fallback path).
 - **Problem**: The string was an SQL-injection template waiting to be activated by anyone who later wired up an `exec_sql` RPC. Dead-code injection footguns are common in evolving codebases.
 - **Fix**: Delete dead raw-SQL strings entirely. If a future feature needs raw SQL, it must be designed with parameter binding from the start, not by activating dormant string-concat code.
+
+## ➕ APPEND — 2026-05-15 v3.33.2 hotfix lessons
+
+### [LESSON-TRIGGER-PAIR-001]: Never ship an enforcement trigger without verifying every legitimate writer arms its guard
+- **Context**: v3.33.1 added an `enforce_tier_id_immutability` trigger on `tenant_subscriptions` that requires `current_setting('app.tier_change_rpc_active', true) = 'true'`. The expectation was that `superadmin_change_workspace_tier` (the sole legitimate writer) sets that marker.
+- **Problem**: The RPC body in the remote DB never set the marker. The trigger would have blocked every legitimate tier change in production once v3.33.1 went live. We assumed the RPC sets it because we agreed it would; we never read the live body.
+- **Fix**: Always pull `pg_get_functiondef()` of the writer RPC and grep for the `set_config` call BEFORE shipping the trigger. Better: write a migration-invariant test that asserts the call exists, so the assumption is enforced forever.
+- **Pattern**: When a trigger + an RPC form a "trigger-RPC pair" (trigger blocks, RPC arms guard), treat them as one atomic deliverable. Read both function bodies during PR review. Write a regression test that asserts both halves of the pair.
+
+### [LESSON-PG-SEARCH-PATH-001]: Every new SECURITY DEFINER / trigger function must declare SET search_path
+- **Context**: The 4 functions added in v3.33.1 (`enforce_tier_id_immutability`, `validate_tier_feature_keys`, `validate_feature_dependencies`, `require_feature_id`) all lacked `SET search_path TO 'public'`. Caught by Supabase `function_search_path_mutable` advisor.
+- **Problem**: Without `SET search_path`, an attacker who can manipulate session search_path can shadow `public.features` / `public.tenant_subscriptions` from inside a trigger or DEFINER context. The Supabase advisor flags this as a security warning.
+- **Fix**: Every `CREATE OR REPLACE FUNCTION public.foo() ... LANGUAGE plpgsql` block must include `SET search_path TO 'public'` (or another explicit schema list) BEFORE the `AS $$`. This applies to triggers and helpers too, not just SECURITY DEFINER RPCs.
+- **Pattern**:
+  ```sql
+  CREATE OR REPLACE FUNCTION public.foo()
+  RETURNS trigger
+  LANGUAGE plpgsql
+  SET search_path TO 'public'   -- mandatory
+  AS $$
+    ...
+  $$;
+  ```
+- **Enforcement**: After applying any migration, run `mcp__supabase__get_advisors({type: 'security'})` and grep the result for the new function names. If any new function appears in `function_search_path_mutable`, it must be patched before merging.
+
+### [LESSON-MIGRATION-INVARIANTS-001]: Migration-invariant tests are the right level for "convention enforcement"
+- **Context**: The two v3.33.2 hotfixes (trigger-pair marker + search_path) were exactly the kind of bug a vitest test could catch by scanning `supabase/migrations/` text.
+- **Problem**: When invariants live as conventions ("the RPC sets the marker", "all functions set search_path"), they drift silently across PRs. By the time a Supabase advisor or a production failure surfaces them, several PRs have shipped on top.
+- **Fix**: For any DB invariant we write down, also write a test in `src/test/migrationInvariants.test.ts` that scans the migrations corpus and asserts the LATEST `CREATE OR REPLACE` block of the protected object satisfies the invariant. Tests run on every commit; convention drift becomes a red CI signal.
+- **Pattern** — see `src/test/migrationInvariants.test.ts`:
+  ```ts
+  // Find the LATEST CREATE OR REPLACE FUNCTION block (later migrations override earlier).
+  // Don't assert against historical snapshots — only the current shipped definition.
+  // Use $$ ... $$ matching for un-tagged dollar quotes; backreferences over empty
+  // captures fail in JS regex, so prefer two simple regexes (one for $$, one for $function$).
+  ```
