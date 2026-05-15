@@ -3414,7 +3414,7 @@ const sk = {
     sign_out: 'Odhlásiť sa',
   },
   password_req: {
-    min_length: 'Aspoň 8 znakov',
+    min_length: 'Aspoň 10 znakov',
     has_lower: 'Aspoň jedno malé písmeno',
     has_upper: 'Aspoň jedno veľké písmeno',
     has_number: 'Aspoň jedna číslica',

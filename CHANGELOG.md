@@ -1,3 +1,36 @@
+## 2026-05-15 — v3.33.4 Password-policy parity + audit-log error-visibility fix
+
+Bug-fix release. No new features.
+
+### Password policy parity (ChangePasswordCard)
+
+`ChangePasswordCard` + `PasswordRequirements` enforced an 8-character minimum
+while the authoritative `validate_password_policy()` Postgres function and the
+`create-workspace-user` edge function (both introduced in v3.33.0) require 10.
+Users could set a password that displayed green UI checkmarks but was below the
+company policy.
+
+- `src/lib/passwordValidation.ts` — `minLength` raised from `>= 8` to `>= 10`.
+- `password_req.min_length` i18n key updated in all 8 locale files (en, hu, de,
+  at, cs, sk, pl, ro) to reflect "10 characters". The de/at/ro locales also
+  received their first proper native-language translation for this key (they
+  previously fell back to the English placeholder).
+- `src/test/passwordValidation.test.ts` — boundary tests updated to 10-char.
+
+### Audit log error visibility
+
+`logAuditEvent()` used a bare `await` without destructuring `{ error }` from
+the Supabase insert result. Supabase JS never throws on DB errors — it returns
+`{ data, error }`. Real insert failures (RLS rejection, constraint violation)
+were silently discarded. The function now checks `error` explicitly, logs a
+warning, and returns `Promise<boolean>` so callers can react if needed.
+
+### Verification
+- `npx tsc --noEmit` → 0 errors.
+- `npx vitest run` → 177/177 passing.
+
+---
+
 ## 2026-05-15 — v3.33.3 Search-path hygiene sweep on remaining public functions
 
 Closes the `function_search_path_mutable` advisor warning for 10

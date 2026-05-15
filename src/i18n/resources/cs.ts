@@ -3414,7 +3414,7 @@ const cs = {
     sign_out: 'Odhlásit se',
   },
   password_req: {
-    min_length: 'Alespoň 8 znaků',
+    min_length: 'Alespoň 10 znaků',
     has_lower: 'Alespoň jedno malé písmeno',
     has_upper: 'Alespoň jedno velké písmeno',
     has_number: 'Alespoň jedna číslice',

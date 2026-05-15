@@ -12,9 +12,9 @@ interface AuditEntry {
   new_state?: Record<string, unknown> | null;
 }
 
-export async function logAuditEvent(entry: AuditEntry) {
+export async function logAuditEvent(entry: AuditEntry): Promise<boolean> {
   try {
-    await supabase.from('enterprise_audit_events').insert([{
+    const { error } = await supabase.from('enterprise_audit_events').insert([{
       workspace_id: entry.workspace_id,
       actor_id: entry.actor_id,
       action: entry.action,
@@ -25,7 +25,13 @@ export async function logAuditEvent(entry: AuditEntry) {
       prev_state: (entry.prev_state || null) as any,
       new_state: (entry.new_state || null) as any,
     }]);
+    if (error) {
+      console.warn('Audit log insert failed:', error);
+      return false;
+    }
+    return true;
   } catch (err) {
-    console.warn('Audit log insert failed:', err);
+    console.warn('Audit log insert failed (network):', err);
+    return false;
   }
 }
