@@ -287,12 +287,12 @@ export function BacklogFilterBuilder({
       {showIterationFilter && iterPathOptions.length > 0 && (
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">{t('backlog_browser.filter_iteration')}</Label>
-          <Select value={iterationPath} onValueChange={setIterationPath}>
+          <Select value={iterationPath || '__all__'} onValueChange={(v) => setIterationPath(v === '__all__' ? '' : v)}>
             <SelectTrigger className="h-8 text-xs">
               <SelectValue placeholder={t('backlog_browser.all_iterations')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">{t('backlog_browser.all_iterations')}</SelectItem>
+              <SelectItem value="__all__">{t('backlog_browser.all_iterations')}</SelectItem>
               {iterPathOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
             </SelectContent>
           </Select>
