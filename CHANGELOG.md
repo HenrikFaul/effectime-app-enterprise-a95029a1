@@ -1,3 +1,44 @@
+## 2026-05-15 — v3.33.3 Search-path hygiene sweep on remaining public functions
+
+Closes the `function_search_path_mutable` advisor warning for 10
+pre-existing `public` schema functions:
+
+- `candidate_interview_slot_eligible`
+- `document_substitute`
+- `enforce_data_retention` (SECURITY DEFINER)
+- `enterprise_decision_memory_set_due`
+- `haversine_km`
+- `set_hr_workflow_updated_at`
+- `set_webhook_updated_at`
+- `update_office_equipment_updated_at`
+- `update_office_min_staffing_updated_at`
+- `validate_password_policy`
+
+Each function was audited before edit: all references are either
+fully qualified to `public.*` or pg_catalog builtins. Adding
+`SET search_path TO 'public'` is non-functional hardening — same
+shape as the v3.33.2 fix on the new triggers.
+
+### Regression net
+The `search_path hygiene` block in `src/test/migrationInvariants.test.ts`
+now covers all 16 protected functions (6 v3.33.x + 10 retroactive).
+31 tests total, all green.
+
+### Out of scope
+6 advisor hits in non-public schemas (`syncfolk`, `plannermaster`)
+are owned by other subsystems.
+
+### DB migration on disk
+`20260515070039_v3_33_3_public_function_search_path_sweep.sql`
+(applied to remote in one `apply_migration` call).
+
+### Verification
+- `npx tsc --noEmit` → 0 errors.
+- `npx vitest run` → 177/177 passing (10 new).
+- Post-apply: all 10 functions now have `search_path=public` in `proconfig`.
+
+---
+
 ## 2026-05-15 — v3.33.2 Hotfix: tier-change RPC marker + search_path
 
 Two regressions caught while continuing the v3.33.1 audit:

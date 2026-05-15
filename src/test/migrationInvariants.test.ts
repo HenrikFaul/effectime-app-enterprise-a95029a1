@@ -160,12 +160,24 @@ describe('Migration invariants — v3.33.1 referential triggers (B-7, B-31)', ()
 describe('Migration invariants — search_path hygiene on v3.33.x functions', () => {
   const migrations = loadMigrations();
   const protectedFns = [
+    // v3.33.1 additions (hardened in v3.33.2)
     'enforce_tier_id_immutability',
     'validate_tier_feature_keys',
     'validate_feature_dependencies',
     'require_feature_id',
     'create_workspace_with_owner',
     'superadmin_change_workspace_tier',
+    // v3.33.3 sweep — pre-existing functions retro-hardened
+    'candidate_interview_slot_eligible',
+    'document_substitute',
+    'enforce_data_retention',
+    'enterprise_decision_memory_set_due',
+    'haversine_km',
+    'set_hr_workflow_updated_at',
+    'set_webhook_updated_at',
+    'update_office_equipment_updated_at',
+    'update_office_min_staffing_updated_at',
+    'validate_password_policy',
   ];
   for (const fn of protectedFns) {
     it(`${fn} declares SET search_path (advisor: function_search_path_mutable)`, () => {
