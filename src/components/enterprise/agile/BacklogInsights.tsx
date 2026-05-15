@@ -140,7 +140,7 @@ export function BacklogInsights({ issues }: BacklogInsightsProps) {
   });
 
   return (
-    <div className="rounded-xl border bg-card shadow-sm overflow-hidden h-full">
+    <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b bg-gradient-to-r from-primary/5 to-transparent">
         <div className="flex items-center gap-2">
@@ -290,9 +290,10 @@ export function BacklogInsights({ issues }: BacklogInsightsProps) {
           </div>
         )}
 
-        {/* ── NEXUS ──────────────────────────────────────────────────────────── */}
-        <NexusPanel stats={stats} />
       </div>
+
+      {/* ── NEXUS — full-bleed footer ──────────────────────────────────────── */}
+      <NexusPanel stats={stats} />
     </div>
   );
 }
@@ -319,7 +320,7 @@ function NexusPanel({ stats }: { stats: NexusStats }) {
   const arcOffset = CIRC / 4;
 
   return (
-    <div className="rounded-xl overflow-hidden border border-indigo-500/25 bg-slate-950 relative">
+    <div className="overflow-hidden border-t border-indigo-500/25 bg-slate-950 relative">
       {/* Scanline texture */}
       <div className="absolute inset-0 pointer-events-none" style={NEXUS_SCANLINE} />
 
