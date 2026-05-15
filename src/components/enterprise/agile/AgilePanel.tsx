@@ -26,6 +26,7 @@ interface IntegrationMini {
   base_url: string;
   project_key: string | null;
   is_active: boolean;
+  selected_field_ids: string[];
 }
 
 export function AgilePanel({ workspaceId, userId, isAdmin }: Props) {
@@ -37,7 +38,7 @@ export function AgilePanel({ workspaceId, userId, isAdmin }: Props) {
   const loadIntegrations = async () => {
     const { data } = await supabase
       .from('enterprise_workspace_integrations')
-      .select('id,provider,base_url,project_key,is_active')
+      .select('id,provider,base_url,project_key,is_active,selected_field_ids')
       .eq('workspace_id', workspaceId);
     const list = ((data as IntegrationMini[]) ?? []).filter((i) => i.is_active);
     setIntegrations(list);
@@ -108,7 +109,7 @@ export function AgilePanel({ workspaceId, userId, isAdmin }: Props) {
           {active ? <CapacityFit integration={active} workspaceId={workspaceId} /> : <EmptyState />}
         </TabsContent>
         <TabsContent value="fields">
-          {active ? <FieldDiscovery integration={active} /> : <EmptyState />}
+          {active ? <FieldDiscovery integration={active} onSelectionChange={loadIntegrations} /> : <EmptyState />}
         </TabsContent>
         <TabsContent value="insights">
           {active ? <AgileInsights integrationId={active.id} /> : <EmptyState />}

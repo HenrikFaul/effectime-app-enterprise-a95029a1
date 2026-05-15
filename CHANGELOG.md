@@ -1,3 +1,41 @@
+## 2026-05-15 — v3.34.0 Agile integration: visual filter builder + field board selection
+
+Smart visual query builder for the Backlog tab plus checkbox-based field selection in the Fields tab, covering all 8 locales.
+
+### supabase/migrations/20260515120000_v3_34_0_agile_field_selection.sql (new)
+- Adds `selected_field_ids text[] DEFAULT '{}'` to `enterprise_workspace_integrations` to persist per-integration field board selections.
+
+### src/components/enterprise/agile/BacklogFilterBuilder.tsx (new)
+- Visual query builder component: renders type-appropriate filter controls based on discovered field metadata.
+- **Work item type / Issue type**: multi-checkbox list from `ado.workitemtype.*` schema or Jira issuetype metadata.
+- **State / Status**: multi-checkbox list aggregated from all work item type `schema.states`.
+- **Assigned to**: checkbox list of project members loaded via `search_assignable_users` proxy (lazy, best-effort).
+- **Iteration path** (ADO): dropdown from `ado.iterations` schema paths.
+- **Created date range**: dual date-picker for `System.CreatedDate` range.
+- **Text search**: title CONTAINS / summary ~ free-text input.
+- Active filter summary badges with one-click removal.
+- Assembles WIQL (ADO) or JQL (Jira) from filter state and calls `search_issues` proxy.
+
+### src/components/enterprise/agile/BacklogBrowser.tsx (modified)
+- Added mode toggle (Visual filter / WIQL) in card header.
+- Visual mode renders `BacklogFilterBuilder`; WIQL mode renders existing text input + presets.
+- `search()` now accepts optional `queryOverride` so the visual builder can drive searches without touching the WIQL state.
+
+### src/components/enterprise/agile/FieldDiscovery.tsx (modified)
+- Added "Board" checkbox column — users select which discovered fields to pull into the board.
+- Selection state initialised from `integration.selected_field_ids`; "Save selection" button persists via Supabase update.
+- Shows `{{count}} selected` counter next to save button.
+
+### src/components/enterprise/agile/AgilePanel.tsx (modified)
+- Extended `IntegrationMini` interface + query to include `selected_field_ids`.
+- Passes `onSelectionChange={loadIntegrations}` to `FieldDiscovery` so board header refreshes on save.
+
+### i18n — all 8 locales (en, hu, de, at, cs, sk, pl, ro)
+- New `backlog_browser` keys: `mode_wiql`, `mode_visual`, `filter_work_item_type`, `filter_state`, `filter_assignee`, `filter_iteration`, `filter_date_created`, `filter_text`, `filter_text_placeholder`, `loading_users`, `no_users`, `all_iterations`.
+- New `field_discovery` keys: `col_board`, `btn_save_selection`, `selection_saved`, `n_selected`.
+
+---
+
 ## 2026-05-15 — v3.33.9 Infrastructure gap closure (coverage rules view, email queue, 3 missing edge functions)
 
 Gap-closure release provisioning 2 missing DB objects and deploying 3 previously missing edge functions discovered during a comprehensive audit.
