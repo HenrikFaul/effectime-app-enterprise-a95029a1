@@ -1,14 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useI18n } from '@/i18n/I18nProvider';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlignJustify, ChevronDown, ChevronUp, Loader2, Search, SlidersHorizontal, X } from 'lucide-react';
+import { Loader2, Search, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface IntegrationMini {
@@ -31,8 +26,6 @@ interface UserOption {
   account_id: string | null;
 }
 
-type FilterLayout = 'inline' | 'accordion';
-
 interface BacklogFilterBuilderProps {
   integration: IntegrationMini;
   fieldMeta: FieldMeta[];
@@ -46,6 +39,38 @@ interface BacklogFilterBuilderProps {
   issues?: Record<string, unknown>[];
 }
 
+// ── Color helpers ──────────────────────────────────────────────────────────────
+
+const TYPE_COLORS = ['#8b5cf6', '#06b6d4', '#f59e0b', '#10b981', '#f97316', '#ec4899', '#3b82f6', '#84cc16'];
+
+function typeColor(idx: number): string {
+  return TYPE_COLORS[idx % TYPE_COLORS.length];
+}
+
+function stateColor(s: string): string {
+  const l = s.toLowerCase();
+  if (['done', 'closed', 'resolved', 'complete', "won't"].some(d => l.includes(d))) return '#22c55e';
+  if (['active', 'in progress', 'doing', 'development', 'review', 'code'].some(d => l.includes(d))) return '#06b6d4';
+  if (['blocked', 'impediment', 'hold', 'stalled', 'waiting'].some(d => l.includes(d))) return '#ef4444';
+  if (['new', 'to do', 'open', 'backlog', 'ready'].some(d => l.includes(d))) return '#8b5cf6';
+  return '#6b7280';
+}
+
+function priorityColor(p: string): string {
+  const l = String(p).toLowerCase();
+  if (l === '1' || l === 'critical' || l === 'highest') return '#ef4444';
+  if (l === '2' || l === 'high') return '#f97316';
+  if (l === '3' || l === 'medium') return '#eab308';
+  if (l === '4' || l === 'low') return '#22c55e';
+  return '#6b7280';
+}
+
+function nameToHsl(name: string): string {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) % 360;
+  return `hsl(${h}, 60%, 52%)`;
+}
+
 function countBy(items: Record<string, unknown>[], key: string): Record<string, number> {
   const m: Record<string, number> = {};
   for (const item of items) {
@@ -55,41 +80,67 @@ function countBy(items: Record<string, unknown>[], key: string): Record<string, 
   return m;
 }
 
-interface AccordionSectionProps {
-  isOpen: boolean;
-  onToggle: () => void;
+// ── Sub-components ─────────────────────────────────────────────────────────────
+
+interface FilterChipProps {
   label: string;
-  activeCount: number;
-  children: ReactNode;
+  count?: number;
+  selected: boolean;
+  color?: string;
+  weight?: number;
+  onClick: () => void;
 }
 
-function AccordionSection({ isOpen, onToggle, label, activeCount, children }: AccordionSectionProps) {
+function FilterChip({ label, count, selected, color = '#6366f1', weight = 1, onClick }: FilterChipProps) {
   return (
-    <div className={cn('border-b last:border-b-0', activeCount > 0 && 'bg-primary/5')}>
-      <button
-        type="button"
-        className={cn(
-          'w-full flex items-center justify-between px-3 py-2.5 text-xs font-medium hover:bg-accent/50 transition-colors',
-          activeCount > 0 && 'text-primary',
-        )}
-        onClick={onToggle}
-      >
-        <span>{label}</span>
-        <div className="flex items-center gap-1.5">
-          {activeCount > 0 && (
-            <Badge variant="secondary" className="h-4 px-1.5 text-[10px] bg-primary/10 text-primary border-primary/20">
-              {activeCount}
-            </Badge>
-          )}
-          {isOpen
-            ? <ChevronUp className="h-3.5 w-3.5 opacity-50" />
-            : <ChevronDown className="h-3.5 w-3.5 opacity-50" />}
-        </div>
-      </button>
-      {isOpen && <div className="px-3 pb-3">{children}</div>}
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium transition-all duration-150 border',
+        selected
+          ? 'text-white border-transparent'
+          : 'bg-background border-border/60 hover:border-border hover:bg-accent/40 text-foreground',
+      )}
+      style={selected
+        ? { background: color, borderColor: color, boxShadow: `0 0 10px ${color}55, 0 0 3px ${color}` }
+        : { opacity: 0.45 + weight * 0.55 }
+      }
+    >
+      <span className="truncate max-w-[100px]">{label}</span>
+      {count !== undefined && count > 0 && (
+        <span className={cn(
+          'text-[9px] px-1 rounded-full shrink-0',
+          selected ? 'bg-white/25 text-white' : 'bg-muted/80 text-muted-foreground',
+        )}>
+          {count}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function SignalMeter({ current, total }: { current: number; total: number }) {
+  const pct = total > 0 ? (current / total) * 100 : 100;
+  const color = pct > 60 ? '#22c55e' : pct > 25 ? '#f59e0b' : '#ef4444';
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 h-1 rounded-full bg-muted/50 overflow-hidden">
+        <div
+          className="h-full rounded-full transition-all duration-500"
+          style={{ width: `${pct}%`, background: color, boxShadow: `0 0 4px ${color}80` }}
+        />
+      </div>
+      <span className="font-mono text-[10px] text-muted-foreground shrink-0 tabular-nums">
+        {current}/{total}
+      </span>
     </div>
   );
 }
+
+const CHIP_LIMIT = 8;
+
+// ── Main component ─────────────────────────────────────────────────────────────
 
 export function BacklogFilterBuilder({
   integration,
@@ -104,9 +155,8 @@ export function BacklogFilterBuilder({
   issues = [],
 }: BacklogFilterBuilderProps) {
   const { t } = useI18n();
-  const [filterLayout, setFilterLayout] = useState<FilterLayout>('inline');
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
-  const [showEmptyInSection, setShowEmptyInSection] = useState<Set<string>>(new Set());
+  const [chipSearch, setChipSearch] = useState('');
+  const [showAllSection, setShowAllSection] = useState<Set<string>>(new Set());
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
   const [selectedStates, setSelectedStates] = useState<Set<string>>(new Set());
   const [selectedPriorities, setSelectedPriorities] = useState<Set<string>>(new Set());
@@ -120,14 +170,14 @@ export function BacklogFilterBuilder({
 
   const isAdo = integration.provider === 'azure_devops';
 
-  // Counts derived from currently loaded issues
+  // ── Counts from loaded issues ────────────────────────────────────────────────
   const typeCounts = useMemo(() => countBy(issues, 'issue_type'), [issues]);
   const stateCounts = useMemo(() => countBy(issues, 'status'), [issues]);
   const priorityCounts = useMemo(() => countBy(issues, 'priority'), [issues]);
   const iterCounts = useMemo(() => countBy(issues, 'iteration_path'), [issues]);
   const assigneeCounts = useMemo(() => countBy(issues, 'assignee_name'), [issues]);
 
-  // ── Derived values from field metadata (with cache fallbacks) ────────────────
+  // ── Derived options ──────────────────────────────────────────────────────────
   const workItemTypeFields = fieldMeta.filter(f => f.field_type === 'workitemtype');
   const allWorkItemTypeNames = workItemTypeFields.map(f => f.field_name);
   const allStates = [...new Set(
@@ -150,7 +200,7 @@ export function BacklogFilterBuilder({
   const iterPathOptions = metaIterPaths.length ? metaIterPaths : cachedIterationPaths;
   const priorityOptions = cachedPriorities;
 
-  // ── Decide which filter sections to show ────────────────────────────────────
+  // ── Visibility flags ─────────────────────────────────────────────────────────
   const noSelection = selectedFieldIds.length === 0;
 
   const showTypeFilter = noSelection || (isAdo
@@ -183,7 +233,7 @@ export function BacklogFilterBuilder({
       ['string', 'html', 'plainText'].includes(fieldMeta.find(f => f.field_id === id)?.field_type ?? ''),
   );
 
-  // ── Load users ──────────────────────────────────────────────────────────────
+  // ── Load users ───────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!showAssigneeFilter) return;
     setUsersLoading(true);
@@ -198,7 +248,7 @@ export function BacklogFilterBuilder({
     }).catch(() => {}).finally(() => setUsersLoading(false));
   }, [integration.id, integration.provider, integration.project_key, showAssigneeFilter]);
 
-  // ── WIQL / JQL assembly ─────────────────────────────────────────────────────
+  // ── WIQL / JQL assembly (unchanged) ─────────────────────────────────────────
   function buildAdoWiql(): string {
     const project = integration.project_key ?? 'Project';
     const conds: string[] = [`[System.TeamProject] = '${project}'`];
@@ -248,16 +298,8 @@ export function BacklogFilterBuilder({
     return next;
   }
 
-  function toggleSection(id: string) {
-    setExpandedSections(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  }
-
-  function toggleEmptySection(id: string) {
-    setShowEmptyInSection(prev => {
+  function toggleShowAll(id: string) {
+    setShowAllSection(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id); else next.add(id);
       return next;
@@ -266,464 +308,470 @@ export function BacklogFilterBuilder({
 
   const hasActiveFilters =
     selectedTypes.size > 0 || selectedStates.size > 0 || selectedPriorities.size > 0 ||
-    selectedAssignees.size > 0 || iterationPath || dateFrom || dateTo || textFilter;
+    selectedAssignees.size > 0 || !!iterationPath || !!dateFrom || !!dateTo || !!textFilter;
 
-  // ── INLINE LAYOUT ────────────────────────────────────────────────────────────
-  const inlineLayout = (
-    <div className="space-y-4">
-      {showTypeFilter && typeOptions.length > 0 && (() => {
-        const withData = typeOptions.filter(v => (typeCounts[v] ?? 0) > 0);
-        const withoutData = typeOptions.filter(v => (typeCounts[v] ?? 0) === 0);
-        const showEmpty = showEmptyInSection.has('type');
-        const visible = showEmpty ? typeOptions : withData;
-        return (
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium">{t('backlog_browser.filter_work_item_type')}</Label>
-            <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-              {visible.map((type) => (
-                <label key={type} className="flex items-center gap-1.5 cursor-pointer">
-                  <Checkbox
-                    checked={selectedTypes.has(type)}
-                    onCheckedChange={() => setSelectedTypes(toggleSet(selectedTypes, type))}
-                    className="h-3.5 w-3.5"
-                  />
-                  <span className="text-xs">
-                    {type}{typeCounts[type] ? <span className="text-muted-foreground"> ({typeCounts[type]})</span> : null}
-                  </span>
-                </label>
-              ))}
-            </div>
-            {withoutData.length > 0 && (
-              <button type="button" className="text-[10px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline" onClick={() => toggleEmptySection('type')}>
-                {showEmpty ? t('backlog_browser.filter_hide_empty') : t('backlog_browser.filter_show_empty', { count: withoutData.length })}
-              </button>
-            )}
-          </div>
-        );
-      })()}
+  function clearAll() {
+    setSelectedTypes(new Set());
+    setSelectedStates(new Set());
+    setSelectedPriorities(new Set());
+    setSelectedAssignees(new Set());
+    setIterationPath('');
+    setDateFrom('');
+    setDateTo('');
+    setTextFilter('');
+  }
 
-      {showStateFilter && stateOptions.length > 0 && (() => {
-        const withData = stateOptions.filter(v => (stateCounts[v] ?? 0) > 0);
-        const withoutData = stateOptions.filter(v => (stateCounts[v] ?? 0) === 0);
-        const showEmpty = showEmptyInSection.has('state');
-        const visible = showEmpty ? stateOptions : withData;
-        return (
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium">{t('backlog_browser.filter_state')}</Label>
-            <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-              {visible.map((state) => (
-                <label key={state} className="flex items-center gap-1.5 cursor-pointer">
-                  <Checkbox
-                    checked={selectedStates.has(state)}
-                    onCheckedChange={() => setSelectedStates(toggleSet(selectedStates, state))}
-                    className="h-3.5 w-3.5"
-                  />
-                  <span className="text-xs">
-                    {state}{stateCounts[state] ? <span className="text-muted-foreground"> ({stateCounts[state]})</span> : null}
-                  </span>
-                </label>
-              ))}
-            </div>
-            {withoutData.length > 0 && (
-              <button type="button" className="text-[10px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline" onClick={() => toggleEmptySection('state')}>
-                {showEmpty ? t('backlog_browser.filter_hide_empty') : t('backlog_browser.filter_show_empty', { count: withoutData.length })}
-              </button>
-            )}
-          </div>
-        );
-      })()}
+  // ── Preset actions ───────────────────────────────────────────────────────────
+  function applyPresetInFlight() {
+    const kw = ['active', 'in progress', 'doing', 'development', 'review', 'code'];
+    const matching = stateOptions.filter(s => kw.some(k => s.toLowerCase().includes(k)));
+    setSelectedStates(new Set(matching.length ? matching : ['Active', 'In Progress']));
+    setSelectedTypes(new Set()); setSelectedPriorities(new Set()); setSelectedAssignees(new Set()); setIterationPath('');
+  }
 
-      {showPriorityFilter && priorityOptions.length > 0 && (() => {
-        const withData = priorityOptions.filter(v => (priorityCounts[v] ?? 0) > 0);
-        const withoutData = priorityOptions.filter(v => (priorityCounts[v] ?? 0) === 0);
-        const showEmpty = showEmptyInSection.has('priority');
-        const visible = showEmpty ? priorityOptions : withData;
-        return (
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium">{t('backlog_browser.filter_priority')}</Label>
-            <div className="flex flex-wrap gap-x-4 gap-y-1.5">
-              {visible.map((p) => (
-                <label key={p} className="flex items-center gap-1.5 cursor-pointer">
-                  <Checkbox
-                    checked={selectedPriorities.has(p)}
-                    onCheckedChange={() => setSelectedPriorities(toggleSet(selectedPriorities, p))}
-                    className="h-3.5 w-3.5"
-                  />
-                  <span className="text-xs">
-                    {p}{priorityCounts[p] ? <span className="text-muted-foreground"> ({priorityCounts[p]})</span> : null}
-                  </span>
-                </label>
-              ))}
-            </div>
-            {withoutData.length > 0 && (
-              <button type="button" className="text-[10px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline" onClick={() => toggleEmptySection('priority')}>
-                {showEmpty ? t('backlog_browser.filter_hide_empty') : t('backlog_browser.filter_show_empty', { count: withoutData.length })}
-              </button>
-            )}
-          </div>
-        );
-      })()}
+  function applyPresetCritical() {
+    if (isAdo) {
+      setSelectedPriorities(new Set(['1', '2']));
+    } else {
+      const kw = ['critical', 'high', 'highest'];
+      const matching = priorityOptions.filter(p => kw.some(k => p.toLowerCase().includes(k)));
+      setSelectedPriorities(new Set(matching.length ? matching : ['Critical', 'High']));
+    }
+    setSelectedTypes(new Set()); setSelectedStates(new Set()); setSelectedAssignees(new Set()); setIterationPath('');
+  }
 
-      {showAssigneeFilter && (
-        <div className="space-y-1.5">
-          <Label className="text-xs font-medium">{t('backlog_browser.filter_assignee')}</Label>
-          {usersLoading ? (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <Loader2 className="h-3 w-3 animate-spin" /> {t('backlog_browser.loading_users')}
-            </div>
-          ) : userOptions.length > 0 ? (
-            <div className="flex flex-wrap gap-x-4 gap-y-1.5 max-h-32 overflow-y-auto border rounded p-2">
-              {userOptions.map((u, idx) => {
-                const label = u.display_name ?? u.email ?? `User ${idx}`;
-                const value = u.display_name ?? u.email ?? '';
-                const count = assigneeCounts[u.display_name ?? ''] ?? 0;
-                return (
-                  <label key={u.account_id ?? idx} className="flex items-center gap-1.5 cursor-pointer">
-                    <Checkbox
-                      checked={selectedAssignees.has(value)}
-                      onCheckedChange={() => value && setSelectedAssignees(toggleSet(selectedAssignees, value))}
-                      className="h-3.5 w-3.5"
-                    />
-                    <span className="text-xs">
-                      {label}{count ? <span className="text-muted-foreground"> ({count})</span> : null}
-                    </span>
-                  </label>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-[10px] text-muted-foreground">{t('backlog_browser.no_users')}</p>
-          )}
+  function applyPresetUnblocked() {
+    const blockedKw = ['blocked', 'impediment', 'hold', 'stalled', 'waiting'];
+    const unblocked = stateOptions.filter(s => !blockedKw.some(k => s.toLowerCase().includes(k)));
+    setSelectedStates(new Set(unblocked.length ? unblocked : stateOptions));
+    setSelectedTypes(new Set()); setSelectedPriorities(new Set()); setSelectedAssignees(new Set()); setIterationPath('');
+  }
+
+  // ── Filter pipeline computation ──────────────────────────────────────────────
+  const funnelStats = useMemo(() => {
+    if (!hasActiveFilters || issues.length === 0) return null;
+    const total = issues.length;
+    const afterType = selectedTypes.size > 0
+      ? issues.filter(i => selectedTypes.has(i.issue_type as string)).length
+      : null;
+    const afterState = selectedStates.size > 0
+      ? issues.filter(i =>
+          (selectedTypes.size === 0 || selectedTypes.has(i.issue_type as string)) &&
+          selectedStates.has(i.status as string)
+        ).length
+      : null;
+    const final = issues.filter(i => {
+      if (selectedTypes.size > 0 && !selectedTypes.has(i.issue_type as string)) return false;
+      if (selectedStates.size > 0 && !selectedStates.has(i.status as string)) return false;
+      if (selectedPriorities.size > 0 && !selectedPriorities.has(i.priority as string)) return false;
+      if (selectedAssignees.size > 0 && !selectedAssignees.has(i.assignee_name as string)) return false;
+      if (iterationPath && i.iteration_path !== iterationPath) return false;
+      if (textFilter && !(i.title as string || '').toLowerCase().includes(textFilter.toLowerCase())) return false;
+      return true;
+    }).length;
+    return { total, afterType, afterState, final };
+  }, [issues, selectedTypes, selectedStates, selectedPriorities, selectedAssignees, iterationPath, textFilter, hasActiveFilters]);
+
+  // ── Chip search helper ───────────────────────────────────────────────────────
+  function applyChipSearch(opts: string[]): string[] {
+    if (!chipSearch) return opts;
+    return opts.filter(o => o.toLowerCase().includes(chipSearch.toLowerCase()));
+  }
+
+  // ── Chip section renderer ────────────────────────────────────────────────────
+  function renderChipSection(
+    id: string,
+    label: string,
+    sectionColor: string,
+    opts: string[],
+    selected: Set<string>,
+    onToggle: (v: string) => void,
+    counts: Record<string, number>,
+    getChipColor: (v: string, idx: number) => string,
+  ) {
+    const nonEmpty = opts.filter(v => (counts[v] ?? 0) > 0);
+    const pool = nonEmpty.length > 0 ? nonEmpty : opts;
+    const filtered = applyChipSearch(pool);
+    if (filtered.length === 0) return null;
+    const maxCount = Math.max(...filtered.map(v => counts[v] ?? 0), 1);
+    const showAll = showAllSection.has(id);
+    const visible = showAll ? filtered : filtered.slice(0, CHIP_LIMIT);
+    const hidden = filtered.length - CHIP_LIMIT;
+    return (
+      <div>
+        <div className="flex items-center gap-2 mb-1.5 mt-3">
+          <div className="w-0.5 h-3 rounded-full shrink-0" style={{ background: sectionColor }} />
+          <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{label}</span>
         </div>
-      )}
-
-      {showIterationFilter && iterPathOptions.length > 0 && (() => {
-        const withData = iterPathOptions.filter(v => (iterCounts[v] ?? 0) > 0);
-        const withoutData = iterPathOptions.filter(v => (iterCounts[v] ?? 0) === 0);
-        const showEmpty = showEmptyInSection.has('iteration');
-        const visibleIter = showEmpty ? iterPathOptions : (withData.length > 0 ? withData : iterPathOptions);
-        return (
-          <div className="space-y-1.5">
-            <Label className="text-xs font-medium">{t('backlog_browser.filter_iteration')}</Label>
-            <Select value={iterationPath || '__all__'} onValueChange={(v) => setIterationPath(v === '__all__' ? '' : v)}>
-              <SelectTrigger className="h-8 text-xs">
-                <SelectValue placeholder={t('backlog_browser.all_iterations')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">{t('backlog_browser.all_iterations')}</SelectItem>
-                {visibleIter.map((p) => (
-                  <SelectItem key={p} value={p}>
-                    {p}{iterCounts[p] ? ` (${iterCounts[p]})` : ''}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {withoutData.length > 0 && (
-              <button type="button" className="text-[10px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline" onClick={() => toggleEmptySection('iteration')}>
-                {showEmpty ? t('backlog_browser.filter_hide_empty') : t('backlog_browser.filter_show_empty', { count: withoutData.length })}
-              </button>
-            )}
-          </div>
-        );
-      })()}
-
-      {showDateFilter && (
-        <div className="space-y-1.5">
-          <Label className="text-xs font-medium">{t('backlog_browser.filter_date_created')}</Label>
-          <div className="flex items-center gap-2">
-            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-8 text-xs w-40" />
-            <span className="text-xs text-muted-foreground">—</span>
-            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-8 text-xs w-40" />
-          </div>
+        <div className="flex flex-wrap gap-1">
+          {visible.map((v, localIdx) => {
+            const cnt = counts[v] ?? 0;
+            const weight = maxCount > 0 ? cnt / maxCount : 0;
+            const globalIdx = opts.indexOf(v);
+            return (
+              <FilterChip
+                key={v}
+                label={v}
+                count={cnt > 0 ? cnt : undefined}
+                selected={selected.has(v)}
+                color={getChipColor(v, globalIdx >= 0 ? globalIdx : localIdx)}
+                weight={weight}
+                onClick={() => onToggle(v)}
+              />
+            );
+          })}
         </div>
-      )}
+        {!showAll && hidden > 0 && (
+          <button type="button" className="mt-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors" onClick={() => toggleShowAll(id)}>
+            +{hidden} {t('backlog_browser.filter_show_empty', { count: hidden })}
+          </button>
+        )}
+        {showAll && filtered.length > CHIP_LIMIT && (
+          <button type="button" className="mt-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors" onClick={() => toggleShowAll(id)}>
+            {t('backlog_browser.filter_hide_empty')}
+          </button>
+        )}
+      </div>
+    );
+  }
 
-      {showTextFilter && (
-        <div className="space-y-1.5">
-          <Label className="text-xs font-medium">{t('backlog_browser.filter_text')}</Label>
-          <Input
-            value={textFilter}
-            onChange={(e) => setTextFilter(e.target.value)}
-            placeholder={t('backlog_browser.filter_text_placeholder')}
-            className="h-8 text-xs"
-          />
-        </div>
-      )}
-    </div>
-  );
-
-  // ── ACCORDION LAYOUT ─────────────────────────────────────────────────────────
-  const accordionLayout = (
-    <div className="border rounded-lg bg-card overflow-hidden">
-      {showTypeFilter && typeOptions.length > 0 && (() => {
-        const withDataAcc = typeOptions.filter(v => (typeCounts[v] ?? 0) > 0);
-        const withoutDataAcc = typeOptions.filter(v => (typeCounts[v] ?? 0) === 0);
-        const showEmptyAcc = showEmptyInSection.has('type');
-        const visibleAcc = showEmptyAcc ? typeOptions : withDataAcc;
-        return (
-          <AccordionSection
-            isOpen={expandedSections.has('type')}
-            onToggle={() => toggleSection('type')}
-            label={t('backlog_browser.filter_work_item_type')}
-            activeCount={selectedTypes.size}
-          >
-            <div className="space-y-0.5">
-              {visibleAcc.map((type) => (
-                <label key={type} className="flex items-center gap-2 py-1 px-1 rounded hover:bg-accent cursor-pointer">
-                  <Checkbox
-                    checked={selectedTypes.has(type)}
-                    onCheckedChange={() => setSelectedTypes(toggleSet(selectedTypes, type))}
-                    className="h-3.5 w-3.5"
-                  />
-                  <span className="text-xs flex-1">{type}</span>
-                  {typeCounts[type] > 0 && <span className="text-[10px] text-muted-foreground">({typeCounts[type]})</span>}
-                </label>
-              ))}
-              {withoutDataAcc.length > 0 && (
-                <button type="button" className="text-[10px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline mt-1" onClick={() => toggleEmptySection('type')}>
-                  {showEmptyAcc ? t('backlog_browser.filter_hide_empty') : t('backlog_browser.filter_show_empty', { count: withoutDataAcc.length })}
-                </button>
-              )}
-            </div>
-          </AccordionSection>
-        );
-      })()}
-
-      {showStateFilter && stateOptions.length > 0 && (() => {
-        const withDataAcc = stateOptions.filter(v => (stateCounts[v] ?? 0) > 0);
-        const withoutDataAcc = stateOptions.filter(v => (stateCounts[v] ?? 0) === 0);
-        const showEmptyAcc = showEmptyInSection.has('state');
-        const visibleAcc = showEmptyAcc ? stateOptions : withDataAcc;
-        return (
-          <AccordionSection
-            isOpen={expandedSections.has('state')}
-            onToggle={() => toggleSection('state')}
-            label={t('backlog_browser.filter_state')}
-            activeCount={selectedStates.size}
-          >
-            <div className="space-y-0.5">
-              {visibleAcc.map((state) => (
-                <label key={state} className="flex items-center gap-2 py-1 px-1 rounded hover:bg-accent cursor-pointer">
-                  <Checkbox
-                    checked={selectedStates.has(state)}
-                    onCheckedChange={() => setSelectedStates(toggleSet(selectedStates, state))}
-                    className="h-3.5 w-3.5"
-                  />
-                  <span className="text-xs flex-1">{state}</span>
-                  {stateCounts[state] > 0 && <span className="text-[10px] text-muted-foreground">({stateCounts[state]})</span>}
-                </label>
-              ))}
-              {withoutDataAcc.length > 0 && (
-                <button type="button" className="text-[10px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline mt-1" onClick={() => toggleEmptySection('state')}>
-                  {showEmptyAcc ? t('backlog_browser.filter_hide_empty') : t('backlog_browser.filter_show_empty', { count: withoutDataAcc.length })}
-                </button>
-              )}
-            </div>
-          </AccordionSection>
-        );
-      })()}
-
-      {showPriorityFilter && priorityOptions.length > 0 && (() => {
-        const withDataAcc = priorityOptions.filter(v => (priorityCounts[v] ?? 0) > 0);
-        const withoutDataAcc = priorityOptions.filter(v => (priorityCounts[v] ?? 0) === 0);
-        const showEmptyAcc = showEmptyInSection.has('priority');
-        const visibleAcc = showEmptyAcc ? priorityOptions : withDataAcc;
-        return (
-          <AccordionSection
-            isOpen={expandedSections.has('priority')}
-            onToggle={() => toggleSection('priority')}
-            label={t('backlog_browser.filter_priority')}
-            activeCount={selectedPriorities.size}
-          >
-            <div className="space-y-0.5">
-              {visibleAcc.map((p) => (
-                <label key={p} className="flex items-center gap-2 py-1 px-1 rounded hover:bg-accent cursor-pointer">
-                  <Checkbox
-                    checked={selectedPriorities.has(p)}
-                    onCheckedChange={() => setSelectedPriorities(toggleSet(selectedPriorities, p))}
-                    className="h-3.5 w-3.5"
-                  />
-                  <span className="text-xs flex-1">{p}</span>
-                  {priorityCounts[p] > 0 && <span className="text-[10px] text-muted-foreground">({priorityCounts[p]})</span>}
-                </label>
-              ))}
-              {withoutDataAcc.length > 0 && (
-                <button type="button" className="text-[10px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline mt-1" onClick={() => toggleEmptySection('priority')}>
-                  {showEmptyAcc ? t('backlog_browser.filter_hide_empty') : t('backlog_browser.filter_show_empty', { count: withoutDataAcc.length })}
-                </button>
-              )}
-            </div>
-          </AccordionSection>
-        );
-      })()}
-
-      {showAssigneeFilter && (
-        <AccordionSection
-          isOpen={expandedSections.has('assignee')}
-          onToggle={() => toggleSection('assignee')}
-          label={t('backlog_browser.filter_assignee')}
-          activeCount={selectedAssignees.size}
-        >
-          {usersLoading ? (
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground py-1">
-              <Loader2 className="h-3 w-3 animate-spin" /> {t('backlog_browser.loading_users')}
-            </div>
-          ) : userOptions.length > 0 ? (
-            <div className="space-y-0.5 max-h-48 overflow-y-auto">
-              {userOptions.map((u, idx) => {
-                const label = u.display_name ?? u.email ?? `User ${idx}`;
-                const value = u.display_name ?? u.email ?? '';
-                const count = assigneeCounts[u.display_name ?? ''] ?? 0;
-                return (
-                  <label key={u.account_id ?? idx} className="flex items-center gap-2 py-1 px-1 rounded hover:bg-accent cursor-pointer">
-                    <Checkbox
-                      checked={selectedAssignees.has(value)}
-                      onCheckedChange={() => value && setSelectedAssignees(toggleSet(selectedAssignees, value))}
-                      className="h-3.5 w-3.5"
-                    />
-                    <span className="text-xs flex-1 truncate">{label}</span>
-                    {count > 0 && <span className="text-[10px] text-muted-foreground">({count})</span>}
-                  </label>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-[10px] text-muted-foreground">{t('backlog_browser.no_users')}</p>
-          )}
-        </AccordionSection>
-      )}
-
-      {showIterationFilter && iterPathOptions.length > 0 && (() => {
-        const withDataAcc = iterPathOptions.filter(v => (iterCounts[v] ?? 0) > 0);
-        const withoutDataAcc = iterPathOptions.filter(v => (iterCounts[v] ?? 0) === 0);
-        const showEmptyAcc = showEmptyInSection.has('iteration');
-        const visibleAcc = showEmptyAcc ? iterPathOptions : (withDataAcc.length > 0 ? withDataAcc : iterPathOptions);
-        return (
-          <AccordionSection
-            isOpen={expandedSections.has('iteration')}
-            onToggle={() => toggleSection('iteration')}
-            label={t('backlog_browser.filter_iteration')}
-            activeCount={iterationPath ? 1 : 0}
-          >
-            <div className="space-y-0.5">
-              {visibleAcc.map((p) => (
-                <label
-                  key={p}
-                  className={cn(
-                    'flex items-center gap-2 py-1 px-1 rounded hover:bg-accent cursor-pointer',
-                    iterationPath === p && 'bg-primary/10',
-                  )}
-                >
-                  <Checkbox
-                    checked={iterationPath === p}
-                    onCheckedChange={() => setIterationPath(iterationPath === p ? '' : p)}
-                    className="h-3.5 w-3.5"
-                  />
-                  <span className="text-xs flex-1">{p}</span>
-                  {iterCounts[p] > 0 && <span className="text-[10px] text-muted-foreground">({iterCounts[p]})</span>}
-                </label>
-              ))}
-              {withoutDataAcc.length > 0 && (
-                <button type="button" className="text-[10px] text-muted-foreground hover:text-foreground underline-offset-2 hover:underline mt-1" onClick={() => toggleEmptySection('iteration')}>
-                  {showEmptyAcc ? t('backlog_browser.filter_hide_empty') : t('backlog_browser.filter_show_empty', { count: withoutDataAcc.length })}
-                </button>
-              )}
-            </div>
-          </AccordionSection>
-        );
-      })()}
-
-      {showDateFilter && (
-        <AccordionSection
-          isOpen={expandedSections.has('date')}
-          onToggle={() => toggleSection('date')}
-          label={t('backlog_browser.filter_date_created')}
-          activeCount={dateFrom || dateTo ? 1 : 0}
-        >
-          <div className="flex items-center gap-2 pt-1">
-            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-8 text-xs w-40" />
-            <span className="text-xs text-muted-foreground">—</span>
-            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-8 text-xs w-40" />
-          </div>
-        </AccordionSection>
-      )}
-
-      {showTextFilter && (
-        <AccordionSection
-          isOpen={expandedSections.has('text')}
-          onToggle={() => toggleSection('text')}
-          label={t('backlog_browser.filter_text')}
-          activeCount={textFilter ? 1 : 0}
-        >
-          <Input
-            value={textFilter}
-            onChange={(e) => setTextFilter(e.target.value)}
-            placeholder={t('backlog_browser.filter_text_placeholder')}
-            className="h-8 text-xs mt-1"
-          />
-        </AccordionSection>
-      )}
-    </div>
-  );
+  const signalCurrent = funnelStats ? funnelStats.final : issues.length;
+  const signalTotal = issues.length;
 
   return (
     <div className="space-y-3">
-      {/* Layout toggle */}
-      <div className="flex items-center gap-1 rounded-md border p-0.5 self-start w-fit">
-        <Button
-          variant={filterLayout === 'inline' ? 'secondary' : 'ghost'}
-          size="sm"
-          className="h-6 gap-1 px-2 text-[10px]"
-          onClick={() => setFilterLayout('inline')}
-        >
-          <SlidersHorizontal className="h-3 w-3" /> {t('backlog_browser.filter_layout_inline')}
-        </Button>
-        <Button
-          variant={filterLayout === 'accordion' ? 'secondary' : 'ghost'}
-          size="sm"
-          className="h-6 gap-1 px-2 text-[10px]"
-          onClick={() => setFilterLayout('accordion')}
-        >
-          <AlignJustify className="h-3 w-3" /> {t('backlog_browser.filter_layout_accordion')}
-        </Button>
+
+      {/* CONTROL SURFACE header + signal meter */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between">
+          <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground/60">
+            {t('backlog_browser.control_surface')}
+          </span>
+          {hasActiveFilters && (
+            <button
+              type="button"
+              className="font-mono text-[9px] uppercase tracking-wide text-muted-foreground hover:text-destructive transition-colors"
+              onClick={clearAll}
+            >
+              {t('backlog_browser.clear_all')} ×
+            </button>
+          )}
+        </div>
+        {signalTotal > 0 && (
+          <SignalMeter current={signalCurrent} total={signalTotal} />
+        )}
       </div>
 
-      {/* Filter content */}
-      {filterLayout === 'inline' ? inlineLayout : accordionLayout}
+      {/* Cross-category chip search */}
+      <div className="relative">
+        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground pointer-events-none" />
+        <Input
+          className="h-7 pl-7 pr-6 text-[11px] bg-muted/30 border-border/50"
+          placeholder={t('backlog_browser.chip_search_placeholder')}
+          value={chipSearch}
+          onChange={e => setChipSearch(e.target.value)}
+        />
+        {chipSearch && (
+          <button
+            type="button"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 p-0.5 text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => setChipSearch('')}
+          >
+            <X className="h-3 w-3" />
+          </button>
+        )}
+      </div>
 
-      {/* Active filter badges */}
+      {/* Quick presets */}
+      <div>
+        <div className="flex items-center gap-2 mb-1.5">
+          <div className="w-0.5 h-3 rounded-full shrink-0 bg-amber-500" />
+          <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+            {t('backlog_browser.presets')}
+          </span>
+        </div>
+        <div className="flex flex-wrap gap-1.5">
+          <button
+            type="button"
+            onClick={applyPresetInFlight}
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border border-cyan-500/40 bg-cyan-500/5 text-cyan-500 hover:bg-cyan-500/15 transition-colors"
+          >
+            ⚡ {t('backlog_browser.preset_inflight')}
+          </button>
+          <button
+            type="button"
+            onClick={applyPresetCritical}
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border border-red-500/40 bg-red-500/5 text-red-500 hover:bg-red-500/15 transition-colors"
+          >
+            🔴 {t('backlog_browser.preset_critical')}
+          </button>
+          <button
+            type="button"
+            onClick={applyPresetUnblocked}
+            className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium border border-emerald-500/40 bg-emerald-500/5 text-emerald-500 hover:bg-emerald-500/15 transition-colors"
+          >
+            🎯 {t('backlog_browser.preset_unblocked')}
+          </button>
+        </div>
+      </div>
+
+      {/* Active filter chips */}
       {hasActiveFilters && (
-        <div className="flex flex-wrap gap-1.5 pt-1">
-          {[...selectedTypes].map(v => (
-            <Badge key={v} variant="secondary" className="text-[10px] gap-1 cursor-pointer" onClick={() => setSelectedTypes(toggleSet(selectedTypes, v))}>
-              {v} <X className="h-2.5 w-2.5" />
-            </Badge>
-          ))}
-          {[...selectedStates].map(v => (
-            <Badge key={v} variant="secondary" className="text-[10px] gap-1 cursor-pointer" onClick={() => setSelectedStates(toggleSet(selectedStates, v))}>
-              {v} <X className="h-2.5 w-2.5" />
-            </Badge>
-          ))}
-          {[...selectedPriorities].map(v => (
-            <Badge key={v} variant="secondary" className="text-[10px] gap-1 cursor-pointer" onClick={() => setSelectedPriorities(toggleSet(selectedPriorities, v))}>
-              P{v} <X className="h-2.5 w-2.5" />
-            </Badge>
-          ))}
-          {[...selectedAssignees].map(v => (
-            <Badge key={v} variant="outline" className="text-[10px] gap-1 cursor-pointer" onClick={() => setSelectedAssignees(toggleSet(selectedAssignees, v))}>
-              @{v} <X className="h-2.5 w-2.5" />
-            </Badge>
-          ))}
-          {iterationPath && (
-            <Badge variant="outline" className="text-[10px] gap-1 cursor-pointer" onClick={() => setIterationPath('')}>
-              {iterationPath} <X className="h-2.5 w-2.5" />
-            </Badge>
+        <div className="rounded-md border border-border/40 bg-muted/15 p-2 space-y-1.5">
+          <div className="flex items-center gap-2">
+            <div className="w-0.5 h-3 rounded-full bg-primary shrink-0" />
+            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+              {t('backlog_browser.active_filters')}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-1">
+            {[...selectedTypes].map(v => (
+              <span key={v} onClick={() => setSelectedTypes(toggleSet(selectedTypes, v))}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white cursor-pointer"
+                style={{ background: '#8b5cf6', boxShadow: '0 0 6px #8b5cf660' }}>
+                {v} <X className="h-2.5 w-2.5" />
+              </span>
+            ))}
+            {[...selectedStates].map(v => (
+              <span key={v} onClick={() => setSelectedStates(toggleSet(selectedStates, v))}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white cursor-pointer"
+                style={{ background: stateColor(v), boxShadow: `0 0 6px ${stateColor(v)}60` }}>
+                {v} <X className="h-2.5 w-2.5" />
+              </span>
+            ))}
+            {[...selectedPriorities].map(v => (
+              <span key={v} onClick={() => setSelectedPriorities(toggleSet(selectedPriorities, v))}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white cursor-pointer"
+                style={{ background: priorityColor(v), boxShadow: `0 0 6px ${priorityColor(v)}60` }}>
+                P{v} <X className="h-2.5 w-2.5" />
+              </span>
+            ))}
+            {[...selectedAssignees].map(v => (
+              <span key={v} onClick={() => setSelectedAssignees(toggleSet(selectedAssignees, v))}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white cursor-pointer"
+                style={{ background: nameToHsl(v), boxShadow: `0 0 6px ${nameToHsl(v)}60` }}>
+                @{v.split(' ')[0]} <X className="h-2.5 w-2.5" />
+              </span>
+            ))}
+            {iterationPath && (
+              <span onClick={() => setIterationPath('')}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white cursor-pointer"
+                style={{ background: '#f59e0b', boxShadow: '0 0 6px #f59e0b60' }}>
+                {iterationPath.split('\\').pop()} <X className="h-2.5 w-2.5" />
+              </span>
+            )}
+            {(dateFrom || dateTo) && (
+              <span onClick={() => { setDateFrom(''); setDateTo(''); }}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white cursor-pointer"
+                style={{ background: '#10b981', boxShadow: '0 0 6px #10b98160' }}>
+                {dateFrom}{dateFrom && dateTo ? '→' : ''}{dateTo} <X className="h-2.5 w-2.5" />
+              </span>
+            )}
+            {textFilter && (
+              <span onClick={() => setTextFilter('')}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium text-white cursor-pointer"
+                style={{ background: '#f97316', boxShadow: '0 0 6px #f9731660' }}>
+                "{textFilter}" <X className="h-2.5 w-2.5" />
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Filter pipeline */}
+      {funnelStats && (
+        <div className="rounded-md border border-border/30 bg-muted/10 px-2.5 py-2">
+          <div className="flex items-center gap-1 flex-wrap font-mono text-[10px]">
+            <span className="text-foreground font-bold tabular-nums">{funnelStats.total}</span>
+            {funnelStats.afterType !== null && (
+              <>
+                <span className="text-muted-foreground">──▶</span>
+                <span className="px-1.5 py-0.5 rounded text-[9px]" style={{ background: '#8b5cf620', color: '#a78bfa' }}>
+                  T:{funnelStats.afterType}
+                </span>
+              </>
+            )}
+            {funnelStats.afterState !== null && (
+              <>
+                <span className="text-muted-foreground">──▶</span>
+                <span className="px-1.5 py-0.5 rounded text-[9px]" style={{ background: '#06b6d420', color: '#22d3ee' }}>
+                  S:{funnelStats.afterState}
+                </span>
+              </>
+            )}
+            <span className="text-muted-foreground">──▶</span>
+            <span className="text-foreground font-bold tabular-nums">{funnelStats.final}</span>
+            <span className="text-muted-foreground">{t('backlog_browser.funnel_results')}</span>
+          </div>
+        </div>
+      )}
+
+      {/* TYPE chips */}
+      {showTypeFilter && renderChipSection(
+        'type', t('backlog_browser.section_type'), '#8b5cf6',
+        typeOptions, selectedTypes,
+        v => setSelectedTypes(toggleSet(selectedTypes, v)),
+        typeCounts, (_v, idx) => typeColor(idx),
+      )}
+
+      {/* STATE chips */}
+      {showStateFilter && renderChipSection(
+        'state', t('backlog_browser.section_state'), '#06b6d4',
+        stateOptions, selectedStates,
+        v => setSelectedStates(toggleSet(selectedStates, v)),
+        stateCounts, v => stateColor(v),
+      )}
+
+      {/* PRIORITY chips */}
+      {showPriorityFilter && renderChipSection(
+        'priority', t('backlog_browser.section_priority'), '#f97316',
+        priorityOptions, selectedPriorities,
+        v => setSelectedPriorities(toggleSet(selectedPriorities, v)),
+        priorityCounts, v => priorityColor(v),
+      )}
+
+      {/* ASSIGNEE chips */}
+      {showAssigneeFilter && (
+        <div>
+          <div className="flex items-center gap-2 mb-1.5 mt-3">
+            <div className="w-0.5 h-3 rounded-full shrink-0 bg-pink-500" />
+            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+              {t('backlog_browser.section_assignee')}
+            </span>
+          </div>
+          {usersLoading ? (
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" /> {t('backlog_browser.loading_users')}
+            </div>
+          ) : userOptions.length > 0 ? (() => {
+            const allLabels = userOptions.map(u => u.display_name ?? u.email ?? '').filter(Boolean);
+            const pool = applyChipSearch(allLabels);
+            const maxCnt = Math.max(...pool.map(v => assigneeCounts[v] ?? 0), 1);
+            const showAll = showAllSection.has('assignee');
+            const visible = showAll ? pool : pool.slice(0, CHIP_LIMIT);
+            const hidden = pool.length - CHIP_LIMIT;
+            return (
+              <div>
+                <div className="flex flex-wrap gap-1">
+                  {visible.map(label => {
+                    const cnt = assigneeCounts[label] ?? 0;
+                    return (
+                      <FilterChip
+                        key={label}
+                        label={label}
+                        count={cnt > 0 ? cnt : undefined}
+                        selected={selectedAssignees.has(label)}
+                        color={nameToHsl(label)}
+                        weight={maxCnt > 0 ? cnt / maxCnt : 0}
+                        onClick={() => setSelectedAssignees(toggleSet(selectedAssignees, label))}
+                      />
+                    );
+                  })}
+                </div>
+                {!showAll && hidden > 0 && (
+                  <button type="button" className="mt-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors" onClick={() => toggleShowAll('assignee')}>
+                    +{hidden} {t('backlog_browser.filter_show_empty', { count: hidden })}
+                  </button>
+                )}
+                {showAll && pool.length > CHIP_LIMIT && (
+                  <button type="button" className="mt-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors" onClick={() => toggleShowAll('assignee')}>
+                    {t('backlog_browser.filter_hide_empty')}
+                  </button>
+                )}
+              </div>
+            );
+          })() : (
+            <p className="text-[10px] text-muted-foreground">{t('backlog_browser.no_users')}</p>
           )}
         </div>
       )}
 
-      <Button size="sm" onClick={handleSearch} disabled={loading} className="gap-1">
-        {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Search className="h-3 w-3" />}
+      {/* ITERATION chips (ADO only) */}
+      {showIterationFilter && iterPathOptions.length > 0 && (() => {
+        const nonEmpty = iterPathOptions.filter(v => (iterCounts[v] ?? 0) > 0);
+        const pool = nonEmpty.length > 0 ? nonEmpty : iterPathOptions;
+        const filtered = applyChipSearch(pool);
+        if (filtered.length === 0) return null;
+        const maxCnt = Math.max(...filtered.map(v => iterCounts[v] ?? 0), 1);
+        const showAll = showAllSection.has('iteration');
+        const visible = showAll ? filtered : filtered.slice(0, CHIP_LIMIT);
+        const hidden = filtered.length - CHIP_LIMIT;
+        return (
+          <div>
+            <div className="flex items-center gap-2 mb-1.5 mt-3">
+              <div className="w-0.5 h-3 rounded-full shrink-0 bg-amber-500" />
+              <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+                {t('backlog_browser.section_iteration')}
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {visible.map(p => {
+                const cnt = iterCounts[p] ?? 0;
+                return (
+                  <FilterChip
+                    key={p}
+                    label={p.split('\\').pop() ?? p}
+                    count={cnt > 0 ? cnt : undefined}
+                    selected={iterationPath === p}
+                    color="#f59e0b"
+                    weight={maxCnt > 0 ? cnt / maxCnt : 0}
+                    onClick={() => setIterationPath(iterationPath === p ? '' : p)}
+                  />
+                );
+              })}
+            </div>
+            {!showAll && hidden > 0 && (
+              <button type="button" className="mt-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors" onClick={() => toggleShowAll('iteration')}>
+                +{hidden} {t('backlog_browser.filter_show_empty', { count: hidden })}
+              </button>
+            )}
+            {showAll && filtered.length > CHIP_LIMIT && (
+              <button type="button" className="mt-1.5 text-[10px] text-muted-foreground hover:text-foreground transition-colors" onClick={() => toggleShowAll('iteration')}>
+                {t('backlog_browser.filter_hide_empty')}
+              </button>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* DATE RANGE */}
+      {showDateFilter && (
+        <div>
+          <div className="flex items-center gap-2 mb-1.5 mt-3">
+            <div className="w-0.5 h-3 rounded-full shrink-0 bg-emerald-500" />
+            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+              {t('backlog_browser.section_date')}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} className="h-7 text-[11px] flex-1 min-w-0" />
+            <span className="text-muted-foreground text-xs shrink-0">→</span>
+            <Input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} className="h-7 text-[11px] flex-1 min-w-0" />
+          </div>
+        </div>
+      )}
+
+      {/* TEXT SEARCH */}
+      {showTextFilter && (
+        <div>
+          <div className="flex items-center gap-2 mb-1.5 mt-3">
+            <div className="w-0.5 h-3 rounded-full shrink-0 bg-orange-500" />
+            <span className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">
+              {t('backlog_browser.section_text')}
+            </span>
+          </div>
+          <Input
+            value={textFilter}
+            onChange={e => setTextFilter(e.target.value)}
+            placeholder={t('backlog_browser.filter_text_placeholder')}
+            className="h-7 text-[11px]"
+          />
+        </div>
+      )}
+
+      {/* Execute query */}
+      <Button size="sm" onClick={handleSearch} disabled={loading} className="w-full gap-1.5 mt-2">
+        {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
         {t('backlog_browser.search')}
       </Button>
     </div>
