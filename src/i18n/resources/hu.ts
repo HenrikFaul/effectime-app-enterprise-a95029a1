@@ -3284,6 +3284,9 @@ const hu = {
     loading_users: 'Felhasználók betöltése…',
     no_users: 'Nem található felhasználó',
     all_iterations: 'Összes iteráció',
+    page_size_label: 'Oldalanként',
+    page_size_all: 'Összes',
+    showing_count: '{{count}} elem',
   },
   issue_writeback: {
     bad_response: 'Hibás válasz',
@@ -3430,6 +3433,11 @@ const hu = {
     btn_save_selection: 'Választás mentése',
     selection_saved: 'Választás mentve',
     n_selected: '{{count}} kiválasztva',
+    col_used: 'Használva',
+    btn_show_used_only: 'Csak használt',
+    btn_show_all_fields: 'Összes mező',
+    btn_select_all_used: 'Összes használt kijelölése',
+    used_hint: '(gyorsítótár alapján)',
   },
   agile_panel: {
     card_title: 'Agile integráció (Jira / Azure DevOps)',

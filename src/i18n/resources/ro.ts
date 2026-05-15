@@ -3278,6 +3278,9 @@ const ro = {
     loading_users: 'Se încarcă utilizatorii…',
     no_users: 'Niciun utilizator găsit',
     all_iterations: 'Toate iterațiile',
+    page_size_label: 'Pe pagină',
+    page_size_all: 'Toate',
+    showing_count: '{{count}} elemente',
   },
   issue_writeback: {
     bad_response: 'Bad response',
@@ -3424,6 +3427,11 @@ const ro = {
     btn_save_selection: 'Salvează selecția',
     selection_saved: 'Selecție salvată',
     n_selected: '{{count}} selectate',
+    col_used: 'Utilizat',
+    btn_show_used_only: 'Doar utilizate',
+    btn_show_all_fields: 'Toate câmpurile',
+    btn_select_all_used: 'Selectează toate utilizate',
+    used_hint: '(din cache)',
   },
   agile_panel: {
     card_title: 'Agile integration (Jira / Azure DevOps)',

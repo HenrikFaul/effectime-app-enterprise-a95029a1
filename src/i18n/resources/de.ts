@@ -3278,6 +3278,9 @@ const de = {
     loading_users: 'Benutzer werden geladen…',
     no_users: 'Keine Benutzer gefunden',
     all_iterations: 'Alle Iterationen',
+    page_size_label: 'Pro Seite',
+    page_size_all: 'Alle',
+    showing_count: '{{count}} Einträge',
   },
   issue_writeback: {
     bad_response: 'Bad response',
@@ -3424,6 +3427,11 @@ const de = {
     btn_save_selection: 'Auswahl speichern',
     selection_saved: 'Auswahl gespeichert',
     n_selected: '{{count}} ausgewählt',
+    col_used: 'Verwendet',
+    btn_show_used_only: 'Nur verwendete',
+    btn_show_all_fields: 'Alle Felder',
+    btn_select_all_used: 'Alle verwendeten wählen',
+    used_hint: '(basierend auf Cache)',
   },
   agile_panel: {
     card_title: 'Agile integration (Jira / Azure DevOps)',
