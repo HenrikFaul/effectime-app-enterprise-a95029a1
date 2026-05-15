@@ -18,6 +18,7 @@ interface FieldRow {
 }
 
 // Same mapping as BacklogBrowser — field reference name → enterprise_agile_issues column
+// Only map to columns that actually exist in the enterprise_agile_issues table.
 const FIELD_TO_COL: Record<string, string> = {
   'System.WorkItemType': 'issue_type',
   'System.State': 'status',
@@ -25,17 +26,11 @@ const FIELD_TO_COL: Record<string, string> = {
   'Microsoft.VSTS.Common.Priority': 'priority',
   'Microsoft.VSTS.Scheduling.StoryPoints': 'story_points',
   'System.IterationPath': 'iteration_path',
-  'System.AreaPath': 'area_path',
   'System.Description': 'description',
   'System.Tags': 'labels',
   'System.CreatedDate': 'created_at',
   'System.ChangedDate': 'external_updated_at',
-  'Microsoft.VSTS.Scheduling.DueDate': 'ado_due_date',
-  'Microsoft.VSTS.Common.ClosedDate': 'ado_closed_date',
-  'Microsoft.VSTS.Common.ActivatedDate': 'ado_activated_date',
-  'Microsoft.VSTS.Common.ClosedBy': 'ado_closed_by',
-  'Microsoft.VSTS.Common.ResolvedBy': 'ado_resolved_by',
-  'Microsoft.VSTS.Common.ResolvedDate': 'ado_resolved_date',
+  'Microsoft.VSTS.Scheduling.DueDate': 'due_date',
   'assignee': 'assignee_name',
   'status': 'status',
   'issuetype': 'issue_type',
@@ -48,8 +43,8 @@ const FIELD_TO_COL: Record<string, string> = {
   'jira.labels': 'labels',
 };
 
-// Columns to check for "used" detection in enterprise_agile_issues
-const USAGE_COLS = 'issue_type,status,assignee_name,priority,story_points,iteration_path,area_path,description,labels,created_at,external_updated_at';
+// Columns to check for "used" detection in enterprise_agile_issues (must all exist in the table)
+const USAGE_COLS = 'issue_type,status,assignee_name,priority,story_points,iteration_path,due_date,description,labels,created_at,external_updated_at';
 
 export function FieldDiscovery({
   integration,
