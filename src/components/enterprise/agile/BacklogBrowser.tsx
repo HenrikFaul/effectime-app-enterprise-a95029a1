@@ -4,11 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, RefreshCw, ExternalLink, Pencil } from 'lucide-react';
+import { Loader2, RefreshCw, ExternalLink, Pencil, List, SlidersHorizontal } from 'lucide-react';
 import { toast } from 'sonner';
 import { JiraIssueEditor } from './JiraIssueEditor';
 import { AzureDevOpsIssueEditor } from './AzureDevOpsIssueEditor';
 import { useI18n } from '@/i18n/I18nProvider';
+import { BacklogFilterBuilder } from './BacklogFilterBuilder';
 
 interface IntegrationMini {
   id: string;
@@ -35,6 +36,7 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
   const [loading, setLoading] = useState(false);
   const [editorKey, setEditorKey] = useState<string | null>(null);
   const [adoEditorId, setAdoEditorId] = useState<string | null>(null);
+  const [mode, setMode] = useState<'wiql' | 'visual'>('visual');
 
   const placeholder =
     integration.provider === 'jira'
@@ -67,11 +69,13 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
   useEffect(() => {
     loadFromCache();
   }, [integration.id]);
-  const search = async () => {
+
+  const search = async (queryOverride?: string) => {
+    const q = queryOverride ?? query;
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('jira-devops-proxy', {
-        body: { action: 'search_issues', integration_id: integration.id, params: { query, max: 100 } },
+        body: { action: 'search_issues', integration_id: integration.id, params: { query: q, max: 100 } },
       });
       if (error) throw error;
       if (!(data as any)?.ok) throw new Error((data as any)?.error ?? t('agile_boards.error_bad_response'));
@@ -93,47 +97,72 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
   return (
     <Card>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm">{t('backlog_browser.title')}</CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm">{t('backlog_browser.title')}</CardTitle>
+          <div className="flex items-center gap-1 rounded-md border p-0.5">
+            <Button
+              variant={mode === 'visual' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="h-6 gap-1 px-2 text-[10px]"
+              onClick={() => setMode('visual')}
+            >
+              <SlidersHorizontal className="h-3 w-3" /> {t('backlog_browser.mode_visual')}
+            </Button>
+            <Button
+              variant={mode === 'wiql' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="h-6 gap-1 px-2 text-[10px]"
+              onClick={() => setMode('wiql')}
+            >
+              <List className="h-3 w-3" /> {t('backlog_browser.mode_wiql')}
+            </Button>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="flex gap-2">
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder={placeholder}
-            className="h-8 text-xs font-mono"
-          />
-          <Button size="sm" onClick={search} disabled={loading} className="gap-1">
-            {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
-            {t('backlog_browser.search')}
-          </Button>
-        </div>
-        <div className="flex flex-wrap gap-1.5">
-          {presets.map((preset) => (
-            <Button
-              key={preset.label}
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-7 text-[10px]"
-              onClick={() => setQuery(preset.q)}
-            >
-              {preset.label}
-            </Button>
-          ))}
-          <Button type="button" variant="ghost" size="sm" className="h-7 text-[10px]" onClick={loadFromCache}>
-            {t('backlog_browser.load_cache')}
-          </Button>
-        </div>
-        <p className="text-[10px] text-muted-foreground">
-          {t('backlog_browser.empty_query_hint', { project: integration.project_key ?? 'projekt' })}{' '}
-          {t('backlog_browser.cache_note')}
-        </p>
-
-        {integration.provider === 'jira' && (
-          <p className="text-[10px] text-muted-foreground">
-            {t('backlog_browser.tip')}
-          </p>
+        {mode === 'visual' ? (
+          <BacklogFilterBuilder integration={integration} onSearch={search} loading={loading} />
+        ) : (
+          <>
+            <div className="flex gap-2">
+              <Input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={placeholder}
+                className="h-8 text-xs font-mono"
+              />
+              <Button size="sm" onClick={() => search()} disabled={loading} className="gap-1">
+                {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+                {t('backlog_browser.search')}
+              </Button>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {presets.map((preset) => (
+                <Button
+                  key={preset.label}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-[10px]"
+                  onClick={() => setQuery(preset.q)}
+                >
+                  {preset.label}
+                </Button>
+              ))}
+              <Button type="button" variant="ghost" size="sm" className="h-7 text-[10px]" onClick={loadFromCache}>
+                {t('backlog_browser.load_cache')}
+              </Button>
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              {t('backlog_browser.empty_query_hint', { project: integration.project_key ?? 'projekt' })}{' '}
+              {t('backlog_browser.cache_note')}
+            </p>
+            {integration.provider === 'jira' && (
+              <p className="text-[10px] text-muted-foreground">
+                {t('backlog_browser.tip')}
+              </p>
+            )}
+          </>
         )}
 
         <JiraIssueEditor
