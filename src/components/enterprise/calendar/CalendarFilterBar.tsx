@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { ChevronDown, ChevronUp, Filter, X, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { CalendarFilterConfig, CalendarFilterId, FILTER_LABELS } from '@/hooks/useCalendarFilterConfig';
+import { CalendarFilterConfig, CalendarFilterId, useFilterLabels } from '@/hooks/useCalendarFilterConfig';
 import { useI18n } from '@/i18n/I18nProvider';
 
 export interface FilterOption { value: string; label: string }
@@ -38,6 +38,7 @@ interface Props {
 
 export function CalendarFilterBar({ config, values, options, onChange }: Props) {
   const { t } = useI18n();
+  const filterLabels = useFilterLabels();
   const [panelOpen, setPanelOpen] = useState(true);
   const [expandedFilters, setExpandedFilters] = useState<Set<CalendarFilterId>>(new Set());
   const [searchTerms, setSearchTerms] = useState<Partial<Record<CalendarFilterId, string>>>({});
@@ -143,7 +144,7 @@ export function CalendarFilterBar({ config, values, options, onChange }: Props) 
                   )}
                   onClick={() => toggleExpand(c.id)}
                 >
-                  <span className="font-medium">{FILTER_LABELS[c.id]}</span>
+                  <span className="font-medium">{filterLabels[c.id]}</span>
                   <div className="flex items-center gap-1.5">
                     {isActive && (
                       <Badge
