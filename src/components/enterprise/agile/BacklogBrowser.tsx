@@ -11,6 +11,7 @@ import { JiraIssueEditor } from './JiraIssueEditor';
 import { AzureDevOpsIssueEditor } from './AzureDevOpsIssueEditor';
 import { useI18n } from '@/i18n/I18nProvider';
 import { BacklogFilterBuilder, type FieldMeta } from './BacklogFilterBuilder';
+import { BacklogInsights } from './BacklogInsights';
 
 interface IntegrationMini {
   id: string;
@@ -229,18 +230,25 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
       </CardHeader>
       <CardContent className="space-y-3">
         {mode === 'visual' ? (
-          <BacklogFilterBuilder
-            integration={integration}
-            fieldMeta={fieldMeta}
-            selectedFieldIds={selectedFieldIds}
-            onSearch={search}
-            loading={loading}
-            cachedIssueTypes={cachedIssueTypes}
-            cachedStates={cachedStates}
-            cachedPriorities={cachedPriorities}
-            cachedIterationPaths={cachedIterationPaths}
-            issues={issues}
-          />
+          <div className="flex gap-4 items-start">
+            <div className="w-72 shrink-0">
+              <BacklogFilterBuilder
+                integration={integration}
+                fieldMeta={fieldMeta}
+                selectedFieldIds={selectedFieldIds}
+                onSearch={search}
+                loading={loading}
+                cachedIssueTypes={cachedIssueTypes}
+                cachedStates={cachedStates}
+                cachedPriorities={cachedPriorities}
+                cachedIterationPaths={cachedIterationPaths}
+                issues={issues}
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <BacklogInsights issues={issues} provider={integration.provider} />
+            </div>
+          </div>
         ) : (
           <>
             <div className="flex gap-2">
