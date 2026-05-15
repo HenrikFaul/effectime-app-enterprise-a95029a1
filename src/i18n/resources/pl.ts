@@ -3114,6 +3114,7 @@ const pl = {
     mode_visual: 'Filtr wizualny',
     filter_work_item_type: 'Typ elementu pracy',
     filter_state: 'Stan',
+    filter_priority: 'Priorytet',
     filter_assignee: 'Przypisano do',
     filter_iteration: 'Ścieżka iteracji',
     filter_date_created: 'Data utworzenia',
@@ -3275,6 +3276,8 @@ const pl = {
     btn_show_used_only: 'Tylko używane',
     btn_show_all_fields: 'Wszystkie pola',
     btn_select_all_used: 'Zaznacz wszystkie używane',
+    btn_select_all_visible: 'Zaznacz wszystkie',
+    btn_deselect_all: 'Odznacz wszystkie',
     used_hint: '(z pamięci cache)',
   },
   agile_panel: {

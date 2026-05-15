@@ -161,6 +161,23 @@ export function FieldDiscovery({
     });
   };
 
+  // Select / deselect all currently filtered (visible) fields
+  const selectAllVisible = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const f of filtered) next.add(f.field_id);
+      return next;
+    });
+  };
+
+  const deselectAllVisible = () => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      for (const f of filtered) next.delete(f.field_id);
+      return next;
+    });
+  };
+
   // Returns true if this field has actual data in cached issues
   const isUsed = (f: FieldRow): boolean => {
     if (usedCols.size === 0) return false; // cache not yet loaded
@@ -202,6 +219,16 @@ export function FieldDiscovery({
             <span className="ml-1 text-[10px] text-muted-foreground">
               ({t('field_discovery.n_selected', { count: selectedIds.size } as any)})
             </span>
+          </Button>
+        </div>
+
+        {/* ── Bulk selection row ── */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button size="sm" variant="ghost" className="h-7 text-[10px] gap-1" onClick={selectAllVisible}>
+            {t('field_discovery.btn_select_all_visible')}
+          </Button>
+          <Button size="sm" variant="ghost" className="h-7 text-[10px] gap-1" onClick={deselectAllVisible}>
+            {t('field_discovery.btn_deselect_all')}
           </Button>
         </div>
 

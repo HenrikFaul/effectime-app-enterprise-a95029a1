@@ -3114,6 +3114,7 @@ const sk = {
     mode_visual: 'Vizuálny filter',
     filter_work_item_type: 'Typ pracovnej položky',
     filter_state: 'Stav',
+    filter_priority: 'Priorita',
     filter_assignee: 'Priradené',
     filter_iteration: 'Cesta iterácie',
     filter_date_created: 'Dátum vytvorenia',
@@ -3275,6 +3276,8 @@ const sk = {
     btn_show_used_only: 'Len použité',
     btn_show_all_fields: 'Všetky polia',
     btn_select_all_used: 'Vybrať všetky použité',
+    btn_select_all_visible: 'Vybrať všetko',
+    btn_deselect_all: 'Zrušiť výber',
     used_hint: '(z cache záznamu)',
   },
   agile_panel: {

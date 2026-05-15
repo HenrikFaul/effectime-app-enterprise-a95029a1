@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -101,6 +101,24 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
   const dynamicCols = buildDynamicCols(selectedFieldIds, fieldMeta);
   const totalCols = 2 + dynamicCols.length + 1;
 
+  // Derive unique filter option values from cached issues as fallback for visual filter
+  const cachedIssueTypes = useMemo(
+    () => [...new Set(issues.map(i => i.issue_type as string).filter(Boolean))].sort(),
+    [issues],
+  );
+  const cachedStates = useMemo(
+    () => [...new Set(issues.map(i => i.status as string).filter(Boolean))].sort(),
+    [issues],
+  );
+  const cachedPriorities = useMemo(
+    () => [...new Set(issues.map(i => i.priority as string).filter(Boolean))].sort(),
+    [issues],
+  );
+  const cachedIterationPaths = useMemo(
+    () => [...new Set(issues.map(i => i.iteration_path as string).filter(Boolean))].sort(),
+    [issues],
+  );
+
   // Build a simple default query (no filters) for auto-fetch
   const defaultQuery = integration.provider === 'azure_devops'
     ? `SELECT [System.Id] FROM WorkItems WHERE [System.TeamProject] = '${integration.project_key ?? 'Project'}' ORDER BY [System.ChangedDate] DESC`
@@ -182,7 +200,12 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
     const val = issue[col.colKey];
     if (val == null || val === '') return <span className="text-muted-foreground">—</span>;
     if (col.colKey === 'issue_type') return <Badge variant="outline" className="text-[10px]">{String(val)}</Badge>;
-    if (col.fieldType === 'dateTime' || ['created_at', 'external_updated_at'].includes(col.colKey)) {
+    if (col.colKey === 'assignee_name') {
+      const name = String(val);
+      const email = issue['assignee_email'] as string | null;
+      return <span title={email ?? name} className="cursor-default">{name}</span>;
+    }
+    if (col.fieldType === 'dateTime' || ['created_at', 'external_updated_at', 'due_date'].includes(col.colKey)) {
       try { return <span>{new Date(String(val)).toLocaleDateString()}</span>; } catch { /* fall through */ }
     }
     const str = String(val);
@@ -212,6 +235,10 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
             selectedFieldIds={selectedFieldIds}
             onSearch={search}
             loading={loading}
+            cachedIssueTypes={cachedIssueTypes}
+            cachedStates={cachedStates}
+            cachedPriorities={cachedPriorities}
+            cachedIterationPaths={cachedIterationPaths}
           />
         ) : (
           <>
