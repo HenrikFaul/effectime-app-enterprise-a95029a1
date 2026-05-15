@@ -418,37 +418,28 @@ function NexusPanel({ stats }: { stats: NexusStats }) {
         </div>
       </div>
 
-      {/* Priority Signal bar */}
+      {/* Priority Signal — horizontal neon bars */}
       {prioritySignal.length > 0 && (
         <div className="relative border-t border-indigo-500/15 px-3 py-2.5">
           <div className="font-mono text-[9px] text-indigo-400/60 uppercase tracking-wider mb-2">
             {t('backlog_insights.nexus_signal')}
           </div>
-          <div className="flex items-end gap-3 h-8">
+          <div className="space-y-1.5">
             {prioritySignal.map(({ fill, shadow, label, count }) => {
-              const barPct = Math.max(8, (count / total) * 100);
+              const pct = Math.max(4, Math.round((count / total) * 100));
               return (
-                <div key={label} className="flex flex-col items-center gap-1">
-                  <span className="font-mono text-[8px]" style={{ color: fill }}>{count}</span>
-                  <div
-                    className="w-5 rounded-sm transition-all duration-700"
-                    style={{
-                      height: `${barPct * 0.22}rem`,
-                      background: fill,
-                      boxShadow: `0 0 6px ${shadow}, 0 0 12px ${shadow}`,
-                      minHeight: '6px',
-                    }}
-                  />
-                  <span className="font-mono text-[8px] text-slate-500">{label}</span>
+                <div key={label} className="flex items-center gap-2">
+                  <span className="font-mono text-[9px] w-5 shrink-0 text-right" style={{ color: fill }}>{label}</span>
+                  <div className="flex-1 h-2 rounded-sm bg-slate-800 overflow-hidden">
+                    <div
+                      className="h-full rounded-sm transition-all duration-700"
+                      style={{ width: `${pct}%`, background: fill, boxShadow: `0 0 6px ${shadow}` }}
+                    />
+                  </div>
+                  <span className="font-mono text-[9px] shrink-0 tabular-nums" style={{ color: fill }}>{count}</span>
                 </div>
               );
             })}
-            {/* Decorative grid lines */}
-            <div className="flex-1 flex flex-col justify-between h-full opacity-10 pb-4">
-              {[0, 1, 2].map(i => (
-                <div key={i} className="border-t border-indigo-400 w-full" />
-              ))}
-            </div>
           </div>
         </div>
       )}
