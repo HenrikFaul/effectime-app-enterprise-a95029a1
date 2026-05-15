@@ -3123,6 +3123,8 @@ const pl = {
     loading_users: 'Ładowanie użytkowników…',
     no_users: 'Nie znaleziono użytkowników',
     all_iterations: 'Wszystkie iteracje',
+    filter_layout_inline: 'Inline',
+    filter_layout_accordion: 'Panel boczny',
     page_size_label: 'Na stronę',
     page_size_all: 'Wszystkie',
     showing_count: '{{count}} elementów',

@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import type { ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useI18n } from '@/i18n/I18nProvider';
 import { Button } from '@/components/ui/button';
@@ -7,7 +8,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Loader2, Search, X } from 'lucide-react';
+import { AlignJustify, ChevronDown, ChevronUp, Loader2, Search, SlidersHorizontal, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface IntegrationMini {
   id: string;
@@ -29,17 +31,64 @@ interface UserOption {
   account_id: string | null;
 }
 
+type FilterLayout = 'inline' | 'accordion';
+
 interface BacklogFilterBuilderProps {
   integration: IntegrationMini;
   fieldMeta: FieldMeta[];
   selectedFieldIds: string[];
   onSearch: (query: string) => void;
   loading: boolean;
-  /** Fallback options derived from cached issues when fieldMeta has no type/state data */
   cachedIssueTypes?: string[];
   cachedStates?: string[];
   cachedPriorities?: string[];
   cachedIterationPaths?: string[];
+  issues?: Record<string, unknown>[];
+}
+
+function countBy(items: Record<string, unknown>[], key: string): Record<string, number> {
+  const m: Record<string, number> = {};
+  for (const item of items) {
+    const v = item[key] as string;
+    if (v) m[v] = (m[v] ?? 0) + 1;
+  }
+  return m;
+}
+
+interface AccordionSectionProps {
+  isOpen: boolean;
+  onToggle: () => void;
+  label: string;
+  activeCount: number;
+  children: ReactNode;
+}
+
+function AccordionSection({ isOpen, onToggle, label, activeCount, children }: AccordionSectionProps) {
+  return (
+    <div className={cn('border-b last:border-b-0', activeCount > 0 && 'bg-primary/5')}>
+      <button
+        type="button"
+        className={cn(
+          'w-full flex items-center justify-between px-3 py-2.5 text-xs font-medium hover:bg-accent/50 transition-colors',
+          activeCount > 0 && 'text-primary',
+        )}
+        onClick={onToggle}
+      >
+        <span>{label}</span>
+        <div className="flex items-center gap-1.5">
+          {activeCount > 0 && (
+            <Badge variant="secondary" className="h-4 px-1.5 text-[10px] bg-primary/10 text-primary border-primary/20">
+              {activeCount}
+            </Badge>
+          )}
+          {isOpen
+            ? <ChevronUp className="h-3.5 w-3.5 opacity-50" />
+            : <ChevronDown className="h-3.5 w-3.5 opacity-50" />}
+        </div>
+      </button>
+      {isOpen && <div className="px-3 pb-3">{children}</div>}
+    </div>
+  );
 }
 
 export function BacklogFilterBuilder({
@@ -52,8 +101,11 @@ export function BacklogFilterBuilder({
   cachedStates = [],
   cachedPriorities = [],
   cachedIterationPaths = [],
+  issues = [],
 }: BacklogFilterBuilderProps) {
   const { t } = useI18n();
+  const [filterLayout, setFilterLayout] = useState<FilterLayout>('inline');
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [selectedTypes, setSelectedTypes] = useState<Set<string>>(new Set());
   const [selectedStates, setSelectedStates] = useState<Set<string>>(new Set());
   const [selectedPriorities, setSelectedPriorities] = useState<Set<string>>(new Set());
@@ -66,6 +118,13 @@ export function BacklogFilterBuilder({
   const [usersLoading, setUsersLoading] = useState(false);
 
   const isAdo = integration.provider === 'azure_devops';
+
+  // Counts derived from currently loaded issues
+  const typeCounts = useMemo(() => countBy(issues, 'issue_type'), [issues]);
+  const stateCounts = useMemo(() => countBy(issues, 'status'), [issues]);
+  const priorityCounts = useMemo(() => countBy(issues, 'priority'), [issues]);
+  const iterCounts = useMemo(() => countBy(issues, 'iteration_path'), [issues]);
+  const assigneeCounts = useMemo(() => countBy(issues, 'assignee_name'), [issues]);
 
   // ── Derived values from field metadata (with cache fallbacks) ────────────────
   const workItemTypeFields = fieldMeta.filter(f => f.field_type === 'workitemtype');
@@ -81,7 +140,6 @@ export function BacklogFilterBuilder({
   const jiraStatusOptions: string[] = ((fieldMeta.find(f => f.field_id === 'jira.statuses')?.schema as any)?.options ?? [])
     .map((o: any) => (typeof o === 'string' ? o : (o.name ?? o))).filter(Boolean);
 
-  // Use cached data as fallback when fieldMeta-derived lists are empty
   const typeOptions = isAdo
     ? (allWorkItemTypeNames.length ? allWorkItemTypeNames : cachedIssueTypes)
     : jiraTypeOptions;
@@ -124,7 +182,7 @@ export function BacklogFilterBuilder({
       ['string', 'html', 'plainText'].includes(fieldMeta.find(f => f.field_id === id)?.field_type ?? ''),
   );
 
-  // ── Load users when the assignee filter is visible ──────────────────────────
+  // ── Load users ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!showAssigneeFilter) return;
     setUsersLoading(true);
@@ -189,13 +247,21 @@ export function BacklogFilterBuilder({
     return next;
   }
 
+  function toggleSection(id: string) {
+    setExpandedSections(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
   const hasActiveFilters =
     selectedTypes.size > 0 || selectedStates.size > 0 || selectedPriorities.size > 0 ||
     selectedAssignees.size > 0 || iterationPath || dateFrom || dateTo || textFilter;
 
-  return (
+  // ── INLINE LAYOUT ────────────────────────────────────────────────────────────
+  const inlineLayout = (
     <div className="space-y-4">
-      {/* ── Work item type / Issue type ── */}
       {showTypeFilter && typeOptions.length > 0 && (
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">{t('backlog_browser.filter_work_item_type')}</Label>
@@ -207,14 +273,15 @@ export function BacklogFilterBuilder({
                   onCheckedChange={() => setSelectedTypes(toggleSet(selectedTypes, type))}
                   className="h-3.5 w-3.5"
                 />
-                <span className="text-xs">{type}</span>
+                <span className="text-xs">
+                  {type}{typeCounts[type] ? <span className="text-muted-foreground"> ({typeCounts[type]})</span> : null}
+                </span>
               </label>
             ))}
           </div>
         </div>
       )}
 
-      {/* ── State / Status ── */}
       {showStateFilter && stateOptions.length > 0 && (
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">{t('backlog_browser.filter_state')}</Label>
@@ -226,14 +293,15 @@ export function BacklogFilterBuilder({
                   onCheckedChange={() => setSelectedStates(toggleSet(selectedStates, state))}
                   className="h-3.5 w-3.5"
                 />
-                <span className="text-xs">{state}</span>
+                <span className="text-xs">
+                  {state}{stateCounts[state] ? <span className="text-muted-foreground"> ({stateCounts[state]})</span> : null}
+                </span>
               </label>
             ))}
           </div>
         </div>
       )}
 
-      {/* ── Priority ── */}
       {showPriorityFilter && priorityOptions.length > 0 && (
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">{t('backlog_browser.filter_priority')}</Label>
@@ -245,14 +313,15 @@ export function BacklogFilterBuilder({
                   onCheckedChange={() => setSelectedPriorities(toggleSet(selectedPriorities, p))}
                   className="h-3.5 w-3.5"
                 />
-                <span className="text-xs">{p}</span>
+                <span className="text-xs">
+                  {p}{priorityCounts[p] ? <span className="text-muted-foreground"> ({priorityCounts[p]})</span> : null}
+                </span>
               </label>
             ))}
           </div>
         </div>
       )}
 
-      {/* ── Assignee ── */}
       {showAssigneeFilter && (
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">{t('backlog_browser.filter_assignee')}</Label>
@@ -265,6 +334,7 @@ export function BacklogFilterBuilder({
               {userOptions.map((u, idx) => {
                 const label = u.display_name ?? u.email ?? `User ${idx}`;
                 const value = u.display_name ?? u.email ?? '';
+                const count = assigneeCounts[u.display_name ?? ''] ?? 0;
                 return (
                   <label key={u.account_id ?? idx} className="flex items-center gap-1.5 cursor-pointer">
                     <Checkbox
@@ -272,7 +342,9 @@ export function BacklogFilterBuilder({
                       onCheckedChange={() => value && setSelectedAssignees(toggleSet(selectedAssignees, value))}
                       className="h-3.5 w-3.5"
                     />
-                    <span className="text-xs">{label}</span>
+                    <span className="text-xs">
+                      {label}{count ? <span className="text-muted-foreground"> ({count})</span> : null}
+                    </span>
                   </label>
                 );
               })}
@@ -283,7 +355,6 @@ export function BacklogFilterBuilder({
         </div>
       )}
 
-      {/* ── Iteration path (ADO only) ── */}
       {showIterationFilter && iterPathOptions.length > 0 && (
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">{t('backlog_browser.filter_iteration')}</Label>
@@ -293,13 +364,16 @@ export function BacklogFilterBuilder({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="__all__">{t('backlog_browser.all_iterations')}</SelectItem>
-              {iterPathOptions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+              {iterPathOptions.map((p) => (
+                <SelectItem key={p} value={p}>
+                  {p}{iterCounts[p] ? ` (${iterCounts[p]})` : ''}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
       )}
 
-      {/* ── Date range ── */}
       {showDateFilter && (
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">{t('backlog_browser.filter_date_created')}</Label>
@@ -311,7 +385,6 @@ export function BacklogFilterBuilder({
         </div>
       )}
 
-      {/* ── Text search ── */}
       {showTextFilter && (
         <div className="space-y-1.5">
           <Label className="text-xs font-medium">{t('backlog_browser.filter_text')}</Label>
@@ -323,8 +396,205 @@ export function BacklogFilterBuilder({
           />
         </div>
       )}
+    </div>
+  );
 
-      {/* ── Active filter badges ── */}
+  // ── ACCORDION LAYOUT ─────────────────────────────────────────────────────────
+  const accordionLayout = (
+    <div className="border rounded-lg bg-card overflow-hidden">
+      {showTypeFilter && typeOptions.length > 0 && (
+        <AccordionSection
+          isOpen={expandedSections.has('type')}
+          onToggle={() => toggleSection('type')}
+          label={t('backlog_browser.filter_work_item_type')}
+          activeCount={selectedTypes.size}
+        >
+          <div className="space-y-0.5">
+            {typeOptions.map((type) => (
+              <label key={type} className="flex items-center gap-2 py-1 px-1 rounded hover:bg-accent cursor-pointer">
+                <Checkbox
+                  checked={selectedTypes.has(type)}
+                  onCheckedChange={() => setSelectedTypes(toggleSet(selectedTypes, type))}
+                  className="h-3.5 w-3.5"
+                />
+                <span className="text-xs flex-1">{type}</span>
+                {typeCounts[type] > 0 && <span className="text-[10px] text-muted-foreground">({typeCounts[type]})</span>}
+              </label>
+            ))}
+          </div>
+        </AccordionSection>
+      )}
+
+      {showStateFilter && stateOptions.length > 0 && (
+        <AccordionSection
+          isOpen={expandedSections.has('state')}
+          onToggle={() => toggleSection('state')}
+          label={t('backlog_browser.filter_state')}
+          activeCount={selectedStates.size}
+        >
+          <div className="space-y-0.5">
+            {stateOptions.map((state) => (
+              <label key={state} className="flex items-center gap-2 py-1 px-1 rounded hover:bg-accent cursor-pointer">
+                <Checkbox
+                  checked={selectedStates.has(state)}
+                  onCheckedChange={() => setSelectedStates(toggleSet(selectedStates, state))}
+                  className="h-3.5 w-3.5"
+                />
+                <span className="text-xs flex-1">{state}</span>
+                {stateCounts[state] > 0 && <span className="text-[10px] text-muted-foreground">({stateCounts[state]})</span>}
+              </label>
+            ))}
+          </div>
+        </AccordionSection>
+      )}
+
+      {showPriorityFilter && priorityOptions.length > 0 && (
+        <AccordionSection
+          isOpen={expandedSections.has('priority')}
+          onToggle={() => toggleSection('priority')}
+          label={t('backlog_browser.filter_priority')}
+          activeCount={selectedPriorities.size}
+        >
+          <div className="space-y-0.5">
+            {priorityOptions.map((p) => (
+              <label key={p} className="flex items-center gap-2 py-1 px-1 rounded hover:bg-accent cursor-pointer">
+                <Checkbox
+                  checked={selectedPriorities.has(p)}
+                  onCheckedChange={() => setSelectedPriorities(toggleSet(selectedPriorities, p))}
+                  className="h-3.5 w-3.5"
+                />
+                <span className="text-xs flex-1">{p}</span>
+                {priorityCounts[p] > 0 && <span className="text-[10px] text-muted-foreground">({priorityCounts[p]})</span>}
+              </label>
+            ))}
+          </div>
+        </AccordionSection>
+      )}
+
+      {showAssigneeFilter && (
+        <AccordionSection
+          isOpen={expandedSections.has('assignee')}
+          onToggle={() => toggleSection('assignee')}
+          label={t('backlog_browser.filter_assignee')}
+          activeCount={selectedAssignees.size}
+        >
+          {usersLoading ? (
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground py-1">
+              <Loader2 className="h-3 w-3 animate-spin" /> {t('backlog_browser.loading_users')}
+            </div>
+          ) : userOptions.length > 0 ? (
+            <div className="space-y-0.5 max-h-48 overflow-y-auto">
+              {userOptions.map((u, idx) => {
+                const label = u.display_name ?? u.email ?? `User ${idx}`;
+                const value = u.display_name ?? u.email ?? '';
+                const count = assigneeCounts[u.display_name ?? ''] ?? 0;
+                return (
+                  <label key={u.account_id ?? idx} className="flex items-center gap-2 py-1 px-1 rounded hover:bg-accent cursor-pointer">
+                    <Checkbox
+                      checked={selectedAssignees.has(value)}
+                      onCheckedChange={() => value && setSelectedAssignees(toggleSet(selectedAssignees, value))}
+                      className="h-3.5 w-3.5"
+                    />
+                    <span className="text-xs flex-1 truncate">{label}</span>
+                    {count > 0 && <span className="text-[10px] text-muted-foreground">({count})</span>}
+                  </label>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-[10px] text-muted-foreground">{t('backlog_browser.no_users')}</p>
+          )}
+        </AccordionSection>
+      )}
+
+      {showIterationFilter && iterPathOptions.length > 0 && (
+        <AccordionSection
+          isOpen={expandedSections.has('iteration')}
+          onToggle={() => toggleSection('iteration')}
+          label={t('backlog_browser.filter_iteration')}
+          activeCount={iterationPath ? 1 : 0}
+        >
+          <div className="space-y-0.5">
+            {iterPathOptions.map((p) => (
+              <label
+                key={p}
+                className={cn(
+                  'flex items-center gap-2 py-1 px-1 rounded hover:bg-accent cursor-pointer',
+                  iterationPath === p && 'bg-primary/10',
+                )}
+              >
+                <Checkbox
+                  checked={iterationPath === p}
+                  onCheckedChange={() => setIterationPath(iterationPath === p ? '' : p)}
+                  className="h-3.5 w-3.5"
+                />
+                <span className="text-xs flex-1">{p}</span>
+                {iterCounts[p] > 0 && <span className="text-[10px] text-muted-foreground">({iterCounts[p]})</span>}
+              </label>
+            ))}
+          </div>
+        </AccordionSection>
+      )}
+
+      {showDateFilter && (
+        <AccordionSection
+          isOpen={expandedSections.has('date')}
+          onToggle={() => toggleSection('date')}
+          label={t('backlog_browser.filter_date_created')}
+          activeCount={dateFrom || dateTo ? 1 : 0}
+        >
+          <div className="flex items-center gap-2 pt-1">
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-8 text-xs w-40" />
+            <span className="text-xs text-muted-foreground">—</span>
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-8 text-xs w-40" />
+          </div>
+        </AccordionSection>
+      )}
+
+      {showTextFilter && (
+        <AccordionSection
+          isOpen={expandedSections.has('text')}
+          onToggle={() => toggleSection('text')}
+          label={t('backlog_browser.filter_text')}
+          activeCount={textFilter ? 1 : 0}
+        >
+          <Input
+            value={textFilter}
+            onChange={(e) => setTextFilter(e.target.value)}
+            placeholder={t('backlog_browser.filter_text_placeholder')}
+            className="h-8 text-xs mt-1"
+          />
+        </AccordionSection>
+      )}
+    </div>
+  );
+
+  return (
+    <div className="space-y-3">
+      {/* Layout toggle */}
+      <div className="flex items-center gap-1 rounded-md border p-0.5 self-start w-fit">
+        <Button
+          variant={filterLayout === 'inline' ? 'secondary' : 'ghost'}
+          size="sm"
+          className="h-6 gap-1 px-2 text-[10px]"
+          onClick={() => setFilterLayout('inline')}
+        >
+          <SlidersHorizontal className="h-3 w-3" /> {t('backlog_browser.filter_layout_inline')}
+        </Button>
+        <Button
+          variant={filterLayout === 'accordion' ? 'secondary' : 'ghost'}
+          size="sm"
+          className="h-6 gap-1 px-2 text-[10px]"
+          onClick={() => setFilterLayout('accordion')}
+        >
+          <AlignJustify className="h-3 w-3" /> {t('backlog_browser.filter_layout_accordion')}
+        </Button>
+      </div>
+
+      {/* Filter content */}
+      {filterLayout === 'inline' ? inlineLayout : accordionLayout}
+
+      {/* Active filter badges */}
       {hasActiveFilters && (
         <div className="flex flex-wrap gap-1.5 pt-1">
           {[...selectedTypes].map(v => (

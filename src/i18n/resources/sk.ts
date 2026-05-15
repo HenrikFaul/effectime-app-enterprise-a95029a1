@@ -3123,6 +3123,8 @@ const sk = {
     loading_users: 'Načítavanie používateľov…',
     no_users: 'Žiadni používatelia nenájdení',
     all_iterations: 'Všetky iterácie',
+    filter_layout_inline: 'Inline',
+    filter_layout_accordion: 'Bočný panel',
     page_size_label: 'Na stránku',
     page_size_all: 'Všetko',
     showing_count: '{{count}} položiek',

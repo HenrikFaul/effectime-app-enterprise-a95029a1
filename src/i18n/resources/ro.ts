@@ -3279,6 +3279,8 @@ const ro = {
     loading_users: 'Se încarcă utilizatorii…',
     no_users: 'Niciun utilizator găsit',
     all_iterations: 'Toate iterațiile',
+    filter_layout_inline: 'Inline',
+    filter_layout_accordion: 'Panou lateral',
     page_size_label: 'Pe pagină',
     page_size_all: 'Toate',
     showing_count: '{{count}} elemente',
