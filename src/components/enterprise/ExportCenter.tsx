@@ -173,7 +173,7 @@ export function ExportCenter({ workspaceId, userId }: Props) {
     <div className="space-y-4">
       <div className="flex items-center gap-2">
         <FileSpreadsheet className="h-4 w-4" />
-        <h3 className="text-sm font-semibold">Export</h3>
+        <h3 className="text-sm font-semibold">{t('export_center.heading')}</h3>
       </div>
 
       <Card>

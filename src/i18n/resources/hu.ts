@@ -2580,6 +2580,7 @@ const hu = {
     btn_download: '{{format}} Export letöltése',
     html_title: 'Syncfolk — Távollét export',
     html_date_rows: '{{start}} – {{end}} | {{rows}} sor',
+    heading: 'Export',
   },
   quota_balance: {
     title: 'Szabadság-egyenleg ({{year}})',

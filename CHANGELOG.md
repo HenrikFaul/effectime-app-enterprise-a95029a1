@@ -1,3 +1,29 @@
+## 2026-05-15 — v3.33.8 Deferred bug-fix batch (conflict engine, approval inbox, superadmin hub, ms365-sync, export heading)
+
+Bug-fix release addressing 5 of 6 known deferred items from the earlier audit.
+
+### src/lib/conflictEngine.ts
+- Replaced 6 Hungarian `message` fallback strings with English equivalents — log and debug output is now internationally readable. UI rendering is unaffected (already handled by `conflictEngineI18n.ts`).
+
+### src/components/enterprise/ExportCenter.tsx
+- Hardcoded `<h3>Export</h3>` heading replaced with `t('export_center.heading')`.
+- `heading` key added to all 8 locale files (`en`, `hu`, `de`, `at`, `cs`, `sk`, `pl`, `ro`).
+
+### src/components/enterprise/ApprovalInbox.tsx
+- Fixed stale-closure bug: team/role client-side filters now reference the locally-built `mMap` (freshly fetched per call) instead of the stale `memberInfo` React state, which had not yet re-rendered at filter time. Team and role filters now work correctly on first load.
+
+### supabase/functions/superadmin-hub/index.ts
+- Replaced `perPage: 10000` hard cap (silently truncated at 1000) with paginated `listUsers` loops in both `platform-overview` and `list-workspaces` actions. User counts and owner email resolution are now correct for platforms with >1000 auth users.
+
+### supabase/functions/ms365-sync/index.ts
+- OAuth upsert: destructure and throw on error — silent upsert failures (e.g. missing unique constraint) are now surfaced rather than swallowed.
+- Replaced 5 Hungarian strings in OAuth callback HTML responses with English equivalents.
+
+### Deferred (unchanged)
+- `useCandidates.ts`: queries `candidates`/`interview_slots` tables that are intentionally unprovisioned — no fix needed, errors are thrown correctly.
+
+---
+
 ## 2026-05-15 — v3.33.7 Azure DevOps full integration
 
 Feature release. Elevates Azure DevOps from stub to first-class parity with Jira.

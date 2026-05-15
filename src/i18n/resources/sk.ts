@@ -2551,6 +2551,7 @@ const sk = {
     btn_download: '{{format}} Stiahnuť export',
     html_title: 'Syncfolk — Export absencií',
     html_date_rows: '{{start}} – {{end}} | {{rows}} riadkov',
+    heading: 'Export',
   },
   quota_balance: {
     title: 'Zostatok dovolenky ({{year}})',

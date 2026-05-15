@@ -2551,6 +2551,7 @@ const pl = {
     btn_download: '{{format}} Pobierz eksport',
     html_title: 'Syncfolk — Eksport nieobecności',
     html_date_rows: '{{start}} – {{end}} | {{rows}} wierszy',
+    heading: 'Export',
   },
   quota_balance: {
     title: 'Saldo urlopu ({{year}})',
