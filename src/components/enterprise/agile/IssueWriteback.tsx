@@ -71,6 +71,7 @@ export function IssueWriteback({ integration, userId }: { integration: Integrati
   const [configLoading, setConfigLoading] = useState(false);
   const [issueTypeOptions, setIssueTypeOptions] = useState<string[]>([]);
   const [labelOptions, setLabelOptions] = useState<string[]>([]);
+  const [iterationPathOptions, setIterationPathOptions] = useState<string[]>([]);
   const [autoSyncTried, setAutoSyncTried] = useState(false);
 
   const [updateForm, setUpdateForm] = useState({
@@ -92,19 +93,36 @@ export function IssueWriteback({ integration, userId }: { integration: Integrati
       .select('field_id,field_name,field_type,schema')
       .eq('integration_id', integration.id);
     const rows = (data ?? []) as any[];
-    // Only use project-specific issue type rows (field_id starts with 'jira.issuetype.')
-    // The generic field-discovery row has field_id='issuetype', field_name='Issue Type' and must be excluded.
-    const issueTypes = Array.from(
-      new Set(
-        rows
-          .filter((r) => r.field_type === 'issuetype' && r.field_id.startsWith('jira.issuetype.'))
-          .map((r) => r.field_name)
-          .filter(Boolean),
-      ),
-    );
-    const labels = rows.find((r) => r.field_id === 'jira.labels')?.schema?.options ?? [];
+
+    let issueTypes: string[] = [];
+    if (integration.provider === 'jira') {
+      // Only use project-specific issue type rows (field_id starts with 'jira.issuetype.')
+      issueTypes = Array.from(
+        new Set(
+          rows
+            .filter((r) => r.field_type === 'issuetype' && r.field_id.startsWith('jira.issuetype.'))
+            .map((r) => r.field_name)
+            .filter(Boolean),
+        ),
+      );
+      const labels = rows.find((r) => r.field_id === 'jira.labels')?.schema?.options ?? [];
+      setLabelOptions(Array.isArray(labels) ? labels : []);
+    } else {
+      // ADO: work item types are stored as ado.workitemtype.{name}
+      issueTypes = Array.from(
+        new Set(
+          rows
+            .filter((r) => r.field_type === 'workitemtype' && r.field_id.startsWith('ado.workitemtype.'))
+            .map((r) => r.field_name)
+            .filter(Boolean),
+        ),
+      );
+      const iterRow = rows.find((r) => r.field_id === 'ado.iterations');
+      const iterPaths = iterRow?.schema?.paths ?? [];
+      setIterationPathOptions(Array.isArray(iterPaths) ? iterPaths : []);
+    }
+
     setIssueTypeOptions(issueTypes);
-    setLabelOptions(Array.isArray(labels) ? labels : []);
     setCreateForm((prev) => {
       if (!issueTypes.length) return prev;
       if (prev.issue_type && issueTypes.includes(prev.issue_type)) return prev;
@@ -199,8 +217,8 @@ export function IssueWriteback({ integration, userId }: { integration: Integrati
   useEffect(() => {
     setAutoSyncTried(false);
     void loadProjectConfigFromDb().then((opts) => {
-      // Auto-sync once if Jira and no issue types cached yet
-      if (integration.provider === 'jira' && opts.length === 0) {
+      // Auto-sync once if no issue types cached yet
+      if (opts.length === 0) {
         setAutoSyncTried(true);
         void syncProjectConfig(true);
       }
@@ -220,26 +238,24 @@ export function IssueWriteback({ integration, userId }: { integration: Integrati
         <CardTitle className="text-sm">{t('issue_writeback.card_title')}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        {integration.provider === 'jira' && (
-          <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="outline" onClick={() => syncProjectConfig(false)} disabled={configLoading || busy} className="gap-1">
-              {configLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Database className="h-3 w-3" />}
-              {t('issue_writeback.sync_config_label')}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={loadProjectConfigFromDb} disabled={configLoading || busy} className="gap-1">
-              <RefreshCw className="h-3 w-3" /> {t('issue_writeback.load_from_db_btn')}
-            </Button>
-            {issueTypeOptions.length > 0 ? (
-              <Badge variant="secondary" className="text-[10px]">
-                {t('issue_writeback.issue_types_count', { count: issueTypeOptions.length })}
-              </Badge>
-            ) : autoSyncTried && !configLoading ? (
-              <Badge variant="outline" className="text-[10px] text-muted-foreground">
-                Nincs cache-elt issue type — futtass szinkront
-              </Badge>
-            ) : null}
-          </div>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button size="sm" variant="outline" onClick={() => syncProjectConfig(false)} disabled={configLoading || busy} className="gap-1">
+            {configLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <Database className="h-3 w-3" />}
+            {t('issue_writeback.sync_config_label')}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={loadProjectConfigFromDb} disabled={configLoading || busy} className="gap-1">
+            <RefreshCw className="h-3 w-3" /> {t('issue_writeback.load_from_db_btn')}
+          </Button>
+          {issueTypeOptions.length > 0 ? (
+            <Badge variant="secondary" className="text-[10px]">
+              {t('issue_writeback.issue_types_count', { count: issueTypeOptions.length })}
+            </Badge>
+          ) : autoSyncTried && !configLoading ? (
+            <Badge variant="outline" className="text-[10px] text-muted-foreground">
+              {t('issue_writeback.no_cached_issue_types')}
+            </Badge>
+          ) : null}
+        </div>
         <Tabs defaultValue="create">
           <TabsList>
             <TabsTrigger value="create" className="gap-1"><PlusCircle className="h-3 w-3" /> {t('issue_writeback.tab_new')}</TabsTrigger>
@@ -259,28 +275,24 @@ export function IssueWriteback({ integration, userId }: { integration: Integrati
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label className="text-xs">{t('issue_writeback.label_type')}</Label>
-                {integration.provider === 'jira' ? (
-                  issueTypeOptions.length > 0 ? (
-                    <Select
-                      value={createForm.issue_type}
-                      onValueChange={(v) => setCreateForm({ ...createForm, issue_type: v })}
-                    >
-                      <SelectTrigger className="h-8 text-xs">
-                        <SelectValue placeholder={t('issue_writeback.type_placeholder')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {issueTypeOptions.map((opt) => (
-                          <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : (
-                    <div className="text-[10px] text-muted-foreground border rounded-md h-8 px-2 flex items-center">
-                      {configLoading ? '...' : t('issue_writeback.no_config_hint')}
-                    </div>
-                  )
+                {issueTypeOptions.length > 0 ? (
+                  <Select
+                    value={createForm.issue_type}
+                    onValueChange={(v) => setCreateForm({ ...createForm, issue_type: v })}
+                  >
+                    <SelectTrigger className="h-8 text-xs">
+                      <SelectValue placeholder={t('issue_writeback.type_placeholder')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {issueTypeOptions.map((opt) => (
+                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 ) : (
-                  <Input className="h-8 text-xs" value={createForm.issue_type} onChange={(e) => setCreateForm({ ...createForm, issue_type: e.target.value })} placeholder="Task" />
+                  <div className="text-[10px] text-muted-foreground border rounded-md h-8 px-2 flex items-center">
+                    {configLoading ? '...' : t('issue_writeback.no_config_hint')}
+                  </div>
                 )}
               </div>
               <div>
@@ -300,8 +312,18 @@ export function IssueWriteback({ integration, userId }: { integration: Integrati
                   <Input className="h-8 text-xs" value={createForm.assignee_email} onChange={(e) => setCreateForm({ ...createForm, assignee_email: e.target.value })} />
                 </div>
                 <div>
-                  <Label className="text-xs">Iteration path</Label>
-                  <Input className="h-8 text-xs" value={createForm.iteration_path} onChange={(e) => setCreateForm({ ...createForm, iteration_path: e.target.value })} />
+                  <Label className="text-xs">{t('issue_writeback.label_iteration_path')}</Label>
+                  <Input
+                    list="writeback-iter-paths"
+                    className="h-8 text-xs"
+                    value={createForm.iteration_path}
+                    onChange={(e) => setCreateForm({ ...createForm, iteration_path: e.target.value })}
+                  />
+                  {iterationPathOptions.length > 0 && (
+                    <datalist id="writeback-iter-paths">
+                      {iterationPathOptions.map((p) => <option key={p} value={p} />)}
+                    </datalist>
+                  )}
                 </div>
                 <div>
                   <Label className="text-xs">{t('issue_writeback.label_estimate')}</Label>
@@ -416,8 +438,18 @@ export function IssueWriteback({ integration, userId }: { integration: Integrati
                     <Input className="h-8 text-xs" value={updateForm.status} onChange={(e) => setUpdateForm({ ...updateForm, status: e.target.value })} />
                   </div>
                   <div>
-                    <Label className="text-xs">Iteration path</Label>
-                    <Input className="h-8 text-xs" value={updateForm.iteration_path} onChange={(e) => setUpdateForm({ ...updateForm, iteration_path: e.target.value })} />
+                    <Label className="text-xs">{t('issue_writeback.label_iteration_path')}</Label>
+                    <Input
+                      list="writeback-update-iter-paths"
+                      className="h-8 text-xs"
+                      value={updateForm.iteration_path}
+                      onChange={(e) => setUpdateForm({ ...updateForm, iteration_path: e.target.value })}
+                    />
+                    {iterationPathOptions.length > 0 && (
+                      <datalist id="writeback-update-iter-paths">
+                        {iterationPathOptions.map((p) => <option key={p} value={p} />)}
+                      </datalist>
+                    )}
                   </div>
                 </>
               )}

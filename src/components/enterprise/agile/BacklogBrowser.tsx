@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, RefreshCw, ExternalLink, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { JiraIssueEditor } from './JiraIssueEditor';
+import { AzureDevOpsIssueEditor } from './AzureDevOpsIssueEditor';
 import { useI18n } from '@/i18n/I18nProvider';
 
 interface IntegrationMini {
@@ -33,6 +34,7 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(false);
   const [editorKey, setEditorKey] = useState<string | null>(null);
+  const [adoEditorId, setAdoEditorId] = useState<string | null>(null);
 
   const placeholder =
     integration.provider === 'jira'
@@ -141,12 +143,19 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
           issueKey={editorKey}
           onSaved={loadFromCache}
         />
+        <AzureDevOpsIssueEditor
+          open={!!adoEditorId}
+          onOpenChange={(o) => !o && setAdoEditorId(null)}
+          integration={integration}
+          workItemId={adoEditorId}
+          onSaved={loadFromCache}
+        />
 
         <div className="border rounded-md overflow-hidden">
           <table className="w-full text-xs">
             <thead className="bg-muted/50">
               <tr>
-                <th className="text-left p-2">Kulcs</th>
+                <th className="text-left p-2">{t('backlog_browser.col_key')}</th>
                 <th className="text-left p-2">{t('backlog_browser.col_title')}</th>
                 <th className="text-left p-2">{t('backlog_browser.col_type')}</th>
                 <th className="text-left p-2">{t('backlog_browser.col_status')}</th>
@@ -157,7 +166,7 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
             </thead>
             <tbody>
               {issues.length === 0 && (
-                <tr><td colSpan={7} className="p-4 text-center text-muted-foreground">Nincs adat</td></tr>
+                <tr><td colSpan={7} className="p-4 text-center text-muted-foreground">{t('backlog_browser.no_data')}</td></tr>
               )}
               {issues.map((i) => (
                 <tr key={i.external_key} className="border-t hover:bg-accent/30">
@@ -167,6 +176,14 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
                       <button
                         type="button"
                         onClick={() => setEditorKey(i.external_key)}
+                        className="text-left hover:text-primary hover:underline"
+                      >
+                        {i.summary}
+                      </button>
+                    ) : integration.provider === 'azure_devops' ? (
+                      <button
+                        type="button"
+                        onClick={() => setAdoEditorId(i.external_key)}
                         className="text-left hover:text-primary hover:underline"
                       >
                         {i.summary}
@@ -190,8 +207,18 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
                         <Pencil className="h-3 w-3" />
                       </button>
                     )}
+                    {integration.provider === 'azure_devops' && (
+                      <button
+                        type="button"
+                        onClick={() => setAdoEditorId(i.external_key)}
+                        className="text-muted-foreground hover:text-primary"
+                        title={t('agile_boards.edit_in_effectime')}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </button>
+                    )}
                     {i.url && (
-                      <a href={i.url} target="_blank" rel="noreferrer" className="text-primary hover:underline" title={t('backlog_browser.open_in_jira')}>
+                      <a href={i.url} target="_blank" rel="noreferrer" className="text-primary hover:underline" title={t('backlog_browser.open_external')}>
                         <ExternalLink className="h-3 w-3 inline" />
                       </a>
                     )}
