@@ -3141,6 +3141,11 @@ const pl = {
     type_distribution: 'Według typu',
     status_distribution: 'Według statusu',
     top_assignees: 'Top wykonawcy',
+    nexus_title: 'NEXUS AKTYWNY',
+    nexus_nodes: 'WĘZŁY',
+    nexus_resolved: 'UKOŃCZONE',
+    nexus_fabric: 'SIEĆ ZADAŃ',
+    nexus_signal: 'SYGNAŁ PRIORYTETU',
   },
     issue_writeback: {
     bad_response: 'Nieprawidłowa odpowiedź',

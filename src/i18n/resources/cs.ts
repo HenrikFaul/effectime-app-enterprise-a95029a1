@@ -3141,6 +3141,11 @@ const cs = {
     type_distribution: 'Podle typu',
     status_distribution: 'Podle stavu',
     top_assignees: 'Top řešitelé',
+    nexus_title: 'NEXUS AKTÍVNÍ',
+    nexus_nodes: 'UZLY',
+    nexus_resolved: 'VYŘEŠENO',
+    nexus_fabric: 'SÍŤOVÝ PŘEHLED',
+    nexus_signal: 'PRIORITNÍ SIGNÁL',
   },
     issue_writeback: {
     bad_response: 'Neplatná odpověď',

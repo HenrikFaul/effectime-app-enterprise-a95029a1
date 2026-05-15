@@ -3315,6 +3315,11 @@ const en = {
     type_distribution: 'Work type breakdown',
     status_distribution: 'Status distribution',
     top_assignees: 'Top assignees',
+    nexus_title: 'NEXUS ACTIVE',
+    nexus_nodes: 'NODES',
+    nexus_resolved: 'RESOLVED',
+    nexus_fabric: 'WORK FABRIC',
+    nexus_signal: 'PRIORITY SIGNAL',
   },
   issue_writeback: {
     bad_response: 'Bad response',

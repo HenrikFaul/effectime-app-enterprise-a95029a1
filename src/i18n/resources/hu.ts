@@ -3303,6 +3303,11 @@ const hu = {
     type_distribution: 'Munkatípus megoszlás',
     status_distribution: 'Státusz megoszlás',
     top_assignees: 'Top felelősök',
+    nexus_title: 'NEXUS AKTÍV',
+    nexus_nodes: 'CSOMÓPONT',
+    nexus_resolved: 'MEGOLDOTT',
+    nexus_fabric: 'MUNKAHÁLÓ',
+    nexus_signal: 'PRIORITÁS JELE',
   },
   issue_writeback: {
     bad_response: 'Hibás válasz',
