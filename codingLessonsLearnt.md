@@ -1007,3 +1007,93 @@ A workspace-picker `useState('')` került a `if (selectedWorkspaceId) return <Wo
 - **Probléma**: Időnyilvántartás közvetlenül kattintható volt — egy véletlen tap is megnyitotta a napi szerkesztőt. A user nem kapott egyértelmű "kész vagyok" commit pontot, ami megkülönböztette volna a piszkozati változásokat a hivatalos benyújtástól.
 - **Megoldás**: `editMode` UI-state (default `false`). „Szerkesztés" ceruza gomb → `setEditMode(true)` → sárga „Szerkesztésre megnyitva" badge + helper banner. Cellák `cursor: pointer` és reagálnak. „Módosítások mentése" save ikonra → `setEditMode(false)`. A „Benyújtás" gomb egy SEPARATE záró művelet (server-side state transition). A two-tier gate: server-side `period.status` (állapotgép) + client-side `editMode` flag. Ha bármelyik nem engedélyez, a UI nem szerkeszthető.
 - **Megelőzés**: Bármilyen formanyomtatvány / time-tracker / pénzügyi modul, ahol az adatok módosítása következményekkel jár — explicit „edit / save / submit" three-stage flow, nem one-click direct mutation. A user mindig tudja, hogy most miben van.
+
+## ➕ APPEND — 2026-05-14 v3.33.1 stabilization findings
+
+### [LESSON-GOVERNANCE-002]: MCP-applied migrations must be committed to disk in the same session
+- **Context**: v3.17.0 → v3.33.0 — schema objects (`superadmin_change_workspace_tier`, `validate_password_policy`, `workspace_permission_catalog`, `enterprise_feature_catalog.tier_feature_keys`, and ~30 other functions/tables) were applied via Supabase MCP `apply_migration` and never persisted to `supabase/migrations/`.
+- **Problem**: Repo↔DB drift. Rebuilding from disk regresses every MCP-only fix — including the v3.17.1 silent-freemium-fallback fix in `create_workspace_with_owner`. Audit, code review, and rollback all become unreliable.
+- **Fix**: After EVERY `apply_migration` call, immediately persist the SQL to `supabase/migrations/YYYYMMDDHHMMSS_<slug>.sql` with the same body and commit alongside the code change. The disk file is the source of truth for disaster recovery.
+- **Warning**: Most dangerous when MCP is used to FIX a previous on-disk migration — the bug remains in version control while the live DB is patched. Anyone who resets the dev DB from disk regresses the fix without noticing.
+
+### [LESSON-TIER-001]: Tier-id immutability is a DB invariant, not a code convention
+- **Context**: `tenant_subscriptions.tier_id` must change only via `superadmin_change_workspace_tier` per v3.17.0.
+- **Problem**: The original `tenant_subscriptions_admin_all` RLS policy permitted any platform admin to `UPDATE tier_id` directly. Audit-event write was therefore bypassable.
+- **Fix**: BEFORE-UPDATE trigger `enforce_tier_id_immutability` raises unless `current_setting('app.tier_change_rpc_active', true) = 'true'`. The RPC sets the marker via `set_config(..., true)` (txn-local) inside its body. `create_workspace_with_owner` also sets it before the initial INSERT path.
+- **Pattern**:
+  ```sql
+  -- inside the privileged RPC:
+  PERFORM set_config('app.tier_change_rpc_active', 'true', true);
+  UPDATE tenant_subscriptions SET tier_id = _new_id WHERE tenant_id = _tenant;
+  -- the trigger checks this marker; reset_config not needed (txn-local).
+  ```
+
+### [LESSON-CATALOG-002]: `text[]` columns mapping to another table's primary key need a delta-validation trigger
+- **Context**: `enterprise_feature_catalog.tier_feature_keys text[]` references `features.feature_key`. Same pattern with `features.dependencies`.
+- **Problem**: Postgres CHECK can't subquery. Without a trigger, a typo silently hides a UI permission slot (because the EXISTS-check in the visibility computation evaluates to false). Undetectable except by manual inspection.
+- **Fix**: BEFORE INSERT OR UPDATE trigger that validates only NEWLY-ADDED elements:
+  ```sql
+  IF TG_OP = 'INSERT' THEN _added := COALESCE(NEW.col, '{}');
+  ELSE
+    SELECT array_agg(k) INTO _added FROM unnest(NEW.col) AS k
+    WHERE k <> ALL(COALESCE(OLD.col, '{}'));
+  END IF;
+  -- then check _added against the target table
+  ```
+  Delta-validation is critical: full validation would reject any future UPDATE on a row containing a pre-existing typo even if the UPDATE doesn't touch the bad column.
+
+### [LESSON-RPC-091]: Empty array from RPC ≠ RPC failure — keep them distinguishable
+- **Context**: `useEnterprisePermissions` calls `workspace_permission_catalog` and previously fell back to a legacy unfiltered SELECT when the result was empty.
+- **Problem**: The fallback condition `visibleCatalog.length === 0` cannot tell a successful-but-empty response from an error. On error the fallback returned the unfiltered catalog — defeating tier filtering.
+- **Fix**: Inspect the response's `error` field explicitly. Fall back only when `catalogRes.error` is truthy. A legitimately-empty result is rendered as an empty tree with the existing `hiddenByTier` notice.
+- **Pattern**:
+  ```ts
+  if (catalogRes.error) {
+    // legitimate fallback path (older workspace, RPC doesn't exist)
+    const fallback = await supabase.from('legacy_table').select(...);
+    setTree(buildTree(fallback.data ?? []));
+  } else {
+    // empty array is a real answer; render it
+    setTree(buildTree(catalogRes.data ?? []));
+  }
+  ```
+
+### [LESSON-CLEANUP-001]: `useEffect` firing 3+ Supabase queries needs cancellation
+- **Context**: `InviteMemberDialog` fires 8 parallel queries on open with no cleanup. Closing mid-fetch caused React state-on-unmounted-component warnings.
+- **Problem**: Without a cancellation flag, every awaited setState fires regardless of whether the component is still mounted. Beyond the React warning, any subsequent audit-log write or toast triggered by the post-fetch code path can leak.
+- **Fix**:
+  ```tsx
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    Promise.all([...]).then(([...]) => {
+      if (cancelled) return;
+      // safe setState calls
+    });
+    return () => { cancelled = true; };
+  }, [open, workspaceId]);
+  ```
+
+### [LESSON-AUDIT-092]: Every privileged edge function must write its own audit row
+- **Context**: `superadmin-hub` performed 10 different platform-admin actions (workspace-action, toggle-feature-flag, trigger-edge-function, etc.) with only the role check; no audit row was written for any of them.
+- **Problem**: Compliance gap — ISO 27001 A.12.4 / GDPR Art. 5 require traceability for privileged operations. Convention said "track in platform_audit_events"; convention was not enforced.
+- **Fix**: Immediately after the role-check passes and the action is identified, fire-and-forget an `insert` to `platform_audit_events` with `actor_id = user.id`, `action = '<edge_fn_name>.<action>'`, `target_id` derived from body, and `metadata: { body }`. Log (don't throw) on insert failure so the action doesn't fail because of audit latency.
+
+### [LESSON-PARTIAL-FAIL-001]: "Partial success returned as success" recurs every quarter — protect against it explicitly
+- **Context**: Documented twice already (HIBA-074 demo seed, HIBA-075 demo leave seed). Now resurfaced in `send-scheduled-reports` (emails) and `cleanup-demo-workspace` (auth user deletes).
+- **Problem**: A loop that catches per-item errors but reports overall success is the canonical fail-soft anti-pattern. The downstream observer (UI, ops, audit) sees green where there is yellow.
+- **Fix**: Count successes and failures explicitly; emit three states (success / partial_failure / error) and include the list of failed items in the error payload. HTTP 207 Multi-Status is the right code for partial-success HTTP responses.
+- **Pattern**:
+  ```ts
+  const failed: string[] = [];
+  for (const item of items) {
+    try { await doIt(item); } catch (e) { failed.push(item); }
+  }
+  const status = failed.length === 0 ? 'success'
+              : failed.length === items.length ? 'error' : 'partial_failure';
+  ```
+
+### [LESSON-DEAD-SQL-001]: Delete dead raw-SQL strings — they become live injection vectors
+- **Context**: `run-report/index.ts` contained a `wrapped = \`SELECT * FROM (${sql}) WHERE workspace_id = '${workspaceId}'\`` string that was never executed (the function always took the safer JS-builder fallback path).
+- **Problem**: The string was an SQL-injection template waiting to be activated by anyone who later wired up an `exec_sql` RPC. Dead-code injection footguns are common in evolving codebases.
+- **Fix**: Delete dead raw-SQL strings entirely. If a future feature needs raw SQL, it must be designed with parameter binding from the start, not by activating dormant string-concat code.

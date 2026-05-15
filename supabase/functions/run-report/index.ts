@@ -198,12 +198,12 @@ async function runSqlMode(admin: any, sqlRaw: string, workspaceId: string) {
     if (!ALLOWED_TABLES.has(tbl)) throw new Error(`Nem engedélyezett tábla: "${tbl}"`);
   }
 
-  // Wrap with workspace_id filter
-  const wrapped = `SELECT * FROM (${sql}) AS sub WHERE (sub.workspace_id = '${workspaceId}' OR sub.workspace_id IS NULL) LIMIT 5000`;
-
-  // We don't have a generic exec_sql RPC available; use a lightweight approach via admin.rpc only if defined.
-  // Fallback: parse simple "SELECT ... FROM <table> ..." and re-run via supabase-js builder.
-  // For safety, only support direct table reads in SQL mode.
+  // NOTE: SQL mode does NOT execute arbitrary SQL. The user-supplied
+  // string is parsed into a "SELECT <fields> FROM <table> [...]" shape
+  // and re-issued via the supabase-js builder, which parameter-binds
+  // workspace_id. A previous version assembled a `wrapped` raw-SQL
+  // string concatenating workspaceId — never executed but an SQL-injection
+  // trap for any future exec_sql RPC. Removed in v3.33.1 (B-21).
   const directMatch = sql.match(/^select\s+(.+?)\s+from\s+([a-z_]+)(.*)$/is);
   if (!directMatch) throw new Error('A SQL túl bonyolult. Egyszerű "SELECT mezők FROM tábla [WHERE...] [ORDER BY...] [LIMIT...]" alakot támogatunk.');
   const [, fieldsPart, table, rest] = directMatch;
@@ -211,9 +211,16 @@ async function runSqlMode(admin: any, sqlRaw: string, workspaceId: string) {
 
   let q = admin.from(table).select(fieldsPart.trim() === '*' ? '*' : fieldsPart).eq('workspace_id', workspaceId).limit(5000);
 
-  // Best-effort: parse ORDER BY and LIMIT
-  const orderMatch = rest.match(/order\s+by\s+([a-z_]+)\s*(asc|desc)?/i);
-  if (orderMatch) q = q.order(orderMatch[1], { ascending: (orderMatch[2] || 'asc').toLowerCase() === 'asc' });
+  // ORDER BY: must be a simple single column. Complex expressions are
+  // rejected explicitly instead of silently dropped (B-37).
+  const orderClause = rest.match(/order\s+by\s+(.+?)(?:\s+limit\s+\d+\s*)?$/i)?.[1]?.trim();
+  if (orderClause) {
+    const simpleOrder = orderClause.match(/^([a-z_][a-z0-9_]*)\s*(asc|desc)?$/i);
+    if (!simpleOrder) {
+      throw new Error('Csak egyszerű ORDER BY támogatott: "ORDER BY oszlop_neve [ASC|DESC]".');
+    }
+    q = q.order(simpleOrder[1], { ascending: (simpleOrder[2] || 'asc').toLowerCase() === 'asc' });
+  }
   const limitMatch = rest.match(/limit\s+(\d+)/i);
   if (limitMatch) q = q.limit(Math.min(parseInt(limitMatch[1]), 5000));
 

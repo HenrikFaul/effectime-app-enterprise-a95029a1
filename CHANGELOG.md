@@ -1,3 +1,69 @@
+## 2026-05-14 — v3.33.1 Stabilization pass: data-integrity + audit-trail hardening
+
+Bug-fix release. No new features. Reconciles MCP-only schema back to disk
+and closes a set of documented gaps from a full system audit.
+
+### DB migration `v3_33_1_stabilization_reconciliation` (applied to remote)
+
+- `create_workspace_with_owner` — STRICT `_tier_key` contract restored.
+  NULL / unknown raises instead of silently defaulting to freemium
+  (the v3.17.1 fix was previously only in remote; now on disk too).
+- `enforce_tier_id_immutability` trigger blocks direct
+  `UPDATE tenant_subscriptions SET tier_id = …` outside the
+  `superadmin_change_workspace_tier` RPC. The RPC + workspace creation
+  set a session-local guard (`app.tier_change_rpc_active`) the trigger
+  recognizes.
+- `validate_tier_feature_keys` trigger rejects unknown feature_keys
+  added to `enterprise_feature_catalog.tier_feature_keys`. Delta
+  validation, so pre-existing typos don't block unrelated updates.
+- `validate_feature_dependencies` trigger does the same for
+  `features.dependencies`.
+- `tenant_feature_overrides_member_read` RLS now filters expired rows.
+- `tenant_subscriptions_status_ends_at_coherent` CHECK (NOT VALID)
+  disallows future incoherent (status, ends_at) combinations.
+- `require_feature_id(_feature_key)` seed helper raises on missing keys.
+
+### Edge function fixes
+- **superadmin-hub** — writes a `platform_audit_events` row for every
+  privileged action (compliance gap closed).
+- **send-scheduled-reports** — per-recipient try/catch; marks runs
+  `success` / `partial_failure` / `error` correctly instead of always
+  `success` on partial email failure.
+- **cleanup-demo-workspace** — returns `ok: false` + HTTP 207 when any
+  demo user delete fails; payload lists `failed_user_ids`.
+- **run-report** — removed dead-code `wrapped` raw-SQL template (was
+  string-concatenating `workspaceId`; never executed but an injection
+  trap for any future exec_sql wiring). ORDER BY now throws explicitly
+  on complex clauses instead of silently dropping them.
+- **payroll-export** — writes `payroll.export.member_profile_missing`
+  audit row when `display_name` falls back to "Unknown".
+
+### Frontend fixes
+- `useEnterprisePermissions` falls back to the legacy unfiltered SELECT
+  only when the permission-catalog RPC errored, not when it returned
+  an empty array. Also logs parallel-call errors.
+- `InviteMemberDialog` useEffect installs a `cancelled` cleanup flag
+  to prevent state-on-unmounted-component warnings. Mode toggle resets
+  password fields. Two hardcoded Hungarian placeholders replaced with
+  i18n keys (en/hu/cs/sk/pl + de/at/ro scaffolds).
+- 2 new keys × 8 locale files = 16 strings.
+
+### Removed
+- `CODEBASE_AUDIT_ROUND1.md` — file was corrupted, deleted.
+
+### Verification
+- `npx tsc --noEmit` → 0 errors.
+- `npx vitest run` → 146/146 passing.
+- DB triggers + CHECK + RLS verified live via execute_sql.
+
+### Out of scope (follow-ups tracked in versioning file)
+- pg_cron jobs for `gdpr_requests` SLA escalation and
+  `tenant_feature_overrides` write-side expiry.
+- Cross-implementation parity test for password policy.
+- `as any` cluster cleanup pending `supabase gen types` refresh.
+
+---
+
 ## 2026-05-14 — v3.33.0 Direct user creation + tier-filtered role permissions
 
 Two user-requested capabilities shipped together.

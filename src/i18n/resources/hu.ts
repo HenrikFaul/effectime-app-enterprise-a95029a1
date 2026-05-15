@@ -893,6 +893,8 @@ const hu = {
     invite_failed: 'Hiba a meghívó küldésekor',
     invite_email_invalid: 'Érvényes email címet adj meg',
     invite_name_required: 'Add meg a tag nevét',
+    invite_name_placeholder: 'Kovács János',
+    invite_email_placeholder: 'kollega@ceg.hu',
     invite_already_member: 'Ez az email cím már meg van hívva',
     invite_email_failed: 'A meghívó létrejött, de az email küldése nem sikerült',
     invite_template_label: 'Gyors kitöltés sablonból',

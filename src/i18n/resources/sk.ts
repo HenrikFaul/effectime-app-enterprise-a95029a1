@@ -1031,6 +1031,8 @@ const sk = {
     invite_failed: 'Odoslanie pozvánky zlyhalo',
     invite_email_invalid: 'Zadajte platnú e-mailovú adresu',
     invite_name_required: 'Zadajte meno člena',
+    invite_name_placeholder: 'Ján Novák',
+    invite_email_placeholder: 'kolega@firma.sk',
     invite_already_member: 'Tento e-mail je už pozvaný',
     invite_email_failed: 'Pozvánka vytvorená, ale e-mail sa nepodarilo odoslať',
     invite_template_label: 'Vyplniť zo šablóny',

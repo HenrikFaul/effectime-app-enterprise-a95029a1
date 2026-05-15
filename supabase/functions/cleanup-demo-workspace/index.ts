@@ -65,17 +65,32 @@ Deno.serve(async (req) => {
     if (delErr) return jsonRes({ error: 'Workspace törlés sikertelen: ' + delErr.message }, 500);
 
     // Delete demo personas (auth.users). Cascades profiles via FK.
+    // Track failures so the caller can see partial cleanup
+    // (B-28 / HIBA-074 silent-partial-success pattern).
     let deletedUsers = 0;
+    const failedUserIds: string[] = [];
     for (const uid of demoUserIds) {
       try {
         const { error } = await admin.auth.admin.deleteUser(uid);
-        if (!error) deletedUsers += 1;
+        if (!error) {
+          deletedUsers += 1;
+        } else {
+          failedUserIds.push(uid);
+          console.warn('[cleanup-demo-workspace] deleteUser error', uid, error.message);
+        }
       } catch (e) {
-        console.warn('[cleanup-demo-workspace] deleteUser failed', uid, e);
+        failedUserIds.push(uid);
+        console.warn('[cleanup-demo-workspace] deleteUser threw', uid, e);
       }
     }
 
-    return jsonRes({ ok: true, deleted_users: deletedUsers, deleted_workspace: workspaceId });
+    const ok = failedUserIds.length === 0;
+    return jsonRes({
+      ok,
+      deleted_users: deletedUsers,
+      failed_user_ids: failedUserIds,
+      deleted_workspace: workspaceId,
+    }, ok ? 200 : 207); // 207 Multi-Status for partial success
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     console.error('[cleanup-demo-workspace] error:', msg);

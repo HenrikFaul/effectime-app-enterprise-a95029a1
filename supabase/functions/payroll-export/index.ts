@@ -168,6 +168,25 @@ async function calculatePeriod(admin: ReturnType<typeof createClient>, workspace
     const profileData = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles
     const displayName: string = profileData?.display_name || 'Unknown'
 
+    // If the profile is missing or its display_name is empty, payroll data
+    // would land in downstream systems as "Unknown". Surface this loudly
+    // via an audit-event so ops can investigate (B-32 / LESSON-DOD-001).
+    // Fire-and-forget — never block payroll export on audit-write failure.
+    if (!profileData?.display_name) {
+      try {
+        admin.from('enterprise_audit_events').insert({
+          workspace_id: workspaceId,
+          actor_id: null,
+          action: 'payroll.export.member_profile_missing',
+          metadata: { membership_id: m.id, user_id: m.user_id, period_id: periodId },
+        }).then(({ error: auditErr }: { error: unknown }) => {
+          if (auditErr) console.warn('[payroll-export] audit insert failed', auditErr)
+        })
+      } catch (e) {
+        console.warn('[payroll-export] audit insert threw', e)
+      }
+    }
+
     payrollMembers.push({
       membership_id: m.id,
       display_name: displayName,

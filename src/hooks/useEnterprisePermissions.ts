@@ -118,19 +118,28 @@ export function useEnterprisePermissions(workspaceId: string, userRoleKey?: stri
     // Slots whose mapped tier_feature_keys are NOT in the tier are hidden
     // (visible=false); admin/system slots (empty tier_feature_keys[]) are
     // always visible.
-    const [{ data: rd }, { data: rp }, catalogRes] = await Promise.all([
+    const [rdRes, rpRes, catalogRes] = await Promise.all([
       supabase.from('enterprise_role_definitions').select('*').eq('workspace_id', workspaceId).order('sort_order'),
       supabase.from('enterprise_role_permissions').select('*').eq('workspace_id', workspaceId),
       (supabase as any).rpc('workspace_permission_catalog', { _workspace_id: workspaceId }),
     ]);
-    setRoles((rd as any[]) || []);
-    setPermissions((rp as any[]) || []);
+    // Per LESSON-CAPACITY-ERROR-001: never swallow Supabase errors from
+    // parallel calls. Log them so failures are operationally visible.
+    if (rdRes.error) console.error('[useEnterprisePermissions] role_definitions', rdRes.error);
+    if (rpRes.error) console.error('[useEnterprisePermissions] role_permissions', rpRes.error);
+    setRoles((rdRes.data as any[]) || []);
+    setPermissions((rpRes.data as any[]) || []);
     const allCatalog = (catalogRes.data as any[]) || [];
     const visibleCatalog = allCatalog.filter((r) => r.visible !== false);
     setHiddenByTier(allCatalog.length - visibleCatalog.length);
-    // Fallback to enterprise_feature_catalog if the RPC returned empty (e.g.
-    // older workspaces without a tier mapping yet) — preserves prior behavior.
-    if (visibleCatalog.length === 0) {
+    // v3.33.1 — Fall back to the legacy enterprise_feature_catalog SELECT
+    // ONLY when the RPC errored (e.g. older workspaces where the RPC
+    // doesn't yet exist). A successful RPC that returns an empty array
+    // is a legitimate "all slots hidden by tier" state and MUST NOT trip
+    // the fallback, otherwise tier filtering is silently defeated
+    // (B-3 / LESSON-RPC-091).
+    if (catalogRes.error) {
+      console.warn('[useEnterprisePermissions] permission_catalog RPC error, falling back', catalogRes.error);
       const fallback = await (supabase as any)
         .from('enterprise_feature_catalog')
         .select('feature_key, display_name, parent_key, sort_order');

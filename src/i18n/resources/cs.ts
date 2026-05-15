@@ -1031,6 +1031,8 @@ const cs = {
     invite_failed: 'Odeslání pozvánky selhalo',
     invite_email_invalid: 'Zadejte platnou e-mailovou adresu',
     invite_name_required: 'Zadejte jméno člena',
+    invite_name_placeholder: 'Jan Novák',
+    invite_email_placeholder: 'kolega@firma.cz',
     invite_already_member: 'Tento e-mail je již pozván',
     invite_email_failed: 'Pozvánka vytvořena, ale e-mail se nepodařilo odeslat',
     invite_template_label: 'Vyplnit ze šablony',
