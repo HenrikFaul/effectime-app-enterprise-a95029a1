@@ -3589,7 +3589,7 @@ const hu = {
     sign_out: 'Kijelentkezés',
   },
   password_req: {
-    min_length: 'Legalább 8 karakter',
+    min_length: 'Legalább 10 karakter',
     has_lower: 'Legalább egy kisbetű',
     has_upper: 'Legalább egy nagybetű',
     has_number: 'Legalább egy szám',

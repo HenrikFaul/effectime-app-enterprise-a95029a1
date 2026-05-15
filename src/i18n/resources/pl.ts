@@ -3414,7 +3414,7 @@ const pl = {
     sign_out: 'Wyloguj się',
   },
   password_req: {
-    min_length: 'Co najmniej 8 znaków',
+    min_length: 'Co najmniej 10 znaków',
     has_lower: 'Co najmniej jedna mała litera',
     has_upper: 'Co najmniej jedna wielka litera',
     has_number: 'Co najmniej jedna cyfra',

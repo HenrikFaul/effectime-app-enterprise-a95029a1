@@ -1133,3 +1133,25 @@ A workspace-picker `useState('')` került a `if (selectedWorkspaceId) return <Wo
   // Use $$ ... $$ matching for un-tagged dollar quotes; backreferences over empty
   // captures fail in JS regex, so prefer two simple regexes (one for $$, one for $function$).
   ```
+
+---
+
+## ➕ APPEND — 2026-05-15 Password-policy split + audit-log silent failure
+
+### [LESSON-SECURITY-001]: Dual password-validator split — always keep a single source of truth for validation rules
+**Context**: Any time a validation rule (min length, regex, etc.) exists in both a frontend helper and a server-side function, they must agree exactly.
+**Problem**: v3.33.0 introduced `src/lib/security/passwordPolicy.ts` (min 10 chars) alongside the older `src/lib/passwordValidation.ts` (min 8 chars). `InviteMemberDialog` consumed the new 10-char policy; `ChangePasswordCard` + `PasswordRequirements` silently kept the old 8-char policy. Users saw green UI checkmarks for 8- or 9-char passwords that violated company policy. The test suite remained green because it only tested the old file.
+**Fix**: Raised the `minLength` threshold in `passwordValidation.ts` from `>= 8` to `>= 10`. Updated `password_req.min_length` i18n key in all 8 locale files. Updated `passwordValidation.test.ts` boundary assertions.
+**Pattern**: After introducing a canonical validation rule anywhere in the stack, immediately grep the codebase for every other validator covering the same domain and update them in the same commit. Never leave two implementations with different thresholds.
+**Regression trap**: A test suite that only tests the OLD validator file will stay green even as the app silently violates the new policy. Add an explicit cross-check test, or better, consolidate into a single validator.
+
+### [LESSON-SUPABASE-SDK-086]: `logAuditEvent` — Supabase insert errors are not thrown; they must be destructured
+**Context**: Any Supabase JS `.insert()` / `.update()` / `.delete()` call.
+**Problem**: `logAuditEvent()` used `await supabase.from(...).insert(...)` inside a `try/catch`. The Supabase JS client returns `{ data, error }` on DB-level failures (RLS rejection, constraint violation) — it does NOT throw. The `catch` block therefore never fired for real failures. Audit events were silently lost with no log entry and no return signal to callers.
+**Fix**: Destructure `{ error }` from every Supabase mutating call. Check `if (error)` explicitly. `logAuditEvent` now returns `Promise<boolean>` so callers can react to failures.
+**Pattern**:
+```ts
+const { error } = await supabase.from('table').insert([...]);
+if (error) { console.warn('insert failed:', error); return false; }
+```
+**Regression trap**: A `try/catch` around a Supabase call gives false confidence. The only network-level failure that throws is a complete fetch rejection. All application-layer errors come via the `error` field.

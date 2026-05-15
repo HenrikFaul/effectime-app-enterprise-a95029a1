@@ -3601,7 +3601,7 @@ const en = {
     sign_out: 'Sign out',
   },
   password_req: {
-    min_length: 'At least 8 characters',
+    min_length: 'At least 10 characters',
     has_lower: 'At least one lowercase letter',
     has_upper: 'At least one uppercase letter',
     has_number: 'At least one number',

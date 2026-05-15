@@ -11,10 +11,10 @@ describe('validatePassword', () => {
     expect(r.hasSpecial).toBe(false);
   });
 
-  it('detects minLength ≥ 8', () => {
-    expect(validatePassword('abcdefg').minLength).toBe(false);
-    expect(validatePassword('abcdefgh').minLength).toBe(true);
-    expect(validatePassword('abcdefghi').minLength).toBe(true);
+  it('detects minLength ≥ 10', () => {
+    expect(validatePassword('abcdefghi').minLength).toBe(false);
+    expect(validatePassword('abcdefghij').minLength).toBe(true);
+    expect(validatePassword('abcdefghijk').minLength).toBe(true);
   });
 
   it('detects lowercase letter', () => {

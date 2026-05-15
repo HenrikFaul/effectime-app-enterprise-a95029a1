@@ -8,7 +8,7 @@ export interface PasswordCheck {
 
 export function validatePassword(password: string): PasswordCheck {
   return {
-    minLength: password.length >= 8,
+    minLength: password.length >= 10,
     hasLower: /[a-z]/.test(password),
     hasUpper: /[A-Z]/.test(password),
     hasNumber: /[0-9]/.test(password),
