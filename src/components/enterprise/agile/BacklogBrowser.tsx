@@ -21,6 +21,7 @@ interface IntegrationMini {
 }
 
 // ADO / Jira field reference names → enterprise_agile_issues column keys
+// Only map to columns that actually exist in the enterprise_agile_issues table.
 const FIELD_TO_COL: Record<string, string> = {
   'System.WorkItemType': 'issue_type',
   'System.State': 'status',
@@ -28,17 +29,11 @@ const FIELD_TO_COL: Record<string, string> = {
   'Microsoft.VSTS.Common.Priority': 'priority',
   'Microsoft.VSTS.Scheduling.StoryPoints': 'story_points',
   'System.IterationPath': 'iteration_path',
-  'System.AreaPath': 'area_path',
   'System.Description': 'description',
   'System.Tags': 'labels',
   'System.CreatedDate': 'created_at',
   'System.ChangedDate': 'external_updated_at',
-  'Microsoft.VSTS.Scheduling.DueDate': 'ado_due_date',
-  'Microsoft.VSTS.Common.ClosedDate': 'ado_closed_date',
-  'Microsoft.VSTS.Common.ActivatedDate': 'ado_activated_date',
-  'Microsoft.VSTS.Common.ClosedBy': 'ado_closed_by',
-  'Microsoft.VSTS.Common.ResolvedBy': 'ado_resolved_by',
-  'Microsoft.VSTS.Common.ResolvedDate': 'ado_resolved_date',
+  'Microsoft.VSTS.Scheduling.DueDate': 'due_date',
   'assignee': 'assignee_name',
   'status': 'status',
   'issuetype': 'issue_type',
@@ -74,7 +69,7 @@ function buildDynamicCols(selectedIds: string[], allMeta: FieldMeta[]): DynamicC
 
 const CACHE_SELECT = [
   'external_key', 'summary', 'status', 'assignee_name', 'assignee_email',
-  'issue_type', 'priority', 'story_points', 'url', 'iteration_path', 'area_path',
+  'issue_type', 'priority', 'story_points', 'url', 'iteration_path', 'due_date',
   'description', 'labels', 'created_at', 'external_updated_at', 'last_synced_at',
 ].join(',');
 
