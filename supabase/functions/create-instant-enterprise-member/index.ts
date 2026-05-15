@@ -119,6 +119,7 @@ Deno.serve(async (req) => {
     if (membersRes.error) return jsonRes({ error: "Nem sikerült betölteni a meglévő tagértékeket." }, 500);
     if (officesRes.error) return jsonRes({ error: "Nem sikerült betölteni a telephely értékkészletet." }, 500);
     if (skillsRes.error) return jsonRes({ error: "Nem sikerült betölteni a skill értékkészletet." }, 500);
+    if (allocationsRes.error) return jsonRes({ error: "Nem sikerült betölteni a hozzárendelési értékkészletet." }, 500);
 
     const members = (membersRes.data || []).filter((m: any) => m.id !== adminMembership.id);
     const offices = officesRes.data || [];

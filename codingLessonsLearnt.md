@@ -1155,3 +1155,49 @@ const { error } = await supabase.from('table').insert([...]);
 if (error) { console.warn('insert failed:', error); return false; }
 ```
 **Regression trap**: A `try/catch` around a Supabase call gives false confidence. The only network-level failure that throws is a complete fetch rejection. All application-layer errors come via the `error` field.
+
+## ➕ APPEND — 2026-05-15 Edge-function data integrity, TOCTOU hardening, localization
+
+### [LESSON-SCHEMA-001]: GDPR exports — always join through membership_id, not user_id, for workspace-scoped tables
+**Context**: `enterprise_attendance_periods`, `wellbeing_scores`, and similar workspace-scoped tables that link to users via `enterprise_memberships`.
+**Problem**: `security-admin` GDPR export queried both tables with `.eq('user_id', targetUserId)`. Both tables use `membership_id` (a FK to `enterprise_memberships`) not a direct `user_id`. The queries returned empty arrays silently — PostgREST does not error on a WHERE clause that matches no rows.
+**Fix**: Use `targetMembership.id` (already fetched for the workspace-guard check) as `.eq('membership_id', ...)`.
+**Pattern**: Before writing any query on a workspace-scoped table, grep the migration for the actual column name. Never assume `user_id` — many tables use `membership_id` as the user link to preserve referential integrity through the membership layer.
+
+### [LESSON-SCHEMA-002]: Always verify select columns against migration DDL before shipping a hook
+**Context**: `useWellbeing.ts` select query included `period_start`, `period_end` (wellbeing_scores) and `metadata` (wellbeing_alerts).
+**Problem**: The `wellbeing_scores` migration has no `period_start` or `period_end` columns. `wellbeing_alerts` has `message`, not `metadata`. PostgREST silently returns `undefined` for unknown select columns — no error, no warning, just missing data at runtime.
+**Fix**: Removed the non-existent columns from both the select string and the TypeScript interface. `metadata` → `message`.
+**Pattern**: Run `grep "CREATE TABLE.*wellbeing_scores" migrations/` and read the DDL before writing a hook. Never trust an interface that was written without checking the migration.
+
+### [LESSON-SECURITY-002]: Never accept actor identity from the request body — always derive it from the JWT
+**Context**: `payroll-export` lock-period action.
+**Problem**: `locked_by` was set from `body.userId`. Any authenticated workspace admin could claim to lock on behalf of any user by sending a different userId. The JWT is already verified; `user.id` is the single source of truth for the caller's identity.
+**Fix**: Removed `userId` from body destructuring; replaced all uses with `user.id`.
+**Pattern**: For any audit trail, ownership, or attribution field, always use the identity derived from the verified JWT. Never trust client-supplied identity.
+
+### [LESSON-TOCTOU-001]: Use atomic WHERE clauses on UPDATE to prevent TOCTOU races, then check row count
+**Context**: `payroll-export` lock-period: check status = 'open', then update status = 'locked'.
+**Problem**: Between the SELECT (status check) and the UPDATE (lock), another concurrent request could lock the same period, resulting in a double-lock acknowledgment.
+**Fix**: Add `.eq('status', 'open')` to the UPDATE WHERE clause and `.select('id')` to detect 0-row results. If `lockedRows.length === 0`, the period was already locked — return 409.
+**Pattern**:
+```ts
+const { data: rows } = await admin.from('table')
+  .update({ status: 'locked', locked_by: user.id })
+  .eq('id', id)
+  .eq('status', 'open')  // ← atomic guard
+  .select('id');
+if (!rows || rows.length === 0) return jsonRes({ error: 'Already locked' }, 409);
+```
+
+### [LESSON-ORDER-001]: Write audit rows BEFORE destructive operations, not after
+**Context**: `superadmin-hub` workspace-delete action.
+**Problem**: The audit INSERT happened after the workspace DELETE. If the workspace FK cascades to `enterprise_audit_events`, the insert could fail (FK no longer exists) and the audit event is silently lost.
+**Fix**: Insert the audit row before the DELETE. If the DELETE fails, the audit row is a false positive (harmless); if the INSERT fails, we log it and proceed with the DELETE (audit failure is non-fatal).
+**Pattern**: For any hard-delete action, always write the audit trail before the delete, not after.
+
+### [LESSON-LOCALIZATION-001]: Module-level constants cannot use t() — move them inside the component
+**Context**: `LeaveCalendar.tsx` `WEEKDAY_LABELS` array defined outside the component.
+**Problem**: Constants defined at module level cannot call `t()` because `t()` requires the React context. The array was hardcoded in Hungarian, violating the localization mandate for all 7 other locales.
+**Fix**: Removed the module-level constant. Added `weekdayLabels` as a `useMemo` inside the component that calls `t('leave_calendar.weekday_*')` for each of 7 keys. Added all 9 new i18n keys to all 8 locale files.
+**Pattern**: Any user-visible string that appears in a module-level constant is a localization gap. Always move such strings inside the component scope where `t()` is available, or define them as i18n keys.

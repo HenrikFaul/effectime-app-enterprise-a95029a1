@@ -255,13 +255,13 @@ Deno.serve(async (req) => {
           .from('enterprise_attendance_periods')
           .select('*')
           .eq('workspace_id', workspaceId)
-          .eq('user_id', targetUserId),
+          .eq('membership_id', targetMembership.id),
 
         admin
           .from('wellbeing_scores')
           .select('*')
           .eq('workspace_id', workspaceId)
-          .eq('user_id', targetUserId),
+          .eq('membership_id', targetMembership.id),
 
         admin
           .from('enterprise_audit_events')

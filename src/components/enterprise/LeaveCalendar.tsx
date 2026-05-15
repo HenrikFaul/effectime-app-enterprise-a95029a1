@@ -45,7 +45,6 @@ const STATUS_STYLES: Record<string, { dot: string; label: string }> = {
   rejected: { dot: 'bg-rose-500', label: 'Rejected' },
 };
 
-const WEEKDAY_LABELS = ['H', 'K', 'Sz', 'Cs', 'P', 'Sz', 'V'];
 
 interface Props {
   workspaceId: string;
@@ -58,6 +57,16 @@ interface Props {
 
 export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true, showCoverage = true, showRequests = true, showConflicts = true }: Props) {
   const { t } = useI18n();
+
+  const weekdayLabels = useMemo(() => [
+    t('leave_calendar.weekday_mon'),
+    t('leave_calendar.weekday_tue'),
+    t('leave_calendar.weekday_wed'),
+    t('leave_calendar.weekday_thu'),
+    t('leave_calendar.weekday_fri'),
+    t('leave_calendar.weekday_sat'),
+    t('leave_calendar.weekday_sun'),
+  ], [t]);
 
   const LEAVE_TYPE_COLORS: Record<string, { bg: string; border: string; text: string; label: string }> = {
     vacation: { bg: 'bg-emerald-100 dark:bg-emerald-900/30', border: 'border-emerald-300 dark:border-emerald-700', text: 'text-emerald-700 dark:text-emerald-300', label: t('leave_calendar.type_vacation') },
@@ -108,12 +117,12 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
     let profileMap = new Map<string, string>();
     if (userIds.length > 0) {
       const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);
-      profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p.display_name || 'Ismeretlen']));
+      profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p.display_name || t('leave_calendar.unknown')]));
     }
 
     setLeaves((leavesRes.data || []).map((l: any) => ({
       ...l,
-      display_name: profileMap.get(l.user_id) || 'Ismeretlen',
+      display_name: profileMap.get(l.user_id) || t('leave_calendar.unknown'),
       team: memberMap.get(l.user_id)?.team || null,
       business_role: memberMap.get(l.user_id)?.business_role || null,
     })));
@@ -527,7 +536,7 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
         <Select value={teamFilter} onValueChange={setTeamFilter}>
           <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Minden csapat</SelectItem>
+            <SelectItem value="all">{t('leave_calendar.all_teams')}</SelectItem>
             {teams.map(t => <SelectItem key={t} value={t}>{t}</SelectItem>)}
           </SelectContent>
         </Select>
@@ -566,7 +575,7 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
             </CardHeader>
             <CardContent className="px-2 pb-3 sm:px-4">
               <div className="grid grid-cols-7 mb-1">
-                {WEEKDAY_LABELS.map((label, i) => (
+                {weekdayLabels.map((label, i) => (
                   <div key={`${label}-${i}`} className="text-center text-xs font-semibold text-muted-foreground py-1.5">{label}</div>
                 ))}
               </div>

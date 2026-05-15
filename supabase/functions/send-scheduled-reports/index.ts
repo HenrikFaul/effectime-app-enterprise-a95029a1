@@ -146,11 +146,14 @@ function json(data: unknown, status = 200) {
 }
 
 async function markRun(admin: any, id: string, status: string, error: string | null) {
-  await admin.from('enterprise_report_schedules').update({
+  const { error: updateErr } = await admin.from('enterprise_report_schedules').update({
     last_run_at: new Date().toISOString(),
     last_run_status: status,
     last_run_error: error,
   }).eq('id', id);
+  if (updateErr) {
+    console.error(`[send-scheduled-reports] markRun failed for schedule ${id}:`, updateErr.message);
+  }
 }
 
 function buildCsv(columns: string[], rows: any[]): string {

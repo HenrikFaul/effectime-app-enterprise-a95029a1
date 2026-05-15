@@ -398,11 +398,10 @@ Deno.serve(async (req) => {
     // Action: lock-period
     // =========================================================
     if (action === 'lock-period') {
-      const { periodId, userId } = body
+      const { periodId } = body
       if (!periodId) return jsonRes({ error: 'periodId is required' }, 400)
-      if (!userId) return jsonRes({ error: 'userId is required' }, 400)
 
-      // Validate the period is still open
+      // Fetch period metadata (name, dates) for the audit event.
       const { data: existing, error: fetchErr } = await admin
         .from('payroll_periods')
         .select('id, status, name, start_date, end_date')
@@ -418,25 +417,31 @@ Deno.serve(async (req) => {
 
       const now = new Date().toISOString()
 
-      // Lock the period
-      const { error: lockErr } = await admin
+      // Atomic lock: the WHERE clause includes status = 'open' so a concurrent
+      // lock request between our SELECT and this UPDATE yields 0 rows (TOCTOU guard).
+      const { data: lockedRows, error: lockErr } = await admin
         .from('payroll_periods')
         .update({
           status: 'locked',
-          locked_by: userId,
+          locked_by: user.id,
           locked_at: now,
         })
         .eq('id', periodId)
         .eq('workspace_id', workspaceId)
+        .eq('status', 'open')
+        .select('id')
 
       if (lockErr) return jsonRes({ error: `Failed to lock period: ${lockErr.message}` }, 500)
+      if (!lockedRows || lockedRows.length === 0) {
+        return jsonRes({ error: `Period is no longer open and cannot be locked` }, 409)
+      }
 
       // Insert audit event
       const { error: auditErr } = await admin
         .from('enterprise_audit_events')
         .insert({
           workspace_id: workspaceId,
-          actor_id: userId,
+          actor_id: user.id,
           action: 'payroll.period_locked',
           target_type: 'payroll_period',
           target_id: periodId,
