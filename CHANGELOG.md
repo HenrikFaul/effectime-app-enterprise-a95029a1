@@ -19,8 +19,13 @@ Bug-fix release addressing 5 of 6 known deferred items from the earlier audit.
 - OAuth upsert: destructure and throw on error — silent upsert failures (e.g. missing unique constraint) are now surfaced rather than swallowed.
 - Replaced 5 Hungarian strings in OAuth callback HTML responses with English equivalents.
 
-### Deferred (unchanged)
-- `useCandidates.ts`: queries `candidates`/`interview_slots` tables that are intentionally unprovisioned — no fix needed, errors are thrown correctly.
+### supabase/migrations/20260515080000_v3_33_8_candidate_ats_tables.sql (new)
+- **`candidates` table**: workspace-scoped candidate pipeline store with status enum, ATS provider link, optional `enterprise_membership_id` FK, and `updated_at` trigger.
+- **`interview_slots` table**: workspace-scoped slots with `interviewer_membership_ids[]`, booking token (unique, consumed on booking), outcome rating/recommendation, and `updated_at` trigger.
+- **RLS**: `candidates` — members read, owners/resourceAssistants manage. `interview_slots` — same, plus `anon` SELECT on available slots by token (public self-booking page).
+- **`candidate_create_slot` RPC**: creates an available slot after verifying interviewer eligibility via `candidate_interview_slot_eligible`; generates a booking token.
+- **`candidate_self_book` RPC** (anon + authenticated): atomic self-booking via token — upserts the candidate, advances status to `interview`, books the slot, consumes the token.
+- **`candidate_generate_onboarding` RPC**: creates an `enterprise_onboarding_instances` row for a hired candidate linked to the most recently published workspace template; returns null instance fields gracefully when no membership or template exists.
 
 ---
 
