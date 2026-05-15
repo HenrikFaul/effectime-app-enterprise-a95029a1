@@ -171,18 +171,25 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   // Fetch current user's membership + profile for "Profilom"
   useEffect(() => {
     const fetchMyMembership = async () => {
-      const [{ data: membership }, { data: profile }, { data: members }] = await Promise.all([
+      const [membershipRes, profileRes, membersRes] = await Promise.all([
         supabase.from('enterprise_memberships').select('*').eq('workspace_id', workspace.id).eq('user_id', userId).eq('status', 'active').maybeSingle(),
         supabase.from('profiles').select('display_name').eq('user_id', userId).maybeSingle(),
         (supabase as any).from('enterprise_memberships').select('id, user_id, role, status, team, location, business_role, joined_at, city, office_id, base_working_hours').eq('workspace_id', workspace.id).eq('status', 'active'),
       ]);
+      if (membershipRes.error) console.error('[WorkspaceDashboard] membership fetch failed:', membershipRes.error.message);
+      if (profileRes.error) console.error('[WorkspaceDashboard] profile fetch failed:', profileRes.error.message);
+      if (membersRes.error) console.error('[WorkspaceDashboard] members fetch failed:', membersRes.error.message);
+      const membership = membershipRes.data;
+      const profile = profileRes.data;
+      const members = membersRes.data;
       if (membership) {
         setMyMembership({ ...membership, display_name: profile?.display_name || t('ws_nav.unknown_user') });
       }
       // Enrich members with display names
       if (members && members.length > 0) {
         const userIds = members.map((m: any) => m.user_id);
-        const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);
+        const { data: profiles, error: profilesErr } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);
+        if (profilesErr) console.error('[WorkspaceDashboard] profiles enrichment failed:', profilesErr.message);
         const nameMap = new Map((profiles || []).map((p: any) => [p.user_id, p.display_name || t('ws_nav.unknown_user')]));
         setAllMembers(members.map((m: any) => ({ ...m, display_name: nameMap.get(m.user_id) || t('ws_nav.unknown_user') })));
       }
@@ -201,22 +208,17 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   // Track workspace recovery mode flag (additive column added by v3.0.0 Phase 6).
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      const { data } = await (supabase as any)
+    const pollRecoveryMode = async () => {
+      const { data, error } = await (supabase as any)
         .from('enterprise_workspaces')
         .select('recovery_mode')
         .eq('id', workspace.id)
         .maybeSingle();
+      if (error) { console.error('[WorkspaceDashboard] recovery_mode poll failed:', error.message); return; }
       if (!cancelled) setRecoveryMode(!!data?.recovery_mode);
-    })();
-    const id = window.setInterval(async () => {
-      const { data } = await (supabase as any)
-        .from('enterprise_workspaces')
-        .select('recovery_mode')
-        .eq('id', workspace.id)
-        .maybeSingle();
-      if (!cancelled) setRecoveryMode(!!data?.recovery_mode);
-    }, 90_000);
+    };
+    pollRecoveryMode();
+    const id = window.setInterval(pollRecoveryMode, 90_000);
     return () => { cancelled = true; window.clearInterval(id); };
   }, [workspace.id]);
 

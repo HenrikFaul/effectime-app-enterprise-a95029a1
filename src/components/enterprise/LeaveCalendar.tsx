@@ -105,6 +105,12 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
       (supabase as any).from('enterprise_teams').select('id, name').eq('workspace_id', workspaceId).order('name'),
     ]);
 
+    if (leavesRes.error) console.error('[LeaveCalendar] leaves fetch failed:', leavesRes.error.message);
+    if (holidaysRes.error) console.error('[LeaveCalendar] holidays fetch failed:', holidaysRes.error.message);
+    if (blockedRes.error) console.error('[LeaveCalendar] blocked dates fetch failed:', blockedRes.error.message);
+    if (rulesRes.error) console.error('[LeaveCalendar] daily rules fetch failed:', rulesRes.error.message);
+    if (membersRes.error) console.error('[LeaveCalendar] members fetch failed:', membersRes.error.message);
+
     setWorkspaceTeams((teamsRes.data as any[]) || []);
 
     const memberData = membersRes.data || [];
@@ -116,7 +122,8 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
 
     let profileMap = new Map<string, string>();
     if (userIds.length > 0) {
-      const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);
+      const { data: profiles, error: profilesErr } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);
+      if (profilesErr) console.error('[LeaveCalendar] profiles fetch failed:', profilesErr.message);
       profileMap = new Map((profiles || []).map((p: any) => [p.user_id, p.display_name || t('leave_calendar.unknown')]));
     }
 

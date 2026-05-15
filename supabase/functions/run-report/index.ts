@@ -141,9 +141,10 @@ async function runVisualMode(admin: any, dataSource: string, config: any, worksp
   if (table === 'enterprise_memberships' && rows.length > 0) {
     const userIds = Array.from(new Set(rows.map(r => r.user_id).filter(Boolean)));
     if (userIds.length > 0) {
-      const { data: profiles } = await admin.from('profiles').select('user_id, display_name').in('user_id', userIds);
+      const { data: profiles, error: profilesErr } = await admin.from('profiles').select('user_id, display_name').in('user_id', userIds);
+      if (profilesErr) console.error('[run-report] profiles enrichment failed:', profilesErr.message);
       const nameMap = new Map((profiles || []).map((p: any) => [p.user_id, p.display_name]));
-      rows = rows.map(r => ({ display_name: nameMap.get(r.user_id) || 'Ismeretlen', ...r }));
+      rows = rows.map(r => ({ display_name: nameMap.get(r.user_id) || 'Unknown', ...r }));
     }
   }
 

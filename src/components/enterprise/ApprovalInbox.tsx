@@ -63,7 +63,12 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
     if (dateFrom) query = query.gte('start_date', format(dateFrom, 'yyyy-MM-dd'));
     if (dateTo) query = query.lte('end_date', format(dateTo, 'yyyy-MM-dd'));
 
-    const { data } = await query;
+    const { data, error: queryErr } = await query;
+    if (queryErr) {
+      console.error('[ApprovalInbox] Failed to fetch leave requests:', queryErr.message);
+      setLoading(false);
+      return;
+    }
     let items = (data as any[]) || [];
     setSelectedIds(new Set());
 
@@ -156,8 +161,10 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
     if (selectedIds.size === 0) return;
     setProcessing(true);
     for (const id of selectedIds) {
-      await supabase.from('leave_requests').update({ status: decision as any, reviewer_id: userId, reviewed_at: new Date().toISOString() }).eq('id', id);
-      await supabase.from('approval_decisions').insert({ leave_request_id: id, workspace_id: workspaceId, decided_by: userId, decision: decision as any });
+      const { error: bulkUpdateErr } = await supabase.from('leave_requests').update({ status: decision as any, reviewer_id: userId, reviewed_at: new Date().toISOString() }).eq('id', id);
+      if (bulkUpdateErr) { console.error('[ApprovalInbox] Bulk update failed for', id, bulkUpdateErr.message); continue; }
+      const { error: bulkInsertErr } = await supabase.from('approval_decisions').insert({ leave_request_id: id, workspace_id: workspaceId, decided_by: userId, decision: decision as any });
+      if (bulkInsertErr) console.error('[ApprovalInbox] Bulk approval_decisions insert failed for', id, bulkInsertErr.message);
     }
     toast.success(decision === 'approved' ? t('approval_inbox.bulk_approved', { count: selectedIds.size }) : t('approval_inbox.bulk_rejected', { count: selectedIds.size }));
     fetchRequests();

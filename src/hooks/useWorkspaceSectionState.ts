@@ -7,10 +7,14 @@ const cache = new Map<string, Map<string, SectionState>>(); // workspaceId -> se
 const listeners = new Set<() => void>();
 
 async function loadFor(workspaceId: string) {
-  const { data } = await (supabase as any)
+  const { data, error } = await (supabase as any)
     .from('enterprise_ui_section_states')
     .select('section_key,state')
     .eq('workspace_id', workspaceId);
+  if (error) {
+    console.error('[useWorkspaceSectionState] Failed to load section states:', error.message);
+    return;
+  }
   const m = new Map<string, SectionState>();
   (data || []).forEach((r: any) => m.set(r.section_key, r.state as SectionState));
   cache.set(workspaceId, m);

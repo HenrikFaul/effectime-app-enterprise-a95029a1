@@ -93,7 +93,8 @@ export function RolePermissionManager({ workspaceId, userRole }: Props) {
                     ['calendar', 'calendar_leave_days', 'requests_own', 'members', 'notifications'].includes(fk) ? 'readonly' : 'none',
     }));
 
-    await supabase.from('enterprise_role_permissions').insert(defaultPerms as any[]);
+    const { error: permError } = await supabase.from('enterprise_role_permissions').insert(defaultPerms as any[]);
+    if (permError) console.error('[RolePermissionManager] Failed to insert default permissions:', permError.message);
 
     toast.success(t('role_permission_mgr.created'));
     setNewRoleName('');
@@ -105,8 +106,10 @@ export function RolePermissionManager({ workspaceId, userRole }: Props) {
 
   const handleDeleteRole = async () => {
     if (!deletingRole) return;
-    await supabase.from('enterprise_role_permissions').delete().eq('workspace_id', workspaceId).eq('role_key', deletingRole.role_key);
-    await supabase.from('enterprise_role_definitions').delete().eq('id', deletingRole.id);
+    const { error: permDelErr } = await supabase.from('enterprise_role_permissions').delete().eq('workspace_id', workspaceId).eq('role_key', deletingRole.role_key);
+    if (permDelErr) console.error('[RolePermissionManager] Failed to delete permissions:', permDelErr.message);
+    const { error: roleDelErr } = await supabase.from('enterprise_role_definitions').delete().eq('id', deletingRole.id);
+    if (roleDelErr) { toast.error(t('role_permission_mgr.create_failed')); return; }
     toast.success(t('role_permission_mgr.deleted'));
     setDeletingRole(null);
     if (selectedRole === deletingRole.role_key) setSelectedRole(null);
@@ -117,14 +120,16 @@ export function RolePermissionManager({ workspaceId, userRole }: Props) {
     setSaving(true);
     const existing = permissions.find(p => p.role_key === roleKey && p.feature_key === featureKey);
     if (existing) {
-      await supabase.from('enterprise_role_permissions').update({ access_level: newLevel } as any).eq('id', existing.id);
+      const { error: updateErr } = await supabase.from('enterprise_role_permissions').update({ access_level: newLevel } as any).eq('id', existing.id);
+      if (updateErr) { console.error('[RolePermissionManager] Failed to update permission:', updateErr.message); setSaving(false); return; }
     } else {
-      await supabase.from('enterprise_role_permissions').insert({
+      const { error: insertErr } = await supabase.from('enterprise_role_permissions').insert({
         workspace_id: workspaceId,
         role_key: roleKey,
         feature_key: featureKey,
         access_level: newLevel,
       } as any);
+      if (insertErr) { console.error('[RolePermissionManager] Failed to insert permission:', insertErr.message); setSaving(false); return; }
     }
     await refetch();
     setSaving(false);

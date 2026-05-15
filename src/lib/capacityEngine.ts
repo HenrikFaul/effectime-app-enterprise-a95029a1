@@ -138,7 +138,7 @@ export async function computeWorkspaceCapacity(params: {
   const { data: profiles } = userIds.length
     ? await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds)
     : { data: [] as any[] };
-  const nameByUser = new Map<string, string>((profiles || []).map((p: any) => [p.user_id, p.display_name || 'Ismeretlen']));
+  const nameByUser = new Map<string, string>((profiles || []).map((p: any) => [p.user_id, p.display_name || 'Unknown']));
 
   const { data: rawAssignments, error: assignError } = await supabase
     .from('enterprise_project_assignments')

@@ -85,11 +85,15 @@ Deno.serve(async (req) => {
     const workspaceId = explicitWorkspaceId
 
     // Authorization: must be owner/resourceAssistant
-    const { data: roleCheck } = await supabaseAdmin.rpc('has_enterprise_role', {
+    const { data: roleCheck, error: roleErr } = await supabaseAdmin.rpc('has_enterprise_role', {
       _workspace_id: workspaceId,
       _user_id: userId,
       _roles: ['owner', 'resourceAssistant'],
     })
+    if (roleErr) {
+      console.error('[sync-holidays] Role check RPC failed:', roleErr.message)
+      return new Response(JSON.stringify({ error: 'Authorization check failed' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
     if (!roleCheck) {
       return new Response(JSON.stringify({ error: 'Forbidden' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
@@ -128,12 +132,13 @@ async function syncForWorkspace(
 
   let inserted = 0, skipped = 0
   for (const h of holidays) {
-    const { data: existing } = await supabaseAdmin
+    const { data: existing, error: existingErr } = await supabaseAdmin
       .from('enterprise_holidays')
       .select('id')
       .eq('workspace_id', workspaceId)
       .eq('holiday_date', h.datum)
       .maybeSingle()
+    if (existingErr) throw new Error(`Duplicate check failed for ${h.datum}: ${existingErr.message}`)
     if (existing) { skipped++; continue }
     const { error: insErr } = await supabaseAdmin.from('enterprise_holidays').insert({
       workspace_id: workspaceId,
@@ -141,13 +146,20 @@ async function syncForWorkspace(
       name: h.nev,
       is_recurring: false,
     })
-    if (!insErr) inserted++
+    if (insErr) {
+      console.error(`[sync-holidays] Insert failed for ${h.datum}:`, insErr.message)
+    } else {
+      inserted++
+    }
   }
 
-  await supabaseAdmin
+  const { error: syncUpdateErr } = await supabaseAdmin
     .from('enterprise_workspaces')
     .update({ holidays_last_sync_at: new Date().toISOString() })
     .eq('id', workspaceId)
+  if (syncUpdateErr) {
+    console.error('[sync-holidays] Failed to update holidays_last_sync_at:', syncUpdateErr.message)
+  }
 
   return { total: holidays.length, inserted, skipped }
 }
