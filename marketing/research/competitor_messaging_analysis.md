@@ -110,3 +110,54 @@ Use this file to guide structured analysis of how Effectime's competitors commun
 3. Check their LinkedIn ad library for current paid messaging
 4. Review their blog for SEO topic bets — reveals intent they're targeting
 5. Update this document quarterly; messaging drifts and gaps close
+
+
+<!-- ENRICHMENT 2026-05-13 START -->
+## Enrichment — 2026-05-13
+
+            > _Appended by the marketing enrichment system. Original content above is preserved verbatim._
+
+            > _New techniques, patterns, and decision rules synthesised from external research on **messaging**. Source provenance and the per-source breakdown of which nuggets came from where are recorded in the daily run log — this section contains only the resulting prompt knowledge._
+
+### Messaging
+
+- 6 Exceptional Brand Messaging Examples We Can All Learn From.
+- Create two columns outside of your competitor messaging hierarchy.
+- Quickly synthesizing and analyzing large amounts of competitor data, summarizing key messaging themes in minutes.
+- Analyzing Competitor Messaging & Positioning.
+- Launch and marketing by crafting impactful messaging based on user needs.
+- Start by presenting your messaging to a representative sample of your audience.
+- Keep in mind that the goal is to create messaging that not only informs but also engages and inspires your potential customers.
+
+### Competitor
+
+- Allowing you to analyze multiple competitors simultaneously, which would be extremely time-consuming manually.
+- Validation by comparing proposed features with competitor offerings.
+- Analyzing Competitor Product Strategies for Innovation Insights.
+- Real competitor price tracking (via pricing pages, industry reports).
+- Identify direct and indirect competitors (e.g., “Analyze pricing models for top SaaS CRM tools.”).
+- Analyze promotional strategies & discounting tactics (e.g., “What pricing incentives do competitors use?”).
+- Highlight value-based vs. cost-plus pricing (e.g., “Are competitors’ prices based on perceived value or production cost?”).
+
+### Feature
+
+- Ideation and research, as AI can help brainstorm feature ideas based on market gaps.
+- Prioritizing New Features Based on Demand.
+
+### Analysis
+
+- Competitor & trend analysis: Instruct AI to consider existing market players, trends, and demand drivers for a more realistic view.
+- Customer sentiment analysis (e.g., Trustpilot, G2 reviews mentioning price satisfaction/dissatisfaction).
+- Consider organizing your analysis around specific themes that emerge from your data.
+
+### General Principles
+
+- Al‐Ghafri, T. S. , Al‐Harthi S. M., Al‐Farsi Y., Craigie A. M., Bannerman E., and Anderson A. S.. 2020. “Perceived Changes in General Well‐Being: Findings From the ‘movediabetes’ Physical Activity Randomized Control Trial.” Oman Medical Journal 35, no. 4: e149. 10.5001/omj.2020.68. [DOI] [PMC free article] [PubMed] [Google Scholar].
+- Alghafri, T. S. , Alharthi S. M., Al‐Farsi Y., et al. 2018. “'movediabetes': A Cluster Randomized Controlled Trial to Increase Physical Activity in Adults With Type 2 Diabetes in Primary Health in Oman.” BMJ Open Diabetes Research & Care 6, no. 1: e000605. 10.1136/.
+- Proof point: Makes [process] easier.
+- Key message: Allows customers to complete [process] in 5 minutes or less.
+- Sales Battlecards 101: How to Help Your Sellers Leave the Competition In the Dust.
+- How to Create a Competitive Matrix (Step-by-Step Guide With Examples + Free Templates).
+- The 8 Free Market Research Tools and Resources You Need to Know.
+- 6 Competitive Advantage Examples From the Real World.
+<!-- ENRICHMENT 2026-05-13 END -->

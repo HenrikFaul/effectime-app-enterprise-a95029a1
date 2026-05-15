@@ -79,3 +79,44 @@ Scripts for live and recorded Effectime product demos. Three variants: HR person
 Do NOT ask: "So, what do you think?"
 
 Instead: "Based on what you told me about [their specific pain], does this address that? [Wait for answer] — Great. The easiest next step is a free trial. I can walk you through the 10-minute setup right now, or you can start it yourself. Which would you prefer?"
+
+
+<!-- ENRICHMENT 2026-05-15 START -->
+## Enrichment — 2026-05-15
+
+            > _Appended by the marketing enrichment system. Original content above is preserved verbatim._
+
+            > _New techniques, patterns, and decision rules synthesised from external research on **demo**. Source provenance and the per-source breakdown of which nuggets came from where are recorded in the daily run log — this section contains only the resulting prompt knowledge._
+
+### Focus
+
+- Focus on key opportunities and provide strategic guidance and coaching to make sure deals are actively progressing towards close.
+- Keep your focus on the end goals and know how those action items will get you there.
+- Focus on their desired outcomes and the most common speed bumps rather than technical functionality.
+
+### Manager
+
+- These meetings help build strong relationships between the manager and the employee.
+- Establish the product manager as a strategic partner to sales, not just a technical resource.
+
+### Persona
+
+- They improve the sales rep's accountability and help them grow professionally and personally.
+- Start the conversation with personal questions like how they're doing, gradually moving towards growth and work-related questions.
+
+### Demo
+
+- Using real-world customer goals and pain points as the foundation for the demo.
+- Showcase real-world examples and success stories and make sure your demo data looks like a real customer environment instead of cryptic test data.
+
+### General Principles
+
+- Salespeople who received quality coaching saw a 19% improvement in long-term performance, according to the Sales Executive Council.
+- Companies that invest in sales coaching generate, on average, 16.7% greater annual revenue growth, according to the Sales Management Association.
+- Has the dollar amount changed?.
+- Has the forecast category been updated?.
+- Did the rep recently move the deal from Best Case to Commit?.
+- How long has the deal stayed in a given stage?.
+- What do these metrics tell us given historic conversion rates?.
+- Have similar deals moved through the sales process with ease or is this behavior a red flag?.
+<!-- ENRICHMENT 2026-05-15 END -->

@@ -333,3 +333,33 @@ It must be:
 - visually cohesive,
 - reusable inside a prompt library,
 - and tightly connected to Effectime’s real product value.
+
+<!-- ENRICHMENT 2026-05-15 START -->
+## Enrichment — 2026-05-15
+
+            > _Appended by the marketing enrichment system. Original content above is preserved verbatim._
+
+            > _New techniques, patterns, and decision rules synthesised from external research on **effectime**. Source provenance and the per-source breakdown of which nuggets came from where are recorded in the daily run log — this section contains only the resulting prompt knowledge._
+
+### Marketing
+
+- Efficient budget allocation. Monitoring MER changes regularly helps assess if your marketing strategy remains efficient. A decrease in MER suggests it's time to examine where money is best used.
+- Vital for small businesses. Small business owners often lack time to calculate specific metrics. MER, being a simple formula, can be tracked over time, helping smaller businesses optimize their marketing strategies without complex analysis.
+- Detailed expense tracking. Keep a close eye on costs at every step of your marketing journey. Understand where your money goes and which parts of your strategy are the most cost-effective.
+- Understanding channel impact. Take a closer look at which marketing channels bring the most revenue. Understanding your top-performing channels helps you put money where they'll make the biggest impact.
+- Boosting conversion rates. Analyze how changes in your strategies affect the overall efficiency. These may include changes in messaging, design elements, targeting, or offers in your marketing campaigns. By monitoring them, you can see which strategies are most effective in bringing up conversion rates.
+- Smart budget management. Distribute your budget across various marketing phases. If social media ads consistently bring in high returns, investing more in that area can maintain a good ratio and lead to better results overall.
+- The marketing budget, usually a percentage of the sales forecast covering ad spends, vendor fees, and marketing team costs.
+- Contribution margin (what's left from the gross margin after covering the marketing budget).
+
+### General Principles
+
+- Independent data tracking. External data becomes more difficult to access, which makes advertising platform data less reliable. Whereas, data that you own gives a clearer idea of how well you're doing.
+- A comprehensive view of paid media channels. Considering all your paid media channels together with MER provides a broader picture. You don't have to attribute success to a single platform. Different channels serve varied purposes – some create awareness, while others drive conversions, and MER accounts for these differences.
+- Costs related to hiring a social media manager or agency.
+- Analytics and tracking tools subscription fees.
+- Content creation expenses (visuals, videos).
+- Influencer collaborations or partnership costs.
+- Total Revenue from Facebook and Instagram campaigns = $8,000.
+- Total Cost of both campaigns = $2,500 (Facebook) + $1,800 (Instagram) = $4,300.
+<!-- ENRICHMENT 2026-05-15 END -->

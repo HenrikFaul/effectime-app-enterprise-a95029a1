@@ -63,3 +63,64 @@ Campaign framework for event-triggered marketing at Effectime. Events create nat
 **Audience:** HR managers and owners in affected markets
 **Message:** "This change affects how you track [X]. Here's what you need to know."
 **Note:** Always have legal review before publishing compliance-adjacent content. Frame as "things to be aware of" not "we guarantee compliance."
+
+
+<!-- ENRICHMENT 2026-05-13 START -->
+## Enrichment — 2026-05-13
+
+            > _Appended by the marketing enrichment system. Original content above is preserved verbatim._
+
+            > _New techniques, patterns, and decision rules synthesised from external research on **linkedin**. Source provenance and the per-source breakdown of which nuggets came from where are recorded in the daily run log — this section contains only the resulting prompt knowledge._
+
+### Linkedin
+
+- Video views on LinkedIn have grown 36% year-over-year. To keep up with this moment, LinkedIn has introduced new video tools.
+- The LinkedIn algorithm favors meaningful conversation over likes and shares.
+- The LinkedIn algorithm also rewards human expertise and originality over low-quality, generic writing.
+- LinkedIn’s upgraded ad tools give marketers far more control, better forecasting, and stronger performance across campaigns.
+- A complete Company Page, strong executive profiles, and employee advocacy all play a major role in boosting trust and brand visibility on LinkedIn.
+- A CapCut integration, so you can edit in CapCut and send your videos straight to LinkedIn.
+- BrandLink: LinkedIn’s upgraded video ad program.
+- New capabilities for LinkedIn Live Event Ads and Accelerate ads.
+
+### Marketing
+
+- Marketing Overview: A full account-level snapshot across campaigns.
+- Use a social media marketing tool.
+- Form relationships: Emotion, trust, and real relationships are a vital part of B2B marketing. Rather than competing with other businesses, think about what brand collaborations and partnerships you can form for lasting relationships.
+- Malik Brown, Senior Marketing Strategist @ IntelWelcome back, {firstName}.
+- You're collecting a lot of data. You've got the data. You're likely drowning in how much data you have. But are you really drawing any insights from it? MarTech offers some useful insights on where data breaks down and why B2B teams are struggling with marketing and sales data. Check out the article below! ⬇️.
+- Account-based marketing (ABM) capabilities: Marketers can target specific accounts and personalise messaging at scale.
+- Enhance lead quality by using compliant, verified contact information across European and US markets, improving both the efficiency and effectiveness of your marketing and sales efforts.
+- Optimise multi-channel engagement strategies by enriching your CRM with up-to-date, actionable contact and company insights, strengthening overall marketing and sales coordination.
+
+### Campaign
+
+- Dynamic UTMs: An automated tool for generating consistent UTMs across campaigns.
+- Campaign Performance Digest: AI-powered, actionable insights and benchmarks.
+- Give a quick recap of a campaign you ran or a lesson you recently learned.
+- Set daily or lifetime budgets and choose from different bidding strategies based on your campaign objectives.
+- Define clear campaign objectives for maximum impact.
+- Use daily budgets
+Daily budgets typically work better than lifetime budgets for most campaigns.
+- Determine each campaign's click-through rate (CTR).
+- Sponsored Content and Sponsored Messaging Campaigns: 300,000+ audience members.
+
+### Feature
+
+- Use the “Product” tab to highlight key details about your product, such as pricing and top features.
+- Single image ads, which feature one image.
+- Carousel ads, which feature two or more images.
+- Video ads, which feature one video.
+
+### General Principles
+
+- A “Videos For You” section in your feed, packed with personalized video recommendations you can scroll through horizontally.
+- A full-screen video mode on mobile — just tap a video and it opens an immersive, full-screen player.
+- Trusted publisher content (think: Forbes and Business Insider).
+- Top creator videos from names like Steven Bartlett, Rebecca Minkoff, Gary Vaynerchuk, and more.
+- Viewers are 18% more likely to become a lead.
+- 130% higher video completion rate than standard video ads.
+- Ads Duplication: Quickly duplicate or test variations of high-performing ads.
+- Measurement Insights: A new Insights dashboard that provides deeper, journey-level analytics.
+<!-- ENRICHMENT 2026-05-13 END -->

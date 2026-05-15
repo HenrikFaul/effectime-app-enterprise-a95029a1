@@ -155,3 +155,51 @@ Use this prompt before writing:
 - sales decks,
 - campaign hooks,
 - or ad messaging.
+
+
+<!-- ENRICHMENT 2026-05-15 START -->
+## Enrichment — 2026-05-15
+
+            > _Appended by the marketing enrichment system. Original content above is preserved verbatim._
+
+            > _New techniques, patterns, and decision rules synthesised from external research on **positioning**. Source provenance and the per-source breakdown of which nuggets came from where are recorded in the daily run log — this section contains only the resulting prompt knowledge._
+
+### Positioning
+
+- Target audience: Identifying and understanding your target audience is crucial in positioning. Different segments have different needs, preferences, and motivations. By understanding your target audience, you can tailor your positioning strategy to resonate with them on a deeper level.
+- Consistency: Your messaging should align with your brand's positioning and maintain a consistent tone and style across all marketing channels. Consistency builds trust and helps your audience recognize and connect with your brand more easily.
+- Positioning defines where a product fits within the market. It outlines who the product is for, its purpose, and how it stands out.
+- Positioning is the genre of the movie.
+- Positioning defines what kind of movie we’re making, who it’s for, how it compares to others in the genre, and why it matters.
+- Positioning drives how you build and market the product.
+- Differentiation: In a crowded marketplace, positioning helps your brand stand out. It highlights your unique offering and why customers should choose you over competitors. Effective positioning creates a clear and compelling reason for consumers to prefer your brand.
+- Clarity and Focus: Positioning provides clarity and focus for your marketing efforts. It defines your brand’s core attributes and benefits, guiding all aspects of your marketing strategy. This focus ensures that your messaging, branding, and marketing activities are aligned and cohesive.
+
+### Messaging
+
+- Clarity: Ensure your messaging is clear, concise, and easy to understand. Avoid jargon or confusing language that may confuse or alienate your audience. Use simple and straightforward language that resonates with your target audience.
+- Emotion: Emotionally engaging messaging connects with the audience on a deeper level, resonating with their desires and motivations. Whether it's through storytelling, evoking positive emotions, or addressing pain points, emotional messaging can create a strong bond between your brand and your audience.
+- Messaging provides clarity on what is communicated about the product.
+- Tailor messaging to match brand recognition.
+- Align messaging with the customer’s goals and context.
+- Ensure messaging is unique to your brand.
+- Test and refine messaging continuously.
+- Messaging is about the narrative — the core ideas and emotions you want your audience to walk away with.
+
+### Define
+
+- Define Your Unique Value Proposition: Clearly articulate what makes your brand unique and why customers should choose you over competitors.
+- Identify Key Messages: Define the core message and supporting messages that convey your brand’s value proposition.
+- Market Category: The market we define our solution as fitting to better help illustrate the value to our target buyers.
+
+### General Principles
+
+- Avoid jargon or confusing language that may confuse or alienate your audience.
+- Use simple and straightforward language that resonates with your target audience.
+- Which buyer type do we focus on?.
+- What unique benefits or pain points do we own?.
+- What differentiators do we bet on?.
+- Which buyer subtype should I focus on for this web page?.
+- What benefit should I lead with when comparing my product to competitors?.
+- What differentiators should I highlight at a trade show booth?.
+<!-- ENRICHMENT 2026-05-15 END -->

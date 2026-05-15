@@ -86,3 +86,34 @@ Comprehensive objection handling for Effectime sales conversations. For each obj
 **Bridge:** "Totally understandable. What would help me is: what does [decision-maker] care most about — cost, security, integration, or something else? I can put together a one-pager that addresses exactly that."
 
 **Assets:** Use `sales/one_pager_masterprompt.md` to build the internal selling document.
+
+
+<!-- ENRICHMENT 2026-05-15 START -->
+## Enrichment — 2026-05-15
+
+            > _Appended by the marketing enrichment system. Original content above is preserved verbatim._
+
+            > _New techniques, patterns, and decision rules synthesised from external research on **objection**. Source provenance and the per-source breakdown of which nuggets came from where are recorded in the daily run log — this section contains only the resulting prompt knowledge._
+
+### Objection
+
+- Understand the types of objections prospects raise and how they indicate hesitation or resistance in the buying process.
+- Learn how effective objection handling builds trust, keeps sales conversations alive, and improves conversion rates.
+- Gain strategies to address objections related to price, timing, need, authority, competition, and value.
+- Master a proven framework for managing objections and guiding prospects toward a successful sale.
+- Listening carefully to fully understand the objection.
+- Clarifying the objection to make sure both sides are on the same page.
+- Confirming that the objection has been resolved, and guiding the conversation back to the sale.
+- Offer a tailored response to overcome objections.
+
+### General Principles
+
+- Empathizing with the prospect’s concerns to show understanding.
+- Providing solutions or alternatives that address the concern.
+- I don’t have the budget for this right now.
+- I can get something similar for less money.
+- I’m too busy to focus on this right now.
+- Maybe later, after I see how things go with my current solution.
+- We don’t really need this right now.
+- I’m happy with what we’re currently using.
+<!-- ENRICHMENT 2026-05-15 END -->

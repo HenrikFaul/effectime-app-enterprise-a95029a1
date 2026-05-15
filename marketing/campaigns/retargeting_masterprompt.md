@@ -164,3 +164,4 @@ The final result should feel like a smart conversion-support system, not a repet
 ### File-specific piacrobbantó idea
 - Signal-based retargeting or a proof-first sequence.
 - Why it works: it shows a warm user the next most relevant trust signal instead of repeating the same generic CTA.
+

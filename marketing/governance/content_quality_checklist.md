@@ -72,3 +72,5 @@ Review each item before publishing. If any critical item fails, revise the asset
 ## Quality bar
 
 The goal is not perfection. The goal is to prevent vague, off-brand, low-credibility, or hard-to-scan assets from shipping.
+
+

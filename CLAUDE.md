@@ -13,6 +13,7 @@ Read order every session:
 6. `.governance/ui_ux_rules.md` when UI is affected
 7. Latest `versioning/*.md` relevant to the task
 8. `marketing/SYSTEM.md` — when the task has user-facing, positioning, or feature-announcement implications
+9. The relevant report-toolkit entry file — only when the task is to generate a valuation, growth-strategy, or documentation report (see "Repository report toolkits" below)
 
 Required behavior:
 - **ALWAYS fetch + rebase on `origin/main` BEFORE writing code or editing CHANGELOG.md.** Other PRs may have merged into `main` since the feature branch was created — failing to rebase causes CHANGELOG conflicts and version-number collisions. Run `git fetch origin main && git rebase origin/main` (or `git pull --rebase origin main`) at the start of every session, and again before any CHANGELOG edit. Resolve conflicts manually; never force-push without verifying nothing was lost.
@@ -41,3 +42,20 @@ The `marketing/` folder contains a complete marketing prompt library for Effecti
 
 **When producing marketing assets** (copy, campaigns, content, visuals), route through `marketing/SYSTEM.md` first, then use the specialist file from the routing table there.
 
+## Repository report toolkits
+
+The repo may contain one or more **self-contained, drop-in report packs**. They are tools, not part of the application — they read the repo and produce deliverables.
+
+| Folder | Produces | Entry file |
+|--------|----------|-----------|
+| `growth_strategy/` | Valuation + growth-strategy PDFs (EN/HU) | `growth_strategy/AI_INSTRUCTIONS.md` |
+| `valuation/` | Software valuation PDF (EN/HU) | `valuation/AI_INSTRUCTIONS.md` |
+| `doc creation/` | A full `docs/` documentation system | `doc creation/SYSTEM.md` |
+
+Each folder is optional and **self-governing** — when the task is to generate one of these reports, read that pack's entry file and follow it. Key rules (full detail in `AI_EXECUTION_PROMPTS.md` § "Repository report & documentation toolkits"):
+
+- **Routing:** if the user asks for a valuation / growth strategy / documentation system and the matching folder exists, read its entry file and follow it end-to-end.
+- **Precedence:** this governance stays the repo constitution (branch discipline, commit format, no-regression); the pack's own file governs the task mechanics. They do not overlap.
+- **Protected files:** never edit a pack's renderers/infrastructure (`generate_*.py`, `scan_repo.py`, `_fonts.py`, `fonts/`, doc templates) to change a report — change the pack's `data/` JSON instead.
+- **Carve-out:** *running* a report is a tool run, not a feature PR — no `CHANGELOG.md` / `versioning/` / `marketing_values/` entry. *Upgrading* a pack (bug fix, new language, layout change) IS a normal change and follows the full workflow.
+- **Decoupling:** never make the application import from or depend on these packs; the repo must build identically with or without them.

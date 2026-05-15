@@ -73,3 +73,57 @@ One clear next step. Not a menu.
 - Short — maximum 3 pages for an SMB proposal
 - No legal boilerplate or enterprise contract language (that's for later)
 - Written in the same conversational register as your conversation — not a formal document voice
+
+
+<!-- ENRICHMENT 2026-05-15 START -->
+## Enrichment — 2026-05-15
+
+            > _Appended by the marketing enrichment system. Original content above is preserved verbatim._
+
+            > _New techniques, patterns, and decision rules synthesised from external research on **specific**. Source provenance and the per-source breakdown of which nuggets came from where are recorded in the daily run log — this section contains only the resulting prompt knowledge._
+
+### Proposal
+
+- Use a pre-built marketing proposal template so you can get it over to them as quickly as possible.
+- HubSpot's Free Marketing Proposal for PDF & Word.
+- CoSchedule Marketing Proposal Template (Investment Section).
+- Bonsai Product Marketing Proposal Template.
+- SlideTeam Marketing Proposal (One-Page Infographic).
+- Nothing in the proposal should really be a surprise.
+- Review: Don’t just send one page marketing proposal outline template off without looking at it a second time.
+- Ensure the one page marketing proposal outline template is 100% complete, reflects your goals and accurately reflects the work you have put into drafting the document.
+
+### Page
+
+- Make a good first impression on the cover page.
+- Landing page and thank you page.
+
+### Send
+
+- Sign and send documents for legally binding e-signatures.
+- Send Your Emails at the Correct Time.
+- Avoid sending emails late at night or on weekends.
+- Send at least 3-4 follow-ups spaced a few days apart.
+
+### Specific
+
+- Edit and personalize fillable forms for your specific needs.
+- Modify the wording to fit the recipient’s industry and specific challenges.
+- Mention their company, industry, or a specific challenge they face.
+
+### Pain
+
+- Identify their pain points and tailor your email accordingly.
+- Identify common pain points within their industry.
+
+### General Principles
+
+- Qualify and uncover the needs of the client or internal stakeholder during a discovery session.
+- Create a plan of action, your vision for what must be done to achieve their goals.
+- Detail the findings of your discovery session with the executive summary.
+- Outline their goals and challenges and set the stage for your solutions.
+- Expand on the strategies and tactics you plan to use to reach their goals.
+- Provide a summary where you clearly lay out the scope of work.
+- Detail how you'll measure success in the metrics section.
+- If it's for a client, convince them that you're the right agency for the job.
+<!-- ENRICHMENT 2026-05-15 END -->

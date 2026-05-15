@@ -172,3 +172,42 @@ This file is the translation layer between Effectime's technical features and th
 - "Your HR dashboard, live. No manual report construction. No waiting."
 - "When the CEO asks for last quarter's absence data, you pull the report — you don't build it."
 - "Audit-ready records, always. Not just before the audit."
+
+
+<!-- ENRICHMENT 2026-05-12 START -->
+## Enrichment — 2026-05-12
+
+            > _Appended by the marketing enrichment system. Original content above is preserved verbatim._
+
+            > _New techniques, patterns, and decision rules synthesised from external research on **leave**. Source provenance and the per-source breakdown of which nuggets came from where are recorded in the daily run log — this section contains only the resulting prompt knowledge._
+
+### Translation
+
+- Avoid literal translations. Rewrite rather than translate when needed.
+- How to translate marketing content efficiently with an AI translation solution.
+- How to centralize marketing translation projects.
+- Use a Translation Management System (TMS) to significantly enhance translation quality, streamline workflow, and ensure consistency to address marketing translation challenges head-on.
+- Use translation-specific GPT models (like PairaphraseGPT).
+- Centralize your translation workflow in one secure platform.
+- Leverage Translation Memory (TM) for consistency and cost control.
+- Upskill marketers on AI-enhanced translation.
+
+### Business
+
+- Assessing your business data to discover markets where the demand for your product or service is steadily increasing.
+- Assess Your Existing Business Resources.
+- Iterate & Improve
+Iteration allows businesses to adapt to changing market dynamics, and customer preferences.
+- Analyze performance data to identify the tactics that have been most successful in driving business growth.
+
+### General Principles
+
+- The Swedish-owned vacuum manufacturer, Electrolux, once used the English slogan “Nothing sucks like an Electrolux” in the U.S. market. While humorous to American ears, the phrase confused and amused consumers rather than persuading them to buy the product source.
+- Using region-specific idioms or pop culture references.
+- Tailoring humor to local sensibilities.
+- Adapting units of measure, currencies, and dates.
+- Better ROI on Global Campaigns.
+- Avoidance of Cultural Faux Pas.
+- The campaign relies on wordplay, idioms, or cultural references.
+- The product positioning differs across regions.
+<!-- ENRICHMENT 2026-05-12 END -->

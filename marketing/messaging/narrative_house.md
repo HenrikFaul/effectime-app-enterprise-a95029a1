@@ -98,3 +98,68 @@ Before publishing any major piece of content, ask:
 3. Does it show a credible transformation — not just a feature list?
 4. Is the product's role clear as an enabler, not a savior?
 5. Does the tone match the "experienced operational advisor" voice — not the SaaS marketer?
+
+
+<!-- ENRICHMENT 2026-05-13 START -->
+## Enrichment — 2026-05-13
+
+            > _Appended by the marketing enrichment system. Original content above is preserved verbatim._
+
+            > _New techniques, patterns, and decision rules synthesised from external research on **narrative**. Source provenance and the per-source breakdown of which nuggets came from where are recorded in the daily run log — this section contains only the resulting prompt knowledge._
+
+### Narrative
+
+- Homes anchor life milestones. Narrative helps people visualize life in a home and helps sellers picture a smooth, successful sale.
+- Stand out in crowded feeds: Story-driven listing narratives, neighborhood spotlights, and short-form video outperform feature-only blurbs.
+- Adding people to renderings often enhances the narrative. Images and films should focus on benefits, not features, and visualization should showcase amenities that solve real-world problems.
+
+### Story
+
+- Multi-channel lift: The same core story, told consistently across listings, social, email, and showings, compounds results.
+- Know your audience. First-time buyers, luxury move-ups, investors, downsizers, and relocators each have distinct motivations and fears. Build simple personas and tailor every story to one persona at a time.
+- Ethics, compliance, and inclusion. Protect privacy, obtain permissions, honor Fair Housing, and ensure inclusive, accessible storytelling (captions, alt text, representative visuals).
+- Sound and pacing: music matches vibe; warm, minimal narration or on-screen text that supports the story (not the MLS).
+- Professional photography, floor plans, and 3D/VR tours to anchor the story.
+- Framework (Challenge → Plan → Action → Result → Next chapter): Tight timeline? We sequence prep with high-ROI fixes, launch a two-week marketing sprint, and negotiate around the constraints—then share outcomes (offers, days on market, price vs. list) to validate the story.
+- Single property sites are effective and engaging storytelling tools. With Paradym you can even use single property sites to tell the story of a community event or share a branding story.
+- Automated story publishing is a great tool for the busy real estate agent (learn how this works with Paradym).
+
+### Channels
+
+- Be consistent across channels. Align your voice and values on your website, socials, email, and in-person conversations.
+- Evaluate how people interact with your marketing content, and take note of which channels seem to give you the most return on your investment.
+
+### Market
+
+- Infuse local charm. Farmers market Saturdays, sunset dog walks, corner bakery croissants.
+- Capturing leads is a critical part of digital real estate marketing. After all, you want your stories to generate results! Automatic lead notifications make it easy to connect with potential clients.
+- You’re always on the go, so it makes sense to take your marketing with you. Mobile marketing apps put actionable information in the palm of your hand.
+- Digital marketing tools are great… if you know how to use them! Support and coaching can go a long way in helping you get the most out of your marketing investment.
+- Support and coaching can go a long way in helping you get the most out of your marketing investment.
+- Location pages, which focus on each area you cover within your market.
+
+### Product
+
+- Determine the customer issue solved by your product.
+- Look beyond the product itself and study the actual people who use it.
+- Consider markets that are sufficiently unique, so you can explore the benefits of your product in a different way for each target.
+- Consider both qualitative and quantitative aspects of your product and write them down.
+- Make sure your marketing and product teams are working closely together to keep your marketing "bible" up to date on a monthly, quarterly, or annual basis.
+
+### Problem
+
+- Consider the what and the how of the problems that they have, utilize your foundational research, and focus on the areas that you know you are best positioned to help with.
+- Use the elements of a story: A hero with a problem meets a guide who gives the hero a plan and calls him or her to action, resulting in either success or failure.
+- Make the problem in your story specific to a pain point your customers face.
+
+### General Principles
+
+- Facts inform; stories transform. Square footage and specs matter, but stories make buyers care—and caring drives action.
+- Trust and authenticity: Client success stories and behind-the-scenes moments humanize your brand and increase referrals.
+- Decide the message first. Choose the takeaway: confidence, simplicity, community, or potential.
+- Make clients the hero; be the guide. We position clients as protagonists overcoming obstacles; we provide the plan, tools, and clarity.
+- Use human language. Skip corporate-speak and legalese. Write like you talk during a showing.
+- Add honest conflict. Tight timelines, bidding wars, inspection surprises—show how you navigated them.
+- The hero: your client (not us). We picture a specific person and life stage so the copy speaks to a real human, not a demographic.
+- External: “Need more space,” “Tight timeline,” “Equity unclear.”.
+<!-- ENRICHMENT 2026-05-13 END -->

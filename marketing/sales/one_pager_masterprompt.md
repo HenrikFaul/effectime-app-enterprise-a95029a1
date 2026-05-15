@@ -315,3 +315,60 @@ The result should read like a credible proof asset, not a generic success story.
 
 ---
 
+
+
+<!-- ENRICHMENT 2026-05-15 START -->
+## Enrichment — 2026-05-15
+
+            > _Appended by the marketing enrichment system. Original content above is preserved verbatim._
+
+            > _New techniques, patterns, and decision rules synthesised from external research on **effectime**. Source provenance and the per-source breakdown of which nuggets came from where are recorded in the daily run log — this section contains only the resulting prompt knowledge._
+
+### One Pager
+
+- 4 Real-Life Sales One-Pager Examples.
+- Key Benefits of a Sales One-Pager.
+- 11 Sales One-Pager Templates to Make Your Own.
+- How to Create a Sales One-Pager in 7 Steps.
+- A sales one-pager is used by salespeople to share information, promotional offerings, educational content and more with prospective clients and customers.
+- Sales one-pagers are versatile, shareable and easy to design. They also help drive engagement and conversions for your business.
+- Visme offers dozens of ready-made sales one-pager templates tailored to various industries and purposes.
+- To create a sales one-pager in Visme, simply choose a template, rebrand it with a few clicks, edit the content and design to support your information and then download it or share it directly online.
+
+### Prompt
+
+- Prompt action with compelling copy and CTAs.
+- Generate a complete one-pager from a prompt, website, or doc in minutes.
+- If you prefer starting from scratch, just write a prompt, and our AI assistant will generate a complete one-pager for you.
+- Start with a prompt, your website, or drop in existing content.
+
+### Sales
+
+- Company Sales One Pager Template.
+- Step 2: Choose a Sales One Pager Template.
+- Step 5: Make Your Sales One Page Interactive.
+- Step 6: Review & Proofread Your Sales One Pager.
+- Step 7: Download & Share Your Sales One Pager.
+- Perfect for outbound campaigns, sales follow-ups, or partner enablement.
+
+### Create
+
+- Doesn’t hit on pain points or frustrations to create urgency 𝘅.
+- Create persuasive copy
+Design is what will get potential clients to look at your one pager, but copy is where you create urgency towards the sale.
+- How to Create a Case Study One Pager With Visme.
+- Visme has everything you need to create a winning case study one pager regardless of your industry or niche. Access professionally designed templates that are easily customizable with multiple sharing and download options.
+- If it’s going external (like to an investor, reporter, or customer), attach it as a PDF to an email or create a shareable link from Google Drive or Dropbox.
+- AI to create a one pager with mind mapping, auto-layout, and smart content suggestions.
+
+### General Principles
+
+- Grab the reader's attention with engaging design.
+- Summarize key information and your value proposition.
+- Provide clarity with a breathable layout and selective words.
+- Retail Business Plan One Pager Template.
+- Media Startup One Pager Template.
+- Gym Brand One Pager Proposal Template.
+- Food Processor Product Sell Sheet Template.
+- Coffee Maker Product Sell Sheet Template.
+<!-- ENRICHMENT 2026-05-15 END -->

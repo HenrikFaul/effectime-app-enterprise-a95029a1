@@ -139,3 +139,65 @@ Proof is what separates a claim from a fact. This file defines the types of proo
 - Always attribute to the most specific title available (not "a user" — "HR Manager, 80-person optical retail chain")
 - Quantified claims must be sourced from a real customer and documented internally
 - Do not invent or extrapolate metrics — if you don't have the data, use a scenario-based estimate and label it clearly
+
+
+<!-- ENRICHMENT 2026-05-13 START -->
+## Enrichment — 2026-05-13
+
+            > _Appended by the marketing enrichment system. Original content above is preserved verbatim._
+
+            > _New techniques, patterns, and decision rules synthesised from external research on **proof**. Source provenance and the per-source breakdown of which nuggets came from where are recorded in the daily run log — this section contains only the resulting prompt knowledge._
+
+### Trust
+
+- 84% of people trust online reviews as much as personal recommendations from friends.
+- Customer Reviews & Testimonials – The backbone of online trust.
+- Certification & Trust Badges – Visual shortcuts to credibility.
+- Add subtle CTAs for your product or service, but don’t put them in every email. The primary goal is to provide value and build trust.
+- Start today: audit your current website for trust gaps, send your first review request using the template above, and plan your 6‑day email course.
+- Key Elements of a Trust-Building Case Study.
+- Review management platforms: Services like Trustpilot, Google Reviews, and Yelp help gather and showcase customer feedback.
+- 88% of consumers trust user reviews as much as personal recommendations — BrightLocal Consumer Review Survey.
+
+### Proof
+
+- Social Media Proof – Harnessing the power of your online community.
+- Build a Systematic Social Proof Flywheel (90‑Day Plan)
+Phase 1: Foundation (Days 1‑30)
+Audit your website, identify your 3 highest‑impact pages.
+- Add social proof to those key pages.
+- Track these metrics: conversion rate lift, time on page, reduced cart abandonment, interaction with social proof elements, and the percentage of customers who provide reviews.
+- Many consumers trust online reviews as much as personal recommendations, making social proof a critical element in your marketing strategy.
+- Building social proof from scratch requires identifying your unique selling points and systematically collecting authentic customer feedback.
+- Psychological principles like herding mentality and the bandwagon effect explain why social proof is so persuasive in consumer decision-making.
+- The six most effective types of social proof include customer testimonials, user-generated content, case studies, social media engagement, influencer endorsements, and statistical data.
+
+### Product
+
+- Action photos – customers actively using your product.
+- Unboxing/first impression photos – excitement of receiving your product.
+- 61% of consumers are more likely to purchase a product recommended by an industry expert.
+- If they switched to your product from a competitor.
+- Why did you select our product/service instead of a competitor?.
+- How did our product/service solve a problem you were experiencing?.
+- How long have you been using our product or service?.
+- What did our product or service replace in your current work process?.
+
+### Build
+
+- Build relationship capital – engage with their content, share their work, add value before asking.
+- What Makes Case Studies Effective for Building Credibility.
+- Build an earned media strategy alongside your review strategy.
+- 4) Business profiles that build confidence.
+
+### General Principles
+
+- 92% of consumers read online reviews before making a purchase.
+- Testimonials can increase conversion rates by up to 34%.
+- User‑generated content drives 29% higher web conversions.
+- User‑Generated Content – Authentic photos and videos from real customers.
+- Expert Endorsements – Leveraging authority figures in your industry.
+- Usage Statistics – Showcasing popularity and adoption (e.g., “Joined by 50,000+ customers”).
+- Star ratings – quick visual indicators of quality.
+- Text testimonials – detailed feedback addressing specific benefits.
+<!-- ENRICHMENT 2026-05-13 END -->

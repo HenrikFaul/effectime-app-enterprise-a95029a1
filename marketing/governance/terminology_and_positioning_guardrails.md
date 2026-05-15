@@ -90,3 +90,48 @@ A claim may only be made in marketing if it meets one of these criteria:
 ## Localization note
 
 For Hungarian market: formal B2B tone is standard. "Ön" preferred over "te" in formal contexts. For Czech, Slovak, Polish: follow similar professional B2B register. See `governance/localization_marketing_rules.md` for per-market guidance.
+
+
+<!-- ENRICHMENT 2026-05-12 START -->
+## Enrichment — 2026-05-12
+
+            > _Appended by the marketing enrichment system. Original content above is preserved verbatim._
+
+            > _New techniques, patterns, and decision rules synthesised from external research on **management**. Source provenance and the per-source breakdown of which nuggets came from where are recorded in the daily run log — this section contains only the resulting prompt knowledge._
+
+### Terminology
+
+- Terminology is critical for clarity, consistency, and legal compliance.
+- Early terminology definition improves content quality across teams.
+- Set the spelling rules
+Creating spelling rules for an enterprise terminology database is essential for keeping clarity, consistency, and efficiency in translation and localization.
+- Start a terminology database
+Are you a technical expert?.
+- Ensure company-wide terminology awareness
+The best way to enforce consistent terminology across the enterprise is to ensure everyone is aware of the importance of terminology and make it easy to apply the correct terminology wherever people write.
+- Terminology storing and sharing – Glossaries of specific terms are imported into the termbase. Termbases can also be imported or exported for new projects or collaborators.
+- Suggested translations – The termbase will suggest translations for any identified terminology, which can be easily inserted into the text using keyboard shortcuts.
+- Defining and approving specific terminology with subject matter experts.
+
+### Management
+
+- Strong terminology management supports better user experiences worldwide.
+- Improve Communication with Strategic Terminology Management
+Key takeaways:
+- Terminology is critical for clarity, consistency, and legal compliance.
+- How terminology management can benefit your outdoor sports brand and.
+- How to leverage technology to streamline your terminology management assets and processes.
+- Integrating terminology into CAT tools, MT workflows and the translation management system.
+- What authority is delegated to management.
+
+### General Principles
+
+- Inconsistent terms slow projects and confuse customers.
+- Governance and accessible tools help enforce correct usage.
+- Delays in projects and product launches.
+- Inconsistent internal and external communication.
+- Misunderstandings in translation and localization.
+- “the technical or special terms used in a business, art, science, or special subject”.
+- “nomenclature as a field of study”.
+- The graphical representation or a symbol (a.k.a. the word).
+<!-- ENRICHMENT 2026-05-12 END -->

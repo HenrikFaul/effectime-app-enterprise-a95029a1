@@ -155,3 +155,62 @@ The result should read like a credible proof asset, not a generic success story.
 ```
 
 ---
+
+
+<!-- ENRICHMENT 2026-05-15 START -->
+## Enrichment — 2026-05-15
+
+            > _Appended by the marketing enrichment system. Original content above is preserved verbatim._
+
+            > _New techniques, patterns, and decision rules synthesised from external research on **case**. Source provenance and the per-source breakdown of which nuggets came from where are recorded in the daily run log — this section contains only the resulting prompt knowledge._
+
+### Prompt
+
+- Where in the interface the prompt suggestion appears.
+- Suggest prompts that other users have found useful in the same area.
+- Cards: A more spacious format that allows for longer prompts, brief descriptions, or supporting visuals. Cards are especially useful when additional context is needed to help users understand the suggestion.
+- Evaluating prompt performance. Analytics can also show which prompt suggestions users engage with the most and which are consistently ignored. This information helps teams make data-informed decisions about which suggestions to keep, improve, or remove.
+- Formulate the Prompt: Structure your prompt to guide ChatGPT in highlighting these challenges. The prompt should direct ChatGPT to focus on the nature of the problem, its impact on the client, and why it was crucial to address.
+- Formulate the Prompt: Construct a prompt directing ChatGPT to articulate these details clearly. The prompt should instruct the AI to focus on how the solution addressed the client’s specific challenges and the rationale behind choosing this particular approach.
+- Craft the Prompt: Direct ChatGPT to concisely summarize these results. The prompt should guide the AI to not only list the outcomes but also to connect them back to the client’s initial challenges, illustrating the direct impact of the solution.
+- Craft the Prompt: The prompt should guide ChatGPT to sift through the knowledge file and extract the most impactful and relevant testimonials. It should focus on testimonials that best convey the client’s perspective on the challenge, the solution, and the results.
+
+### Case
+
+- Longer prompts are needed to showcase the system’s capabilities.
+- Identifying common use cases. Usage data can reveal which tasks or goals are most frequently pursued by current users. These insights can inform which prompt suggestions to display to new users, ensuring that suggestions reflect real-world behaviors and needs.
+- Provide structure & a blueprint: Case studies basically have.
+- ChatGPT: best AI tool for anything case study. Crunching numbers, giving a basic structure, grammar check, etc.
+- Storydoc: interactive & engaging case studies.
+- There’s an AI for that or Deepgramt: can create a case study from a customer call recording.
+- A few other tools like Writer.com, ClickUp, Grammarly, etc have dedicated case study writing abilities now.
+- Create a compelling case study that showcases the success and impact of HubSpot’s services on Handled using the information provided below.
+
+### Create
+
+- Analyze data and create a report.
+- Midjourney: can help create images if need be.
+- Create an attention‑grabbing one‑sentence hook.
+- Create a clear list of key pain points the client was dealing with.
+- Create a narrative that shows why our solution was the right choice for this client.
+- Create a professional version of this testimonial based on the raw text.
+- Create a list of key benefits that encourage a faster decision.
+- Create a meta description that attracts clicks.
+
+### Saas
+
+- Your industry or niche (e.g., B2B SaaS, fashion e-commerce, fintech).
+- Over-the-shoulder shot of a laptop opening an AI SaaS product with a person in a casual shirt. The setting should be a cafe.
+- Analyze the UX of this competitor landing page [link] from the lens of a [B2B SaaS buyer] and extract five tactics they use to convert cold traffic into leads. Explain how I can improve [page] for the same audience.
+
+### General Principles
+
+- How broad or specialized the AI system’s capabilities are.
+- How familiar users are with AI in general.
+- The complexity of the typical tasks users perform.
+- Helping new users quickly understand what the system can do.
+- Teaching and inspiring active users to use the system effectively.
+- Clearly tied to common user goals.
+- The AI tool is specialized or primarily used for a small number of tasks.
+- Help users complete tasks more efficiently.
+<!-- ENRICHMENT 2026-05-15 END -->

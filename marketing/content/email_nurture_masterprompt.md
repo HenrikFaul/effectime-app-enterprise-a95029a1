@@ -164,3 +164,4 @@ The result should feel like a practical lifecycle marketing system, not a generi
 ### File-specific piacrobbantó idea
 - A diagnostic mini-series or a behavior-triggered proof email.
 - Why it works: it matches the buyer’s current state instead of forcing the same sequence on every contact.
+

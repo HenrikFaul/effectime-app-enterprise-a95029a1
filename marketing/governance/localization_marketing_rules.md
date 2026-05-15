@@ -108,3 +108,34 @@ Before publishing localized marketing content:
 - [ ] CTA tested for click-motivation in native language
 - [ ] Any claims verified as accurate in the target market's regulatory context
 - [ ] Cultural references checked (idioms, examples, company names used are relevant to that market)
+
+
+<!-- ENRICHMENT 2026-05-13 START -->
+## Enrichment — 2026-05-13
+
+            > _Appended by the marketing enrichment system. Original content above is preserved verbatim._
+
+            > _New techniques, patterns, and decision rules synthesised from external research on **market**. Source provenance and the per-source breakdown of which nuggets came from where are recorded in the daily run log — this section contains only the resulting prompt knowledge._
+
+### Market
+
+- Promotion – The methods used to communicate with your target audience, from advertising to social media marketing.
+- Inbound Marketing – Attracts potential customers through content, SEO, and ongoing relationship building. It’s centered around drawing people in rather than pushing out messages.
+- Outbound Marketing – Includes traditional outreach methods like cold calls, print ads, or promotional emails. These strategies are more direct and often used to reach a broad audience quickly.
+- Content Marketing – Focuses on creating written, visual, or audio content that informs or entertains while supporting a brand’s voice or mission.
+- Search Engine Marketing (SEM) – Involves paid advertising to increase visibility in search engine results, often through platforms like Google Ads.
+- Social Media Marketing – Uses platforms like Instagram, LinkedIn, or TikTok to build community, share updates, and respond to trends in real-time.
+- Influencer Marketing – Partners with individuals who already have an established audience, often to build trust or introduce a product in a more personal way.
+- Guerrilla Marketing – Relies on unconventional, low-budget tactics designed to create surprise or spark conversation in public spaces.
+
+### General Principles
+
+- Product – The actual good or service being offered. This includes quality, features, design, and lifecycle.
+- Price – The value assigned to the product. Pricing strategies consider customer perception, competition, and costs.
+- Place – The distribution channels used to deliver the product to customers. This includes online stores, physical locations, or third-party retailers.
+- Track real-time data and performance.
+- Optimize content for search engines.
+- Enhance customer acquisition and engagement.
+- Public Relations – Managing your company’s brand and reputation through media coverage and storytelling.
+- Benefits and Impacts on Strategy.
+<!-- ENRICHMENT 2026-05-13 END -->

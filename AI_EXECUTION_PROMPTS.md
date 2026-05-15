@@ -20,8 +20,11 @@ Read ALL of the following before implementing anything:
 | 7 | Latest `versioning/*.md` file(s) relevant to the task | when the task relates to a known module |
 | 8 | `marketing/SYSTEM.md` | when producing marketing assets, copy, campaign plans, or feature announcements |
 | 8a | `marketing/marketing_values/` (recent files) | when a marketing agent needs to know current product capabilities |
+| 9 | The relevant report-toolkit entry file (see "Repository report & documentation toolkits" below) | only when the task is to generate a valuation, growth-strategy, or repository-documentation report — and only if that toolkit folder is present in the repo |
 
 Do not skip steps 2 and 3. They are the primary defense against regressions and repeated mistakes.
+
+Steps 6, 7, 8, 8a and 9 are conditional — read them only when the task type matches. Step 9 toolkits are self-contained and self-governing; you read their entry file instead of guessing, not in addition to skipping it.
 
 ---
 
@@ -237,6 +240,90 @@ versioning/DDMMYYNNN_vX.Y.Z_slug.md
 - `slug` = 2–5 word kebab-case delivery summary
 
 If a PR was merged without a versioning file, create it retrospectively from the PR description and commit history, then reference it in a follow-up commit on the same branch.
+
+---
+
+## Repository report & documentation toolkits
+
+This repo may contain one or more **self-contained report-generation packs** that
+were dropped in as tools. They are NOT part of the application — they read the
+repo and produce deliverables (PDF reports, a `docs/` documentation system).
+
+| Folder | Produces | Entry file to read |
+|--------|----------|--------------------|
+| `growth_strategy/` | Valuation **and** growth-strategy PDFs (EN/HU) | `growth_strategy/AI_INSTRUCTIONS.md` |
+| `valuation/` | Software valuation PDF (EN/HU) | `valuation/AI_INSTRUCTIONS.md` |
+| `doc creation/` | A full `docs/` documentation system + help-menu manifest | `doc creation/SYSTEM.md` |
+
+Any of these may be absent. Treat each as **optional** — act on it only if the
+folder actually exists in the repo.
+
+### Governance relationship — precedence
+
+These packs are **self-governing**. Each carries its own instruction file that
+defines exactly how to do its job. The relationship with this master governance:
+
+- **This file stays the repo's constitution.** Repo-wide rules always apply to
+  toolkit work too: branch discipline (never push to `main`), commit message
+  format (`type(scope): description`), `origin/main` sync before work, and the
+  "never break working functionality" mandate.
+- **The pack's own entry file governs the task mechanics.** When the task is to
+  generate a report, read that pack's entry file and follow it for everything
+  pack-specific: which JSON to fill, what shape it takes, how to run the renderer.
+  Do not improvise a different procedure.
+- **On conflict:** this file wins for repo-wide concerns; the pack's file wins for
+  the mechanics of producing its own deliverable. They do not overlap by design.
+
+### When to route to a toolkit
+
+If the user asks for a software **valuation**, a **growth strategy**, or a
+generated **documentation system**, and the matching folder is present:
+
+1. Read that pack's entry file (table above) and follow it end-to-end.
+2. The pack will have you run its `scan_repo.py` (or analyse the repo directly),
+   fill its `data/*.json`, and run its renderer. Output lands in the pack's own
+   `output/` (PDF packs) or in the repo's `docs/` (documentation pack).
+
+### Protected toolkit files — do not edit
+
+Inside a pack, these are **renderers/infrastructure, not content** — never modify
+them to change a report; change the JSON instead:
+
+- `generate_*.py`, `scan_repo.py`, `_fonts.py`, `fonts/*` (PDF packs)
+- `claude-code-docs-masterprompt.md`, `HELP_MENU_MASTERFILE_TEMPLATE.json`, and the
+  document templates (documentation pack)
+
+All report content is controlled through each pack's `data/` JSON and
+`project.json`. If a renderer genuinely needs a fix, that IS a real change — see
+"Upgrading a toolkit" below.
+
+### Carve-out: running a report is not a feature PR
+
+**Generating a report is a tool run, not a product change.** It does NOT trigger
+the Phase 8 / Phase 9 deliverable requirements:
+
+- No `CHANGELOG.md` entry — no application behavior changed.
+- No `versioning/*.md` file — nothing was delivered into the product.
+- No `marketing/marketing_values/*.md` file — no product capability was created.
+- Generated PDFs are build artifacts; the packs' `output/` folders gitignore them.
+  The filled `data/*.json` may be committed if a reproducible report is wanted, but
+  it is report input, not product source.
+
+### Upgrading a toolkit IS a normal change
+
+Editing a pack's renderer, instructions, or templates — fixing a bug, adding a
+language, improving layout — is a genuine change and follows the **full normal
+workflow**: `origin/main` sync, the execution loop, a `CHANGELOG.md` entry, a
+`versioning/*.md` file, and a `[LESSON-*]` entry if a non-obvious insight was
+gained. A `marketing/marketing_values/*.md` file is needed only if the upgrade
+changes a user-facing or sellable capability.
+
+### Keep the packs decoupled
+
+The packs are intentionally generic and repo-agnostic. Never make the application
+import from them, depend on them at build/runtime, or merge their logic into
+`src/`. They are drop-in tools — the repo must build and run identically whether
+they are present or removed.
 
 ---
 

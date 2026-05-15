@@ -134,3 +134,60 @@ Use this file to define, refine, and operationalize Effectime's Ideal Customer P
 - Campaign targeting (LinkedIn, email) should be segmented by persona job title cluster
 - Demo scripts should be routed by persona type
 - Each persona's objections should be mapped to specific proof elements and content formats (see `research/objections_and_pains.md`)
+
+
+<!-- ENRICHMENT 2026-05-15 START -->
+## Enrichment — 2026-05-15
+
+            > _Appended by the marketing enrichment system. Original content above is preserved verbatim._
+
+            > _New techniques, patterns, and decision rules synthesised from external research on **customer**. Source provenance and the per-source breakdown of which nuggets came from where are recorded in the daily run log — this section contains only the resulting prompt knowledge._
+
+### Customer
+
+- TL;DR: A buyer persona is a research-based profile of your ideal customer, encompassing their goals, challenges, and purchasing behaviors. These personas help you personalize marketing, align sales and marketing teams, and improve ROI.
+- How to create a buyer persona: Gather data from real customers, identify patterns, and document motivations and pain points.
+- Individual customer profiles (they represent groups).
+- Customers who are too advanced for your product or service.
+- Potential customers who are just too expensive to acquire.
+- Actual quotes from interviews: Real words from real customers.
+- Survey customers to confirm accuracy.
+- Why did you buy this now, as opposed to earlier or later? This will help you understand the critical moments in a customer journey that catalyze a purchase, known as the “buying moment.”.
+
+### Persona
+
+- Why are buyer personas important to your business?.
+- How to Create a Buyer Persona in 5 Steps.
+- How to Find Interviewees for Researching Buyer Personas.
+- How to Use Buyer Personas in Your Marketing.
+- Demographic info: Age, gender, education, location, etc., gives you a foundational understanding of who your persona is (note: make this optional unless pivotal, as some people prefer privacy).
+- Pain points and challenges: Issues your persona faces and how your product is the solution.
+- Create targeted campaigns for each persona.
+- Update personas quarterly based on new data.
+
+### Profile
+
+- Simple demographic profiles or market segments.
+- Demographic profile: Age range, education level, job title, industry, and company size.
+- Brief a content agency or freelancer with a structured audience profile.
+
+### Buyer
+
+- How many different buyers and influencers need to be addressed through marketing and sales outreach to generate a typical sale?.
+- How do buyers and influencers describe their business or technical problems? What specific words and phrases do they search for when seeking solutions?.
+- How do buyers educate themselves on offerings that might meet business or technical needs?.
+- Which vendors are considered leaders by buyers and influencers? Which vendors are perceived as being behind?.
+- What virtual and in-person communities do buyers typically engage with?.
+- What emerging trends (business or technology) are influencing buyer’s decisions?.
+
+### General Principles
+
+- Demographics: Age, location, income, education, job title.
+- Psychographics: Values, interests, lifestyle choices.
+- Behavioral patterns: Preferred channels, content consumption habits, buying triggers.
+- Goals and challenges: Professional objectives and pain points.
+- Static documents that never change.
+- People who only engage with your content to gain knowledge.
+- Price-focused shoppers with no brand loyalty and high return rates.
+- Improve lead quality and conversion rates.
+<!-- ENRICHMENT 2026-05-15 END -->

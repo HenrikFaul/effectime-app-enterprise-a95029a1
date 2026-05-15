@@ -71,3 +71,4 @@ Identify 5–10 adjacent but non-competing SaaS tools used by the same ICP (payr
 **Example:** "We write about how leave management connects to payroll accuracy for your audience; you write about your [adjacent tool] for our audience."
 
 **Effort:** Low. Returns: new audience exposure, backlinks, community trust.
+

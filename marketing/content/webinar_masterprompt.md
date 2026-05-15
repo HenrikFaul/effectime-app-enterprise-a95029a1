@@ -57,3 +57,45 @@ Subject: "One thing most [HR managers / ops managers] get wrong about [topic]"
 > You'll walk away with [3 specific takeaways].
 > No long sales pitch. Just practical frameworks.
 > [Register link]."
+
+
+<!-- ENRICHMENT 2026-05-12 START -->
+## Enrichment — 2026-05-12
+
+            > _Appended by the marketing enrichment system. Original content above is preserved verbatim._
+
+            > _New techniques, patterns, and decision rules synthesised from external research on **webinar**. Source provenance and the per-source breakdown of which nuggets came from where are recorded in the daily run log — this section contains only the resulting prompt knowledge._
+
+### Audience
+
+- Set a Date and Time: Tuesdays, Wednesdays, and Thursdays are typically the best days for attendance. Be mindful of different time zones if you have a global audience.
+- The Expert Interview: Host an industry influencer to discuss trends. This expands your reach to their audience as well.
+- Lighting: Position yourself facing a window or use a ring light so your audience can see your facial expressions clearly.
+- Audience Retention: At what point did people start leaving? This helps you identify “boring” sections of your presentation.
+- Start with a “hook” to explain exactly what the audience will gain by staying until the end.
+- Research your target audience or buyer persona to find out which goals and challenges they're navigating.
+- Make time for Q&A. A great presentation sparks more thinking and thoughtful questions. Try to leave at least five minutes for Q&A to engage with your audience. You should allot even more time if you have a superstar guest.
+- Try to leave at least five minutes for Q&A to engage with your audience.
+
+### Webinar
+
+- Choose an engaging webinar topic.
+- Optimize your webinar landing page.
+- Testimonials from previous webinar attendees.
+- Limit the number of webinar participants.
+- Outline and rehearse a script. It's easy to get intimidated or lose your train of thought when hosting a webinar. This is where a script comes in handy. Write down the things you want to talk about (or get AI to do it for you) and rehearse it before delivering the presentation.
+- Encourage audience participation. It's hard to gauge what your audience is thinking when you can't see their face. Encourage them to give their feedback and interact with your webinar through polls, Q&As, or breakout sessions.
+- Screen recording functionality to create and record webinar presentations.
+- Professional editing features to perfect your webinar before publishing the replay, including background noise removal, filler word removal, and Overdub to fix audio mistakes.
+
+### General Principles
+
+- How long an attendee stayed in the session.
+- Which questions they asked in the chat.
+- How they responded to live polls.
+- Their specific pain points shared during the Q&A.
+- Interactive features like polls, hand-raising, and Q&A boxes.
+- Automated email reminders to boost attendance.
+- Integration with your CRM to sync lead data instantly.
+- Define Roles: Who is presenting? Who is moderating the chat? Having a dedicated moderator allows the speaker to focus entirely on the presentation.
+<!-- ENRICHMENT 2026-05-12 END -->

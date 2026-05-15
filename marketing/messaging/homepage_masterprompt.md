@@ -160,3 +160,48 @@ The result must feel like a conversion-aware B2B SaaS homepage framework that ca
 ## Recommended use
 
 Use this after positioning work has been completed or at least strongly drafted.
+
+
+<!-- ENRICHMENT 2026-05-15 START -->
+## Enrichment — 2026-05-15
+
+            > _Appended by the marketing enrichment system. Original content above is preserved verbatim._
+
+            > _New techniques, patterns, and decision rules synthesised from external research on **homepage**. Source provenance and the per-source breakdown of which nuggets came from where are recorded in the daily run log — this section contains only the resulting prompt knowledge._
+
+### Prompt
+
+- Prompt to App Creation: Builds apps directly from single prompts.
+- Include hero section, video section, feature grid, and social proof."
+Many AI tools can generate images or UI designs based on prompts.
+- Use clean layout and balanced images."
+This prompt helps AI generate:
+- Product cards
+- Checkout pages
+- Product images
+- Navigation links
+Many website builder platforms combine generative AI with store features.
+- Start with simple prompts, test different ideas, and adjust the instructions when needed.
+- Build Pages in Minutes With Prompts
+One interesting part of Rocket.new is how fast the system responds to prompts.
+- Use consistent, descriptive tag names across your prompts.
+- Put longform data at the top: Place your long documents and inputs near the top of your prompt, above your query, instructions, and examples. This can significantly improve performance across all models.
+- Less verbose: May skip detailed summaries for efficiency unless prompted otherwise.
+
+### Messaging
+
+- Avoid Mixed Messaging
+Here’s a scenario: your website says one thing, your LinkedIn says another, and your sales team throws a totally different pitch.
+- Keep your messaging aligned across the board - because consistency builds trust, and trust turns browsers into buyers!.
+
+### General Principles
+
+- Specify images and video sections.
+- Figma Import: Converts design files into live, editable layouts.
+- AI-Powered Backend: Automatically handles logic, data, and workflows.
+- Custom Domain Support: Publishes projects with a branded domain.
+- Code Export: Allows developers to extend or customize later.
+- Live Preview: Shows instant updates while editing.
+- Include a hero section, navigation bar, video section, social proof, pricing section, and contact page.
+- Use soft colors, white space, and a modern color palette.
+<!-- ENRICHMENT 2026-05-15 END -->

@@ -96,3 +96,45 @@ Use this file when writing sales scripts, demo flows, website copy, or content t
 - Implementation timeline visual
 - ROI calculator (even simple version)
 - "What we don't do" honest positioning page or FAQ
+
+
+<!-- ENRICHMENT 2026-05-15 START -->
+## Enrichment — 2026-05-15
+
+            > _Appended by the marketing enrichment system. Original content above is preserved verbatim._
+
+            > _New techniques, patterns, and decision rules synthesised from external research on **objection**. Source provenance and the per-source breakdown of which nuggets came from where are recorded in the daily run log — this section contains only the resulting prompt knowledge._
+
+### Objection
+
+- Use the Discovery Objections Cheat Sheet today.
+- Try Briefpoint for Faster, More Accurate Discovery Responses
+Discovery objections are part of the job, but the process around drafting and responding often takes more time than it should.
+- Object specifically to the objectionable part and still answer the valid portion.
+- Plaintiff objects to this interrogatory as vague, ambiguous, argumentative, overbroad, unduly burdensome, and not reasonably calculated to lead to the discovery of admissible evidence. [This is a classic general objection you should use sparingly. Boilerplate objections do not go over well with judges.].
+- Plaintiff objects to this interrogatory because it requires the responding party to marshal all of its available proof or the proof the party intends to offer at trial. [But the evidence marshaling objection will only get you so far.].
+- W. Pico Furniture v. Superior Court (1961): Often cited California Supreme Court case for the idea that objections such as compound questions or assuming facts not in evidence, more appropriate for oral examination, are not grounds for objecting to written interrogatories.
+- Be clear in your objections or risk waving them.
+- Use this objection to challenge questions not conforming to proper questioning techniques.
+
+### Content
+
+- Always be specific about the privilege invoked, and refrain from disclosing privileged content.
+- Draft contention interrogatories and other interrogatories seeking specific responses narrowly.
+
+### Need
+
+- Plaintiff objects to this interrogatory because the only possible purpose of this request is to harass and cause hardship to the plaintiff and needlessly increase the cost of litigation to the plaintiff or her counsel.
+- Plaintiff objects because this request calls for the disclosure of attorney work product prepared in anticipation of litigation or for trial. Moreover, the defendant has failed to demonstrate a substantial need and the substantial equivalent of which the defendant would be unable to obtain by other means without due hardship.
+
+### General Principles
+
+- Protect privileged or protected information.
+- Limit requests that seek documents beyond a reasonable scope.
+- Account for the parties’ resources and practical burdens of compliance.
+- Avoid delays caused by vague or overly broad requests.
+- Broad or undefined references to communications or documents.
+- Requests for electronically stored information without limits on time, format, or source.
+- Vague demands for tangible things without explaining what categories are included.
+- Use of, and access to, this website or any of the links or resources contained within the site do not create an attorney-client relationship between the reader, user, or browser and website authors, contributors, contributing law firms, or committee members and their respective employers.
+<!-- ENRICHMENT 2026-05-15 END -->

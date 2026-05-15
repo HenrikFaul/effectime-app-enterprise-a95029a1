@@ -165,3 +165,39 @@ It should be directly usable as part of Effectime’s content engine.
 ## Recommended use
 
 Use this file after positioning is known and once the content engine is starting to grow around repeatable pain areas and audience questions.
+
+
+<!-- ENRICHMENT 2026-05-12 START -->
+## Enrichment — 2026-05-12
+
+            > _Appended by the marketing enrichment system. Original content above is preserved verbatim._
+
+            > _New techniques, patterns, and decision rules synthesised from external research on **article**. Source provenance and the per-source breakdown of which nuggets came from where are recorded in the daily run log — this section contains only the resulting prompt knowledge._
+
+### Content
+
+- Previous content or campaign performance data.
+- The content format (blog post, email, social media caption).
+- Examples of successful content from your brand.
+- “Analyze the benefits of…” (triggers evaluation-based content).
+- Mention any unique data points or case studies that strengthen your content’s authority.
+- “Respond as an experienced content editor reviewing this draft”.
+
+### Prompt
+
+- “Explain the concept of…” (prompts educational material).
+- Begin with a well-defined subject; prompt clarity prevents ambiguity.
+- Research shows that well-crafted prompts significantly improve AI outputs by providing clear instructions, relevant context, and suitable examples.
+- Research clearly demonstrates that well-crafted prompts lead to significantly improved outputs across various applications, from creative writing to complex reasoning tasks.
+
+### General Principles
+
+- “Act as an SEO specialist with 10 years of experience”.
+- “You are a creative storyteller specializing in science fiction”.
+- “Take on the role of a financial advisor explaining concepts to beginners”.
+- Your target audience and their pain points.
+- Your brand voice and style preferences.
+- Whether to include bullet points, numbered lists, or tables.
+- Formatting for specific elements (quotes, examples, etc.).
+- Sample paragraphs showing your preferred writing style.
+<!-- ENRICHMENT 2026-05-12 END -->
