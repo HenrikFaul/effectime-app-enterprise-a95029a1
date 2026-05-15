@@ -239,6 +239,7 @@ export function BacklogBrowser({ integration }: { integration: IntegrationMini }
             cachedStates={cachedStates}
             cachedPriorities={cachedPriorities}
             cachedIterationPaths={cachedIterationPaths}
+            issues={issues}
           />
         ) : (
           <>

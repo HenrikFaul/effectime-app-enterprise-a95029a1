@@ -3279,6 +3279,8 @@ const at = {
     loading_users: 'Benutzer werden geladen…',
     no_users: 'Keine Benutzer gefunden',
     all_iterations: 'Alle Iterationen',
+    filter_layout_inline: 'Inline',
+    filter_layout_accordion: 'Seitenleiste',
     page_size_label: 'Pro Seite',
     page_size_all: 'Alle',
     showing_count: '{{count}} Einträge',

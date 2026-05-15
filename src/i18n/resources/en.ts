@@ -3297,6 +3297,8 @@ const en = {
     loading_users: 'Loading users…',
     no_users: 'No users found',
     all_iterations: 'All iterations',
+    filter_layout_inline: 'Inline',
+    filter_layout_accordion: 'Sidebar',
     page_size_label: 'Per page',
     page_size_all: 'All',
     showing_count: '{{count}} items',

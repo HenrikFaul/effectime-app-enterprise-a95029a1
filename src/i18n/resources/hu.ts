@@ -3285,6 +3285,8 @@ const hu = {
     loading_users: 'Felhasználók betöltése…',
     no_users: 'Nem található felhasználó',
     all_iterations: 'Összes iteráció',
+    filter_layout_inline: 'Vízszintes',
+    filter_layout_accordion: 'Oldalsáv',
     page_size_label: 'Oldalanként',
     page_size_all: 'Összes',
     showing_count: '{{count}} elem',

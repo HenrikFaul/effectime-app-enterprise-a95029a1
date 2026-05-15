@@ -3123,6 +3123,8 @@ const cs = {
     loading_users: 'Načítání uživatelů…',
     no_users: 'Žádní uživatelé nenalezeni',
     all_iterations: 'Všechny iterace',
+    filter_layout_inline: 'Inline',
+    filter_layout_accordion: 'Postranní panel',
     page_size_label: 'Na stránku',
     page_size_all: 'Vše',
     showing_count: '{{count}} položek',
