@@ -2592,6 +2592,7 @@ const en = {
     btn_download: '{{format}} Export download',
     html_title: 'Syncfolk — Leave export',
     html_date_rows: '{{start}} – {{end}} | {{rows}} rows',
+    heading: 'Export',
   },
   quota_balance: {
     title: 'Leave balance ({{year}})',

@@ -161,8 +161,15 @@ Deno.serve(async (req: Request) => {
       let totalAuthUsers = 0
       let newAuthUsers30d  = 0
       try {
-        const { data: authData } = await admin.auth.admin.listUsers({ page: 1, perPage: 10000 })
-        const allAuthUsers = (authData?.users || []).filter((u: any) => !u.deleted_at)
+        const allAuthUsers: any[] = []
+        let page = 1
+        while (true) {
+          const { data: authData } = await admin.auth.admin.listUsers({ page, perPage: 1000 })
+          const batch = (authData?.users || []).filter((u: any) => !u.deleted_at)
+          allAuthUsers.push(...batch)
+          if ((authData?.users || []).length < 1000) break
+          page++
+        }
         totalAuthUsers = allAuthUsers.length
         newAuthUsers30d = countRecentFromArray(allAuthUsers, 'created_at', 30)
       } catch (e: unknown) {
@@ -266,13 +273,19 @@ Deno.serve(async (req: Request) => {
 
       if (ownerIds.length > 0) {
         try {
-          // Attempt to resolve emails from profiles first (display_name only there),
-          // then fall back to auth.admin to get email addresses.
-          const { data: authData } = await admin.auth.admin.listUsers({ page: 1, perPage: 10000 })
-          for (const u of authData?.users || []) {
-            if (ownerIds.includes(u.id)) {
-              ownerEmailMap.set(u.id, (u as any).email || '')
+          // Paginate through all auth users to resolve owner emails.
+          let page = 1
+          while (true) {
+            const { data: authData } = await admin.auth.admin.listUsers({ page, perPage: 1000 })
+            for (const u of authData?.users || []) {
+              if (ownerIds.includes(u.id)) {
+                ownerEmailMap.set(u.id, (u as any).email || '')
+              }
             }
+            if ((authData?.users || []).length < 1000) break
+            // Stop early if all owners are resolved
+            if (ownerIds.every(id => ownerEmailMap.has(id))) break
+            page++
           }
         } catch (e: unknown) {
           console.error('list-workspaces: could not resolve owner emails:', (e as Error).message)

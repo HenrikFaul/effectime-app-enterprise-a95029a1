@@ -2551,6 +2551,7 @@ const cs = {
     btn_download: '{{format}} Stáhnout export',
     html_title: 'Syncfolk — Export absencí',
     html_date_rows: '{{start}} – {{end}} | {{rows}} řádků',
+    heading: 'Export',
   },
   quota_balance: {
     title: 'Zůstatek dovolené ({{year}})',

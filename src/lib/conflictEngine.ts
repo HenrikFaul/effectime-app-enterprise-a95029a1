@@ -116,7 +116,7 @@ export async function validateLeaveRequest(
     conflicts.push({
       code: 'BLOCKED_DATE',
       severity: 'blocking',
-      message: `${bd.blocked_date} tiltott nap${bd.reason ? `: ${bd.reason}` : ''}`,
+      message: `${bd.blocked_date} blocked${bd.reason ? `: ${bd.reason}` : ''}`,
       date: bd.blocked_date,
       params: { date: bd.blocked_date, reason: bd.reason ?? '' },
     });
@@ -191,7 +191,7 @@ export async function validateLeaveRequest(
         conflicts.push({
           code: 'MAX_OFF_EXCEEDED',
           severity: 'blocking',
-          message: `${dateStr}: max ${rule.max_off} fő lehet távol, jelenleg ${offCount} fő már távol van${ruleRoleLabel(rule)}`,
+          message: `${dateStr}: max ${rule.max_off} absent allowed, currently ${offCount} absent${ruleRoleLabel(rule)}`,
           date: dateStr,
           params: { date: dateStr, max: rule.max_off, current: offCount, roleLabel },
         });
@@ -199,7 +199,7 @@ export async function validateLeaveRequest(
         conflicts.push({
           code: 'MAX_OFF_WARNING',
           severity: 'warning',
-          message: `${dateStr}: majdnem eléri a max távollévők számát (${offCount + 1}/${rule.max_off})${ruleRoleLabel(rule)}`,
+          message: `${dateStr}: near absence limit (${offCount + 1}/${rule.max_off})${ruleRoleLabel(rule)}`,
           date: dateStr,
           params: { date: dateStr, current: offCount + 1, max: rule.max_off, roleLabel },
         });
@@ -253,7 +253,7 @@ export async function validateLeaveRequest(
         conflicts.push({
           code: 'OFFICE_COVERAGE_BREACH',
           severity: 'blocking',
-          message: `${dateStr}: telephely lefedettség sérülne (${roleLabel}) — min ${rule.min_headcount} fő szükséges, csak ${presentIfApproved} maradna`,
+          message: `${dateStr}: office coverage breach (${roleLabel}) — min ${rule.min_headcount} required, ${presentIfApproved} would remain`,
           date: dateStr,
           params: { date: dateStr, roleLabel, min: rule.min_headcount, remaining: presentIfApproved },
         });
@@ -261,7 +261,7 @@ export async function validateLeaveRequest(
         conflicts.push({
           code: 'OFFICE_COVERAGE_WARNING',
           severity: 'warning',
-          message: `${dateStr}: telephely lefedettség éppen a minimumon (${roleLabel}: ${presentIfApproved}/${rule.min_headcount})`,
+          message: `${dateStr}: office coverage at minimum (${roleLabel}: ${presentIfApproved}/${rule.min_headcount})`,
           date: dateStr,
           params: { date: dateStr, roleLabel, current: presentIfApproved, min: rule.min_headcount },
         });
@@ -281,7 +281,7 @@ export async function validateLeaveRequest(
     conflicts.push({
       code: 'SELF_OVERLAP',
       severity: 'warning',
-      message: `Már van függőben lévő vagy jóváhagyott kérelmed ebben az időszakban`,
+      message: 'Overlapping leave request already exists for this period',
       params: {},
     });
   }

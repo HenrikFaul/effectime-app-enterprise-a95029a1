@@ -73,6 +73,7 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
     setSelectedIds(new Set());
 
     const userIds = [...new Set(items.map(r => r.user_id))];
+    const mMap: Record<string, { team: string | null; role: string | null }> = {};
     if (userIds.length > 0) {
       const [{ data: profileData }, { data: memData }] = await Promise.all([
         supabase.from('profiles').select('user_id, display_name').in('user_id', userIds),
@@ -82,7 +83,6 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
       (profileData || []).forEach((p: any) => { pMap[p.user_id] = p.display_name || t('approval_inbox.unknown'); });
       setProfiles(pMap);
 
-      const mMap: Record<string, { team: string | null; role: string | null }> = {};
       const tSet = new Set<string>(); const rSet = new Set<string>();
       (memData || []).forEach((m: any) => {
         mMap[m.user_id] = { team: m.team, role: m.business_role };
@@ -94,9 +94,9 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
       setRoles(Array.from(rSet).sort());
     }
 
-    // Client-side filters
-    if (teamFilter !== 'all') items = items.filter(r => memberInfo[r.user_id]?.team === teamFilter);
-    if (roleFilter !== 'all') items = items.filter(r => memberInfo[r.user_id]?.role === roleFilter);
+    // Client-side filters — use local mMap (freshly fetched), not stale memberInfo state
+    if (teamFilter !== 'all') items = items.filter(r => mMap[r.user_id]?.team === teamFilter);
+    if (roleFilter !== 'all') items = items.filter(r => mMap[r.user_id]?.role === roleFilter);
     if (requesterFilter !== 'all') items = items.filter(r => r.user_id === requesterFilter);
 
     setRequests(items);

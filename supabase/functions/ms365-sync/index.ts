@@ -287,9 +287,9 @@ async function handleCallback(req: Request) {
   const state = url.searchParams.get("state");
   const errParam = url.searchParams.get("error");
   if (errParam) {
-    return htmlResponse(`<h1>Microsoft 365 csatlakozás megszakítva</h1><p>${errParam}</p>`, 400);
+    return htmlResponse(`<h1>Microsoft 365 connection cancelled</h1><p>${errParam}</p>`, 400);
   }
-  if (!code || !state) return htmlResponse("<h1>Hibás visszahívás</h1>", 400);
+  if (!code || !state) return htmlResponse("<h1>Invalid callback</h1>", 400);
 
   // Look up state
   const { data: stateRow } = await admin
@@ -299,13 +299,13 @@ async function handleCallback(req: Request) {
     .order("created_at", { ascending: false })
     .limit(1)
     .single();
-  if (!stateRow) return htmlResponse("<h1>Lejárt vagy ismeretlen állapot</h1>", 400);
+  if (!stateRow) return htmlResponse("<h1>Expired or unknown state</h1>", 400);
 
   try {
     const tokens = await exchangeCode(code);
     const me = await fetchMsUser(tokens.access_token);
     const expiry = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
-    await admin
+    const { error: upsertErr } = await admin
       .from("enterprise_user_calendar_integrations")
       .upsert({
         workspace_id: stateRow.workspace_id,
@@ -322,20 +322,22 @@ async function handleCallback(req: Request) {
         last_sync_error: null,
       }, { onConflict: "workspace_id,user_id,provider" });
 
+    if (upsertErr) throw new Error(`Integration upsert failed: ${upsertErr.message}`);
+
     const returnTo = (stateRow.details as any)?.return_to ?? "/";
     return htmlResponse(
-      `<!doctype html><html><head><meta charset="utf-8"><title>Csatlakozva</title></head>
+      `<!doctype html><html><head><meta charset="utf-8"><title>Connected</title></head>
        <body style="font-family:system-ui;text-align:center;padding:48px">
-         <h1>✓ Microsoft 365 csatlakoztatva</h1>
+         <h1>✓ Microsoft 365 connected</h1>
          <p>${me.userPrincipalName ?? me.mail ?? ""}</p>
-         <p>Visszairányítás 2 másodperc múlva…</p>
+         <p>Redirecting in 2 seconds…</p>
          <script>setTimeout(function(){window.location.href=${JSON.stringify(returnTo)};},2000);</script>
        </body></html>`,
     );
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("Callback error", msg);
-    return htmlResponse(`<h1>Csatlakozási hiba</h1><pre>${msg}</pre>`, 500);
+    return htmlResponse(`<h1>Connection error</h1><pre>${msg}</pre>`, 500);
   }
 }
 
