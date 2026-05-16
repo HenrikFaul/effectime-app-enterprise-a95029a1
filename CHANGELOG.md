@@ -1,3 +1,23 @@
+## 2026-05-16 — v3.37.0 Business Intelligence predictive analytics and forecasting domain (Phase 3)
+
+Adds a complete predictive analytics subdomain to the BI prompt architecture: 8 new prompt files and 1 new forecast template. Master forecasting controller with method-horizon-uncertainty rules. Documented seasonal pattern library (16 patterns, 5 metric domains, EU and cross-market). Domain forecasting for shift demand (methods D-1 through D-4), turnover risk scoring (9 signals, PII-first design), wellbeing trajectory (velocity model, burnout timeline), financial forecasting (3-driver cost decomposition, burn rate index), scenario modeling (5 decision types with causal chains), and capacity-demand gap forecasting (supply trajectory + demand projection → inflection point + intervention window + cascade risk). No application code changed.
+
+### business_intelligence/prompts/ (8 new files)
+- **forecasting_methodology.md**: 6 methods, 6 responsibility rules, horizon limits table, pre-forecast checklist, Forecast Master Block output format.
+- **seasonal_pattern_library.md**: 16 named patterns with seasonal index tables, jurisdiction labels, minimum data requirements, and application protocol.
+- **workforce_demand_forecasting.md**: Methods D-1 to D-4, demand driver identification, FTE conversion, backtest validation.
+- **turnover_risk_scoring.md**: 9 behavioural signals, PII constraints, scoring matrix, team risk classification, 90-day volume projection.
+- **wellbeing_trajectory_forecasting.md**: Data sufficiency check, velocity model, proxy signal adjustment, burnout tier classification, recovery timeline.
+- **financial_forecasting.md**: Labor cost projection, overtime driver classification, budget burn rate index, marketplace fill cost.
+- **scenario_modeling.md**: 4-step definition protocol, 5 decision-type impact chains with causal mechanisms, uncertainty stacking, decision recommendation framework.
+- **capacity_demand_gap_forecasting.md**: Supply trajectory modeling, 4-tier gap classification, inflection point, intervention lead time table, cascade chain, 3-scenario uncertainty, compliance floor breach detection.
+
+### business_intelligence/templates/ (1 new file)
+- **forecast_report_template.md**: 10-section standard forecast structure with Master Block, bounds table, threshold analysis, assumptions registry, validation evidence, governance notes.
+
+### business_intelligence/SYSTEM.md + README.md (updated)
+Routing table extended from 18 to 25 entries. README folder structure and quick routing updated.
+
 ## 2026-05-16 — v3.36.0 Business Intelligence domain specialist prompts (Phase 2)
 
 Extends the BI prompt architecture (v3.35.0) with seven domain-specialist prompt files covering predictive signals, financial analytics, compliance analytics, workforce planning, platform health, BI governance, and narrative storytelling. Adds one board report template. Updates SYSTEM.md routing table (10 → 18 entries) and README routing (13 → 21 entries). No application code changed.
