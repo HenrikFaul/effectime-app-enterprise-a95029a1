@@ -1,0 +1,86 @@
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea';
+import { Megaphone, CheckCircle2, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
+import { useI18n } from '@/i18n/I18nProvider';
+import { useCreateOpenShift, useOpenShiftRequests } from '@/hooks/useOpenShifts';
+
+interface Props {
+  workspaceId: string;
+  officeId: string;
+  shiftDate: string;      // yyyy-mm-dd
+  businessRole?: string;
+  skillId?: string;
+}
+
+export function OpenShiftManager({ workspaceId, officeId, shiftDate, businessRole, skillId }: Props) {
+  const { t } = useI18n();
+  const [notes, setNotes] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const create = useCreateOpenShift();
+  const { data: requests = [] } = useOpenShiftRequests(workspaceId);
+
+  const existingOpen = requests.find(
+    r => r.office_id === officeId && r.shift_date === shiftDate && r.status === 'open'
+  );
+
+  const handlePost = async () => {
+    try {
+      await create.mutateAsync({ workspaceId, officeId, shiftDate, businessRole, skillId, notes: notes || undefined });
+      toast.success(t('open_shifts.posted_success'));
+      setNotes('');
+      setShowForm(false);
+    } catch {
+      toast.error(t('open_shifts.post_error'));
+    }
+  };
+
+  if (existingOpen) {
+    return (
+      <div className="flex items-center gap-2 rounded border border-amber-300 bg-amber-50 dark:bg-amber-900/20 px-3 py-2 text-sm">
+        <CheckCircle2 className="h-4 w-4 text-amber-600" />
+        <span className="text-amber-800 dark:text-amber-300">{t('open_shifts.already_posted')}</span>
+        <Badge variant="outline" className="ml-auto text-xs border-amber-400 text-amber-700">
+          {t('open_shifts.status_open')}
+        </Badge>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {!showForm ? (
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full gap-2 text-xs"
+          onClick={() => setShowForm(true)}
+        >
+          <Megaphone className="h-3.5 w-3.5" />
+          {t('open_shifts.post_open_shift')}
+        </Button>
+      ) : (
+        <div className="rounded border p-3 space-y-2 bg-muted/30">
+          <p className="text-xs font-medium text-muted-foreground">{t('open_shifts.post_hint')}</p>
+          <Textarea
+            value={notes}
+            onChange={e => setNotes(e.target.value)}
+            placeholder={t('open_shifts.notes_placeholder')}
+            className="text-sm min-h-[60px]"
+          />
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handlePost} disabled={create.isPending} className="gap-1">
+              {create.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Megaphone className="h-3 w-3" />}
+              {t('open_shifts.broadcast')}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => { setShowForm(false); setNotes(''); }}>
+              {t('open_shifts.cancel')}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

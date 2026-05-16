@@ -11,21 +11,26 @@
 *(Fill in during setup — this block configures the entire system for your project)*
 
 ```
-Project name: [YOUR PROJECT NAME]
-Domain: [SaaS / ecommerce / HR / fintech / logistics / healthcare / other]
-Business model: [B2B / B2C / marketplace / subscription / transactional]
-Primary BI audiences: [founders / executives / product / HR / operations / investors]
+Project name: Vite React Shadcn Ts
+Domain: SaaS / B2B platform
+Business model: B2B SaaS subscription
+Primary BI audiences: founders / executives / HR leaders / operations / finance
+Multi-tenancy: yes — workspace/tenant scoped (confirm RLS policy)
 
-Version history location: [CHANGELOG.md / Git tags / release notes / path]
-Schema/migration history: [migrations/ folder / DBT / schema files / path]
-Primary data source: [database type and connection context]
-Dashboard/reporting layer: [tool or component path]
+Version history location: CHANGELOG.md + versioning/ folder (30 files)
+Current version: v3.38.0
+Schema/migration history: supabase/migrations/ (98 SQL migration files)
+Primary data source: Supabase (PostgreSQL + Edge Functions)
+  Key tables: profiles, user_roles, events, event_participants, votes, personal_availability, event_share_tokens, friendships, favorites, account_deletions, enterprise_workspaces, enterprise_memberships, enterprise_invitations, leave_requests, approval_decisions, enterprise_leave_types, enterprise_holidays, enterprise_blocked_dates, enterprise_daily_rules, enterprise_approval_chains, enterprise_escalation_rules, enterprise_audit_events, enterprise_notifications, enterprise_rule_templates, enterprise_export_jobs
+  Key views:  own, votes, share, all, their, workspace, approval, leave, holidays, blocked, daily, escalation, audit, rule, export
+Tech stack: Supabase (PostgreSQL + Edge Functions), React / TypeScript, Vite, PostgreSQL, Capacitor (mobile)
+Dashboard/reporting layer: Custom React dashboard
 
-Regulatory context: [GDPR / HIPAA / SOX / none / describe]
-PII minimum aggregation: [individual / team N≥X / department]
+Regulatory context: GDPR / FCA
+PII minimum aggregation: team (N ≥ 5 recommended) — verify with legal
 
-Seasonal patterns: [documented in prompts/seasonal_pattern_library.md / not yet documented]
-Metric catalog: [in templates/metric_definition_template.md / not yet built]
+Seasonal patterns: seasonal effects detected in corpus — populate prompts/seasonal_pattern_library.md
+Metric catalog: [populate templates/metric_definition_template.md — detected metrics listed in setup_report.md]
 ```
 
 ---

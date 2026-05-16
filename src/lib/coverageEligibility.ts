@@ -65,6 +65,8 @@ export interface EligibilityContext {
   blockedDatesISO: Set<string>;    // blocked_dates
   leaves: LeaveLite[];
   shifts: ShiftLite[];             // already-existing shift assignments (this date pool)
+  /** user_ids that marked themselves available on each date (yyyy-mm-dd → Set<user_id>) */
+  availabilityByDate?: Map<string, Set<string>>;
 }
 
 export interface EligibilityResult {
@@ -144,7 +146,13 @@ export function evaluateEligibility(
     }
   }
 
-  // 5) Capacity (heti — információs warning)
+  // 5) Availability boost — member explicitly marked themselves available
+  if (ctx.availabilityByDate) {
+    const avail = ctx.availabilityByDate.get(req.shift_date);
+    if (avail?.has(member.user_id)) score += 20;
+  }
+
+  // 6) Capacity (heti — információs warning)
   // Egy nap = base_working_hours; heti összóra > weekly_capacity_hours warning.
   const isoWeekKey = isoWeekKeyOf(req.shift_date);
   const sameWeekShifts = ctx.shifts.filter(
