@@ -5,6 +5,8 @@ import { AchievementsPanel } from '@/components/engagement/AchievementsPanel';
 import { OnboardingChecklist } from '@/components/customer-success/OnboardingChecklist';
 import { ClockInPanel } from '@/components/clock/ClockInPanel';
 import { ShiftMarketplacePanel } from '@/components/shift-marketplace/ShiftMarketplacePanel';
+import { AvailabilityCalendar } from './AvailabilityCalendar';
+import { OpenShiftPanel } from '@/components/shift-marketplace/OpenShiftPanel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -397,6 +399,16 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
           design for the deskless-worker persona. */}
       {membershipId && (
         <ClockInPanel workspaceId={workspaceId} membershipId={membershipId} />
+      )}
+
+      {/* Availability calendar — employee submits available days for manager visibility */}
+      {membershipId && (
+        <AvailabilityCalendar workspaceId={workspaceId} membershipId={membershipId} userId={userId} />
+      )}
+
+      {/* Open shifts — first-come-first-served claim of manager-posted open slots */}
+      {membershipId && (
+        <OpenShiftPanel workspaceId={workspaceId} />
       )}
 
       {/* Shift marketplace (Top-20 Rank 12, v3.21.0). Browse open offers

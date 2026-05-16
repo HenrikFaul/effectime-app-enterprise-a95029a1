@@ -1,3 +1,39 @@
+## 2026-05-16 — v3.39.0 Smart Staffing Workflow — availability pool + open-shift broadcast + first-claim
+
+Adds a digital end-to-end staffing workflow on top of the existing CoveragePlannerView and EmployeeDashboard. Zero redesign: extends existing components only, reuses existing notification infrastructure, and preserves all current scheduling behaviour.
+
+### Database (1 migration)
+- **`enterprise_staff_availability`**: workspace-scoped employee availability table (status: available / preferred / unavailable per date). RLS: members write own rows; all workspace members can read (manager visibility).
+- **`enterprise_open_shift_requests`**: manager-posted unfilled shift slots with office, date, role, notes and fill status.
+- **`enterprise_open_shift_claims`**: employee claim attempts with `UNIQUE(request_id, user_id)` for idempotency.
+- **`claim_open_shift` RPC**: race-safe SECURITY DEFINER function using `SELECT … FOR UPDATE` row lock — atomically validates, claims, assigns, marks filled, supersedes competing claims, fires notifications.
+- **`create_open_shift_request` RPC**: manager-only broadcast RPC that creates the request and notifies all active members.
+
+### Coverage engine
+- `EligibilityContext.availabilityByDate` (optional `Map<string, Set<string>>`) — members who self-marked available on the target date receive +20 score boost in `evaluateEligibility()`. Fully backward-compatible.
+
+### UI — Manager (CoveragePlannerView)
+- Loads `enterprise_staff_availability` alongside existing data sources (no extra round-trip).
+- Green dot indicator next to candidate names who marked themselves available.
+- New "Open shift broadcast" section in each cell drawer via `OpenShiftManager`.
+
+### UI — Employee (EmployeeDashboard)
+- `AvailabilityCalendar`: monthly tap-to-cycle calendar (unmarked → available → preferred → unavailable → clear). Upserts via `enterprise_staff_availability`.
+- `OpenShiftPanel`: lists open shifts for the workspace; one-tap claim with confirmation dialog. Handles race-condition errors gracefully.
+
+### Notifications (reuses `enterprise_notifications`)
+- `shift_assigned` (claimant confirmation), `open_shift_filled` (manager alert), `open_shift_broadcast` (member notification).
+
+### New hooks
+- `useStaffAvailability` — `useWorkspaceAvailability`, `useMyAvailability`, `useUpsertAvailability`, `useDeleteAvailability`.
+- `useOpenShifts` — `useOpenShiftRequests`, `useClaimOpenShift`, `useCreateOpenShift`.
+
+### i18n
+- 2 new namespaces (`availability`, `open_shifts`) + 3 new `coverage_planner` keys added to all 8 locale files (en, hu, de, at, cs, sk, pl, ro).
+
+### Tests
+- `src/test/smartStaffing.test.ts`: 7 tests covering availability boost correctness, non-boost cases, backward compatibility, and ranking precedence.
+
 ## 2026-05-16 — v3.38.0 Generic BI Framework — portable drop-in prompt architecture
 
 Adds `BI_FRAMEWORK/` — a completely self-contained, project-agnostic Business Intelligence prompt architecture (29 files) that can be dropped into any repository. All Effectime-specific references replaced with bracketed placeholders. Includes a new `SETUP.md` configuration guide, generic master controller (`SYSTEM.md`), 21 specialist prompt files, 4 report templates, and 12 copy-paste usage examples. Model-agnostic (Claude / GPT-4 / Gemini compatible). `business_intelligence/` (Effectime-specific) is entirely unchanged. No application code changed.

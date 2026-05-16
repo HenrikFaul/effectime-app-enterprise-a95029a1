@@ -1,0 +1,119 @@
+import { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { ClipboardList, Zap } from 'lucide-react';
+import { format } from 'date-fns';
+import { hu } from 'date-fns/locale';
+import { toast } from 'sonner';
+import { useI18n } from '@/i18n/I18nProvider';
+import { useOpenShiftRequests, useClaimOpenShift } from '@/hooks/useOpenShifts';
+
+interface Props {
+  workspaceId: string;
+}
+
+export function OpenShiftPanel({ workspaceId }: Props) {
+  const { t } = useI18n();
+  const { data: requests = [], isLoading } = useOpenShiftRequests(workspaceId);
+  const claim = useClaimOpenShift();
+  const [claimingId, setClaimingId] = useState<string | null>(null);
+
+  const open = requests.filter(r => r.status === 'open');
+
+  const handleClaim = async (requestId: string) => {
+    setClaimingId(requestId);
+    try {
+      await claim.mutateAsync(requestId);
+      toast.success(t('open_shifts.claim_success'));
+    } catch (err: any) {
+      const code = err?.message ?? '';
+      if (code.includes('request_not_open')) {
+        toast.error(t('open_shifts.already_filled'));
+      } else if (code.includes('not_member')) {
+        toast.error(t('open_shifts.not_member'));
+      } else {
+        toast.error(t('open_shifts.claim_error'));
+      }
+    } finally {
+      setClaimingId(null);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <ClipboardList className="h-4 w-4" />
+          {t('open_shifts.title')}
+          {open.length > 0 && (
+            <Badge variant="destructive" className="ml-auto text-xs">{open.length}</Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="space-y-2">
+            {[1, 2].map(i => <Skeleton key={i} className="h-14 rounded" />)}
+          </div>
+        ) : open.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-4 text-center">
+            {t('open_shifts.empty')}
+          </p>
+        ) : (
+          <div className="space-y-2">
+            {open.map(req => (
+              <div
+                key={req.id}
+                className="flex items-center justify-between gap-2 rounded border px-3 py-2 bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {format(new Date(`${req.shift_date}T00:00:00`), 'EEEE, d MMMM', { locale: hu })}
+                  </p>
+                  {(req.business_role || req.notes) && (
+                    <p className="text-xs text-muted-foreground truncate">
+                      {[req.business_role, req.notes].filter(Boolean).join(' · ')}
+                    </p>
+                  )}
+                </div>
+
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="default"
+                      className="shrink-0 gap-1"
+                      disabled={claim.isPending && claimingId === req.id}
+                    >
+                      <Zap className="h-3 w-3" />
+                      {t('open_shifts.claim')}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>{t('open_shifts.confirm_title')}</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        {t('open_shifts.confirm_desc', {
+                          date: format(new Date(`${req.shift_date}T00:00:00`), 'EEEE, d MMMM yyyy', { locale: hu }),
+                        })}
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>{t('open_shifts.cancel')}</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => handleClaim(req.id)}>
+                        {t('open_shifts.confirm_claim')}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { rankCandidates, type MemberInput, type EligibilityContext, type RequirementInput } from '@/lib/coverageEligibility';
 import { SmartBatchScheduleDialog } from './SmartBatchScheduleDialog';
+import { OpenShiftManager } from './OpenShiftManager';
 
 interface Props {
   workspaceId: string;
@@ -95,6 +96,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
   const [holidays, setHolidays] = useState<string[]>([]);
   const [blocked, setBlocked] = useState<string[]>([]);
   const [leaves, setLeaves] = useState<{ user_id: string; start_date: string; end_date: string; status: string }[]>([]);
+  const [availabilityByDate, setAvailabilityByDate] = useState<Map<string, Set<string>>>(new Map());
   const [loading, setLoading] = useState(true);
   const loadIdRef = useRef(0);
 
@@ -122,7 +124,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
     const to = format(days[days.length - 1], 'yyyy-MM-dd');
 
     try {
-      const [oRes, rRes, sRes, mRes, mskRes, spRes, sklRes, hRes, bRes, lRes] = await Promise.all([
+      const [oRes, rRes, sRes, mRes, mskRes, spRes, sklRes, hRes, bRes, lRes, avRes] = await Promise.all([
         (supabase as any).from('enterprise_offices').select('id,name,city').eq('workspace_id', workspaceId).order('name'),
         (supabase as any).from('enterprise_office_coverage_rules').select('*').eq('workspace_id', workspaceId).eq('status', 'active'),
         (supabase as any).from('enterprise_shift_assignments').select('*').eq('workspace_id', workspaceId).gte('shift_date', from).lte('shift_date', to),
@@ -133,6 +135,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
         (supabase as any).from('enterprise_holidays').select('holiday_date').eq('workspace_id', workspaceId).gte('holiday_date', from).lte('holiday_date', to),
         (supabase as any).from('enterprise_blocked_dates').select('blocked_date').eq('workspace_id', workspaceId).gte('blocked_date', from).lte('blocked_date', to),
         (supabase as any).from('leave_requests').select('user_id,start_date,end_date,status').eq('workspace_id', workspaceId).in('status', ['approved', 'pending']).lte('start_date', to).gte('end_date', from),
+        (supabase as any).from('enterprise_staff_availability').select('user_id,availability_date,status').eq('workspace_id', workspaceId).gte('availability_date', from).lte('availability_date', to).in('status', ['available', 'preferred']),
       ]);
 
       if (loadId !== loadIdRef.current) return;
@@ -144,6 +147,15 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
       setHolidays(((hRes.data || []) as any[]).map(h => h.holiday_date));
       setBlocked(((bRes.data || []) as any[]).map(b => b.blocked_date));
       setLeaves((lRes.data || []) as any[]);
+
+      // Build availabilityByDate: date → Set<user_id>
+      const avMap = new Map<string, Set<string>>();
+      ((avRes.data || []) as any[]).forEach((row: any) => {
+        const s = avMap.get(row.availability_date) ?? new Set<string>();
+        s.add(row.user_id);
+        avMap.set(row.availability_date, s);
+      });
+      setAvailabilityByDate(avMap);
 
       const memRows = (mRes.data || []) as any[];
       const userIds = memRows.map(m => m.user_id);
@@ -232,7 +244,8 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
     blockedDatesISO: new Set(blocked),
     leaves,
     shifts,
-  }), [holidays, blocked, leaves, shifts]);
+    availabilityByDate,
+  }), [holidays, blocked, leaves, shifts, availabilityByDate]);
 
   const assignMember = async (member: MemberInput, rule: CoverageRule, date: Date) => {
     const iso = format(date, 'yyyy-MM-dd');
@@ -500,6 +513,10 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
         <LegendChip className="bg-emerald-100 text-emerald-700 border-emerald-300" label={t('coverage_planner.legend_sufficient')} />
         <LegendChip className="bg-amber-100 text-amber-700 border-amber-300" label={t('coverage_planner.legend_overstaffed')} />
         <LegendChip className="bg-zinc-100 text-zinc-500 border-zinc-300" label={t('coverage_planner.legend_na')} />
+        <div className="flex items-center gap-1">
+          <span className="inline-block h-2 w-2 rounded-full bg-green-500" />
+          <span>{t('coverage_planner.legend_available')}</span>
+        </div>
       </div>
 
       {/* Matrix */}
@@ -784,6 +801,8 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
                   <div className="text-xs text-muted-foreground italic">{t('coverage_planner.no_available_candidates')}</div>
                 ) : (
                   availableCandidates.map(c => {
+                    const dateISO = format(drawerCell.date, 'yyyy-MM-dd');
+                    const isAvailable = availabilityByDate.get(dateISO)?.has(c.member.user_id) ?? false;
                     return (
                       <div
                         key={c.member.membership_id}
@@ -795,6 +814,9 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
                         <div className="flex items-center gap-2">
                           <div className="flex-1 font-medium cursor-grab active:cursor-grabbing" draggable onDragStart={onDragStartCandidate(c.member.membership_id)}>
                             {c.member.display_name}
+                            {isAvailable && (
+                              <span className="ml-1.5 inline-block h-2 w-2 rounded-full bg-green-500 align-middle" title={t('coverage_planner.availability_indicator')} />
+                            )}
                           </div>
                           <Badge variant="outline" className="text-[10px]">score {c.matchScore}</Badge>
                           <Button
@@ -827,6 +849,18 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
                     );
                   })
                 )}
+              </div>
+
+              {/* Open shift broadcast — lets manager post the slot for employees to claim */}
+              <div className="mt-4 space-y-2">
+                <div className="text-xs font-semibold text-muted-foreground uppercase">{t('coverage_planner.open_shift_section')}</div>
+                <OpenShiftManager
+                  workspaceId={workspaceId}
+                  officeId={drawerCell.office.id}
+                  shiftDate={format(drawerCell.date, 'yyyy-MM-dd')}
+                  businessRole={ruleRoles(drawerCell.rule)[0]}
+                  skillId={ruleSkillIds(drawerCell.rule)[0]}
+                />
               </div>
             </>
             );
