@@ -1,3 +1,22 @@
+## 2026-05-16 — v3.36.0 Business Intelligence domain specialist prompts (Phase 2)
+
+Extends the BI prompt architecture (v3.35.0) with seven domain-specialist prompt files covering predictive signals, financial analytics, compliance analytics, workforce planning, platform health, BI governance, and narrative storytelling. Adds one board report template. Updates SYSTEM.md routing table (10 → 18 entries) and README routing (13 → 21 entries). No application code changed.
+
+### business_intelligence/prompts/ (7 new files)
+- **predictive_signals.md**: Leading indicator discovery protocol, Effectime leading indicator map (4 prediction domains), early warning system design, Amber/Red threshold model.
+- **financial_analytics.md**: Labor cost catalog (15+ metrics), 3-driver cost variance decomposition (volume / rate / efficiency), payroll correction pattern analysis, marketplace economics.
+- **compliance_analytics.md**: Compliance score decomposition (rule coverage + violation type + audit trail + WTD), 7-dimension audit readiness scorecard, violation concentration/repeat tests, regulatory calendar for EU markets.
+- **workforce_planning.md**: Effective capacity formula, headcount sufficiency model, turnover impact modeling, scheduling efficiency metrics, workforce composition risk analysis (5 risk types).
+- **platform_health.md**: Workspace adoption/churn catalog (20+ metrics), 3-horizon health framework, 5-signal at-risk workspace model, integration health triage (transient vs. persistent failures), escalation protocol by tier.
+- **bi_governance.md**: Metric lifecycle state model (Draft/Active/Deprecated/Retired/Contested), 8-item consistency audit checklist, 3-tier BI output quality gate, 10-standard registry, metric conflict resolution protocol.
+- **narrative_storytelling.md**: 5-part BI story arc, audience-specific adaptation (4 tiers), evidence selection hierarchy, 7 anti-patterns with explanations, narrative length standards.
+
+### business_intelligence/templates/ (1 new file)
+- **board_report_template.md**: 9-section formal board report — strategic KPI scorecard, risk register, 5-domain operational detail, forward guidance, governance notes, metric definitions appendix.
+
+### business_intelligence/SYSTEM.md + README.md (updated)
+Routing tables extended. No structural or governance changes to existing protocol.
+
 ## 2026-05-15 — v3.35.0 Business Intelligence prompt architecture
 
 Adds a complete, production-grade BI prompt ecosystem to the repository (`business_intelligence/`). Follows the same self-governing toolkit model as `marketing/`, `growth_strategy/`, and `valuation/`. A `SYSTEM.md` master controller routes all BI tasks to 10 specialist prompt files covering the full BI lifecycle: metric definition → trend analysis → anomaly detection → root cause analysis → executive narrative → documentation.

@@ -130,6 +130,14 @@ Workspace growth rate (new workspaces per period), tier upgrade rate, reseller p
 | "Why did this metric move? What caused the change?" | `prompts/root_cause_analysis.md` |
 | "Compare these segments / cohorts / funnel stages" | `prompts/segment_cohort_analysis.md` |
 | "Document this metric / analysis / BI decision" | `prompts/bi_documentation.md` |
+| "Which metrics predict problems before they happen?" | `prompts/predictive_signals.md` |
+| "Analyze labor cost, payroll accuracy, or overtime economics" | `prompts/financial_analytics.md` |
+| "Analyze compliance score, violations, or audit readiness" | `prompts/compliance_analytics.md` |
+| "Analyze workforce capacity, scheduling, or headcount planning" | `prompts/workforce_planning.md` |
+| "Analyze platform adoption, workspace churn, or integration health" | `prompts/platform_health.md` |
+| "Audit metric consistency or review BI output quality" | `prompts/bi_governance.md` |
+| "Turn this analysis into a narrative / data story" | `prompts/narrative_storytelling.md` |
+| "Produce a formal board-level report" | `templates/board_report_template.md` |
 
 For reusable invocation patterns and copy-paste prompt templates, see `examples/usage_examples.md`.
 

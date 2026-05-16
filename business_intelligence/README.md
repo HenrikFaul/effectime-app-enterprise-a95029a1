@@ -28,10 +28,18 @@ business_intelligence/
 │   ├── data_quality.md                 Trust assessment, completeness checks, confidence scoring
 │   ├── root_cause_analysis.md          Driver identification, hypothesis testing, evidence weighting
 │   ├── segment_cohort_analysis.md      Segmentation, cohort behavior, funnel interpretation
-│   └── bi_documentation.md             BI document generation from repository evidence
+│   ├── bi_documentation.md             BI document generation from repository evidence
+│   ├── predictive_signals.md           Leading indicators, early warning systems, forward analysis
+│   ├── financial_analytics.md          Labor cost, payroll accuracy, overtime economics
+│   ├── compliance_analytics.md         Compliance score, violations, audit readiness, WTD risk
+│   ├── workforce_planning.md           Capacity analysis, headcount planning, scheduling efficiency
+│   ├── platform_health.md              SaaS adoption, workspace churn signals, integration health
+│   ├── bi_governance.md                Metric consistency, definition auditing, BI quality control
+│   └── narrative_storytelling.md       Data storytelling, BI narrative craft, audience adaptation
 ├── templates/
-│   ├── bi_report_template.md           Standard BI report structure
-│   └── metric_definition_template.md   Canonical metric definition format
+│   ├── bi_report_template.md           Standard BI report structure (10-section)
+│   ├── metric_definition_template.md   Canonical metric definition format (10-section)
+│   └── board_report_template.md        Formal board-level report structure (9-section)
 └── examples/
     └── usage_examples.md               Copy-paste invocation patterns for common BI tasks
 ```
@@ -52,6 +60,14 @@ business_intelligence/
 | Find what caused a metric change | `prompts/root_cause_analysis.md` |
 | Compare segments, cohorts, or funnels | `prompts/segment_cohort_analysis.md` |
 | Document a metric or BI decision | `prompts/bi_documentation.md` |
+| Identify leading indicators / early warnings | `prompts/predictive_signals.md` |
+| Analyze labor cost or payroll accuracy | `prompts/financial_analytics.md` |
+| Analyze compliance score or audit readiness | `prompts/compliance_analytics.md` |
+| Analyze workforce capacity or scheduling | `prompts/workforce_planning.md` |
+| Analyze platform adoption or churn risk | `prompts/platform_health.md` |
+| Audit BI output quality or metric consistency | `prompts/bi_governance.md` |
+| Turn data into a narrative or data story | `prompts/narrative_storytelling.md` |
 | Define a new metric formally | `templates/metric_definition_template.md` |
-| Structure a BI report | `templates/bi_report_template.md` |
+| Structure a standard BI report | `templates/bi_report_template.md` |
+| Structure a board-level report | `templates/board_report_template.md` |
 | Get copy-paste prompt examples | `examples/usage_examples.md` |
