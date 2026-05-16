@@ -91,7 +91,7 @@ export function ClockInPanel({ workspaceId, membershipId }: Props) {
       setQrCode(''); setNfcTag('');
       await refetch();
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
+      const msg = (e as any)?.message ?? (e instanceof Error ? e.message : String(e));
       toast.error(t('clock_in.error') + ': ' + msg);
     } finally {
       setSubmitting(false);

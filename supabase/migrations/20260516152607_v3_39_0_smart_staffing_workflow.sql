@@ -1,9 +1,9 @@
 -- v3.39.0 Smart Staffing Workflow
 -- Adds workspace-scoped availability, open-shift requests, and race-safe claim flow.
 -- Nothing in this migration modifies existing tables.
+-- enterprise_role enum values: owner | resourceAssistant | member  (no 'admin')
 
 -- ─── 1. EMPLOYEE AVAILABILITY ────────────────────────────────────────────────
--- Replaces personal_availability (no workspace_id) for manager-visible pool.
 CREATE TABLE IF NOT EXISTS public.enterprise_staff_availability (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   workspace_id   uuid NOT NULL REFERENCES public.enterprise_workspaces(id) ON DELETE CASCADE,
@@ -20,13 +20,11 @@ CREATE TABLE IF NOT EXISTS public.enterprise_staff_availability (
 
 ALTER TABLE public.enterprise_staff_availability ENABLE ROW LEVEL SECURITY;
 
--- Members can manage their own rows; managers can read all rows in workspace.
+-- All active members can read (managers need to see everyone's availability)
 CREATE POLICY "availability_select" ON public.enterprise_staff_availability
   FOR SELECT USING (
-    workspace_id IN (
-      SELECT workspace_id FROM public.enterprise_memberships
-      WHERE user_id = auth.uid() AND status = 'active'
-    )
+    public.has_enterprise_role(workspace_id, auth.uid(),
+      ARRAY['owner'::enterprise_role,'resourceAssistant'::enterprise_role,'member'::enterprise_role])
   );
 
 CREATE POLICY "availability_insert" ON public.enterprise_staff_availability
@@ -66,23 +64,15 @@ ALTER TABLE public.enterprise_open_shift_requests ENABLE ROW LEVEL SECURITY;
 -- All active members in the workspace can read open shift requests.
 CREATE POLICY "osr_select" ON public.enterprise_open_shift_requests
   FOR SELECT USING (
-    workspace_id IN (
-      SELECT workspace_id FROM public.enterprise_memberships
-      WHERE user_id = auth.uid() AND status = 'active'
-    )
+    public.has_enterprise_role(workspace_id, auth.uid(),
+      ARRAY['owner'::enterprise_role,'resourceAssistant'::enterprise_role,'member'::enterprise_role])
   );
 
--- Only managers (admin role) can insert/update/delete via RPC.
--- Direct INSERT is blocked; writes go through the RPC below.
+-- Only owners/resourceAssistants can insert directly.
 CREATE POLICY "osr_insert_manager" ON public.enterprise_open_shift_requests
   FOR INSERT WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.enterprise_memberships
-      WHERE workspace_id = enterprise_open_shift_requests.workspace_id
-        AND user_id = auth.uid()
-        AND status = 'active'
-        AND role IN ('admin','owner')
-    )
+    public.has_enterprise_role(workspace_id, auth.uid(),
+      ARRAY['owner'::enterprise_role,'resourceAssistant'::enterprise_role])
   );
 
 CREATE POLICY "osr_update_rpc" ON public.enterprise_open_shift_requests
@@ -108,12 +98,11 @@ ALTER TABLE public.enterprise_open_shift_claims ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "osc_select" ON public.enterprise_open_shift_claims
   FOR SELECT USING (
-    request_id IN (
-      SELECT id FROM public.enterprise_open_shift_requests
-      WHERE workspace_id IN (
-        SELECT workspace_id FROM public.enterprise_memberships
-        WHERE user_id = auth.uid() AND status = 'active'
-      )
+    EXISTS (
+      SELECT 1 FROM public.enterprise_open_shift_requests r
+      WHERE r.id = request_id
+        AND public.has_enterprise_role(r.workspace_id, auth.uid(),
+              ARRAY['owner'::enterprise_role,'resourceAssistant'::enterprise_role,'member'::enterprise_role])
     )
   );
 
@@ -201,7 +190,7 @@ BEGIN
      'You claimed and were assigned to the open shift on ' || v_req.shift_date::text || '.',
      'open_shift_request', _request_id);
 
-  -- Notify workspace admins that the shift was filled.
+  -- Notify workspace owners/resourceAssistants that the shift was filled.
   INSERT INTO enterprise_notifications
     (workspace_id, user_id, event_type, title, message, related_type, related_id)
   SELECT
@@ -212,7 +201,7 @@ BEGIN
   FROM enterprise_memberships em
   WHERE em.workspace_id = v_req.workspace_id
     AND em.status = 'active'
-    AND em.role IN ('admin','owner')
+    AND em.role IN ('owner'::enterprise_role, 'resourceAssistant'::enterprise_role)
     AND em.user_id <> v_uid;
 
   RETURN jsonb_build_object('ok', true, 'assignment_id', v_assign_id);
@@ -240,13 +229,13 @@ DECLARE
   v_uid    uuid := auth.uid();
   v_req_id uuid;
 BEGIN
-  -- Caller must be admin/owner in workspace.
+  -- Caller must be owner or resourceAssistant.
   IF NOT EXISTS (
     SELECT 1 FROM enterprise_memberships
     WHERE workspace_id = _workspace_id
       AND user_id = v_uid
       AND status = 'active'
-      AND role IN ('admin','owner')
+      AND role IN ('owner'::enterprise_role, 'resourceAssistant'::enterprise_role)
   ) THEN
     RAISE EXCEPTION 'not_authorized';
   END IF;
