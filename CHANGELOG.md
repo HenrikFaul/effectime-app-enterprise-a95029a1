@@ -1,3 +1,13 @@
+## 2026-05-16 — v3.38.0 Generic BI Framework — portable drop-in prompt architecture
+
+Adds `BI_FRAMEWORK/` — a completely self-contained, project-agnostic Business Intelligence prompt architecture (29 files) that can be dropped into any repository. All Effectime-specific references replaced with bracketed placeholders. Includes a new `SETUP.md` configuration guide, generic master controller (`SYSTEM.md`), 21 specialist prompt files, 4 report templates, and 12 copy-paste usage examples. Model-agnostic (Claude / GPT-4 / Gemini compatible). `business_intelligence/` (Effectime-specific) is entirely unchanged. No application code changed.
+
+### BI_FRAMEWORK/ (29 new files)
+- **README.md + SETUP.md + SYSTEM.md**: Entry point, 8-step configuration guide, generic master controller with fillable Project Context block.
+- **prompts/ (21 files)**: bi_strategy, kpi_analysis, trend_analysis, anomaly_detection, dashboard_interpretation, executive_summary, data_quality, root_cause_analysis, segment_cohort_analysis, bi_documentation, bi_governance, narrative_storytelling, predictive_signals, forecasting_methodology, seasonal_pattern_library, demand_forecasting, churn_risk_scoring, engagement_trajectory_forecasting, financial_forecasting, scenario_modeling, capacity_demand_gap_forecasting.
+- **templates/ (4 files)**: metric_definition_template, bi_report_template, board_report_template, forecast_report_template.
+- **examples/ (1 file)**: usage_examples — 12 copy-paste invocation patterns.
+
 ## 2026-05-16 — v3.37.0 Business Intelligence predictive analytics and forecasting domain (Phase 3)
 
 Adds a complete predictive analytics subdomain to the BI prompt architecture: 8 new prompt files and 1 new forecast template. Master forecasting controller with method-horizon-uncertainty rules. Documented seasonal pattern library (16 patterns, 5 metric domains, EU and cross-market). Domain forecasting for shift demand (methods D-1 through D-4), turnover risk scoring (9 signals, PII-first design), wellbeing trajectory (velocity model, burnout timeline), financial forecasting (3-driver cost decomposition, burn rate index), scenario modeling (5 decision types with causal chains), and capacity-demand gap forecasting (supply trajectory + demand projection → inflection point + intervention window + cascade risk). No application code changed.
