@@ -81,7 +81,7 @@ export function ComplianceDashboard({ workspaceId }: Props) {
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <div className="rounded-lg border p-3 text-center">
               <div className="text-2xl font-bold text-red-600 dark:text-red-400">{violationCount}</div>
               <div className="text-[10px] uppercase tracking-wide text-muted-foreground">

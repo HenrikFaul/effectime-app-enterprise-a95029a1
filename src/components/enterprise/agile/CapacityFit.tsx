@@ -199,8 +199,8 @@ export function CapacityFit({ integration, workspaceId }: { integration: Integra
           </div>
         </div>
 
-        <div className="border rounded-md overflow-hidden">
-          <table className="w-full text-xs">
+        <div className="border rounded-md overflow-hidden overflow-x-auto">
+          <table className="w-full text-xs min-w-[400px]">
             <thead className="bg-muted/50">
               <tr>
                 <th className="text-left p-2">{t('capacity_fit.col_member')}</th>

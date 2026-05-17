@@ -404,7 +404,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                       showRequests={canView('calendar_requests')}
                       showConflicts={canView('calendar_conflicts')}
                     />
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <BirthdayAnniversaryWidget workspaceId={workspace.id} />
                       <AnnualTrendChart workspaceId={workspace.id} />
                     </div>

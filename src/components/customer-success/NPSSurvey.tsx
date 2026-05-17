@@ -74,13 +74,13 @@ export function NPSSurvey({ workspaceId, userId }: Props) {
         </CardHeader>
         <CardContent className="space-y-3">
           {/* 0-10 score scale */}
-          <div className="grid grid-cols-11 gap-1">
+          <div className="flex gap-1 overflow-x-auto pb-0.5">
             {Array.from({ length: 11 }).map((_, i) => (
               <button
                 key={i}
                 type="button"
                 onClick={() => setScore(i)}
-                className={`h-8 rounded text-xs font-medium border transition-colors ${
+                className={`h-8 w-8 shrink-0 flex-1 min-w-[2rem] rounded text-xs font-medium border transition-colors ${
                   score === i
                     ? 'bg-primary text-primary-foreground border-primary'
                     : 'bg-background hover:bg-muted border-border'

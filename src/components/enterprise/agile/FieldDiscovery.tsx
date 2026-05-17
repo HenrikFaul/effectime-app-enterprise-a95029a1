@@ -256,8 +256,8 @@ export function FieldDiscovery({
           </div>
         )}
 
-        <div className="border rounded-md overflow-hidden max-h-[480px] overflow-y-auto">
-          <table className="w-full text-xs">
+        <div className="border rounded-md overflow-hidden max-h-[480px] overflow-y-auto overflow-x-auto">
+          <table className="w-full text-xs min-w-[420px]">
             <thead className="bg-muted/50 sticky top-0">
               <tr>
                 <th className="text-left p-2 w-10">{t('field_discovery.col_board')}</th>

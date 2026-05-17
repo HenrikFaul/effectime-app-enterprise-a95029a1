@@ -1,3 +1,33 @@
+## 2026-05-17 — v3.41.4 UI/UX Refactor: global overflow, responsive grid, table scroll
+
+Systematic layout audit pass following the UI_UX_REFACTOR_UNIVERSAL_PROMPT. Eliminates horizontal scroll on all breakpoints and adds missing responsive grid stepping.
+
+**Global CSS (index.css):**
+- `overflow-x: hidden` + `max-width: 100%` + `scrollbar-gutter: stable` on `body`
+- `overflow-x: hidden` on `html` root
+- `img, video { max-width: 100%; height: auto; }` baseline
+
+**AppShell:**
+- `overflow-x-hidden` on the root flex container
+
+**Grid stepping fixes (xl/lg jumping without md step):**
+- `WorkspaceDashboard`: `xl:grid-cols-2` → `md:grid-cols-2` for birthday/trend widgets
+- `Auth.tsx`: trust chips `grid-cols-3` → `grid-cols-1 min-[420px]:grid-cols-3`
+- `Auth.tsx`: workflow steps `lg:grid-cols-3` → `sm:grid-cols-2 lg:grid-cols-3`
+- `SuperadminControlPlane`: email stats `grid-cols-3` → `sm:grid-cols-3`
+- `ComplianceDashboard`: KPI `grid-cols-3` → `sm:grid-cols-3`
+- `ResellerPortal`: KPI `grid-cols-3` → `sm:grid-cols-3`
+- `WellbeingRecalculateCard`: `grid-cols-4` → `grid-cols-2 sm:grid-cols-4`
+
+**Table overflow wrappers:**
+- `CapacityFit.tsx`: added `overflow-x-auto` + `min-w-[400px]` on 6-col table
+- `FieldDiscovery.tsx`: added `overflow-x-auto` + `min-w-[420px]` on 6-col table
+
+**NPS Survey:**
+- `grid-cols-11` → `flex overflow-x-auto` with `shrink-0 flex-1 min-w-[2rem]` buttons
+
+**TypeScript:** `tsc --noEmit` passes with 0 errors.
+
 ## 2026-05-17 — v3.41.3 UX: Free-text search in position picker catalog
 
 Added a free-text search/autocomplete field to the "Előre definiált pozíció-katalógus" dialog (used in both Resources menu position creation and open shift creation). Previously users had to click through the full category → position tree; now typing any part of a position name instantly shows a flat filtered list across all categories. Clicking a search result goes directly to the skills review step (step 3), bypassing the tree.

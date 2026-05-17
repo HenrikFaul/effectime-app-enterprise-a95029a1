@@ -63,7 +63,7 @@ export function WellbeingRecalculateCard({ workspaceId }: Props) {
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           <div className="rounded-lg border p-2 text-center">
             <div className="text-2xl font-bold tabular-nums">{avg}</div>
             <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
