@@ -1,3 +1,51 @@
+## 2026-05-17 — v3.41.5 Backend QA: RLS Index Coverage Sweep
+
+Systematic backend integrity audit following `BACKEND_BUGFIX_QA_UNIVERSAL_PROMPT.md`.
+All Phase 1 checks passed clean; the only actionable finding was missing `workspace_id` /
+`user_id` indexes on 29 tables whose RLS policies were causing seq-scans.
+
+### Fixed
+- DB: 29 missing workspace_id / user_id indexes added via migration `20260517230000_v3_41_5_rls_index_coverage.sql`
+  - **HIGH:** `leave_requests.workspace_id`, `leave_requests.user_id`, `enterprise_notifications.workspace_id`
+  - **MEDIUM:** `approval_decisions`, `enterprise_quota_transactions`, `enterprise_allowances`,
+    `enterprise_company_leave_days`, `enterprise_hr_workflow_tasks`, `enterprise_shift_cancellations`,
+    `leave_request_attachments`, `leave_request_substitutes`
+  - **LOW:** 18 additional tables (agile, offices, scenarios, plugins, QR, etc.)
+
+### Verified Clean (no fixes needed)
+- Function overload ambiguity (PostgREST 409): 0 ambiguous overloads
+- SECURITY DEFINER coverage: all ~70 privileged functions confirmed present
+- RLS enabled: all 186 public tables have RLS ON
+- RLS policies with no rows: 0 tables (every RLS-enabled table has at least one policy)
+- Radix UI `SelectItem value=""`: 0 instances
+- Hardcoded service_role key in client code: 0 instances
+- Workspace scoping in all hooks: verified correct
+- TypeScript: `tsc --noEmit` → 0 errors
+- Migrations: all applied, latest = v3_41_2_drop_old_create_open_shift_overload
+- RPC GRANTs: all 60+ public functions have EXECUTE granted to authenticated
+- No TODO/FIXME in source code
+
+### Supabase Advisor Findings (documented for next sprint)
+- **auth_rls_initplan (404 warnings / 156 tables)** — CRITICAL performance issue: RLS policies
+  call `auth.uid()` directly instead of `(select auth.uid())`, causing per-row re-evaluation.
+  Fix pattern: `USING ((select auth.uid()) = user_id)`. Tracked as HIBA-RLS-001.
+- **unindexed_foreign_keys (119 / 89 tables)** — FK columns without indexes cause seq-scans on cascades.
+  Our workspace_id sweep covered the primary RLS columns; FK-specific sweep tracked as next step.
+- **multiple_permissive_policies (108 / 54 tables)** — Overlapping permissive policies compound eval cost.
+  Should be consolidated with OR conditions. Tracked for next RLS hardening session.
+- **unused_index (103 / 65 tables)** — Includes 31 in plannermaster schema (staging). Drop candidates
+  should be reviewed after query traffic analysis.
+- **duplicate_index (3)** — Fixed: see migration below.
+- **auth_db_connections_absolute (1)** — Auth server is hard-capped at 10 connections;
+  switch to percentage-based in Supabase project settings.
+
+### Notes
+- 3 UPDATE policies use `USING (true)` on `enterprise_open_shift_requests`,
+  `enterprise_open_shift_waitlist`, `enterprise_shift_cancellations` — intentional design
+  (SECURITY DEFINER RPCs are the sole write path; the policy enables RPC-level updates).
+- i18n: cs/pl/sk locales are ~203 keys behind en/hu; at/de/ro are ~47 keys behind.
+  Pre-existing gap (not introduced this session). Tracked for next i18n sweep.
+
 ## 2026-05-17 — v3.41.4 UI/UX Refactor: global overflow, responsive grid, table scroll
 
 Systematic layout audit pass following the UI_UX_REFACTOR_UNIVERSAL_PROMPT. Eliminates horizontal scroll on all breakpoints and adds missing responsive grid stepping.
