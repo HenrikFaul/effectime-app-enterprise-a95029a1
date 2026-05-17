@@ -5,10 +5,12 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Megaphone, CheckCircle2, Loader2, X, Plus } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Megaphone, Loader2, X, Plus, Users, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useI18n } from '@/i18n/I18nProvider';
-import { useCreateOpenShift, useOpenShiftRequests, useCancelOpenShift } from '@/hooks/useOpenShifts';
+import { useCreateOpenShift, useOpenShiftRequests, useCancelOpenShift, useShiftCandidates } from '@/hooks/useOpenShifts';
+import { PositionPickerDialog, type PositionPickerResult } from '@/components/enterprise/positions/PositionPickerDialog';
 
 interface SkillOption { id: string; name: string }
 
@@ -29,35 +31,67 @@ export function OpenShiftManager({
 }: Props) {
   const { t } = useI18n();
   const [showForm, setShowForm] = useState(false);
-  const [selectedRole, setSelectedRole] = useState(businessRole ?? '');
+  const [pickerOpen, setPickerOpen] = useState(false);
+
+  // Structured position (from PositionPickerDialog)
+  const [selectedRoleId, setSelectedRoleId] = useState<string | null>(null);
+  const [selectedRoleName, setSelectedRoleName] = useState(businessRole ?? '');
+  const [selectedSkillIds, setSelectedSkillIds] = useState<string[]>(skillId ? [skillId] : []);
+
+  // Legacy single-skill for when picker is not used in compact pre-set mode
   const [selectedSkillId, setSelectedSkillId] = useState(skillId ?? '');
   const [notes, setNotes] = useState('');
+  const [timeoutHours, setTimeoutHours] = useState(3);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [selectedCandidateIds, setSelectedCandidateIds] = useState<string[]>([]);
 
   const create = useCreateOpenShift();
   const cancel = useCancelOpenShift();
   const { data: allRequests = [] } = useOpenShiftRequests(workspaceId);
+  const { data: candidates = [], isFetching: candidatesLoading } = useShiftCandidates({
+    workspaceId, officeId, shiftDate,
+    businessRole: selectedRoleName || businessRole || null,
+    skillIds: selectedSkillIds.length > 0 ? selectedSkillIds : (selectedSkillId ? [selectedSkillId] : []),
+    enabled: showForm && !compact,
+  });
 
   const openShifts = allRequests.filter(
     r => r.office_id === officeId && r.shift_date === shiftDate && r.status === 'open'
   );
 
-  const skillName = (id: string) =>
-    availableSkills?.find(s => s.id === id)?.name ?? id;
+  const top3 = candidates.filter(c => c.isEligible).slice(0, 3);
 
-  const handlePost = async () => {
+  const handlePickPosition = (result: PositionPickerResult) => {
+    setSelectedRoleId(result.positionRoleId);
+    setSelectedRoleName(result.positionLabel);
+    setSelectedSkillIds(result.skillIds);
+    setSelectedCandidateIds([]);
+  };
+
+  const clearPosition = () => {
+    setSelectedRoleId(null);
+    setSelectedRoleName(businessRole ?? '');
+    setSelectedSkillIds(skillId ? [skillId] : []);
+    setSelectedCandidateIds([]);
+  };
+
+  const handlePost = async (targetOnly: boolean) => {
+    const targetUserIds = targetOnly
+      ? candidates.filter(c => selectedCandidateIds.includes(c.member.user_id)).map(c => c.member.user_id)
+      : [];
     try {
       await create.mutateAsync({
         workspaceId, officeId, shiftDate,
-        businessRole: selectedRole || undefined,
+        businessRole: selectedRoleName || undefined,
         skillId: selectedSkillId || undefined,
         notes: notes || undefined,
+        roleId: selectedRoleId || undefined,
+        skillIds: selectedSkillIds.length > 0 ? selectedSkillIds : undefined,
+        timeoutHours,
+        targetUserIds,
       });
       toast.success(t('open_shifts.posted_success'));
-      setNotes('');
-      setSelectedRole(businessRole ?? '');
-      setSelectedSkillId(skillId ?? '');
-      setShowForm(false);
+      resetForm();
     } catch {
       toast.error(t('open_shifts.post_error'));
     }
@@ -83,8 +117,12 @@ export function OpenShiftManager({
   const resetForm = () => {
     setShowForm(false);
     setNotes('');
-    setSelectedRole(businessRole ?? '');
+    setTimeoutHours(3);
+    setSelectedRoleId(null);
+    setSelectedRoleName(businessRole ?? '');
+    setSelectedSkillIds(skillId ? [skillId] : []);
     setSelectedSkillId(skillId ?? '');
+    setSelectedCandidateIds([]);
   };
 
   // ── Compact mode (inside coverage-rule drawer header) ────────────────────
@@ -134,16 +172,56 @@ export function OpenShiftManager({
             </Button>
           </div>
         ))}
-        <CompactFormFields
-          selectedRole={selectedRole} setSelectedRole={setSelectedRole}
-          selectedSkillId={selectedSkillId} setSelectedSkillId={setSelectedSkillId}
-          notes={notes} setNotes={setNotes}
-          availableSkills={availableSkills}
-          businessRole={businessRole} skillId={skillId}
-          t={t}
+
+        {/* Position picker button (compact) */}
+        {!businessRole && (
+          <div className="space-y-1">
+            {selectedRoleName ? (
+              <div className="flex items-center gap-1">
+                <Badge variant="secondary" className="text-xs flex-1 justify-start">
+                  {selectedRoleName}
+                </Badge>
+                <Button variant="ghost" size="icon" className="h-5 w-5" onClick={clearPosition}>
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>
+            ) : (
+              <Button
+                variant="outline" size="sm"
+                className="w-full text-xs h-7 justify-start text-muted-foreground"
+                onClick={() => setPickerOpen(true)}
+              >
+                {t('open_shifts.select_position')}
+              </Button>
+            )}
+          </div>
+        )}
+
+        {!skillId && availableSkills && availableSkills.length > 0 && selectedSkillIds.length === 0 && (
+          <Select
+            value={selectedSkillId || '__any__'}
+            onValueChange={v => setSelectedSkillId(v === '__any__' ? '' : v)}
+          >
+            <SelectTrigger className="text-sm h-7">
+              <SelectValue placeholder={t('open_shifts.any_skill')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__any__">{t('open_shifts.any_skill')}</SelectItem>
+              {availableSkills.map(s => (
+                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+
+        <Textarea
+          value={notes}
+          onChange={e => setNotes(e.target.value)}
+          placeholder={t('open_shifts.notes_placeholder')}
+          className="text-sm min-h-[60px]"
         />
         <div className="flex gap-2">
-          <Button size="sm" onClick={handlePost} disabled={create.isPending} className="gap-1">
+          <Button size="sm" onClick={() => handlePost(false)} disabled={create.isPending} className="gap-1">
             {create.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Megaphone className="h-3 w-3" />}
             {t('open_shifts.broadcast')}
           </Button>
@@ -151,6 +229,13 @@ export function OpenShiftManager({
             {t('open_shifts.cancel')}
           </Button>
         </div>
+
+        <PositionPickerDialog
+          open={pickerOpen}
+          onOpenChange={setPickerOpen}
+          workspaceId={workspaceId}
+          onPick={handlePickPosition}
+        />
       </div>
     );
   }
@@ -170,10 +255,18 @@ export function OpenShiftManager({
               {req.business_role && (
                 <Badge variant="secondary" className="text-xs">{req.business_role}</Badge>
               )}
-              {req.skill_id && (
-                <Badge variant="outline" className="text-xs">{skillName(req.skill_id)}</Badge>
-              )}
-              {!req.business_role && !req.skill_id && (
+              {req.skill_ids && req.skill_ids.length > 0
+                ? req.skill_ids.map(sid => {
+                    const name = availableSkills?.find(s => s.id === sid)?.name ?? sid;
+                    return <Badge key={sid} variant="outline" className="text-xs">{name}</Badge>;
+                  })
+                : req.skill_id && (
+                    <Badge variant="outline" className="text-xs">
+                      {availableSkills?.find(s => s.id === req.skill_id)?.name ?? req.skill_id}
+                    </Badge>
+                  )
+              }
+              {!req.business_role && !req.skill_id && req.skill_ids?.length === 0 && (
                 <Badge variant="secondary" className="text-xs">{t('open_shifts.any_role')}</Badge>
               )}
               <Badge className="text-xs bg-amber-500 hover:bg-amber-500 border-0">
@@ -200,20 +293,41 @@ export function OpenShiftManager({
 
       {/* Add new broadcast form */}
       {showForm ? (
-        <div className="rounded border p-3 space-y-2 bg-muted/30">
+        <div className="rounded border p-3 space-y-3 bg-muted/30">
           <p className="text-xs font-medium text-muted-foreground">{t('open_shifts.post_hint')}</p>
+
+          {/* Position picker */}
           {!businessRole && (
             <div className="space-y-1">
-              <Label className="text-xs">{t('open_shifts.role_label')}</Label>
-              <Input
-                value={selectedRole}
-                onChange={e => setSelectedRole(e.target.value)}
-                placeholder={t('open_shifts.any_role')}
-                className="text-sm h-8"
-              />
+              <Label className="text-xs">{t('open_shifts.position_label')}</Label>
+              {selectedRoleName ? (
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="text-sm flex-1 justify-start py-1 px-2">
+                    {selectedRoleName}
+                    {selectedSkillIds.length > 0 && (
+                      <span className="ml-1.5 text-muted-foreground">
+                        · {selectedSkillIds.length} {t('open_shifts.skill_label').toLowerCase()}
+                      </span>
+                    )}
+                  </Badge>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={clearPosition}>
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  variant="outline" size="sm"
+                  className="w-full h-8 justify-start text-muted-foreground"
+                  onClick={() => setPickerOpen(true)}
+                >
+                  {t('open_shifts.select_position')}
+                </Button>
+              )}
             </div>
           )}
-          {!skillId && availableSkills && availableSkills.length > 0 && (
+
+          {/* Legacy skill select (only when no position picked and skills provided) */}
+          {!skillId && availableSkills && availableSkills.length > 0 && selectedSkillIds.length === 0 && (
             <div className="space-y-1">
               <Label className="text-xs">{t('open_shifts.skill_label')}</Label>
               <Select
@@ -232,16 +346,83 @@ export function OpenShiftManager({
               </Select>
             </div>
           )}
+
+          {/* Timeout */}
+          <div className="space-y-1">
+            <Label className="text-xs">{t('open_shifts.timeout_label')}</Label>
+            <Input
+              type="number"
+              min={1}
+              max={72}
+              value={timeoutHours}
+              onChange={e => setTimeoutHours(Number(e.target.value) || 3)}
+              className="text-sm h-8 w-32"
+            />
+          </div>
+
           <Textarea
             value={notes}
             onChange={e => setNotes(e.target.value)}
             placeholder={t('open_shifts.notes_placeholder')}
             className="text-sm min-h-[60px]"
           />
-          <div className="flex gap-2">
-            <Button size="sm" onClick={handlePost} disabled={create.isPending} className="gap-1">
+
+          {/* Top-3 candidate shortlist */}
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="text-xs font-medium">{t('open_shifts.top_candidates')}</span>
+              {candidatesLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+            </div>
+            {!candidatesLoading && top3.length === 0 ? (
+              <p className="text-xs text-muted-foreground italic">{t('open_shifts.no_candidates')}</p>
+            ) : (
+              <>
+                <p className="text-[11px] text-muted-foreground">{t('open_shifts.candidates_hint')}</p>
+                {top3.map(r => (
+                  <label
+                    key={r.member.user_id}
+                    className="flex items-center gap-2 rounded border bg-card px-2 py-1.5 cursor-pointer hover:bg-accent transition"
+                  >
+                    <Checkbox
+                      checked={selectedCandidateIds.includes(r.member.user_id)}
+                      onCheckedChange={v => {
+                        setSelectedCandidateIds(prev =>
+                          v ? [...prev, r.member.user_id] : prev.filter(id => id !== r.member.user_id)
+                        );
+                      }}
+                    />
+                    <span className="text-sm flex-1">{r.member.display_name}</span>
+                    {r.member.business_role && (
+                      <span className="text-[11px] text-muted-foreground">{r.member.business_role}</span>
+                    )}
+                    {r.issues.some(i => i.severity === 'warning') ? (
+                      <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
+                    ) : (
+                      <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />
+                    )}
+                  </label>
+                ))}
+              </>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {selectedCandidateIds.length > 0 && (
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => handlePost(true)}
+                disabled={create.isPending}
+                className="gap-1"
+              >
+                {create.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Users className="h-3 w-3" />}
+                {t('open_shifts.notify_selected')} ({selectedCandidateIds.length})
+              </Button>
+            )}
+            <Button size="sm" onClick={() => handlePost(false)} disabled={create.isPending} className="gap-1">
               {create.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Megaphone className="h-3 w-3" />}
-              {t('open_shifts.broadcast')}
+              {t('open_shifts.broadcast_all')}
             </Button>
             <Button size="sm" variant="ghost" onClick={resetForm}>
               {t('open_shifts.cancel')}
@@ -257,58 +438,13 @@ export function OpenShiftManager({
           {t('open_shifts.post_open_shift')}
         </Button>
       )}
-    </div>
-  );
-}
 
-// ── Shared compact form fields ────────────────────────────────────────────────
-function CompactFormFields({
-  selectedRole, setSelectedRole,
-  selectedSkillId, setSelectedSkillId,
-  notes, setNotes,
-  availableSkills,
-  businessRole, skillId,
-  t,
-}: {
-  selectedRole: string; setSelectedRole: (v: string) => void;
-  selectedSkillId: string; setSelectedSkillId: (v: string) => void;
-  notes: string; setNotes: (v: string) => void;
-  availableSkills?: { id: string; name: string }[];
-  businessRole?: string; skillId?: string;
-  t: (key: string, vars?: Record<string, string | number>) => string;
-}) {
-  return (
-    <>
-      {!businessRole && (
-        <Input
-          value={selectedRole}
-          onChange={e => setSelectedRole(e.target.value)}
-          placeholder={t('open_shifts.role_label')}
-          className="text-sm h-7"
-        />
-      )}
-      {!skillId && availableSkills && availableSkills.length > 0 && (
-        <Select
-          value={selectedSkillId || '__any__'}
-          onValueChange={v => setSelectedSkillId(v === '__any__' ? '' : v)}
-        >
-          <SelectTrigger className="text-sm h-7">
-            <SelectValue placeholder={t('open_shifts.any_skill')} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__any__">{t('open_shifts.any_skill')}</SelectItem>
-            {availableSkills.map(s => (
-              <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      )}
-      <Textarea
-        value={notes}
-        onChange={e => setNotes(e.target.value)}
-        placeholder={t('open_shifts.notes_placeholder')}
-        className="text-sm min-h-[60px]"
+      <PositionPickerDialog
+        open={pickerOpen}
+        onOpenChange={setPickerOpen}
+        workspaceId={workspaceId}
+        onPick={handlePickPosition}
       />
-    </>
+    </div>
   );
 }

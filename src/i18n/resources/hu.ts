@@ -4605,6 +4605,17 @@ const hu = {
     close_shift: 'Meghirdetés lezárása',
     cancelled_success: 'A nyitott műszak meghirdetése törölve.',
     cancel_error: 'Nem sikerült törölni a meghirdetést. Próbáld újra.',
+    position_label: 'Szükséges pozíció',
+    select_position: 'Pozíció kiválasztása…',
+    timeout_label: 'Válaszidő (óra)',
+    top_candidates: 'Legjobb jelöltek',
+    notify_selected: 'Kiválasztottak értesítése',
+    broadcast_all: 'Meghirdetés az összes megfelelőnek',
+    join_waitlist: 'Várólistára feliratkozás',
+    waitlist_joined: 'Felkerültél a várólistára.',
+    waitlist_error: 'Nem sikerült a várólistára feliratkozni. Próbáld újra.',
+    no_candidates: 'Nem található megfelelő jelölt.',
+    candidates_hint: 'Válassz jelölteket közvetlen értesítéshez, vagy hirdesd meg az összes megfelelő tagnak.',
   },
 } as const;
 

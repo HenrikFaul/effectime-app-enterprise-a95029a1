@@ -4388,6 +4388,17 @@ const cs = {
     close_shift: 'Zavřít inzerát',
     cancelled_success: 'Inzerát volné směny zrušen.',
     cancel_error: 'Nepodařilo se zrušit inzerát. Zkuste to znovu.',
+    position_label: 'Požadovaná pozice',
+    select_position: 'Vyberte pozici…',
+    timeout_label: 'Lhůta pro odpověď (hodiny)',
+    top_candidates: 'Nejlepší kandidáti',
+    notify_selected: 'Upozornit vybrané',
+    broadcast_all: 'Rozeslat všem odpovídajícím',
+    join_waitlist: 'Přidat se na čekací listinu',
+    waitlist_joined: 'Přidáni na čekací listinu.',
+    waitlist_error: 'Nepodařilo se připojit na čekací listinu. Zkuste to znovu.',
+    no_candidates: 'Nebyli nalezeni žádní způsobilí kandidáti.',
+    candidates_hint: 'Vyberte kandidáty pro přímé upozornění nebo rozešlete všem odpovídajícím členům.',
   },
 } as const;
 

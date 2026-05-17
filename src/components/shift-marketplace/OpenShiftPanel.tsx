@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { ClipboardList, Zap } from 'lucide-react';
+import { ClipboardList, Zap, Clock, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
-import { useOpenShiftRequests, useClaimOpenShift } from '@/hooks/useOpenShifts';
+import { useOpenShiftRequests, useClaimOpenShift, useJoinWaitlist } from '@/hooks/useOpenShifts';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Props {
@@ -46,18 +46,36 @@ export function OpenShiftPanel({ workspaceId, membershipId }: Props) {
   const { data: requests = [], isLoading: isShiftsLoading } = useOpenShiftRequests(workspaceId);
   const { data: memberProfile, isLoading: isProfileLoading } = useMemberProfile(membershipId);
   const claim = useClaimOpenShift();
+  const joinWaitlist = useJoinWaitlist();
   const [claimingId, setClaimingId] = useState<string | null>(null);
+  const [waitlistingId, setWaitlistingId] = useState<string | null>(null);
 
   const isLoading = isShiftsLoading || (!!membershipId && isProfileLoading);
 
-  // Filter to only open shifts that match the member's role/skills (or have no requirement)
-  const open = requests.filter(r => {
-    if (r.status !== 'open') return false;
-    if (!memberProfile) return !membershipId; // no membershipId → show all; ID given but loading → hide until ready
+  // Filter to open shifts matching member's role/skills, plus filled shifts (for waitlist)
+  const visible = requests.filter(r => {
+    if (r.status === 'cancelled') return false;
+    if (!memberProfile) return !membershipId;
     const roleMatch = !r.business_role || r.business_role === memberProfile.businessRole;
-    const skillMatch = !r.skill_id || memberProfile.skillIds.includes(r.skill_id);
+    const effectiveSkillIds: string[] = r.skill_ids?.length ? r.skill_ids : (r.skill_id ? [r.skill_id] : []);
+    const skillMatch = effectiveSkillIds.length === 0 ||
+      effectiveSkillIds.some(sid => memberProfile.skillIds.includes(sid));
     return roleMatch && skillMatch;
   });
+  const open = visible.filter(r => r.status === 'open');
+  const filled = visible.filter(r => r.status === 'filled');
+
+  const handleJoinWaitlist = async (requestId: string) => {
+    setWaitlistingId(requestId);
+    try {
+      await joinWaitlist.mutateAsync(requestId);
+      toast.success(t('open_shifts.waitlist_joined'));
+    } catch {
+      toast.error(t('open_shifts.waitlist_error'));
+    } finally {
+      setWaitlistingId(null);
+    }
+  };
 
   const handleClaim = async (requestId: string) => {
     setClaimingId(requestId);
@@ -94,7 +112,7 @@ export function OpenShiftPanel({ workspaceId, membershipId }: Props) {
           <div className="space-y-2">
             {[1, 2].map(i => <Skeleton key={i} className="h-14 rounded" />)}
           </div>
-        ) : open.length === 0 ? (
+        ) : open.length === 0 && filled.length === 0 ? (
           <p className="text-sm text-muted-foreground py-4 text-center">
             {t('open_shifts.empty')}
           </p>
@@ -145,6 +163,38 @@ export function OpenShiftPanel({ workspaceId, membershipId }: Props) {
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
+              </div>
+            ))}
+
+            {/* Filled shifts — show waitlist option */}
+            {filled.map(req => (
+              <div
+                key={req.id}
+                className="flex items-center justify-between gap-2 rounded border px-3 py-2 bg-muted/30 border-muted-foreground/20 opacity-75"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {format(new Date(`${req.shift_date}T00:00:00`), 'EEEE, d MMMM', { locale: dateFnsLocale })}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {t('open_shifts.filled_label')}
+                    {req.business_role && ` · ${req.business_role}`}
+                  </p>
+                </div>
+                {membershipId && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0 gap-1 text-xs"
+                    disabled={joinWaitlist.isPending && waitlistingId === req.id}
+                    onClick={() => handleJoinWaitlist(req.id)}
+                  >
+                    {joinWaitlist.isPending && waitlistingId === req.id
+                      ? <Loader2 className="h-3 w-3 animate-spin" />
+                      : <Clock className="h-3 w-3" />}
+                    {t('open_shifts.join_waitlist')}
+                  </Button>
+                )}
               </div>
             ))}
           </div>

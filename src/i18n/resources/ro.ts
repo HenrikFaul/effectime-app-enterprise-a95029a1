@@ -4568,6 +4568,17 @@ const ro = {
     close_shift: 'Închide anunțul',
     cancelled_success: 'Anunțul turei deschise a fost anulat.',
     cancel_error: 'Nu s-a putut anula anunțul. Încercați din nou.',
+    position_label: 'Poziție necesară',
+    select_position: 'Selectați poziția…',
+    timeout_label: 'Termen limită răspuns (ore)',
+    top_candidates: 'Candidați de top',
+    notify_selected: 'Notificați selectați',
+    broadcast_all: 'Trimiteți tuturor corespunzătorilor',
+    join_waitlist: 'Înscrie-te pe lista de așteptare',
+    waitlist_joined: 'Adăugat pe lista de așteptare.',
+    waitlist_error: 'Nu s-a putut alătura listei de așteptare. Încercați din nou.',
+    no_candidates: 'Nu s-au găsit candidați eligibili.',
+    candidates_hint: 'Selectați candidați pentru notificare directă sau trimiteți tuturor membrilor corespunzători.',
   },
 } as const;
 

@@ -4388,6 +4388,17 @@ const pl = {
     close_shift: 'Zamknij ogłoszenie',
     cancelled_success: 'Ogłoszenie wolnej zmiany anulowane.',
     cancel_error: 'Nie udało się anulować ogłoszenia. Spróbuj ponownie.',
+    position_label: 'Wymagane stanowisko',
+    select_position: 'Wybierz stanowisko…',
+    timeout_label: 'Termin odpowiedzi (godziny)',
+    top_candidates: 'Najlepsi kandydaci',
+    notify_selected: 'Powiadom wybranych',
+    broadcast_all: 'Wyślij do wszystkich pasujących',
+    join_waitlist: 'Dołącz do listy oczekujących',
+    waitlist_joined: 'Dodano do listy oczekujących.',
+    waitlist_error: 'Nie udało się dołączyć do listy oczekujących. Spróbuj ponownie.',
+    no_candidates: 'Nie znaleziono odpowiednich kandydatów.',
+    candidates_hint: 'Wybierz kandydatów do bezpośredniego powiadomienia lub wyślij do wszystkich pasujących członków.',
   },
 } as const;
 

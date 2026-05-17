@@ -4617,6 +4617,17 @@ const en = {
     close_shift: 'Close broadcast',
     cancelled_success: 'Open shift broadcast cancelled.',
     cancel_error: 'Could not cancel the broadcast. Try again.',
+    position_label: 'Required position',
+    select_position: 'Select position…',
+    timeout_label: 'Response timeout (hours)',
+    top_candidates: 'Top candidates',
+    notify_selected: 'Notify selected',
+    broadcast_all: 'Broadcast to all matching',
+    join_waitlist: 'Join waitlist',
+    waitlist_joined: 'Added to the waitlist.',
+    waitlist_error: 'Could not join waitlist. Try again.',
+    no_candidates: 'No eligible candidates found.',
+    candidates_hint: 'Select candidates to notify directly, or broadcast to all matching members.',
   },
 } as const;
 
