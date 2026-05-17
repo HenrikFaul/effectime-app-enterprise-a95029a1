@@ -4926,6 +4926,170 @@ export type Database = {
           },
         ]
       }
+      enterprise_open_shift_claims: {
+        Row: {
+          claimed_at: string
+          id: string
+          membership_id: string
+          request_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          claimed_at?: string
+          id?: string
+          membership_id: string
+          request_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          claimed_at?: string
+          id?: string
+          membership_id?: string
+          request_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_open_shift_claims_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_open_shift_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_open_shift_requests: {
+        Row: {
+          business_role: string | null
+          created_at: string
+          created_by: string
+          escalation_level: number
+          filled_at: string | null
+          filled_by_user_id: string | null
+          id: string
+          notes: string | null
+          notified_user_ids: string[]
+          office_id: string
+          respond_by_at: string | null
+          role_id: string | null
+          shift_date: string
+          skill_id: string | null
+          skill_ids: string[]
+          status: string
+          target_user_ids: string[]
+          timeout_hours: number
+          updated_at: string
+          workspace_id: string
+        }
+        Insert: {
+          business_role?: string | null
+          created_at?: string
+          created_by: string
+          escalation_level?: number
+          filled_at?: string | null
+          filled_by_user_id?: string | null
+          id?: string
+          notes?: string | null
+          notified_user_ids?: string[]
+          office_id: string
+          respond_by_at?: string | null
+          role_id?: string | null
+          shift_date: string
+          skill_id?: string | null
+          skill_ids?: string[]
+          status?: string
+          target_user_ids?: string[]
+          timeout_hours?: number
+          updated_at?: string
+          workspace_id: string
+        }
+        Update: {
+          business_role?: string | null
+          created_at?: string
+          created_by?: string
+          escalation_level?: number
+          filled_at?: string | null
+          filled_by_user_id?: string | null
+          id?: string
+          notes?: string | null
+          notified_user_ids?: string[]
+          office_id?: string
+          respond_by_at?: string | null
+          role_id?: string | null
+          shift_date?: string
+          skill_id?: string | null
+          skill_ids?: string[]
+          status?: string
+          target_user_ids?: string[]
+          timeout_hours?: number
+          updated_at?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_open_shift_requests_role_id_fkey"
+            columns: ["role_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspace_roles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "enterprise_open_shift_requests_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_org_pulse_membership"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "enterprise_open_shift_requests_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_open_shift_waitlist: {
+        Row: {
+          id: string
+          joined_at: string
+          membership_id: string
+          position: number
+          request_id: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          membership_id: string
+          position: number
+          request_id: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          membership_id?: string
+          position?: number
+          request_id?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_open_shift_waitlist_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_open_shift_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enterprise_org_chart_snapshots: {
         Row: {
           created_at: string
@@ -5901,6 +6065,54 @@ export type Database = {
         }
         Relationships: []
       }
+      enterprise_shift_cancellations: {
+        Row: {
+          assignment_id: string | null
+          business_role: string | null
+          cancelled_at: string
+          id: string
+          notified_managers: boolean
+          office_id: string
+          replacement_found: boolean
+          replacement_user_id: string | null
+          role_id: string | null
+          shift_date: string
+          skill_ids: string[]
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          assignment_id?: string | null
+          business_role?: string | null
+          cancelled_at?: string
+          id?: string
+          notified_managers?: boolean
+          office_id: string
+          replacement_found?: boolean
+          replacement_user_id?: string | null
+          role_id?: string | null
+          shift_date: string
+          skill_ids?: string[]
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          assignment_id?: string | null
+          business_role?: string | null
+          cancelled_at?: string
+          id?: string
+          notified_managers?: boolean
+          office_id?: string
+          replacement_found?: boolean
+          replacement_user_id?: string | null
+          role_id?: string | null
+          shift_date?: string
+          skill_ids?: string[]
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: []
+      }
       enterprise_skills: {
         Row: {
           category: string | null
@@ -5939,6 +6151,57 @@ export type Database = {
           },
           {
             foreignKeyName: "enterprise_skills_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      enterprise_staff_availability: {
+        Row: {
+          availability_date: string
+          created_at: string
+          id: string
+          membership_id: string
+          notes: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          workspace_id: string
+        }
+        Insert: {
+          availability_date: string
+          created_at?: string
+          id?: string
+          membership_id: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          workspace_id: string
+        }
+        Update: {
+          availability_date?: string
+          created_at?: string
+          id?: string
+          membership_id?: string
+          notes?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_staff_availability_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_org_pulse_membership"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "enterprise_staff_availability_workspace_id_fkey"
             columns: ["workspace_id"]
             isOneToOne: false
             referencedRelation: "enterprise_workspaces"
@@ -6412,6 +6675,7 @@ export type Database = {
           is_active: boolean
           project_key: string | null
           provider: Database["public"]["Enums"]["integration_provider"]
+          selected_field_ids: string[]
           updated_at: string
           workspace_id: string
         }
@@ -6427,6 +6691,7 @@ export type Database = {
           is_active?: boolean
           project_key?: string | null
           provider: Database["public"]["Enums"]["integration_provider"]
+          selected_field_ids?: string[]
           updated_at?: string
           workspace_id: string
         }
@@ -6442,6 +6707,7 @@ export type Database = {
           is_active?: boolean
           project_key?: string | null
           provider?: Database["public"]["Enums"]["integration_provider"]
+          selected_field_ids?: string[]
           updated_at?: string
           workspace_id?: string
         }
@@ -9160,6 +9426,14 @@ export type Database = {
         Args: { _event_id: string; _user_id: string }
         Returns: boolean
       }
+      cancel_open_shift_request: {
+        Args: { _request_id: string }
+        Returns: Json
+      }
+      cancel_shift_assignment: {
+        Args: { _assignment_id: string }
+        Returns: Json
+      }
       candidate_create_slot: {
         Args: {
           _interviewer_ids: string[]
@@ -9194,6 +9468,7 @@ export type Database = {
         }
         Returns: Json
       }
+      claim_open_shift: { Args: { _request_id: string }; Returns: Json }
       clock_event: {
         Args: {
           _event_type: string
@@ -9218,6 +9493,21 @@ export type Database = {
           _workspace_id: string
         }
         Returns: Json
+      }
+      create_open_shift_request: {
+        Args: {
+          _business_role?: string
+          _notes?: string
+          _office_id: string
+          _role_id?: string
+          _shift_date: string
+          _skill_id?: string
+          _skill_ids?: string[]
+          _target_user_ids?: string[]
+          _timeout_hours?: number
+          _workspace_id: string
+        }
+        Returns: string
       }
       create_workspace_with_owner: {
         Args: {
@@ -9410,6 +9700,7 @@ export type Database = {
         Args: { _tenant_id: string; _user_id: string }
         Returns: boolean
       }
+      join_open_shift_waitlist: { Args: { _request_id: string }; Returns: Json }
       marketplace_install_plugin: {
         Args: { _config?: Json; _plugin_id: string; _workspace_id: string }
         Returns: string
@@ -9443,6 +9734,7 @@ export type Database = {
         }
         Returns: number
       }
+      process_open_shift_escalations: { Args: never; Returns: number }
       read_email_batch: {
         Args: { batch_size: number; queue_name: string; vt: number }
         Returns: {
