@@ -2749,6 +2749,10 @@ const cs = {
     open_shift_section: 'Zveřejnit volnou směnu',
     capacity_rules_title: 'Pravidla kapacity',
     assigned_label: 'Přiřazeno',
+    weekly: 'Týdenní',
+    monthly: 'Měsíční',
+    overflow_label: 'Navíc (nad kapacitu)',
+    member_assigned_toast: '{{name}} přiřazen ({{date}})',
   },
   smart_batch: {
     invalid_dates: 'Neplatná data',

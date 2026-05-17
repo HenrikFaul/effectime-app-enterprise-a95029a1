@@ -2783,6 +2783,10 @@ const en = {
     open_shift_section: 'Open shift broadcast',
     capacity_rules_title: 'Capacity rules',
     assigned_label: 'Assigned',
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+    overflow_label: 'Extra (over quota)',
+    member_assigned_toast: '{{name}} assigned ({{date}})',
   },
   smart_batch: {
     invalid_dates: 'Invalid dates',

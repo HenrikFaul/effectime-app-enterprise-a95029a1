@@ -89,50 +89,69 @@ export function OpenShiftManager({
 
   // ── Compact mode (inside coverage-rule drawer header) ────────────────────
   if (compact) {
-    if (openShifts.length > 0 && !showForm) {
+    if (!showForm) {
+      if (openShifts.length > 0) {
+        return (
+          <Badge
+            variant="outline"
+            className="gap-1 text-xs border-amber-400 text-amber-700 bg-amber-50 dark:bg-amber-900/20 cursor-pointer"
+            onClick={() => setShowForm(true)}
+          >
+            <Megaphone className="h-3 w-3" />
+            {openShifts.length}×
+          </Badge>
+        );
+      }
       return (
-        <Badge
-          variant="outline"
-          className="gap-1 text-xs border-amber-400 text-amber-700 bg-amber-50 dark:bg-amber-900/20 cursor-pointer"
+        <Button
+          variant="outline" size="sm" className="gap-1.5 text-xs"
           onClick={() => setShowForm(true)}
+          title={t('open_shifts.post_open_shift')}
         >
-          <Megaphone className="h-3 w-3" />
-          {openShifts.length}×
-        </Badge>
-      );
-    }
-    if (showForm) {
-      return (
-        <div className="rounded border p-3 space-y-2 bg-muted/30 min-w-[260px]">
-          <CompactFormFields
-            selectedRole={selectedRole} setSelectedRole={setSelectedRole}
-            selectedSkillId={selectedSkillId} setSelectedSkillId={setSelectedSkillId}
-            notes={notes} setNotes={setNotes}
-            availableSkills={availableSkills}
-            businessRole={businessRole} skillId={skillId}
-            t={t}
-          />
-          <div className="flex gap-2">
-            <Button size="sm" onClick={handlePost} disabled={create.isPending} className="gap-1">
-              {create.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Megaphone className="h-3 w-3" />}
-              {t('open_shifts.broadcast')}
-            </Button>
-            <Button size="sm" variant="ghost" onClick={resetForm}>
-              {t('open_shifts.cancel')}
-            </Button>
-          </div>
-        </div>
+          <Megaphone className="h-3.5 w-3.5" />
+          {t('open_shifts.post_open_shift')}
+        </Button>
       );
     }
     return (
-      <Button
-        variant="outline" size="sm" className="gap-1.5 text-xs"
-        onClick={() => setShowForm(true)}
-        title={t('open_shifts.post_open_shift')}
-      >
-        <Megaphone className="h-3.5 w-3.5" />
-        {t('open_shifts.post_open_shift')}
-      </Button>
+      <div className="rounded border p-3 space-y-2 bg-muted/30 min-w-[260px]">
+        {openShifts.map(req => (
+          <div key={req.id} className="flex items-center gap-2 text-xs rounded border border-amber-300 bg-amber-50 dark:bg-amber-900/20 px-2 py-1.5">
+            <Megaphone className="h-3 w-3 text-amber-600 shrink-0" />
+            <span className="flex-1 truncate">
+              {req.business_role ?? t('open_shifts.any_role')}
+            </span>
+            <Button
+              variant="ghost" size="icon"
+              className="h-5 w-5 shrink-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+              disabled={cancellingId === req.id}
+              onClick={() => handleCancel(req.id)}
+              title={t('open_shifts.close_shift')}
+            >
+              {cancellingId === req.id
+                ? <Loader2 className="h-3 w-3 animate-spin" />
+                : <X className="h-3 w-3" />}
+            </Button>
+          </div>
+        ))}
+        <CompactFormFields
+          selectedRole={selectedRole} setSelectedRole={setSelectedRole}
+          selectedSkillId={selectedSkillId} setSelectedSkillId={setSelectedSkillId}
+          notes={notes} setNotes={setNotes}
+          availableSkills={availableSkills}
+          businessRole={businessRole} skillId={skillId}
+          t={t}
+        />
+        <div className="flex gap-2">
+          <Button size="sm" onClick={handlePost} disabled={create.isPending} className="gap-1">
+            {create.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Megaphone className="h-3 w-3" />}
+            {t('open_shifts.broadcast')}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={resetForm}>
+            {t('open_shifts.cancel')}
+          </Button>
+        </div>
+      </div>
     );
   }
 
@@ -256,7 +275,7 @@ function CompactFormFields({
   notes: string; setNotes: (v: string) => void;
   availableSkills?: { id: string; name: string }[];
   businessRole?: string; skillId?: string;
-  t: (key: string, vars?: Record<string, string>) => string;
+  t: (key: string, vars?: Record<string, string | number>) => string;
 }) {
   return (
     <>

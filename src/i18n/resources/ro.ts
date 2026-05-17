@@ -2781,6 +2781,10 @@ const ro = {
     open_shift_section: 'Publicare tură deschisă',
     capacity_rules_title: 'Reguli de capacitate',
     assigned_label: 'Alocat',
+    weekly: 'Săptămânal',
+    monthly: 'Lunar',
+    overflow_label: 'Extra (peste capacitate)',
+    member_assigned_toast: '{{name}} alocat ({{date}})',
   },
   smart_batch: {
     invalid_dates: 'Invalid dates',

@@ -270,7 +270,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
     };
     const { error } = await (supabase as any).from('enterprise_shift_assignments').insert(payload);
     if (error) { toast.error(t('coverage_planner.assign_error', { msg: error.message })); return; }
-    toast.success(`${member.display_name} beosztva (${iso})`);
+    toast.success(t('coverage_planner.member_assigned_toast', { name: member.display_name, date: iso }));
     load();
   };
 
@@ -509,14 +509,14 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
               className={cn('px-3 py-1.5 transition-colors', viewMode === 'weekly' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent')}
               onClick={() => setViewMode('weekly')}
             >
-              Heti
+              {t('coverage_planner.weekly')}
             </button>
             <button
               type="button"
               className={cn('px-3 py-1.5 border-l transition-colors', viewMode === 'monthly' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent')}
               onClick={() => setViewMode('monthly')}
             >
-              Havi
+              {t('coverage_planner.monthly')}
             </button>
           </div>
           <Button variant="outline" size="icon" className="h-8 w-8" onClick={prev}>
@@ -774,7 +774,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
 
               {/* Slot rows (Phase I) */}
               <div className="mt-4 space-y-2">
-                <div className="text-xs font-semibold text-muted-foreground uppercase">Beosztva</div>
+                <div className="text-xs font-semibold text-muted-foreground uppercase">{t('coverage_planner.assigned_label')}</div>
                 <div className="space-y-1.5">
                   {slots.map((slot) => {
                     const filled = slotFill.get(slot.idx);
@@ -828,7 +828,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
                   {/* Overflow */}
                   {overflow.length > 0 && (
                     <div className="pt-2 mt-2 border-t border-dashed">
-                      <div className="text-[10px] uppercase text-muted-foreground mb-1">Extra (slot felett)</div>
+                      <div className="text-[10px] uppercase text-muted-foreground mb-1">{t('coverage_planner.overflow_label')}</div>
                       {overflow.map((a, i) => {
                         const member = a.kind === 'shift' ? a.member : a.draft.member;
                         return (

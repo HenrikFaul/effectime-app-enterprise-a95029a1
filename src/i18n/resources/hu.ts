@@ -2771,6 +2771,10 @@ const hu = {
     open_shift_section: 'Nyitott műszak meghirdetése',
     capacity_rules_title: 'Kapacitásszabályok',
     assigned_label: 'Beosztva',
+    weekly: 'Heti',
+    monthly: 'Havi',
+    overflow_label: 'Extra (slot felett)',
+    member_assigned_toast: '{{name}} beosztva ({{date}})',
   },
   smart_batch: {
     invalid_dates: 'Érvénytelen dátumok',
