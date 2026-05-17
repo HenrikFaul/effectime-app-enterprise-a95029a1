@@ -4290,7 +4290,7 @@ const pl = {
   },
   ai_copilot: {
     title: 'AI Copilot harmonogramu',
-    powered_by: 'Claude Sonnet',
+    powered_by: 'Gemini',
     empty_prompt: 'Zadaj pytanie o harmonogram w naturalnym języku — np. "Jak będzie wyglądać praca w nadgodzinach w przyszłym miesiącu, jeśli Alicja pójdzie na urlop?"',
     placeholder: 'Zapytaj o cokolwiek dotyczącego harmonogramu, pokrycia lub planowania obszaru roboczego…',
     role_you: 'Ty',

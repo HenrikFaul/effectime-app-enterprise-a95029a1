@@ -4501,7 +4501,7 @@ const ro = {
   },
   ai_copilot: {
     title: 'AI Scheduling Copilot',
-    powered_by: 'Claude Sonnet',
+    powered_by: 'Gemini',
     empty_prompt: 'Ask a scheduling question in natural language — e.g. "How will overtime look next month if Alice goes on leave?"',
     placeholder: 'Ask anything about your workspace scheduling, coverage, or planning…',
     role_you: 'You',

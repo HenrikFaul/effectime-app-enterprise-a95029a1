@@ -4507,7 +4507,7 @@ const hu = {
   },
   ai_copilot: {
     title: 'AI ütemezési Copilot',
-    powered_by: 'Claude Sonnet',
+    powered_by: 'Gemini',
     empty_prompt: 'Tegyél fel egy ütemezési kérdést természetes nyelven — pl. "Hogyan alakul a túlóra a jövő hónapban, ha Alíz szabadságra megy?"',
     placeholder: 'Kérdezz bármit a munkaterület ütemezéséről, lefedettségéről vagy tervezéséről…',
     role_you: 'Te',

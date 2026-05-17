@@ -472,7 +472,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
   const gridCols = `260px repeat(${colCount}, minmax(${viewMode === 'monthly' ? 44 : 80}px, 1fr))`;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-3 pb-16">
       {/* Toolbar */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">
