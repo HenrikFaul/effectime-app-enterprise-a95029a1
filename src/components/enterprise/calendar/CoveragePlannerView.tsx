@@ -101,6 +101,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
   const loadIdRef = useRef(0);
 
   const [drawerCell, setDrawerCell] = useState<null | { office: Office; rule: CoverageRule; date: Date }>(null);
+  const [openShiftCell, setOpenShiftCell] = useState<null | { office: Office; date: Date }>(null);
   const [draftAssignments, setDraftAssignments] = useState<DraftAssignment[]>([]);
   const [pendingSuggestion, setPendingSuggestion] = useState(false);
   const [batchDialogOffice, setBatchDialogOffice] = useState<Office | null>(null);
@@ -577,14 +578,19 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
                       const rule = officeRules.find(r => ruleAppliesOn(r, d));
                       if (!rule) {
                         return (
-                          <div
+                          <button
                             key={d.toISOString()}
+                            type="button"
+                            onClick={() => setOpenShiftCell({ office, date: d })}
                             className={cn(
-                              'min-h-[48px] border-r border-border/70 last:border-r-0 bg-zinc-50/45 dark:bg-zinc-900/25',
+                              'min-h-[48px] border-r border-border/70 last:border-r-0 bg-zinc-50/45 dark:bg-zinc-900/25 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/40 transition-colors cursor-pointer flex items-center justify-center',
                               viewMode === 'monthly' && 'min-h-[42px]',
                               isWeekend(d) && 'bg-zinc-100/45 dark:bg-zinc-900/35'
                             )}
-                          />
+                            title={t('open_shifts.post_open_shift')}
+                          >
+                            <Plus className="h-3 w-3 text-muted-foreground/40 opacity-0 group-hover:opacity-100" />
+                          </button>
                         );
                       }
                       const supply = supplyFor(rule, d);
@@ -695,13 +701,27 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
             return (
             <>
               <SheetHeader>
-                <SheetTitle className="text-2xl font-bold">{officeName}</SheetTitle>
-                <SheetDescription className="text-base font-medium text-muted-foreground">
-                  {ruleDisplay}
-                  <span className="block text-xs mt-0.5">
-                    {t('coverage_planner.drawer_date_header', { date: format(drawerCell.date, 'yyyy. MMMM d. (EEEE)', { locale: hu }), count: drawerCell.rule.min_headcount })}
-                  </span>
-                </SheetDescription>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <SheetTitle className="text-2xl font-bold">{officeName}</SheetTitle>
+                    <SheetDescription className="text-base font-medium text-muted-foreground">
+                      {ruleDisplay}
+                      <span className="block text-xs mt-0.5">
+                        {t('coverage_planner.drawer_date_header', { date: format(drawerCell.date, 'yyyy. MMMM d. (EEEE)', { locale: hu }), count: drawerCell.rule.min_headcount })}
+                      </span>
+                    </SheetDescription>
+                  </div>
+                  <div className="shrink-0 pt-1">
+                    <OpenShiftManager
+                      workspaceId={workspaceId}
+                      officeId={drawerCell.office.id}
+                      shiftDate={format(drawerCell.date, 'yyyy-MM-dd')}
+                      businessRole={ruleRoles(drawerCell.rule)[0]}
+                      skillId={ruleSkillIds(drawerCell.rule)[0]}
+                      compact
+                    />
+                  </div>
+                </div>
               </SheetHeader>
 
               {/* Slot rows (Phase I) */}
@@ -822,7 +842,6 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
                           <Button
                             size="sm"
                             variant={c.isEligible ? 'default' : 'outline'}
-                            disabled={!c.isEligible}
                             onClick={() => assignMember(c.member, drawerCell.rule, drawerCell.date)}
                           >
                             <Plus className="h-3 w-3 mr-1" />
@@ -851,20 +870,35 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
                 )}
               </div>
 
-              {/* Open shift broadcast — lets manager post the slot for employees to claim */}
-              <div className="mt-4 space-y-2">
-                <div className="text-xs font-semibold text-muted-foreground uppercase">{t('coverage_planner.open_shift_section')}</div>
-                <OpenShiftManager
-                  workspaceId={workspaceId}
-                  officeId={drawerCell.office.id}
-                  shiftDate={format(drawerCell.date, 'yyyy-MM-dd')}
-                  businessRole={ruleRoles(drawerCell.rule)[0]}
-                  skillId={ruleSkillIds(drawerCell.rule)[0]}
-                />
-              </div>
             </>
             );
           })()}
+        </SheetContent>
+      </Sheet>
+
+      {/* Open-shift-only sheet — for cells without a coverage rule (weekends, empty days) */}
+      <Sheet open={!!openShiftCell} onOpenChange={(o) => { if (!o) setOpenShiftCell(null); }}>
+        <SheetContent className="sm:max-w-md overflow-y-auto">
+          {openShiftCell && (
+            <>
+              <SheetHeader>
+                <SheetTitle className="text-2xl font-bold">{openShiftCell.office.name}</SheetTitle>
+                <SheetDescription className="text-base font-medium text-muted-foreground">
+                  {t('coverage_planner.open_shift_section')}
+                  <span className="block text-xs mt-0.5">
+                    {format(openShiftCell.date, 'yyyy. MMMM d. (EEEE)', { locale: hu })}
+                  </span>
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-4">
+                <OpenShiftManager
+                  workspaceId={workspaceId}
+                  officeId={openShiftCell.office.id}
+                  shiftDate={format(openShiftCell.date, 'yyyy-MM-dd')}
+                />
+              </div>
+            </>
+          )}
         </SheetContent>
       </Sheet>
 
