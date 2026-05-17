@@ -1235,6 +1235,13 @@ if (!rows || rows.length === 0) return jsonRes({ error: 'Already locked' }, 409)
 **Problem**: Free-text role names are not normalizable — typos and casing differences silently break eligibility engine matching and notification filtering.
 **Fix**: Added `role_id uuid FK enterprise_workspace_roles`; `business_role` preserved for display but resolved from FK name for consistency.
 
+### [LESSON-CLAIM-001]: ON CONFLICT DO NOTHING in SECURITY DEFINER RPCs silently hides errors from the frontend
+- **Date**: 2026-05-17
+- **Context**: `claim_open_shift` RPC, `enterprise_shift_assignments` INSERT
+- **Problem**: The INSERT had `ON CONFLICT (workspace_id, user_id, shift_date) DO NOTHING`. When a user was already assigned on that date, the INSERT silently did nothing, `RETURNING id INTO v_assign_id` set `v_assign_id = NULL`, and the transaction committed successfully. The frontend received `{ok: true, assignment_id: null}` and showed a success toast despite no assignment being created (or in some versions, a subsequent step failed with an opaque error).
+- **Fix**: Add an explicit `IF EXISTS (SELECT 1 FROM ... WHERE duplicate_condition) THEN RAISE EXCEPTION 'already_assigned'; END IF;` check BEFORE the INSERT. Then remove the `ON CONFLICT DO NOTHING` — the check makes it redundant and the explicit exception gives the frontend a named error code to handle gracefully.
+- **Pattern**: For any SECURITY DEFINER function that needs to surface meaningful errors to the frontend, always use named RAISE EXCEPTION codes (`'not_authenticated'`, `'already_assigned'`, etc.) rather than relying on silent conflict handling.
+
 ### [LESSON-LOCALE-002]: Never use Hungarian as an English fallback — hardcode 'Unknown', not 'Ismeretlen'
 **Context**: capacityEngine.ts, run-report edge function.
 **Problem**: `'Ismeretlen'` is the Hungarian word for "Unknown". Using it as a fallback in a shared library means all non-Hungarian users see Hungarian text in display_name fallbacks.
