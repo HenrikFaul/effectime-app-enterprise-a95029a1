@@ -65,7 +65,7 @@ export function useResellerUsage(resellerId: string | null | undefined) {
         _reseller_id: resellerId as string,
       });
       if (error) throw error;
-      return data as ResellerUsage;
+      return data as unknown as ResellerUsage;
     },
     enabled: !!resellerId,
     staleTime: 60 * 1000,

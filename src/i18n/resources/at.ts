@@ -4596,4 +4596,4 @@ const at = {
 } as const;
 
 export default at;
-export type EnglishBundle = typeof en;
+

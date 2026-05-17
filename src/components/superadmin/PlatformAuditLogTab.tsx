@@ -64,7 +64,6 @@ export function PlatformAuditLogTab() {
     try {
       // First page count for pagination footer
       let baseQuery = supabase
-        // @ts-expect-error - platform_audit_events not in generated types yet
         .from('platform_audit_events')
         .select('*', { count: 'exact' })
         .order('created_at', { ascending: false })

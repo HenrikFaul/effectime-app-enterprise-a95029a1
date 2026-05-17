@@ -290,7 +290,7 @@ export function FieldDiscovery({
                     {hasUsageData && (
                       <td className="p-2">
                         {used
-                          ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" title={t('field_discovery.col_used')} />
+                          ? <span title={t('field_discovery.col_used')}><CheckCircle2 className="h-3.5 w-3.5 text-green-500" /></span>
                           : <Circle className="h-3.5 w-3.5 text-muted-foreground/40" />
                         }
                       </td>

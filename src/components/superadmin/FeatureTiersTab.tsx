@@ -210,14 +210,13 @@ export function FeatureTiersTab() {
     // accepts inserts from platform admins, so a failure here is a real config
     // problem worth a console warning.
     try {
-      // @ts-expect-error - platform_audit_events not in generated types yet
       const { error } = await supabase.from('platform_audit_events').insert({
         actor_id: user.id,
         action,
-        target_type: payload.target_type ?? null,
-        target_id: payload.target_id ?? null,
-        new_state: payload.new_state ?? null,
-        metadata: payload.metadata ?? {},
+        target_type: (payload.target_type as string | null | undefined) ?? null,
+        target_id: (payload.target_id as string | null | undefined) ?? null,
+        new_state: (payload.new_state as never) ?? null,
+        metadata: (payload.metadata as never) ?? {},
       });
       if (error) console.warn('[platform_audit_events] insert failed', error);
     } catch (err) {
