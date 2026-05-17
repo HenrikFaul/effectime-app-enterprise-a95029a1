@@ -1,3 +1,27 @@
+## 2026-05-17 — v3.39.3 Code-audit bug-fix batch — localization, compact mode, type safety
+
+Resolves all issues found during the post-v3.39.0 comprehensive code audit: hardcoded Hungarian strings in CoveragePlannerView, compact-mode UX gap in OpenShiftManager (existing broadcasts hidden behind a non-functional badge), and a minor TypeScript type contract violation.
+
+### Bug fixes
+
+- **CoveragePlannerView — 5 hardcoded strings removed (Critical/i18n):**
+  - View-mode toggle buttons ("Heti" / "Havi") → `t('coverage_planner.weekly')` / `t('coverage_planner.monthly')`
+  - Slot-section header ("Beosztva") → `t('coverage_planner.assigned_label')` (key already existed)
+  - Overflow row label ("Extra (slot felett)") → `t('coverage_planner.overflow_label')`
+  - Assignment toast (`${name} beosztva (${iso})`) → `t('coverage_planner.member_assigned_toast', { name, date })`
+- **OpenShiftManager compact mode — existing broadcasts now accessible (Critical/UX):**
+  - Previously: clicking the amber badge opened a create-form only; existing open shifts were hidden with no cancel option.
+  - Now: the expanded compact panel lists all existing broadcasts (with cancel ×) above the new-broadcast form. Clicking the badge always expands the full panel.
+- **OpenShiftManager `CompactFormFields` — type contract fixed (Minor/TypeScript):**
+  - `t` prop typed as `Record<string, string>` → corrected to `Record<string, string | number>` matching `useI18n()` signature.
+
+### i18n — 4 new keys added to all 8 locale files (en, hu, de, at, cs, sk, pl, ro)
+
+- `coverage_planner.weekly`
+- `coverage_planner.monthly`
+- `coverage_planner.overflow_label`
+- `coverage_planner.member_assigned_toast`
+
 ## 2026-05-16 — v3.39.0 Smart Staffing Workflow — availability pool + open-shift broadcast + first-claim
 
 Adds a digital end-to-end staffing workflow on top of the existing CoveragePlannerView and EmployeeDashboard. Zero redesign: extends existing components only, reuses existing notification infrastructure, and preserves all current scheduling behaviour.

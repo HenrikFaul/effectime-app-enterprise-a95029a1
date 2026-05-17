@@ -2749,6 +2749,10 @@ const pl = {
     open_shift_section: 'Opublikuj wolną zmianę',
     capacity_rules_title: 'Reguły pojemności',
     assigned_label: 'Przypisano',
+    weekly: 'Tygodniowy',
+    monthly: 'Miesięczny',
+    overflow_label: 'Dodatkowy (ponad limit)',
+    member_assigned_toast: '{{name}} przypisano ({{date}})',
   },
   smart_batch: {
     invalid_dates: 'Nieprawidłowe daty',

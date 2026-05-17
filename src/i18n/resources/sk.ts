@@ -2749,6 +2749,10 @@ const sk = {
     open_shift_section: 'Zverejniť voľnú smenu',
     capacity_rules_title: 'Pravidlá kapacity',
     assigned_label: 'Priradené',
+    weekly: 'Týždenný',
+    monthly: 'Mesačný',
+    overflow_label: 'Navyše (nad kapacitu)',
+    member_assigned_toast: '{{name}} priradený ({{date}})',
   },
   smart_batch: {
     invalid_dates: 'Neplatné dátumy',

@@ -2781,6 +2781,10 @@ const de = {
     open_shift_section: 'Offene Schicht veröffentlichen',
     capacity_rules_title: 'Kapazitätsregeln',
     assigned_label: 'Zugeteilt',
+    weekly: 'Wöchentlich',
+    monthly: 'Monatlich',
+    overflow_label: 'Extra (über Kontingent)',
+    member_assigned_toast: '{{name}} eingeplant ({{date}})',
   },
   smart_batch: {
     invalid_dates: 'Invalid dates',
