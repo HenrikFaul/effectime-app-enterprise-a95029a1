@@ -2785,6 +2785,7 @@ const ro = {
     monthly: 'Lunar',
     overflow_label: 'Extra (peste capacitate)',
     member_assigned_toast: '{{name}} alocat ({{date}})',
+    open_office_settings: 'Deschide setările filialei',
   },
   smart_batch: {
     invalid_dates: 'Invalid dates',

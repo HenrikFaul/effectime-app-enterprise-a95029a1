@@ -2753,6 +2753,7 @@ const sk = {
     monthly: 'Mesačný',
     overflow_label: 'Navyše (nad kapacitu)',
     member_assigned_toast: '{{name}} priradený ({{date}})',
+    open_office_settings: 'Otvoriť nastavenia pobočky',
   },
   smart_batch: {
     invalid_dates: 'Neplatné dátumy',

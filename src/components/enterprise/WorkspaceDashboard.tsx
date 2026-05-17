@@ -145,11 +145,16 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   );
   const [internalTab, setInternalTab] = useState('members');
   const [recoveryMode, setRecoveryMode] = useState<boolean>(false);
+  const [highlightOfficeId, setHighlightOfficeId] = useState<string | null>(null);
   const activeTab = externalTab || internalTab;
   const setActiveTab = (tab: string) => {
     if (onTabChange) onTabChange(tab);
     else setInternalTab(tab);
   };
+  const handleNavigateToOffice = useCallback((officeId: string) => {
+    setHighlightOfficeId(officeId);
+    setActiveTab('settings');
+  }, []);
   const isAdmin = userRole === 'owner' || userRole === 'resourceAssistant';
   const { canView, canEdit } = useEnterprisePermissions(workspace.id, userRole);
   const { layout } = useWorkspaceNavLayout(workspace.id);
@@ -421,6 +426,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                     <CoveragePlannerView
                       workspaceId={workspace.id}
                       userId={userId}
+                      onNavigateToOffice={handleNavigateToOffice}
                     />
                   </TabsContent>
 
@@ -992,8 +998,8 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
         </SettingsSection>
       )}
 
-      <SettingsSection workspaceId={workspace.id} sectionKey="settings.offices" icon={<Settings className="h-4 w-4" />} title={t('settings_sections.offices')}>
-        <OfficeManager workspaceId={workspace.id} />
+      <SettingsSection workspaceId={workspace.id} sectionKey="settings.offices" icon={<Settings className="h-4 w-4" />} title={t('settings_sections.offices')} forceOpen={!!highlightOfficeId}>
+        <OfficeManager workspaceId={workspace.id} highlightOfficeId={highlightOfficeId} />
       </SettingsSection>
 
       {isAdmin && (
@@ -1226,9 +1232,10 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
   );
 }
 
-function SettingsSection({ workspaceId, sectionKey, icon, title, children, defaultOpen = false }: { workspaceId?: string; sectionKey?: string; icon: React.ReactNode; title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+function SettingsSection({ workspaceId, sectionKey, icon, title, children, defaultOpen = false, forceOpen = false }: { workspaceId?: string; sectionKey?: string; icon: React.ReactNode; title: string; children: React.ReactNode; defaultOpen?: boolean; forceOpen?: boolean }) {
   // Cégszintű (workspace-szintű) konfigurálható alapállapot felülírja a defaultOpen-t.
   const [open, setOpen] = useWorkspaceSectionState(workspaceId, sectionKey || `__local__${title}`, defaultOpen);
+  useEffect(() => { if (forceOpen) setOpen(true); }, [forceOpen]);
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
       <Card>

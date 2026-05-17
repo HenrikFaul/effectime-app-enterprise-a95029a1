@@ -2785,6 +2785,7 @@ const de = {
     monthly: 'Monatlich',
     overflow_label: 'Extra (über Kontingent)',
     member_assigned_toast: '{{name}} eingeplant ({{date}})',
+    open_office_settings: 'Standorteinstellungen öffnen',
   },
   smart_batch: {
     invalid_dates: 'Invalid dates',

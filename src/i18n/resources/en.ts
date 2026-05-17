@@ -2787,6 +2787,7 @@ const en = {
     monthly: 'Monthly',
     overflow_label: 'Extra (over quota)',
     member_assigned_toast: '{{name}} assigned ({{date}})',
+    open_office_settings: 'Open office settings',
   },
   smart_batch: {
     invalid_dates: 'Invalid dates',

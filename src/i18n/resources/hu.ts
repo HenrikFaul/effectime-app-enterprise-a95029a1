@@ -2775,6 +2775,7 @@ const hu = {
     monthly: 'Havi',
     overflow_label: 'Extra (slot felett)',
     member_assigned_toast: '{{name}} beosztva ({{date}})',
+    open_office_settings: 'Telephely beállításainak megnyitása',
   },
   smart_batch: {
     invalid_dates: 'Érvénytelen dátumok',

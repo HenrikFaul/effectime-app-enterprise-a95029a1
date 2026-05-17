@@ -24,6 +24,7 @@ import { useOpenShiftRequests } from '@/hooks/useOpenShifts';
 interface Props {
   workspaceId: string;
   userId: string;
+  onNavigateToOffice?: (officeId: string) => void;
 }
 
 interface Office { id: string; name: string; city: string | null }
@@ -83,7 +84,7 @@ function ruleSkillIds(r: CoverageRule): string[] {
 
 type ViewMode = 'weekly' | 'monthly';
 
-export function CoveragePlannerView({ workspaceId, userId }: Props) {
+export function CoveragePlannerView({ workspaceId, userId, onNavigateToOffice }: Props) {
   const { t } = useI18n();
   const dateFnsLocale = useDateLocale();
   const [viewMode, setViewMode] = useState<ViewMode>('weekly');
@@ -585,7 +586,18 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
                   <div key={office.id} className="grid border-b" style={{ gridTemplateColumns: gridCols }}>
                     <div className="px-3 py-2.5 min-h-[48px] border-r border-border/70 flex items-center gap-2">
                       <Building2 className="h-3.5 w-3.5 text-primary" />
-                      <span className="text-sm font-semibold flex-1 truncate">{office.name}</span>
+                      {onNavigateToOffice ? (
+                        <button
+                          type="button"
+                          onClick={() => onNavigateToOffice(office.id)}
+                          className="text-sm font-semibold flex-1 truncate text-left hover:underline hover:text-primary transition-colors cursor-pointer"
+                          title={t('coverage_planner.open_office_settings')}
+                        >
+                          {office.name}
+                        </button>
+                      ) : (
+                        <span className="text-sm font-semibold flex-1 truncate">{office.name}</span>
+                      )}
                       {office.city && <span className="text-[10px] text-muted-foreground">({office.city})</span>}
                       {officeRules.length > 0 && (
                         <button

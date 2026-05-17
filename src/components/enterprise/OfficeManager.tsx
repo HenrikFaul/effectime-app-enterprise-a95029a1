@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -54,7 +54,7 @@ interface MinStaffing {
 
 interface Skill { id: string; name: string; }
 
-interface Props { workspaceId: string; }
+interface Props { workspaceId: string; highlightOfficeId?: string | null; }
 
 // ── helpers ────────────────────────────────────────────────────────────────
 
@@ -94,12 +94,24 @@ function SectionToggle({ label, open, onToggle }: { label: string; open: boolean
 
 // ── main component ─────────────────────────────────────────────────────────
 
-export function OfficeManager({ workspaceId }: Props) {
+export function OfficeManager({ workspaceId, highlightOfficeId }: Props) {
   const { t } = useI18n();
 
   const [offices, setOffices] = useState<Office[]>([]);
   const [memberCounts, setMemberCounts] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
+  const [flashingId, setFlashingId] = useState<string | null>(null);
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!highlightOfficeId) return;
+    setFlashingId(highlightOfficeId);
+    if (flashTimer.current) clearTimeout(flashTimer.current);
+    flashTimer.current = setTimeout(() => setFlashingId(null), 2500);
+    const el = document.getElementById(`office-row-${highlightOfficeId}`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    return () => { if (flashTimer.current) clearTimeout(flashTimer.current); };
+  }, [highlightOfficeId]);
 
   // Dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -352,7 +364,11 @@ export function OfficeManager({ workspaceId }: Props) {
           )}
 
           {offices.map(office => (
-            <div key={office.id} className="flex items-start justify-between border rounded-md px-3 py-2.5 gap-3">
+            <div
+              key={office.id}
+              id={`office-row-${office.id}`}
+              className={`flex items-start justify-between border rounded-md px-3 py-2.5 gap-3 transition-all duration-300 ${flashingId === office.id ? 'ring-2 ring-primary/60 ring-offset-1 bg-primary/5' : ''}`}
+            >
               <div className="flex items-start gap-3 min-w-0">
                 <Building2 className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
                 <div className="min-w-0">

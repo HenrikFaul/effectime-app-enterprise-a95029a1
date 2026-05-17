@@ -2753,6 +2753,7 @@ const cs = {
     monthly: 'Měsíční',
     overflow_label: 'Navíc (nad kapacitu)',
     member_assigned_toast: '{{name}} přiřazen ({{date}})',
+    open_office_settings: 'Otevřít nastavení pobočky',
   },
   smart_batch: {
     invalid_dates: 'Neplatná data',

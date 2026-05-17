@@ -2753,6 +2753,7 @@ const pl = {
     monthly: 'Miesięczny',
     overflow_label: 'Dodatkowy (ponad limit)',
     member_assigned_toast: '{{name}} przypisano ({{date}})',
+    open_office_settings: 'Otwórz ustawienia lokalizacji',
   },
   smart_batch: {
     invalid_dates: 'Nieprawidłowe daty',
