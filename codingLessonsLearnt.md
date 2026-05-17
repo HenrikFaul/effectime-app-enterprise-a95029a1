@@ -1288,3 +1288,45 @@ if (!rows || rows.length === 0) return jsonRes({ error: 'Already locked' }, 409)
 - Külső API kulcsot, ha nem muszáj publikussá tenni, server-side API route mögé kell tenni. A frontend `/api/location/autocomplete` endpointot hív, a route pedig `AWS_LOCATION_API_KEY` / `AWS_LOCATION_REGION` env-ből dolgozik.
 - Vercel env módosítás után mindig új redeploy kell, különben a serverless route és a buildelt client továbbra is a régi env snapshotot használhatja.
 - Magic link authnál a Supabase redirect URL és a kódbeli `emailRedirectTo` csak akkor működik stabilan, ha a production domain szerepel a Supabase Authentication → URL Configuration allowlistában.
+
+## [HIBA-DB-001] — 2026-05-17: pg_tables.forcerowsecurity column does not exist
+**Fájl:** BACKEND_BUGFIX_QA_UNIVERSAL_PROMPT.md Phase 1.3 query
+**Hibaüzenet:** `ERROR: 42703: column "forcerowsecurity" does not exist`
+**Gyökérok:** The `pg_tables` view in this PostgreSQL version does not expose `rowsecurity` or
+`forcerowsecurity` columns. These attributes live on `pg_class` as `relrowsecurity` and `relforcerowsecurity`.
+**Javítás:** Use `pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace` and read
+`c.relrowsecurity` / `c.relforcerowsecurity` instead of querying `pg_tables`.
+Correct query:
+```sql
+SELECT c.relname AS tablename, c.relrowsecurity AS rls_enabled, c.relforcerowsecurity AS rls_forced
+FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+WHERE n.nspname = 'public' AND c.relkind = 'r' ORDER BY c.relname;
+```
+**Megelőzés:** When auditing RLS, always use `pg_class` directly; never assume `pg_tables` has RLS columns.
+
+## [HIBA-DB-002] — 2026-05-17: CREATE INDEX CONCURRENTLY cannot run inside a transaction
+**Fájl:** supabase/migrations/*.sql
+**Hibaüzenet:** `ERROR: CREATE INDEX CONCURRENTLY cannot run inside a transaction block`
+**Gyökérok:** Supabase `apply_migration` (and the Supabase CLI `db push`) wraps each migration
+in an implicit transaction. `CONCURRENTLY` requires running outside any transaction.
+**Javítás:** In Supabase migration files, use `CREATE INDEX IF NOT EXISTS` (without CONCURRENTLY).
+For production zero-downtime index creation on very large tables, use the Supabase SQL Editor
+directly (not the migration runner) with `CREATE INDEX CONCURRENTLY`.
+**Megelőzés:** Never use CONCURRENTLY in migration files. Reserve it for manual, out-of-band SQL Editor runs.
+
+## [HIBA-RLS-001] — 2026-05-17: auth.uid() in RLS policies causes per-row re-evaluation (auth_rls_initplan)
+**Fájl:** All RLS policy definitions in public schema (156 tables affected as of 2026-05-17)
+**Hibaüzenet:** Supabase advisor: "Auth RLS Initialization Plan" — 404 warnings
+**Gyökérok:** When `auth.uid()` is called directly inside an RLS `USING` or `WITH CHECK` expression,
+Postgres re-evaluates the function for every single row scanned. With large tables and many rows,
+this is a 10–100× performance penalty.
+**Javítás:** Wrap all `auth.uid()`, `auth.role()`, and `current_setting()` calls in a subselect:
+```sql
+-- WRONG (per-row re-evaluation):
+USING (user_id = auth.uid())
+
+-- CORRECT (evaluated once per query):
+USING (user_id = (select auth.uid()))
+```
+**Megelőzés:** Always write new RLS policies with the subselect form `(select auth.uid())`.
+Tracked for a mass-fix migration in a future RLS hardening sprint.

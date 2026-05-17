@@ -1144,7 +1144,7 @@ function EmailQueueTab() {
   return (
     <div className="space-y-6">
       {/* Count cards */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="bg-yellow-50 dark:bg-yellow-950/20">
           <CardContent className="pt-6 pb-4 px-5 text-center">
             <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">{t('superadmin.email_pending')}</p>

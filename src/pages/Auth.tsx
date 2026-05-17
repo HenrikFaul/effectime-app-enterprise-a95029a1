@@ -714,7 +714,7 @@ const Auth = () => {
               <div className="rounded-[2rem] border border-slate-200 bg-white/92 p-5 shadow-[0_30px_100px_-42px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-white/10 dark:bg-[#070b18]/92 dark:shadow-[0_30px_100px_-42px_rgba(0,0,0,0.9)] sm:p-8">
                 {renderAuthPanel()}
               </div>
-              <div className="mt-4 grid grid-cols-3 gap-3 text-center text-xs text-slate-500 dark:text-slate-400">
+              <div className="mt-4 grid grid-cols-1 min-[420px]:grid-cols-3 gap-2 sm:gap-3 text-center text-xs text-slate-500 dark:text-slate-400">
                 <div className="rounded-2xl border border-slate-200 bg-white/70 p-3 dark:border-white/10 dark:bg-white/[0.04]">
                   <div className="font-bold text-slate-900 dark:text-white">{t('auth_page.chip_rls_title')}</div>
                   {t('auth_page.chip_rls_desc')}
@@ -778,7 +778,7 @@ const Auth = () => {
             </p>
           </div>
 
-          <div className="mt-12 grid gap-6 lg:grid-cols-3">
+          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {workflowSteps.map((step, index) => (
               <motion.div
                 key={step.title}

@@ -1,3 +1,94 @@
+## 2026-05-17 — v3.41.6 Fix: Open shift position selector shows all workspace positions
+
+### Fixed
+- `OpenShiftManager`: replaced `PositionPickerDialog` (catalog-only) with a flat `Select` dropdown
+  that loads all workspace positions from all three sources combined:
+  1. `enterprise_workspace_roles.name` — structured catalog positions
+  2. `enterprise_memberships.business_role` — free-text roles on member profiles
+  3. `enterprise_member_role_allocations.business_role` — role allocation strings
+  This ensures manually-added positions (e.g. "Optometrista") appear in open shift creation,
+  exactly matching the position list shown in the office coverage rule editor.
+- New hook `useWorkspaceAllPositions` created and used for unified position loading.
+- Candidate matching still works: `businessRole` string is passed to the RPC as before.
+
+## 2026-05-17 — v3.41.5 Backend QA: RLS Index Coverage Sweep
+
+Systematic backend integrity audit following `BACKEND_BUGFIX_QA_UNIVERSAL_PROMPT.md`.
+All Phase 1 checks passed clean; the only actionable finding was missing `workspace_id` /
+`user_id` indexes on 29 tables whose RLS policies were causing seq-scans.
+
+### Fixed
+- DB: 29 missing workspace_id / user_id indexes added via migration `20260517230000_v3_41_5_rls_index_coverage.sql`
+  - **HIGH:** `leave_requests.workspace_id`, `leave_requests.user_id`, `enterprise_notifications.workspace_id`
+  - **MEDIUM:** `approval_decisions`, `enterprise_quota_transactions`, `enterprise_allowances`,
+    `enterprise_company_leave_days`, `enterprise_hr_workflow_tasks`, `enterprise_shift_cancellations`,
+    `leave_request_attachments`, `leave_request_substitutes`
+  - **LOW:** 18 additional tables (agile, offices, scenarios, plugins, QR, etc.)
+
+### Verified Clean (no fixes needed)
+- Function overload ambiguity (PostgREST 409): 0 ambiguous overloads
+- SECURITY DEFINER coverage: all ~70 privileged functions confirmed present
+- RLS enabled: all 186 public tables have RLS ON
+- RLS policies with no rows: 0 tables (every RLS-enabled table has at least one policy)
+- Radix UI `SelectItem value=""`: 0 instances
+- Hardcoded service_role key in client code: 0 instances
+- Workspace scoping in all hooks: verified correct
+- TypeScript: `tsc --noEmit` → 0 errors
+- Migrations: all applied, latest = v3_41_2_drop_old_create_open_shift_overload
+- RPC GRANTs: all 60+ public functions have EXECUTE granted to authenticated
+- No TODO/FIXME in source code
+
+### Supabase Advisor Findings (documented for next sprint)
+- **auth_rls_initplan (404 warnings / 156 tables)** — CRITICAL performance issue: RLS policies
+  call `auth.uid()` directly instead of `(select auth.uid())`, causing per-row re-evaluation.
+  Fix pattern: `USING ((select auth.uid()) = user_id)`. Tracked as HIBA-RLS-001.
+- **unindexed_foreign_keys (119 / 89 tables)** — FK columns without indexes cause seq-scans on cascades.
+  Our workspace_id sweep covered the primary RLS columns; FK-specific sweep tracked as next step.
+- **multiple_permissive_policies (108 / 54 tables)** — Overlapping permissive policies compound eval cost.
+  Should be consolidated with OR conditions. Tracked for next RLS hardening session.
+- **unused_index (103 / 65 tables)** — Includes 31 in plannermaster schema (staging). Drop candidates
+  should be reviewed after query traffic analysis.
+- **duplicate_index (3)** — Fixed: see migration below.
+- **auth_db_connections_absolute (1)** — Auth server is hard-capped at 10 connections;
+  switch to percentage-based in Supabase project settings.
+
+### Notes
+- 3 UPDATE policies use `USING (true)` on `enterprise_open_shift_requests`,
+  `enterprise_open_shift_waitlist`, `enterprise_shift_cancellations` — intentional design
+  (SECURITY DEFINER RPCs are the sole write path; the policy enables RPC-level updates).
+- i18n: cs/pl/sk locales are ~203 keys behind en/hu; at/de/ro are ~47 keys behind.
+  Pre-existing gap (not introduced this session). Tracked for next i18n sweep.
+
+## 2026-05-17 — v3.41.4 UI/UX Refactor: global overflow, responsive grid, table scroll
+
+Systematic layout audit pass following the UI_UX_REFACTOR_UNIVERSAL_PROMPT. Eliminates horizontal scroll on all breakpoints and adds missing responsive grid stepping.
+
+**Global CSS (index.css):**
+- `overflow-x: hidden` + `max-width: 100%` + `scrollbar-gutter: stable` on `body`
+- `overflow-x: hidden` on `html` root
+- `img, video { max-width: 100%; height: auto; }` baseline
+
+**AppShell:**
+- `overflow-x-hidden` on the root flex container
+
+**Grid stepping fixes (xl/lg jumping without md step):**
+- `WorkspaceDashboard`: `xl:grid-cols-2` → `md:grid-cols-2` for birthday/trend widgets
+- `Auth.tsx`: trust chips `grid-cols-3` → `grid-cols-1 min-[420px]:grid-cols-3`
+- `Auth.tsx`: workflow steps `lg:grid-cols-3` → `sm:grid-cols-2 lg:grid-cols-3`
+- `SuperadminControlPlane`: email stats `grid-cols-3` → `sm:grid-cols-3`
+- `ComplianceDashboard`: KPI `grid-cols-3` → `sm:grid-cols-3`
+- `ResellerPortal`: KPI `grid-cols-3` → `sm:grid-cols-3`
+- `WellbeingRecalculateCard`: `grid-cols-4` → `grid-cols-2 sm:grid-cols-4`
+
+**Table overflow wrappers:**
+- `CapacityFit.tsx`: added `overflow-x-auto` + `min-w-[400px]` on 6-col table
+- `FieldDiscovery.tsx`: added `overflow-x-auto` + `min-w-[420px]` on 6-col table
+
+**NPS Survey:**
+- `grid-cols-11` → `flex overflow-x-auto` with `shrink-0 flex-1 min-w-[2rem]` buttons
+
+**TypeScript:** `tsc --noEmit` passes with 0 errors.
+
 ## 2026-05-17 — v3.41.3 UX: Free-text search in position picker catalog
 
 Added a free-text search/autocomplete field to the "Előre definiált pozíció-katalógus" dialog (used in both Resources menu position creation and open shift creation). Previously users had to click through the full category → position tree; now typing any part of a position name instantly shows a flat filtered list across all categories. Clicking a search result goes directly to the skills review step (step 3), bypassing the tree.
