@@ -3253,8 +3253,15 @@ const at = {
     type_anniversary: 'Work anniversary',
   },
   enterprise_notifications: {
-    title: 'Notifications',
-    empty: 'No notifications.',
+    title: 'Benachrichtigungen',
+    empty: 'Keine Benachrichtigungen.',
+    mark_all_read: 'Alle gelesen',
+    shift_confirmed: 'Schicht bestätigt',
+    shift_confirmed_msg: 'Sie wurden der offenen Schicht am {{date}} zugeteilt.',
+    open_shift_filled_title: 'Offene Schicht besetzt',
+    open_shift_filled_msg: 'Die offene Schicht am {{date}} wurde beansprucht.',
+    new_open_shift_title: 'Offene Schicht verfügbar',
+    new_open_shift_msg: 'Eine offene Schicht ist am {{date}} verfügbar.',
   },
   out_today_widget: {
     title: 'Away today ({{count}})',
@@ -4547,6 +4554,12 @@ const at = {
     post_error: 'Offene Schicht konnte nicht veröffentlicht werden.',
     already_posted: 'Für diesen Tag ist bereits eine offene Schicht veröffentlicht.',
     status_open: 'Offen',
+    filled_label: 'Besetzt',
+    broadcast_label: 'Veröffentlicht',
+    role_label: 'Erforderliche Rolle',
+    skill_label: 'Erforderliche Fähigkeit',
+    any_role: 'Beliebige Rolle',
+    any_skill: 'Beliebige Fähigkeit',
   },
 } as const;
 

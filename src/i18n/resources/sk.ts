@@ -180,6 +180,13 @@ const sk = {
   enterprise_notifications: {
     title: 'Oznámenia',
     empty: 'Žiadne oznámenia.',
+    mark_all_read: 'Označiť všetko ako prečítané',
+    shift_confirmed: 'Smena potvrdená',
+    shift_confirmed_msg: 'Boli ste priradený/á k voľnej smene dňa {{date}}.',
+    open_shift_filled_title: 'Voľná smena obsadená',
+    open_shift_filled_msg: 'Voľná smena dňa {{date}} bola prijatá.',
+    new_open_shift_title: 'Voľná smena k dispozícii',
+    new_open_shift_msg: 'Voľná smena je k dispozícii dňa {{date}}.',
   },
   out_today_widget: {
     title: 'Dnes neprítomní ({{count}})',
@@ -4367,6 +4374,12 @@ const sk = {
     post_error: 'Nepodarilo sa zverejniť voľnú smenu.',
     already_posted: 'Voľná smena už bola pre tento deň zverejnená.',
     status_open: 'Otvorené',
+    filled_label: 'Obsadené',
+    broadcast_label: 'Zverejnené',
+    role_label: 'Požadovaná rola',
+    skill_label: 'Požadovaná zručnosť',
+    any_role: 'Ľubovoľná rola',
+    any_skill: 'Ľubovoľná zručnosť',
   },
 } as const;
 

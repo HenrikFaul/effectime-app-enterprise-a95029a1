@@ -3245,6 +3245,13 @@ const hu = {
   enterprise_notifications: {
     title: 'Értesítések',
     empty: 'Nincs értesítés.',
+    mark_all_read: 'Mind olvasott',
+    shift_confirmed: 'Műszak megerősítve',
+    shift_confirmed_msg: 'Beosztottak a nyitott műszakba ({{date}}).',
+    open_shift_filled_title: 'Nyitott műszak betöltve',
+    open_shift_filled_msg: 'A {{date}}-i nyitott műszakot igényelték.',
+    new_open_shift_title: 'Nyitott műszak elérhető',
+    new_open_shift_msg: 'Nyitott műszak érhető el {{date}} napra.',
   },
   out_today_widget: {
     title: 'Ma távol ({{count}})',
@@ -4584,6 +4591,12 @@ const hu = {
     post_error: 'Nem sikerült meghirdetni a műszakot.',
     already_posted: 'Erre a napra már meg van hirdetve nyitott műszak.',
     status_open: 'Nyitott',
+    filled_label: 'Betöltve',
+    broadcast_label: 'Meghirdetett',
+    role_label: 'Szükséges pozíció',
+    skill_label: 'Szükséges készség',
+    any_role: 'Bármely pozíció',
+    any_skill: 'Bármely készség',
   },
 } as const;
 
