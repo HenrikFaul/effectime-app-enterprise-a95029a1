@@ -444,6 +444,8 @@ const at = {
     inherited: 'Inherited',
     manual: 'Manual',
     global_catalog_note: 'Reading from the global catalog — the workspace-specific list can be edited by an admin in People → Positions.',
+    search_placeholder: 'Nach Positionsname suchen...',
+    search_no_results: 'Keine Treffer für Ihre Suche',
   },
   member: {
     org_unit: 'Organizational unit',

@@ -442,6 +442,8 @@ const hu = {
     inherited: 'Örökölt',
     manual: 'Manuális',
     global_catalog_note: 'Globális katalógusból olvasunk — a workspace specifikus listát admin szerkesztheti a People → Pozíciók nézetben.',
+    search_placeholder: 'Keress pozíció névből...',
+    search_no_results: 'Nincs találat a keresésre',
   },
   member: {
     org_unit: 'Szervezeti egység',

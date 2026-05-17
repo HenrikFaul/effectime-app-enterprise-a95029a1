@@ -587,6 +587,8 @@ const sk = {
     inherited: 'Zdedené',
     manual: 'Manuálne',
     global_catalog_note: 'Čítame z globálneho katalógu — zoznam špecifický pre workspace môže upraviť admin v People → Pozície.',
+    search_placeholder: 'Hľadať podľa názvu pozície...',
+    search_no_results: 'Žiadne výsledky pre vaše hľadanie',
   },
   member: {
     org_unit: 'Organizačná jednotka',

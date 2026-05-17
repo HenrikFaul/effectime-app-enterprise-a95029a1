@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   Dialog,
@@ -12,8 +12,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ChevronRight, ListChecks } from 'lucide-react';
+import { ChevronRight, ListChecks, Search } from 'lucide-react';
 import { useT } from '@/i18n/I18nProvider';
 
 type Seniority = 'junior' | 'medior' | 'senior' | 'lead' | 'principal';
@@ -62,6 +63,7 @@ export function PositionPickerDialog({ open, onOpenChange, workspaceId, onPick }
   const [includedSkillIds, setIncludedSkillIds] = useState<Set<string>>(new Set());
   const [seniority, setSeniority] = useState<Seniority>('medior');
   const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // True when we're displaying the global catalog because the workspace catalog is empty.
   const [usingGlobalCatalog, setUsingGlobalCatalog] = useState(false);
@@ -151,9 +153,17 @@ export function PositionPickerDialog({ open, onOpenChange, workspaceId, onPick }
       setSkills([]);
       setIncludedSkillIds(new Set());
       setSeniority('medior');
+      setSearchQuery('');
       loadCatalog();
     }
   }, [open, loadCatalog]);
+
+  // Flat search results: all roles whose name matches the query
+  const searchResults = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return null;
+    return roles.filter((r) => r.name.toLowerCase().includes(q));
+  }, [searchQuery, roles]);
 
   const handleSelectCategory = (id: string) => {
     setSelectedCategory(id);
@@ -192,20 +202,33 @@ export function PositionPickerDialog({ open, onOpenChange, workspaceId, onPick }
           <DialogDescription>{t('positions.catalog_description')}</DialogDescription>
         </DialogHeader>
 
-        {/* Step indicators */}
-        <div className="flex items-center gap-1 text-xs text-muted-foreground" aria-hidden>
-          <span className={step === 1 ? 'font-semibold text-foreground' : ''}>
-            {t('positions.pick_category')}
-          </span>
-          <ChevronRight className="h-3 w-3" />
-          <span className={step === 2 ? 'font-semibold text-foreground' : ''}>
-            {t('positions.pick_role')}
-          </span>
-          <ChevronRight className="h-3 w-3" />
-          <span className={step === 3 ? 'font-semibold text-foreground' : ''}>
-            {t('positions.review_skills')}
-          </span>
+        {/* Free-text search */}
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+          <Input
+            className="pl-8 h-8 text-sm"
+            placeholder={t('positions.search_placeholder')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
         </div>
+
+        {/* Step indicators — hidden during search */}
+        {!searchResults && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground" aria-hidden>
+            <span className={step === 1 ? 'font-semibold text-foreground' : ''}>
+              {t('positions.pick_category')}
+            </span>
+            <ChevronRight className="h-3 w-3" />
+            <span className={step === 2 ? 'font-semibold text-foreground' : ''}>
+              {t('positions.pick_role')}
+            </span>
+            <ChevronRight className="h-3 w-3" />
+            <span className={step === 3 ? 'font-semibold text-foreground' : ''}>
+              {t('positions.review_skills')}
+            </span>
+          </div>
+        )}
 
         {usingGlobalCatalog && !loading ? (
           <div className="rounded-md border border-primary/20 bg-primary/5 px-2 py-1.5 text-[11px] text-muted-foreground">
@@ -217,8 +240,43 @@ export function PositionPickerDialog({ open, onOpenChange, workspaceId, onPick }
           <div className="py-6 text-center text-sm text-muted-foreground">{t('common.loading')}</div>
         ) : null}
 
+        {/* Search results — flat list of matching positions */}
+        {!loading && searchResults !== null ? (
+          <div className="space-y-2">
+            {searchResults.length === 0 ? (
+              <div className="py-4 text-center text-sm text-muted-foreground italic">
+                {t('positions.search_no_results')}
+              </div>
+            ) : (
+              searchResults.map((r) => {
+                const cat = categories.find((c) => c.id === r.category_id);
+                return (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategory(r.category_id);
+                      setSearchQuery('');
+                      handleSelectRole(r);
+                    }}
+                    className="w-full text-left rounded-md border bg-card hover:bg-accent transition px-3 py-2 flex items-center justify-between gap-2"
+                  >
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-sm font-medium truncate">{r.name}</span>
+                      {cat && (
+                        <span className="text-[11px] text-muted-foreground truncate">{cat.name}</span>
+                      )}
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  </button>
+                );
+              })
+            )}
+          </div>
+        ) : null}
+
         {/* Step 1: category */}
-        {!loading && step === 1 ? (
+        {!loading && searchResults === null && step === 1 ? (
           <div className="space-y-2">
             {categories.length === 0 ? (
               <div className="text-sm text-muted-foreground italic">{t('common.empty')}</div>
@@ -239,7 +297,7 @@ export function PositionPickerDialog({ open, onOpenChange, workspaceId, onPick }
         ) : null}
 
         {/* Step 2: role */}
-        {!loading && step === 2 ? (
+        {!loading && searchResults === null && step === 2 ? (
           <div className="space-y-2">
             {rolesInCategory.length === 0 ? (
               <div className="text-sm text-muted-foreground italic">{t('common.empty')}</div>
@@ -263,7 +321,7 @@ export function PositionPickerDialog({ open, onOpenChange, workspaceId, onPick }
         ) : null}
 
         {/* Step 3: skills review */}
-        {!loading && step === 3 && selectedRole ? (
+        {!loading && step === 3 && selectedRole && searchResults === null ? (
           <div className="space-y-3">
             <Card>
               <CardContent className="p-3 space-y-3">

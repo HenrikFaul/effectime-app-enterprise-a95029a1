@@ -587,6 +587,8 @@ const cs = {
     inherited: 'Zděděno',
     manual: 'Manuální',
     global_catalog_note: 'Čteme z globálního katalogu — seznam specifický pro workspace může upravit admin v People → Pozice.',
+    search_placeholder: 'Hledat podle názvu pozice...',
+    search_no_results: 'Žádné výsledky pro vaše hledání',
   },
   member: {
     org_unit: 'Organizační jednotka',

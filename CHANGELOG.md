@@ -1,3 +1,14 @@
+## 2026-05-17 — v3.41.3 UX: Free-text search in position picker catalog
+
+Added a free-text search/autocomplete field to the "Előre definiált pozíció-katalógus" dialog (used in both Resources menu position creation and open shift creation). Previously users had to click through the full category → position tree; now typing any part of a position name instantly shows a flat filtered list across all categories. Clicking a search result goes directly to the skills review step (step 3), bypassing the tree.
+
+- New `<Input>` with magnifier icon always visible at the top of `PositionPickerDialog`
+- `useMemo`-based client-side filtering across all loaded roles
+- Search results show position name + category name as subtitle
+- Selecting a result clears the query and jumps to skills review
+- Step breadcrumb hidden during active search
+- i18n keys `positions.search_placeholder` and `positions.search_no_results` added to all 8 locales
+
 ## 2026-05-17 — v3.41.2 Bug fixes: open-shift 409, OfficeEditorDialog wider, assigned badge in calendar
 
 Three bugs fixed:

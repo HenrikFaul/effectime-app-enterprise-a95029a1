@@ -587,6 +587,8 @@ const pl = {
     inherited: 'Odziedziczone',
     manual: 'Ręczne',
     global_catalog_note: 'Czytamy z globalnego katalogu — listę specyficzną dla workspace może edytować admin w People → Stanowiska.',
+    search_placeholder: 'Szukaj po nazwie stanowiska...',
+    search_no_results: 'Brak wyników dla Twojego wyszukiwania',
   },
   member: {
     org_unit: 'Jednostka organizacyjna',
