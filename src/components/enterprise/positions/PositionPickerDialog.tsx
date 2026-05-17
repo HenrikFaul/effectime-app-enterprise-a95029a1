@@ -188,6 +188,7 @@ export function PositionPickerDialog({ open, onOpenChange, workspaceId, onPick }
     onPick({
       positionRoleId: selectedRole.id,
       positionLabel: selectedRole.name,
+      business_role: selectedRole.name,
       seniority,
       skillIds: Array.from(includedSkillIds),
     });
