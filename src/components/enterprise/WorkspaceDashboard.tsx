@@ -379,9 +379,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
 
             {hasCalendarAccess && (
               <TabsContent value="calendar">
-                <div className="flex gap-3 items-start">
-                  {/* Calendar sub-tabs — main content area */}
-                  <div className="flex-1 min-w-0 space-y-3">
+                <div className="space-y-3">
                 <Tabs defaultValue="calendar-main" className="space-y-3">
                   <TabsList className="sticky top-[calc(var(--ws-header-h)_+_var(--ws-main-tabs-h))] z-10 grid grid-cols-4 w-full h-auto !bg-background border-b rounded-none shadow-sm">
                     <TabsTrigger value="calendar-main">{t('ws_nav.cal_main')}</TabsTrigger>
@@ -435,19 +433,16 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                     />
                   </TabsContent>
                 </Tabs>
-                  </div>{/* end flex-1 calendar content */}
 
-                  {/* AI Copilot sidebar — narrow, ~25% width */}
+                  {/* AI Copilot — full width below calendar content */}
                   <FeatureGate
                     workspaceId={workspace.id}
                     feature="ai_copilot_chat"
                     fallback={null}
                   >
-                    <div className="w-72 shrink-0 sticky top-[calc(var(--ws-header-h)_+_var(--ws-main-tabs-h)_+_0.5rem)]">
-                      <CopilotPanel workspaceId={workspace.id} />
-                    </div>
+                    <CopilotPanel workspaceId={workspace.id} />
                   </FeatureGate>
-                </div>{/* end flex row */}
+                </div>
               </TabsContent>
             )}
 
