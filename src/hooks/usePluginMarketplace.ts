@@ -73,7 +73,7 @@ export async function submitPlugin(args: {
 }) {
   const { data, error } = await supabase.rpc('marketplace_submit_plugin', {
     _slug: args.slug, _name: args.name, _description: args.description,
-    _category: args.category, _manifest: args.manifest,
+    _category: args.category, _manifest: args.manifest as never,
     _icon_url: args.iconUrl ?? null, _pricing: args.pricing ?? 'free',
   });
   if (error) throw error;
@@ -82,7 +82,7 @@ export async function submitPlugin(args: {
 
 export async function installPlugin(workspaceId: string, pluginId: string, config: Record<string, unknown> = {}) {
   const { data, error } = await supabase.rpc('marketplace_install_plugin', {
-    _workspace_id: workspaceId, _plugin_id: pluginId, _config: config,
+    _workspace_id: workspaceId, _plugin_id: pluginId, _config: config as never,
   });
   if (error) throw error;
   return data as string;
