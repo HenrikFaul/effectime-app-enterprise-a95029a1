@@ -4596,4 +4596,4 @@ const de = {
 } as const;
 
 export default de;
-export type EnglishBundle = typeof en;
+

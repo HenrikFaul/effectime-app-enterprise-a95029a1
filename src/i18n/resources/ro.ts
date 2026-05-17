@@ -4596,4 +4596,4 @@ const ro = {
 } as const;
 
 export default ro;
-export type EnglishBundle = typeof en;
+
