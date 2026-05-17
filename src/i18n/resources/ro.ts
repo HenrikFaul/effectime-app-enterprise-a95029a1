@@ -3253,8 +3253,15 @@ const ro = {
     type_anniversary: 'Work anniversary',
   },
   enterprise_notifications: {
-    title: 'Notifications',
-    empty: 'No notifications.',
+    title: 'Notificări',
+    empty: 'Nicio notificare.',
+    mark_all_read: 'Marchează toate ca citite',
+    shift_confirmed: 'Tură confirmată',
+    shift_confirmed_msg: 'Ați fost alocat/ă la tura deschisă din {{date}}.',
+    open_shift_filled_title: 'Tură deschisă acoperită',
+    open_shift_filled_msg: 'Tura deschisă din {{date}} a fost revendicată.',
+    new_open_shift_title: 'Tură deschisă disponibilă',
+    new_open_shift_msg: 'O tură deschisă este disponibilă pe {{date}}.',
   },
   out_today_widget: {
     title: 'Away today ({{count}})',
@@ -4547,6 +4554,12 @@ const ro = {
     post_error: 'Nu s-a putut publica tura deschisă.',
     already_posted: 'O tură deschisă a fost deja publicată pentru această zi.',
     status_open: 'Deschis',
+    filled_label: 'Acoperit',
+    broadcast_label: 'Publicat',
+    role_label: 'Rol necesar',
+    skill_label: 'Competență necesară',
+    any_role: 'Orice rol',
+    any_skill: 'Orice competență',
   },
 } as const;
 

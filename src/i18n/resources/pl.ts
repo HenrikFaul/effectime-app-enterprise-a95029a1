@@ -180,6 +180,13 @@ const pl = {
   enterprise_notifications: {
     title: 'Powiadomienia',
     empty: 'Brak powiadomień.',
+    mark_all_read: 'Oznacz wszystkie jako przeczytane',
+    shift_confirmed: 'Zmiana potwierdzona',
+    shift_confirmed_msg: 'Zostałeś/aś przypisany/a do wolnej zmiany w dniu {{date}}.',
+    open_shift_filled_title: 'Wolna zmiana obsadzona',
+    open_shift_filled_msg: 'Wolna zmiana w dniu {{date}} została przyjęta.',
+    new_open_shift_title: 'Wolna zmiana dostępna',
+    new_open_shift_msg: 'Wolna zmiana jest dostępna w dniu {{date}}.',
   },
   out_today_widget: {
     title: 'Dziś nieobecni ({{count}})',
@@ -4367,6 +4374,12 @@ const pl = {
     post_error: 'Nie udało się opublikować wolnej zmiany.',
     already_posted: 'Wolna zmiana na ten dzień została już opublikowana.',
     status_open: 'Otwarte',
+    filled_label: 'Obsadzone',
+    broadcast_label: 'Opublikowane',
+    role_label: 'Wymagana rola',
+    skill_label: 'Wymagana umiejętność',
+    any_role: 'Dowolna rola',
+    any_skill: 'Dowolna umiejętność',
   },
 } as const;
 

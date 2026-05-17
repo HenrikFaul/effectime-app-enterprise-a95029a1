@@ -408,7 +408,7 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
 
       {/* Open shifts — first-come-first-served claim of manager-posted open slots */}
       {membershipId && (
-        <OpenShiftPanel workspaceId={workspaceId} />
+        <OpenShiftPanel workspaceId={workspaceId} membershipId={membershipId} />
       )}
 
       {/* Shift marketplace (Top-20 Rank 12, v3.21.0). Browse open offers

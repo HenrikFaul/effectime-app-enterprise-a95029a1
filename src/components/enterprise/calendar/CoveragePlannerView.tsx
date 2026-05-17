@@ -606,6 +606,10 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
                         const hasOpenShift = openShiftRequests.some(
                           r => r.office_id === office.id && r.shift_date === iso && r.status === 'open'
                         );
+                        const assignedHere = shifts.filter(
+                          s => s.office_id === office.id && s.shift_date === iso
+                        );
+                        const hasFilled = !hasOpenShift && assignedHere.length > 0;
                         return (
                           <button
                             key={d.toISOString()}
@@ -614,16 +618,24 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
                             className={cn(
                               'min-h-[48px] border-r border-border/70 last:border-r-0 transition-colors cursor-pointer flex flex-col items-center justify-center gap-0.5',
                               viewMode === 'monthly' && 'min-h-[42px]',
-                              hasOpenShift
-                                ? 'bg-amber-50/70 hover:bg-amber-100/70 dark:bg-amber-950/30 dark:hover:bg-amber-900/40'
-                                : cn('bg-zinc-50/45 dark:bg-zinc-900/25 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/40', isWeekend(d) && 'bg-zinc-100/45 dark:bg-zinc-900/35')
+                              hasFilled
+                                ? 'bg-emerald-50/70 hover:bg-emerald-100/70 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40'
+                                : hasOpenShift
+                                  ? 'bg-amber-50/70 hover:bg-amber-100/70 dark:bg-amber-950/30 dark:hover:bg-amber-900/40'
+                                  : cn('bg-zinc-50/45 dark:bg-zinc-900/25 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/40', isWeekend(d) && 'bg-zinc-100/45 dark:bg-zinc-900/35')
                             )}
-                            title={hasOpenShift ? t('open_shifts.already_posted') : t('open_shifts.post_open_shift')}
+                            title={hasFilled ? t('open_shifts.filled_label') : hasOpenShift ? t('open_shifts.already_posted') : t('open_shifts.post_open_shift')}
                           >
-                            {hasOpenShift && (
+                            {hasFilled && (
+                              <>
+                                <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
+                                <span className="text-[9px] text-emerald-700 dark:text-emerald-300 font-semibold leading-none">{assignedHere.length}</span>
+                              </>
+                            )}
+                            {!hasFilled && hasOpenShift && (
                               <>
                                 <Megaphone className="h-3 w-3 text-amber-600 dark:text-amber-400" />
-                                <span className="text-[9px] text-amber-700 dark:text-amber-300 font-semibold leading-none">Meghirdetett</span>
+                                <span className="text-[9px] text-amber-700 dark:text-amber-300 font-semibold leading-none">{t('open_shifts.broadcast_label')}</span>
                               </>
                             )}
                           </button>
@@ -931,6 +943,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
                   workspaceId={workspaceId}
                   officeId={openShiftCell.office.id}
                   shiftDate={format(openShiftCell.date, 'yyyy-MM-dd')}
+                  availableSkills={skills}
                 />
               </div>
             </>

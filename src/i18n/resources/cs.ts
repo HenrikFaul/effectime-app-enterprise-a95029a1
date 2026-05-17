@@ -180,6 +180,13 @@ const cs = {
   enterprise_notifications: {
     title: 'Oznámení',
     empty: 'Žádná oznámení.',
+    mark_all_read: 'Označit vše jako přečtené',
+    shift_confirmed: 'Směna potvrzena',
+    shift_confirmed_msg: 'Byl(a) jste přiřazen(a) k volné směně dne {{date}}.',
+    open_shift_filled_title: 'Volná směna obsazena',
+    open_shift_filled_msg: 'Volná směna dne {{date}} byla přijata.',
+    new_open_shift_title: 'Volná směna k dispozici',
+    new_open_shift_msg: 'Volná směna je k dispozici dne {{date}}.',
   },
   out_today_widget: {
     title: 'Dnes mimo ({{count}})',
@@ -4367,6 +4374,12 @@ const cs = {
     post_error: 'Nepodařilo se zveřejnit volnou směnu.',
     already_posted: 'Volná směna již byla pro tento den zveřejněna.',
     status_open: 'Otevřeno',
+    filled_label: 'Obsazeno',
+    broadcast_label: 'Zveřejněno',
+    role_label: 'Požadovaná role',
+    skill_label: 'Požadovaná dovednost',
+    any_role: 'Libovolná role',
+    any_skill: 'Libovolná dovednost',
   },
 } as const;
 

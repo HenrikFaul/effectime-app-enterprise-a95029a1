@@ -3257,6 +3257,13 @@ const en = {
   enterprise_notifications: {
     title: 'Notifications',
     empty: 'No notifications.',
+    mark_all_read: 'Mark all read',
+    shift_confirmed: 'Shift confirmed',
+    shift_confirmed_msg: 'You were assigned to the open shift on {{date}}.',
+    open_shift_filled_title: 'Open shift filled',
+    open_shift_filled_msg: 'The open shift on {{date}} has been claimed.',
+    new_open_shift_title: 'Open shift available',
+    new_open_shift_msg: 'An open shift is available on {{date}}.',
   },
   out_today_widget: {
     title: 'Away today ({{count}})',
@@ -4596,6 +4603,12 @@ const en = {
     post_error: 'Could not post open shift.',
     already_posted: 'Open shift already broadcast for this day.',
     status_open: 'Open',
+    filled_label: 'Filled',
+    broadcast_label: 'Broadcast',
+    role_label: 'Required role',
+    skill_label: 'Required skill',
+    any_role: 'Any role',
+    any_skill: 'Any skill',
   },
 } as const;
 

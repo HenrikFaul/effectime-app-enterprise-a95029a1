@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,18 +11,51 @@ import { hu } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useOpenShiftRequests, useClaimOpenShift } from '@/hooks/useOpenShifts';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Props {
   workspaceId: string;
+  membershipId?: string;
 }
 
-export function OpenShiftPanel({ workspaceId }: Props) {
+function useMemberProfile(membershipId: string | undefined) {
+  return useQuery({
+    queryKey: ['member-profile-for-shifts', membershipId],
+    enabled: !!membershipId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const [memRes, skillRes] = await Promise.all([
+        (supabase as any).from('enterprise_memberships')
+          .select('business_role')
+          .eq('id', membershipId)
+          .maybeSingle(),
+        (supabase as any).from('enterprise_member_skills')
+          .select('skill_id')
+          .eq('membership_id', membershipId),
+      ]);
+      return {
+        businessRole: (memRes.data?.business_role ?? null) as string | null,
+        skillIds: ((skillRes.data ?? []) as { skill_id: string }[]).map(s => s.skill_id),
+      };
+    },
+  });
+}
+
+export function OpenShiftPanel({ workspaceId, membershipId }: Props) {
   const { t } = useI18n();
   const { data: requests = [], isLoading } = useOpenShiftRequests(workspaceId);
+  const { data: memberProfile } = useMemberProfile(membershipId);
   const claim = useClaimOpenShift();
   const [claimingId, setClaimingId] = useState<string | null>(null);
 
-  const open = requests.filter(r => r.status === 'open');
+  // Filter to only open shifts that match the member's role/skills (or have no requirement)
+  const open = requests.filter(r => {
+    if (r.status !== 'open') return false;
+    if (!memberProfile) return true; // no profile loaded yet, show all
+    const roleMatch = !r.business_role || r.business_role === memberProfile.businessRole;
+    const skillMatch = !r.skill_id || memberProfile.skillIds.includes(r.skill_id);
+    return roleMatch && skillMatch;
+  });
 
   const handleClaim = async (requestId: string) => {
     setClaimingId(requestId);

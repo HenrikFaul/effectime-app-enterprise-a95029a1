@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Eye, Trash2, Bell } from 'lucide-react';
+import { Eye, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { hu } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -24,7 +23,30 @@ const EVENT_ICONS: Record<string, string> = {
   'escalation.triggered': '⚠️',
   'rule.conflict': '🔥',
   'export.completed': '📊',
+  'shift_assigned': '📅',
+  'open_shift_filled': '✅',
+  'open_shift_broadcast': '📢',
 };
+
+function getLocalizedTitle(t: (key: string, vars?: Record<string, string>) => string, n: any): string {
+  switch (n.event_type) {
+    case 'shift_assigned': return t('enterprise_notifications.shift_confirmed');
+    case 'open_shift_filled': return t('enterprise_notifications.open_shift_filled_title');
+    case 'open_shift_broadcast': return t('enterprise_notifications.new_open_shift_title');
+    default: return n.title;
+  }
+}
+
+function getLocalizedMessage(t: (key: string, vars?: Record<string, string>) => string, n: any): string {
+  const dateMatch = (n.message ?? '').match(/\d{4}-\d{2}-\d{2}/);
+  const date = dateMatch?.[0] ?? '';
+  switch (n.event_type) {
+    case 'shift_assigned': return t('enterprise_notifications.shift_confirmed_msg', { date });
+    case 'open_shift_filled': return t('enterprise_notifications.open_shift_filled_msg', { date });
+    case 'open_shift_broadcast': return t('enterprise_notifications.new_open_shift_msg', { date });
+    default: return n.message ?? '';
+  }
+}
 
 export function EnterpriseNotifications({ workspaceId, userId }: Props) {
   const { t } = useI18n();
@@ -70,17 +92,14 @@ export function EnterpriseNotifications({ workspaceId, userId }: Props) {
   if (loading) return <div className="flex justify-center py-8"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Bell className="h-4 w-4" />
-          <span className="text-sm font-semibold">{t('enterprise_notifications.title')}</span>
-          {unreadCount > 0 && <Badge variant="destructive" className="text-xs h-5">{unreadCount}</Badge>}
+    <div className="space-y-2 p-3">
+      {unreadCount > 0 && (
+        <div className="flex justify-end">
+          <Button size="sm" variant="outline" className="text-xs h-7" onClick={markAllRead}>
+            {t('enterprise_notifications.mark_all_read')}
+          </Button>
         </div>
-        {unreadCount > 0 && (
-          <Button size="sm" variant="outline" className="text-xs h-7" onClick={markAllRead}>Mind olvasott</Button>
-        )}
-      </div>
+      )}
 
       {notifications.length === 0 ? (
         <Card><CardContent className="text-center py-8 text-muted-foreground text-sm">{t('enterprise_notifications.empty')}</CardContent></Card>
@@ -91,8 +110,14 @@ export function EnterpriseNotifications({ workspaceId, userId }: Props) {
               <div key={n.id} className={`flex items-start gap-2 p-2 rounded-md border text-xs ${!n.is_read ? 'bg-foreground/[0.04] border-primary/30' : ''}`}>
                 <span className="text-sm shrink-0">{EVENT_ICONS[n.event_type] || '🔔'}</span>
                 <div className="flex-1 min-w-0">
-                  <p className={`text-xs ${!n.is_read ? 'font-semibold' : ''}`}>{n.title}</p>
-                  {n.message && <p className="text-muted-foreground text-[11px] truncate">{n.message}</p>}
+                  <p className={`text-xs ${!n.is_read ? 'font-semibold' : ''}`}>
+                    {getLocalizedTitle(t, n)}
+                  </p>
+                  {n.message && (
+                    <p className="text-muted-foreground text-[11px] truncate">
+                      {getLocalizedMessage(t, n)}
+                    </p>
+                  )}
                   <p className="text-muted-foreground text-[10px] mt-0.5">
                     {format(new Date(n.created_at), 'MM.dd HH:mm', { locale: hu })}
                   </p>
