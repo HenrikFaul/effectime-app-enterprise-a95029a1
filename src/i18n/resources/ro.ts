@@ -444,6 +444,8 @@ const ro = {
     inherited: 'Inherited',
     manual: 'Manual',
     global_catalog_note: 'Reading from the global catalog — the workspace-specific list can be edited by an admin in People → Positions.',
+    search_placeholder: 'Caută după numele poziției...',
+    search_no_results: 'Nu există rezultate pentru căutarea dvs.',
   },
   member: {
     org_unit: 'Organizational unit',
