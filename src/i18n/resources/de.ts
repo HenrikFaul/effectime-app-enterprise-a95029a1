@@ -4568,6 +4568,17 @@ const de = {
     close_shift: 'Ausschreibung schließen',
     cancelled_success: 'Offene Schicht-Ausschreibung abgebrochen.',
     cancel_error: 'Ausschreibung konnte nicht abgebrochen werden. Erneut versuchen.',
+    position_label: 'Erforderliche Position',
+    select_position: 'Position auswählen…',
+    timeout_label: 'Antwortfrist (Stunden)',
+    top_candidates: 'Top-Kandidaten',
+    notify_selected: 'Ausgewählte benachrichtigen',
+    broadcast_all: 'An alle Passenden senden',
+    join_waitlist: 'Auf Warteliste setzen',
+    waitlist_joined: 'Zur Warteliste hinzugefügt.',
+    waitlist_error: 'Warteliste konnte nicht beigetreten werden. Erneut versuchen.',
+    no_candidates: 'Keine geeigneten Kandidaten gefunden.',
+    candidates_hint: 'Kandidaten für direkte Benachrichtigung auswählen oder an alle passenden Mitglieder senden.',
   },
 } as const;
 

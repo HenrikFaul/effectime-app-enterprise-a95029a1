@@ -1,3 +1,27 @@
+## 2026-05-17 — v3.40.0 Structured Open Shifts — position FK, multi-skill, top-3 candidates, escalation, waitlist
+
+Replaces the free-text "Szükséges pozíció" input with structured position selection from the `enterprise_workspace_roles` catalog. Adds multi-skill requirements, an eligibility-based top-3 candidate shortlist with direct-notify option, configurable auto-escalation timeout, waitlist support for filled shifts, and automatic replacement search when an employee cancels their assignment.
+
+### Database (migration `20260517200000_v3_40_0_structured_open_shifts.sql`)
+- `enterprise_open_shift_requests`: added `role_id uuid FK`, `skill_ids uuid[]`, `respond_by_at`, `escalation_level`, `notified_user_ids`, `target_user_ids`, `timeout_hours`
+- New table `enterprise_open_shift_waitlist`: race-safe waitlist with position ordering and UNIQUE(request_id, user_id)
+- New table `enterprise_shift_cancellations`: audit trail for cancelled assignments with replacement tracking
+- `create_open_shift_request` RPC updated: accepts `role_id`, `skill_ids[]`, `timeout_hours`, `target_user_ids[]`; resolves role name from FK; filters notifications to role/skill-matching members only (or exact target list)
+- New `join_open_shift_waitlist(request_id)` RPC
+- New `cancel_shift_assignment(assignment_id)` RPC: deletes assignment, re-opens shift request, notifies first waitlisted member, alerts managers if no replacement found
+- New `process_open_shift_escalations()` pg_cron function (every 15 min): sends next 5-member batch to unfilled expired requests
+
+### Frontend
+- `OpenShiftManager`: structured `PositionPickerDialog` replaces free-text role input; top-3 eligible candidates shown with checkboxes; "Notify selected" and "Broadcast to all matching" actions; configurable timeout field; skill badge rendering from `skill_ids[]`
+- `OpenShiftPanel`: shows filled shifts with "Join waitlist" button; skill filtering updated to use `skill_ids[]` array (legacy `skill_id` fallback preserved)
+- `useOpenShifts.ts`: extended `OpenShiftRequest` type; updated `useCreateOpenShift` params; new `useJoinWaitlist`, `useCancelShiftAssignment`, `useShiftCandidates` hooks
+- `useShiftCandidates`: loads workspace members + skills + assignments + leaves + holidays in parallel; runs `rankCandidates()` from `coverageEligibility.ts` to rank candidates; returns sorted `EligibilityResult[]`
+
+### i18n — 13 new keys added to all 8 locale files (en, hu, de, at, cs, sk, pl, ro)
+`open_shifts.position_label`, `select_position`, `timeout_label`, `top_candidates`, `notify_selected`, `broadcast_all`, `join_waitlist`, `waitlist_joined`, `waitlist_error`, `no_candidates`, `candidates_hint`
+
+---
+
 ## 2026-05-17 — v3.39.4 Dynamic date locale — 20 components switched to useDateLocale()
 
 Introduces `useDateLocale()` hook in `I18nProvider`. Every date-fns `format()` call and every `<Calendar locale=…>` prop across 20 enterprise components was hardcoded to Hungarian (`{ locale: hu }`). They now all read the user's active app locale at runtime, so Czech, Slovak, Polish, German, Austrian, Romanian, and English users see calendar headers, weekday abbreviations, and date strings in their own language. Also fixes a serial-loop performance bug in `markAllRead` (was N individual DB updates, now a single batch UPDATE).

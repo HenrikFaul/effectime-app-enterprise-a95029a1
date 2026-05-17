@@ -1225,6 +1225,16 @@ if (!rows || rows.length === 0) return jsonRes({ error: 'Already locked' }, 409)
 **Problem**: `const { data: roleCheck } = await supabaseAdmin.rpc(...)` without error check means RPC unavailability is treated the same as "user is not authorized" (returns falsy). The user gets a 403 Forbidden when the real issue is a 500 server error.
 **Fix**: Check `{ error: roleErr }` on RPC calls. Return 500 on RPC failure, 403 on explicit denial.
 
+### [LESSON-OPEN-SHIFT-001]: `<SelectItem value="">` is forbidden in Radix UI — use sentinel `"__any__"` instead
+**Context**: OpenShiftManager skill selector.
+**Problem**: `<SelectItem value="">` causes a Radix UI crash — empty string value is not allowed.
+**Fix**: Use `value="__any__"` as the sentinel and convert back with `v === '__any__' ? '' : v` in `onValueChange`.
+
+### [LESSON-OPEN-SHIFT-002]: Free-text role fields break eligibility matching — always use structured FK
+**Context**: `enterprise_open_shift_requests.business_role` was free-text for v3.39.0.
+**Problem**: Free-text role names are not normalizable — typos and casing differences silently break eligibility engine matching and notification filtering.
+**Fix**: Added `role_id uuid FK enterprise_workspace_roles`; `business_role` preserved for display but resolved from FK name for consistency.
+
 ### [LESSON-LOCALE-002]: Never use Hungarian as an English fallback — hardcode 'Unknown', not 'Ismeretlen'
 **Context**: capacityEngine.ts, run-report edge function.
 **Problem**: `'Ismeretlen'` is the Hungarian word for "Unknown". Using it as a fallback in a shared library means all non-Hungarian users see Hungarian text in display_name fallbacks.
