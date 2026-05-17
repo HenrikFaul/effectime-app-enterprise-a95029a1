@@ -6,10 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { logAuditEvent } from '@/lib/auditLog';
-import { hu } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { LeaveRequestDialog } from './LeaveRequestDialog';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -31,6 +30,7 @@ const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'outline' | 'des
 
 export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = true, canViewTeam = false }: Props) {
   const { t } = useI18n();
+  const dateFnsLocale = useDateLocale();
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
@@ -151,7 +151,7 @@ export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = t
                     <Badge variant="outline" className="text-xs">{t(`approval_inbox.type_${req.leave_type}` as any)}</Badge>
                   </div>
                   <p className={`text-xs text-muted-foreground ${isCancelled ? 'line-through' : ''}`}>
-                    {format(new Date(req.start_date), 'yyyy.MM.dd', { locale: hu })} – {format(new Date(req.end_date), 'yyyy.MM.dd', { locale: hu })}
+                    {format(new Date(req.start_date), 'yyyy.MM.dd', { locale: dateFnsLocale })} – {format(new Date(req.end_date), 'yyyy.MM.dd', { locale: dateFnsLocale })}
                   </p>
                   {req.comment && <p className="text-xs text-muted-foreground truncate">{req.comment}</p>}
                   {req.review_comment && (

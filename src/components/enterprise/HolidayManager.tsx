@@ -11,9 +11,8 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
-import { hu } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -28,6 +27,7 @@ interface Holiday {
 
 export function HolidayManager({ workspaceId }: Props) {
   const { t } = useI18n();
+  const dateFnsLocale = useDateLocale();
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -138,7 +138,7 @@ export function HolidayManager({ workspaceId }: Props) {
         <div className="space-y-1">
           {holidays.map(h => (
             <div key={h.id} className="flex items-center gap-2 p-2 rounded-md border text-sm">
-              <span className="font-medium">{format(new Date(h.holiday_date), 'yyyy.MM.dd', { locale: hu })}</span>
+              <span className="font-medium">{format(new Date(h.holiday_date), 'yyyy.MM.dd', { locale: dateFnsLocale })}</span>
               <span className="text-muted-foreground">—</span>
               <span>{h.name}</span>
               {h.is_recurring && <span className="text-xs text-muted-foreground">{t('holiday_mgr.recurring')}</span>}
@@ -164,11 +164,11 @@ export function HolidayManager({ workspaceId }: Props) {
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-full mt-1 justify-start text-left font-normal", !date && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, 'yyyy.MM.dd', { locale: hu }) : t('holiday_mgr.pick_date')}
+                    {date ? format(date, 'yyyy.MM.dd', { locale: dateFnsLocale }) : t('holiday_mgr.pick_date')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={date} onSelect={setDate} locale={hu} className={cn("p-3 pointer-events-auto")} />
+                  <Calendar mode="single" selected={date} onSelect={setDate} locale={dateFnsLocale} className={cn("p-3 pointer-events-auto")} />
                 </PopoverContent>
               </Popover>
             </div>

@@ -8,10 +8,9 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Checkbox } from '@/components/ui/checkbox';
 import { CalendarIcon, Plus, Trash2, Building2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { hu } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -20,6 +19,7 @@ interface Props {
 
 export function CompanyLeaveDayManager({ workspaceId, userId }: Props) {
   const { t } = useI18n();
+  const dateFnsLocale = useDateLocale();
   const [days, setDays] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [name, setName] = useState('');
@@ -80,11 +80,11 @@ export function CompanyLeaveDayManager({ workspaceId, userId }: Props) {
             <PopoverTrigger asChild>
               <Button variant="outline" className={cn("h-8 text-xs", !date && "text-muted-foreground")}>
                 <CalendarIcon className="mr-1 h-3 w-3" />
-                {date ? format(date, 'yyyy.MM.dd', { locale: hu }) : t('company_day_mgr.date_placeholder')}
+                {date ? format(date, 'yyyy.MM.dd', { locale: dateFnsLocale }) : t('company_day_mgr.date_placeholder')}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0" align="start">
-              <Calendar mode="single" selected={date} onSelect={setDate} locale={hu} className="p-3 pointer-events-auto" />
+              <Calendar mode="single" selected={date} onSelect={setDate} locale={dateFnsLocale} className="p-3 pointer-events-auto" />
             </PopoverContent>
           </Popover>
           <label className="flex items-center gap-1.5 text-xs">

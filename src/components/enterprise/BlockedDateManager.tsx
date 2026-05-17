@@ -10,10 +10,9 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
-import { hu } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Textarea } from '@/components/ui/textarea';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -28,6 +27,7 @@ interface BlockedDate {
 
 export function BlockedDateManager({ workspaceId, userId }: Props) {
   const { t } = useI18n();
+  const dateFnsLocale = useDateLocale();
   const [dates, setDates] = useState<BlockedDate[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -88,7 +88,7 @@ export function BlockedDateManager({ workspaceId, userId }: Props) {
         <div className="space-y-1">
           {dates.map(d => (
             <div key={d.id} className="flex items-center gap-2 p-2 rounded-md border text-sm">
-              <span className="font-medium text-destructive">{format(new Date(d.blocked_date), 'yyyy.MM.dd', { locale: hu })}</span>
+              <span className="font-medium text-destructive">{format(new Date(d.blocked_date), 'yyyy.MM.dd', { locale: dateFnsLocale })}</span>
               {d.reason && <span className="text-muted-foreground text-xs truncate">— {d.reason}</span>}
               <Button variant="ghost" size="icon" className="h-6 w-6 ml-auto" onClick={() => handleDelete(d.id)}>
                 <Trash2 className="h-3 w-3 text-destructive" />
@@ -108,11 +108,11 @@ export function BlockedDateManager({ workspaceId, userId }: Props) {
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-full mt-1 justify-start text-left font-normal", !date && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date ? format(date, 'yyyy.MM.dd', { locale: hu }) : t('blocked_date_mgr.pick_date')}
+                    {date ? format(date, 'yyyy.MM.dd', { locale: dateFnsLocale }) : t('blocked_date_mgr.pick_date')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={date} onSelect={setDate} locale={hu} className={cn("p-3 pointer-events-auto")} />
+                  <Calendar mode="single" selected={date} onSelect={setDate} locale={dateFnsLocale} className={cn("p-3 pointer-events-auto")} />
                 </PopoverContent>
               </Popover>
             </div>

@@ -13,8 +13,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { CheckCircle2, Circle, ChevronDown, Plus, XCircle, AlertTriangle, CalendarDays, User2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format, isPast, isWithinInterval, addDays } from 'date-fns';
-import { hu } from 'date-fns/locale';
-import { useT } from '@/i18n/I18nProvider';
+import { useT, useDateLocale } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -94,6 +93,7 @@ function dueDateClass(dateStr: string | null): string {
 
 export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
   const t = useT();
+  const dateFnsLocale = useDateLocale();
   const [instances, setInstances] = useState<InstanceRow[]>([]);
   const [tasksByInstance, setTasksByInstance] = useState<Record<string, Task[]>>({});
   const [openId, setOpenId] = useState<string | null>(null);
@@ -296,7 +296,7 @@ export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
                     {inst.due_date && (
                       <span className={`flex items-center gap-1 ${dueDateClass(inst.due_date)}`}>
                         <CalendarDays className="h-3 w-3" />
-                        {t('hr_workflow.due_label')} {format(new Date(inst.due_date), 'MMM d.', { locale: hu })}
+                        {t('hr_workflow.due_label')} {format(new Date(inst.due_date), 'MMM d.', { locale: dateFnsLocale })}
                       </span>
                     )}
                     {inst.total_tasks > 0 && (

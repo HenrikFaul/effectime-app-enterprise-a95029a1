@@ -17,9 +17,8 @@ import {
   isWeekend,
   parseISO,
 } from 'date-fns';
-import { hu } from 'date-fns/locale';
 import { CoverageConflictSummary } from './CoverageConflictSummary';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 
 interface LeaveRequest {
   id: string;
@@ -57,6 +56,7 @@ interface Props {
 
 export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true, showCoverage = true, showRequests = true, showConflicts = true }: Props) {
   const { t } = useI18n();
+  const dateFnsLocale = useDateLocale();
 
   const weekdayLabels = useMemo(() => [
     t('leave_calendar.weekday_mon'),
@@ -311,7 +311,7 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
           <CardHeader className="pb-2 px-3 pt-3">
             <CardTitle className="text-xs font-semibold flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
               <CalendarDays className="h-3.5 w-3.5" />
-              {t('leave_calendar.panel_leave_days', { date: format(selectedDay, 'MMM d.', { locale: hu }) })}
+              {t('leave_calendar.panel_leave_days', { date: format(selectedDay, 'MMM d.', { locale: dateFnsLocale }) })}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-3 space-y-2">
@@ -353,7 +353,7 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
         <CardHeader className="pb-2 px-3 pt-3">
           <CardTitle className="text-xs font-semibold flex items-center gap-1.5 text-emerald-700 dark:text-emerald-400">
             <CalendarDays className="h-3.5 w-3.5" />
-            {t('leave_calendar.panel_leave_month', { month: format(currentMonth, 'MMMM', { locale: hu }) })}
+            {t('leave_calendar.panel_leave_month', { month: format(currentMonth, 'MMMM', { locale: dateFnsLocale }) })}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-3 pb-3">
@@ -367,7 +367,7 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
                   onClick={() => handleDateNavigate(d.date)}
                   className="w-full flex items-center justify-between rounded-md px-2 py-1.5 text-xs hover:bg-accent/50 transition-colors text-left"
                 >
-                  <span className="font-medium">{format(parseISO(d.date), 'MMM d. (EEE)', { locale: hu })}</span>
+                  <span className="font-medium">{format(parseISO(d.date), 'MMM d. (EEE)', { locale: dateFnsLocale })}</span>
                   <Badge variant="secondary" className="text-[10px] h-4 min-w-[24px] justify-center">{t('leave_calendar.persons_unit', { count: d.count })}</Badge>
                 </button>
               ))}
@@ -388,7 +388,7 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
           <CardHeader className="pb-2 px-3 pt-3">
             <CardTitle className="text-xs font-semibold flex items-center gap-1.5 text-orange-700 dark:text-orange-400">
               <AlertTriangle className="h-3.5 w-3.5" />
-              Konfliktusok — {format(selectedDay, 'MMM d.', { locale: hu })}
+              Konfliktusok — {format(selectedDay, 'MMM d.', { locale: dateFnsLocale })}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-3">
@@ -414,7 +414,7 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
         <CardHeader className="pb-2 px-3 pt-3">
           <CardTitle className="text-xs font-semibold flex items-center gap-1.5 text-orange-700 dark:text-orange-400">
             <AlertTriangle className="h-3.5 w-3.5" />
-            Konfliktusok — {format(currentMonth, 'MMMM', { locale: hu })}
+            Konfliktusok — {format(currentMonth, 'MMMM', { locale: dateFnsLocale })}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-3 pb-3">
@@ -428,7 +428,7 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
                   onClick={() => handleDateNavigate(c.date)}
                   className="w-full text-left rounded-md px-2 py-1.5 hover:bg-accent/50 transition-colors"
                 >
-                  <div className="text-xs font-medium">{format(parseISO(c.date), 'MMM d. (EEE)', { locale: hu })}</div>
+                  <div className="text-xs font-medium">{format(parseISO(c.date), 'MMM d. (EEE)', { locale: dateFnsLocale })}</div>
                   {c.details.map((d, i) => (
                     <div key={i} className="text-[10px] text-orange-600 dark:text-orange-400 flex items-start gap-1 mt-0.5">
                       <AlertTriangle className="h-2.5 w-2.5 flex-shrink-0 mt-0.5" />
@@ -455,7 +455,7 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
           <CardHeader className="pb-2 px-3 pt-3">
             <CardTitle className="text-xs font-semibold flex items-center gap-1.5 text-primary">
               <Users className="h-3.5 w-3.5" />
-              {t('leave_calendar.panel_requests_today', { date: format(selectedDay, 'MMM d.', { locale: hu }), count: dayPending.length })}
+              {t('leave_calendar.panel_requests_today', { date: format(selectedDay, 'MMM d.', { locale: dateFnsLocale }), count: dayPending.length })}
             </CardTitle>
           </CardHeader>
           <CardContent className="px-3 pb-3">
@@ -503,7 +503,7 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
         <CardHeader className="pb-2 px-3 pt-3">
           <CardTitle className="text-xs font-semibold flex items-center gap-1.5 text-primary">
             <Users className="h-3.5 w-3.5" />
-            {t('leave_calendar.panel_requests_month', { month: format(currentMonth, 'MMMM', { locale: hu }) })}
+            {t('leave_calendar.panel_requests_month', { month: format(currentMonth, 'MMMM', { locale: dateFnsLocale }) })}
           </CardTitle>
         </CardHeader>
         <CardContent className="px-3 pb-3">
@@ -517,7 +517,7 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
                   onClick={() => handleDateNavigate(date)}
                   className="w-full flex items-center justify-between rounded-md px-2 py-1.5 text-xs hover:bg-accent/50 transition-colors text-left"
                 >
-                  <span className="font-medium">{format(parseISO(date), 'MMM d. (EEE)', { locale: hu })}</span>
+                  <span className="font-medium">{format(parseISO(date), 'MMM d. (EEE)', { locale: dateFnsLocale })}</span>
                   <Badge variant="outline" className="text-[10px] h-4 min-w-[24px] justify-center">{count}</Badge>
                 </button>
               ))}
@@ -573,7 +573,7 @@ export function LeaveCalendar({ workspaceId, onNavigateTab, showLeaveDays = true
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
                 <CardTitle className="text-base capitalize">
-                  {format(currentMonth, 'yyyy. MMMM', { locale: hu })}
+                  {format(currentMonth, 'yyyy. MMMM', { locale: dateFnsLocale })}
                 </CardTitle>
                 <Button variant="ghost" size="icon" onClick={() => setCurrentMonth(m => addMonths(m, 1))}>
                   <ChevronRight className="h-4 w-4" />

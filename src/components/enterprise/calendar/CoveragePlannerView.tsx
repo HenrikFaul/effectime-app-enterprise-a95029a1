@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, useCallback, useRef, type DragEvent } from 'react';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +13,6 @@ import {
   addDays, addMonths, addWeeks, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay,
   isWeekend, startOfMonth, startOfWeek, subMonths, subWeeks,
 } from 'date-fns';
-import { hu } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { rankCandidates, type MemberInput, type EligibilityContext, type RequirementInput } from '@/lib/coverageEligibility';
@@ -86,6 +85,7 @@ type ViewMode = 'weekly' | 'monthly';
 
 export function CoveragePlannerView({ workspaceId, userId }: Props) {
   const { t } = useI18n();
+  const dateFnsLocale = useDateLocale();
   const [viewMode, setViewMode] = useState<ViewMode>('weekly');
   const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date(), { weekStartsOn: 1 }));
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
@@ -457,9 +457,9 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
 
   const headerLabel = () => {
     if (viewMode === 'weekly') {
-      return `${format(days[0], 'yyyy. MMM d.', { locale: hu })} — ${format(days[6], 'MMM d.', { locale: hu })}`;
+      return `${format(days[0], 'yyyy. MMM d.', { locale: dateFnsLocale })} — ${format(days[6], 'MMM d.', { locale: dateFnsLocale })}`;
     }
-    return format(month, 'yyyy. MMMM', { locale: hu });
+    return format(month, 'yyyy. MMMM', { locale: dateFnsLocale });
   };
 
   const prev = () => {
@@ -570,10 +570,10 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
                     holidays.includes(format(d, 'yyyy-MM-dd')) && 'bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300'
                   )}>
                     <div className="font-semibold capitalize">
-                      {viewMode === 'monthly' ? format(d, 'd') : format(d, 'EEE', { locale: hu })}
+                      {viewMode === 'monthly' ? format(d, 'd') : format(d, 'EEE', { locale: dateFnsLocale })}
                     </div>
-                    {viewMode === 'weekly' && <div className="text-[10px]">{format(d, 'MMM d.', { locale: hu })}</div>}
-                    {viewMode === 'monthly' && <div className="text-[9px] leading-none">{format(d, 'EEEEE', { locale: hu })}</div>}
+                    {viewMode === 'weekly' && <div className="text-[10px]">{format(d, 'MMM d.', { locale: dateFnsLocale })}</div>}
+                    {viewMode === 'monthly' && <div className="text-[9px] leading-none">{format(d, 'EEEEE', { locale: dateFnsLocale })}</div>}
                   </div>
                 ))}
               </div>
@@ -755,7 +755,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
                     <SheetDescription className="text-base font-medium text-muted-foreground">
                       {ruleDisplay}
                       <span className="block text-xs mt-0.5">
-                        {t('coverage_planner.drawer_date_header', { date: format(drawerCell.date, 'yyyy. MMMM d. (EEEE)', { locale: hu }), count: drawerCell.rule.min_headcount })}
+                        {t('coverage_planner.drawer_date_header', { date: format(drawerCell.date, 'yyyy. MMMM d. (EEEE)', { locale: dateFnsLocale }), count: drawerCell.rule.min_headcount })}
                       </span>
                     </SheetDescription>
                   </div>
@@ -939,7 +939,7 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
                   <SheetDescription className="text-base font-medium text-muted-foreground">
                     {t('coverage_planner.open_shift_section')}
                     <span className="block text-xs mt-0.5">
-                      {format(openShiftCell.date, 'yyyy. MMMM d. (EEEE)', { locale: hu })}
+                      {format(openShiftCell.date, 'yyyy. MMMM d. (EEEE)', { locale: dateFnsLocale })}
                     </span>
                   </SheetDescription>
                 </SheetHeader>

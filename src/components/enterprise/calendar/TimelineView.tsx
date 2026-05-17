@@ -6,13 +6,12 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon, AlertCircle } from 'lucide-react';
 import { addMonths, eachDayOfInterval, endOfMonth, format, isWeekend, startOfMonth, subMonths, isSameDay, parseISO } from 'date-fns';
-import { hu } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { CalendarFilterBar, EMPTY_FILTERS, FilterValues } from './CalendarFilterBar';
 import { useCalendarFilterConfig } from '@/hooks/useCalendarFilterConfig';
 import type { FilterOption } from './CalendarFilterBar';
 import type { CalendarFilterId } from '@/hooks/useCalendarFilterConfig';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -60,6 +59,7 @@ const LEAVE_TYPE_TINT: Record<string, string> = {
 
 export function TimelineView({ workspaceId, onFilteredUsersChange }: Props) {
   const { t } = useI18n();
+  const dateFnsLocale = useDateLocale();
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
   const [members, setMembers] = useState<MemberRow[]>([]);
   const [leaves, setLeaves] = useState<LeaveCell[]>([]);
@@ -294,7 +294,7 @@ export function TimelineView({ workspaceId, onFilteredUsersChange }: Props) {
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <div className="font-semibold capitalize min-w-[140px] text-center">
-            {format(month, 'yyyy. MMMM', { locale: hu })}
+            {format(month, 'yyyy. MMMM', { locale: dateFnsLocale })}
           </div>
           <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => setMonth(m => addMonths(m, 1))}>
             <ChevronRight className="h-4 w-4" />
@@ -357,7 +357,7 @@ export function TimelineView({ workspaceId, onFilteredUsersChange }: Props) {
                     )}
                     style={{ width: CELL_W, minWidth: CELL_W }}
                   >
-                    <div className="leading-none">{format(d, 'EEEEE', { locale: hu })}</div>
+                    <div className="leading-none">{format(d, 'EEEEE', { locale: dateFnsLocale })}</div>
                     <div className="font-semibold">{format(d, 'd')}</div>
                   </div>
                 );

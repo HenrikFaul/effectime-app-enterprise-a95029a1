@@ -5,8 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import { format, subDays, eachDayOfInterval, differenceInHours } from 'date-fns';
-import { hu } from 'date-fns/locale';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -21,6 +20,7 @@ const STATUS_COLORS: Record<string, string> = {
 
 export function ReportingDashboard({ workspaceId }: Props) {
   const { t } = useI18n();
+  const dateFnsLocale = useDateLocale();
 
   const TYPE_LABELS: Record<string, string> = {
     vacation: t('attendance.leave_type_vacation'),

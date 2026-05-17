@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,6 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Sparkles, Loader2, AlertTriangle, CheckCircle2, Users } from 'lucide-react';
 import { format, eachDayOfInterval, parseISO } from 'date-fns';
-import { hu } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { evaluateEligibility, type MemberInput, type EligibilityContext } from '@/lib/coverageEligibility';
@@ -81,6 +80,7 @@ function ruleAppliesOn(r: CoverageRule, d: Date): boolean {
 
 export function SmartBatchScheduleDialog(props: Props) {
   const { t } = useI18n();
+  const dateFnsLocale = useDateLocale();
   const { open, onOpenChange, workspaceId, userId, office, rules, members, ctx, sitePriorityMap, defaultStart, defaultEnd, onCompleted } = props;
 
   const [startDate, setStartDate] = useState(format(defaultStart, 'yyyy-MM-dd'));
@@ -402,7 +402,7 @@ export function SmartBatchScheduleDialog(props: Props) {
                   {planByDay.map(([day, items]) => (
                     <div key={day} className="p-2">
                       <div className="text-[11px] font-semibold text-muted-foreground mb-1">
-                        {format(parseISO(day), 'yyyy. MMM d. (EEEE)', { locale: hu })}
+                        {format(parseISO(day), 'yyyy. MMM d. (EEEE)', { locale: dateFnsLocale })}
                       </div>
                       <div className="space-y-1">
                         {items.map((p, i) => (

@@ -14,11 +14,10 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, AlertTriangle, XCircle, Paperclip, Lock } from 'lucide-react';
 import { format } from 'date-fns';
-import { hu } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { SubstitutePicker } from './SubstitutePicker';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 
 interface Props {
   open: boolean;
@@ -30,6 +29,7 @@ interface Props {
 
 export function LeaveRequestDialog({ open, onOpenChange, workspaceId, userId, onCreated }: Props) {
   const { t } = useI18n();
+  const dateFnsLocale = useDateLocale();
   const [leaveType, setLeaveType] = useState<string>('vacation');
   const [startDate, setStartDate] = useState<Date>();
   const [endDate, setEndDate] = useState<Date>();
@@ -205,11 +205,11 @@ export function LeaveRequestDialog({ open, onOpenChange, workspaceId, userId, on
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-full mt-1 justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
                     <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, 'yyyy.MM.dd', { locale: hu }) : t('leave_request.pick_date')}
+                    {startDate ? format(startDate, 'yyyy.MM.dd', { locale: dateFnsLocale }) : t('leave_request.pick_date')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={startDate} onSelect={handleStartDate} locale={hu} className="p-3 pointer-events-auto" />
+                  <Calendar mode="single" selected={startDate} onSelect={handleStartDate} locale={dateFnsLocale} className="p-3 pointer-events-auto" />
                 </PopoverContent>
               </Popover>
             </div>
@@ -220,11 +220,11 @@ export function LeaveRequestDialog({ open, onOpenChange, workspaceId, userId, on
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full mt-1 justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, 'yyyy.MM.dd', { locale: hu }) : t('leave_request.pick_date')}
+                      {endDate ? format(endDate, 'yyyy.MM.dd', { locale: dateFnsLocale }) : t('leave_request.pick_date')}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={endDate} onSelect={handleEndDate} locale={hu} disabled={(date) => startDate ? date < startDate : false} className="p-3 pointer-events-auto" />
+                    <Calendar mode="single" selected={endDate} onSelect={handleEndDate} locale={dateFnsLocale} disabled={(date) => startDate ? date < startDate : false} className="p-3 pointer-events-auto" />
                   </PopoverContent>
                 </Popover>
               </div>

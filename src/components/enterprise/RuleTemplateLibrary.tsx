@@ -10,8 +10,7 @@ import { Plus, Trash2, Copy, Archive } from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { format } from 'date-fns';
-import { hu } from 'date-fns/locale';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -20,6 +19,7 @@ interface Props {
 
 export function RuleTemplateLibrary({ workspaceId, userId }: Props) {
   const { t } = useI18n();
+  const dateFnsLocale = useDateLocale();
   const [templates, setTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -111,7 +111,7 @@ export function RuleTemplateLibrary({ workspaceId, userId }: Props) {
                     </div>
                     {tmpl.description && <p className="text-xs text-muted-foreground mt-0.5">{tmpl.description}</p>}
                     <p className="text-[10px] text-muted-foreground mt-1">
-                      {format(new Date(tmpl.created_at), 'yyyy.MM.dd', { locale: hu })}
+                      {format(new Date(tmpl.created_at), 'yyyy.MM.dd', { locale: dateFnsLocale })}
                     </p>
                   </div>
                   <div className="flex gap-1 shrink-0">

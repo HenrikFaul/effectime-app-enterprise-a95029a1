@@ -17,9 +17,8 @@ import {
   Hourglass, CalendarDays, Wallet,
 } from 'lucide-react';
 import { format, isPast, isWithinInterval, addDays } from 'date-fns';
-import { hu } from 'date-fns/locale';
 import { AttendancePeriodTotals, STATUS_BADGE_VARIANT, AttendancePeriodStatus } from '../time-attendance/types';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -95,6 +94,7 @@ function StatCard({
 
 export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab }: Props) {
   const { t } = useI18n();
+  const dateFnsLocale = useDateLocale();
   const [membershipId, setMembershipId] = useState<string | null>(null);
   const [displayName, setDisplayName] = useState('');
   const [attendance, setAttendance] = useState<AttendancePeriod | null>(null);
@@ -187,7 +187,7 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
   );
 
   const totals = attendance?.totals;
-  const monthLabel = format(new Date(year, month - 1), 'MMMM', { locale: hu });
+  const monthLabel = format(new Date(year, month - 1), 'MMMM', { locale: dateFnsLocale });
   const statusLabel = attendance ? t(`attendance.status_${attendance.status}` as any) : t('attendance.status_no_period');
   const statusVariant = attendance ? STATUS_BADGE_VARIANT[attendance.status] : 'outline';
 
@@ -205,7 +205,7 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
             {t('self_service.greeting', { name: displayName ? `, ${displayName}` : '' })}
           </h2>
           <p className="text-sm text-muted-foreground">
-            {format(now, 'yyyy. MMMM d., EEEE', { locale: hu })}
+            {format(now, 'yyyy. MMMM d., EEEE', { locale: dateFnsLocale })}
           </p>
         </div>
         <div className="flex gap-2 flex-wrap">
@@ -319,8 +319,8 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
                 const statusLabel = t(statusKey) !== statusKey ? t(statusKey) : req.status;
                 const leaveTypeKey = `self_service.leave_type_${req.leave_type}` as any;
                 const leaveLabel = t(leaveTypeKey) !== leaveTypeKey ? t(leaveTypeKey) : req.leave_type;
-                const start = format(new Date(req.start_date), 'MMM d.', { locale: hu });
-                const end = format(new Date(req.end_date), 'MMM d.', { locale: hu });
+                const start = format(new Date(req.start_date), 'MMM d.', { locale: dateFnsLocale });
+                const end = format(new Date(req.end_date), 'MMM d.', { locale: dateFnsLocale });
                 return (
                   <div key={req.id} className="flex items-center gap-2 text-sm">
                     <span className="flex-1 truncate">

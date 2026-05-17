@@ -12,10 +12,9 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
-import { hu } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -40,6 +39,7 @@ const DOW_ORDER = [1, 2, 3, 4, 5, 6, 0];
 
 export function DailyRuleManager({ workspaceId, userId }: Props) {
   const { t } = useI18n();
+  const dateFnsLocale = useDateLocale();
   const [rules, setRules] = useState<DailyRule[]>([]);
   const [businessRoles, setBusinessRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -178,8 +178,8 @@ export function DailyRuleManager({ workspaceId, userId }: Props) {
 
   const formatValidity = (rule: DailyRule): string | null => {
     if (!rule.valid_from && !rule.valid_until) return null;
-    const from = rule.valid_from ? format(new Date(rule.valid_from), 'yyyy.MM.dd', { locale: hu }) : '—';
-    const until = rule.valid_until ? format(new Date(rule.valid_until), 'yyyy.MM.dd', { locale: hu }) : '∞';
+    const from = rule.valid_from ? format(new Date(rule.valid_from), 'yyyy.MM.dd', { locale: dateFnsLocale }) : '—';
+    const until = rule.valid_until ? format(new Date(rule.valid_until), 'yyyy.MM.dd', { locale: dateFnsLocale }) : '∞';
     return `${from} – ${until}`;
   };
 
@@ -263,11 +263,11 @@ export function DailyRuleManager({ workspaceId, userId }: Props) {
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full mt-1 justify-start text-left font-normal", !validFrom && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {validFrom ? format(validFrom, 'yyyy.MM.dd', { locale: hu }) : t('daily_rule_mgr.pick_any')}
+                      {validFrom ? format(validFrom, 'yyyy.MM.dd', { locale: dateFnsLocale }) : t('daily_rule_mgr.pick_any')}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={validFrom} onSelect={setValidFrom} locale={hu} className={cn("p-3 pointer-events-auto")} />
+                    <Calendar mode="single" selected={validFrom} onSelect={setValidFrom} locale={dateFnsLocale} className={cn("p-3 pointer-events-auto")} />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -277,11 +277,11 @@ export function DailyRuleManager({ workspaceId, userId }: Props) {
                   <PopoverTrigger asChild>
                     <Button variant="outline" className={cn("w-full mt-1 justify-start text-left font-normal", !validUntil && "text-muted-foreground")}>
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {validUntil ? format(validUntil, 'yyyy.MM.dd', { locale: hu }) : t('daily_rule_mgr.pick_unlimited')}
+                      {validUntil ? format(validUntil, 'yyyy.MM.dd', { locale: dateFnsLocale }) : t('daily_rule_mgr.pick_unlimited')}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={validUntil} onSelect={setValidUntil} locale={hu} className={cn("p-3 pointer-events-auto")} />
+                    <Calendar mode="single" selected={validUntil} onSelect={setValidUntil} locale={dateFnsLocale} className={cn("p-3 pointer-events-auto")} />
                   </PopoverContent>
                 </Popover>
               </div>

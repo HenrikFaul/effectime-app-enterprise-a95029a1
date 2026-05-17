@@ -5,10 +5,9 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ChevronLeft, ChevronRight, CalendarCheck2 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend, isSameMonth } from 'date-fns';
-import { hu } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 import {
   useMyAvailability,
   useUpsertAvailability,
@@ -37,6 +36,7 @@ const STATUS_CLASSES: Record<AvailabilityStatus, string> = {
 
 export function AvailabilityCalendar({ workspaceId, membershipId, userId }: Props) {
   const { t } = useI18n();
+  const dateFnsLocale = useDateLocale();
   const [month, setMonth] = useState(() => startOfMonth(new Date()));
 
   const from = format(month, 'yyyy-MM-dd');
@@ -104,7 +104,7 @@ export function AvailabilityCalendar({ workspaceId, membershipId, userId }: Prop
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <span className="text-sm font-medium min-w-[130px] text-center">
-              {format(month, 'yyyy. MMMM', { locale: hu })}
+              {format(month, 'yyyy. MMMM', { locale: dateFnsLocale })}
             </span>
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setMonth(m => startOfMonth(new Date(m.getFullYear(), m.getMonth() + 1, 1)))}>
               <ChevronRight className="h-4 w-4" />
