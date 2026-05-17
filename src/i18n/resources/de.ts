@@ -792,6 +792,8 @@ const de = {
     success: '{{ok}} days filled',
     all_skipped: 'All {{count}} days skipped — already recorded. Enable overwrite.',
     failed_days: '{{count}} days could not be saved',
+    office: 'Standort / Büro',
+    office_none: 'Kein Standort',
   },
   self_service: {
     greeting: 'Hello{{name}}!',

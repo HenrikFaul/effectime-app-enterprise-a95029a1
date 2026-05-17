@@ -923,6 +923,8 @@ const pl = {
     success: '{{ok}} dni wypełnionych',
     all_skipped: 'Wszystkie {{count}} dni pominięte — już zarejestrowane. Włącz nadpisywanie.',
     failed_days: '{{count}} dni nie udało się zapisać',
+    office: 'Miejsce pracy',
+    office_none: 'Bez lokalizacji',
   },
   self_service: {
     greeting: 'Cześć{{name}}!',

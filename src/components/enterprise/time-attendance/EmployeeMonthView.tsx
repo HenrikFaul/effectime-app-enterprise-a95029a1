@@ -450,7 +450,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
               const availEntry = availByDate.get(key) ?? null;
               const availStatus = availEntry?.status ?? null;
               // In non-edit mode, empty days are clickable to toggle availability
-              const canToggleAvail = !canEdit && !daySegs.length && !hasOncall && !!userId && !!membershipId;
+              const canToggleAvail = !canEdit && !!userId && !!membershipId;
 
               return (
                 <button
@@ -580,6 +580,10 @@ export function EmployeeMonthView({ workspaceId }: Props) {
           selectedDays={batchSelectedDays ?? undefined}
           segments={segments}
           onSaved={reload}
+          workspaceId={workspaceId}
+          membershipId={membershipId ?? ''}
+          userId={userId ?? ''}
+          offices={offices}
         />
       )}
     </div>

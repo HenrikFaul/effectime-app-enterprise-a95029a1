@@ -555,7 +555,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
 
             {canView('settings') && (
               <TabsContent value="settings" data-help-region="workspace.settings">
-                <WorkspaceSettings workspace={workspace} userRole={userRole} userId={userId} onRefresh={onRefresh} canViewPermissionConfig={userRole === 'owner' || canView('permission_config')} canViewLayoutSetting={userRole === 'owner' || canView('layout_setting')} />
+                <WorkspaceSettings workspace={workspace} userRole={userRole} userId={userId} onRefresh={onRefresh} canViewPermissionConfig={userRole === 'owner' || canView('permission_config')} canViewLayoutSetting={userRole === 'owner' || canView('layout_setting')} highlightOfficeId={highlightOfficeId} />
                 {/* Plugin marketplace (Top-20 Rank 19, v3.30.0). Workspace
                     owner only; RPCs enforce. Enterprise tier required via
                     FeatureGate. */}
@@ -904,7 +904,7 @@ function InvitationList({ workspaceId, isAdmin }: { workspaceId: string; isAdmin
 }
 
 // ===== Workspace Settings =====
-function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPermissionConfig = true, canViewLayoutSetting = false }: { workspace: Workspace; userRole?: string; userId: string; onRefresh: () => void; canViewPermissionConfig?: boolean; canViewLayoutSetting?: boolean }) {
+function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPermissionConfig = true, canViewLayoutSetting = false, highlightOfficeId = null }: { workspace: Workspace; userRole?: string; userId: string; onRefresh: () => void; canViewPermissionConfig?: boolean; canViewLayoutSetting?: boolean; highlightOfficeId?: string | null }) {
   const { t } = useI18n();
   const [name, setName] = useState(workspace.name);
   const [description, setDescription] = useState(workspace.description || '');
