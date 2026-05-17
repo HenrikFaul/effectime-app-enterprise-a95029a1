@@ -2781,6 +2781,7 @@ const en = {
     legend_available: 'Self-marked available',
     availability_indicator: 'Employee marked themselves available for this day',
     open_shift_section: 'Open shift broadcast',
+    capacity_rules_title: 'Capacity rules',
   },
   smart_batch: {
     invalid_dates: 'Invalid dates',

@@ -2740,6 +2740,7 @@ const pl = {
     legend_available: 'Sam oznaczony jako dostępny',
     availability_indicator: 'Pracownik oznaczył się jako dostępny na ten dzień',
     open_shift_section: 'Opublikuj wolną zmianę',
+    capacity_rules_title: 'Reguły pojemności',
   },
   smart_batch: {
     invalid_dates: 'Nieprawidłowe daty',

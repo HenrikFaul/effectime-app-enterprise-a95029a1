@@ -6,8 +6,9 @@ import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import {
-  ChevronLeft, ChevronRight, AlertTriangle, CheckCircle2, X, Plus, Trash2, Building2, Wand2,
+  ChevronLeft, ChevronRight, ChevronDown, AlertTriangle, CheckCircle2, X, Plus, Trash2, Building2, Wand2, Megaphone, Settings2,
 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import {
   addDays, addMonths, addWeeks, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameDay,
   isWeekend, startOfMonth, startOfWeek, subMonths, subWeeks,
@@ -18,6 +19,8 @@ import { toast } from 'sonner';
 import { rankCandidates, type MemberInput, type EligibilityContext, type RequirementInput } from '@/lib/coverageEligibility';
 import { SmartBatchScheduleDialog } from './SmartBatchScheduleDialog';
 import { OpenShiftManager } from './OpenShiftManager';
+import { OfficeCoverageRuleManager } from '../OfficeCoverageRuleManager';
+import { useOpenShiftRequests } from '@/hooks/useOpenShifts';
 
 interface Props {
   workspaceId: string;
@@ -99,6 +102,9 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
   const [availabilityByDate, setAvailabilityByDate] = useState<Map<string, Set<string>>>(new Map());
   const [loading, setLoading] = useState(true);
   const loadIdRef = useRef(0);
+
+  const [rulesOpen, setRulesOpen] = useState(false);
+  const { data: openShiftRequests = [] } = useOpenShiftRequests(workspaceId);
 
   const [drawerCell, setDrawerCell] = useState<null | { office: Office; rule: CoverageRule; date: Date }>(null);
   const [openShiftCell, setOpenShiftCell] = useState<null | { office: Office; date: Date }>(null);
@@ -474,6 +480,25 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
 
   return (
     <div className="space-y-3 pb-16">
+      {/* Kapacitásszabályok — capacity rule manager (moved from Kérelmek) */}
+      <Collapsible open={rulesOpen} onOpenChange={setRulesOpen}>
+        <CollapsibleTrigger asChild>
+          <button
+            type="button"
+            className="w-full flex items-center justify-between px-4 py-2.5 rounded-lg border bg-card hover:bg-accent/40 transition-colors text-sm font-medium"
+          >
+            <div className="flex items-center gap-2">
+              <Settings2 className="h-4 w-4 text-primary" />
+              <span>{t('coverage_planner.capacity_rules_title')}</span>
+            </div>
+            <ChevronDown className={cn('h-4 w-4 text-muted-foreground transition-transform', rulesOpen && 'rotate-180')} />
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="mt-2">
+          <OfficeCoverageRuleManager workspaceId={workspaceId} userId={userId} />
+        </CollapsibleContent>
+      </Collapsible>
+
       {/* Toolbar */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2 flex-wrap">
@@ -577,19 +602,30 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
                     {days.map(d => {
                       const rule = officeRules.find(r => ruleAppliesOn(r, d));
                       if (!rule) {
+                        const iso = format(d, 'yyyy-MM-dd');
+                        const hasOpenShift = openShiftRequests.some(
+                          r => r.office_id === office.id && r.shift_date === iso && r.status === 'open'
+                        );
                         return (
                           <button
                             key={d.toISOString()}
                             type="button"
                             onClick={() => setOpenShiftCell({ office, date: d })}
                             className={cn(
-                              'min-h-[48px] border-r border-border/70 last:border-r-0 bg-zinc-50/45 dark:bg-zinc-900/25 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/40 transition-colors cursor-pointer flex items-center justify-center',
+                              'min-h-[48px] border-r border-border/70 last:border-r-0 transition-colors cursor-pointer flex flex-col items-center justify-center gap-0.5',
                               viewMode === 'monthly' && 'min-h-[42px]',
-                              isWeekend(d) && 'bg-zinc-100/45 dark:bg-zinc-900/35'
+                              hasOpenShift
+                                ? 'bg-amber-50/70 hover:bg-amber-100/70 dark:bg-amber-950/30 dark:hover:bg-amber-900/40'
+                                : cn('bg-zinc-50/45 dark:bg-zinc-900/25 hover:bg-zinc-200/60 dark:hover:bg-zinc-800/40', isWeekend(d) && 'bg-zinc-100/45 dark:bg-zinc-900/35')
                             )}
-                            title={t('open_shifts.post_open_shift')}
+                            title={hasOpenShift ? t('open_shifts.already_posted') : t('open_shifts.post_open_shift')}
                           >
-                            <Plus className="h-3 w-3 text-muted-foreground/40 opacity-0 group-hover:opacity-100" />
+                            {hasOpenShift && (
+                              <>
+                                <Megaphone className="h-3 w-3 text-amber-600 dark:text-amber-400" />
+                                <span className="text-[9px] text-amber-700 dark:text-amber-300 font-semibold leading-none">Meghirdetett</span>
+                              </>
+                            )}
                           </button>
                         );
                       }

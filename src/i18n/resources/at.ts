@@ -2779,6 +2779,7 @@ const at = {
     legend_available: 'Selbst als verfügbar markiert',
     availability_indicator: 'Mitarbeiter hat sich für diesen Tag als verfügbar markiert',
     open_shift_section: 'Offene Schicht veröffentlichen',
+    capacity_rules_title: 'Kapazitätsregeln',
   },
   smart_batch: {
     invalid_dates: 'Invalid dates',

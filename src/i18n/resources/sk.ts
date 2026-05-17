@@ -2740,6 +2740,7 @@ const sk = {
     legend_available: 'Sám sa označil ako dostupný',
     availability_indicator: 'Zamestnanec sa označil ako dostupný pre tento deň',
     open_shift_section: 'Zverejniť voľnú smenu',
+    capacity_rules_title: 'Pravidlá kapacity',
   },
   smart_batch: {
     invalid_dates: 'Neplatné dátumy',
