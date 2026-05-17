@@ -778,6 +778,8 @@ const hu = {
     success: '{{ok}} nap kitöltve',
     all_skipped: 'Minden nap ({{count}}) ki lett hagyva — már volt rögzítés. Kapcsold be a felülírást.',
     failed_days: '{{count}} nap mentése sikertelen volt',
+    office: 'Telephely',
+    office_none: 'Nincs telephely',
   },
   self_service: {
     greeting: 'Szia{{name}}!',

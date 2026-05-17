@@ -8,7 +8,7 @@ import { Switch } from '@/components/ui/switch';
 import { Zap, Loader2, AlertTriangle } from 'lucide-react';
 import { format, eachDayOfInterval, isWeekend as dfIsWeekend, startOfMonth, endOfMonth } from 'date-fns';
 import { toast } from 'sonner';
-import { upsertSegment, deleteSegment } from './api';
+import { upsertSegment, deleteSegment, upsertSiteAssignment, type OfficeOption } from './api';
 import { nightHoursInRange } from './calculations';
 import { AttendanceSegment, AttendanceSegmentType } from './types';
 import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
@@ -25,6 +25,10 @@ interface Props {
   selectedDays?: Date[];
   segments: AttendanceSegment[];
   onSaved: () => void;
+  workspaceId: string;
+  membershipId: string;
+  userId: string;
+  offices: OfficeOption[];
 }
 
 const toLocalDateStr = (d: Date) => format(d, 'yyyy-MM-dd');
@@ -32,6 +36,7 @@ const toLocalDateStr = (d: Date) => format(d, 'yyyy-MM-dd');
 export function BatchFillDialog({
   open, onOpenChange, periodId, year, month,
   initialStart, initialEnd, selectedDays, segments, onSaved,
+  workspaceId, membershipId, userId, offices,
 }: Props) {
   const { t } = useI18n();
   const dateFnsLocale = useDateLocale();
@@ -48,6 +53,7 @@ export function BatchFillDialog({
   const [skipWeekend, setSkipWeekend] = useState(true);
   const [autoNight, setAutoNight] = useState(true);
   const [overwriteExisting, setOverwriteExisting] = useState(false);
+  const [selectedOfficeId, setSelectedOfficeId] = useState<string>('');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -60,6 +66,7 @@ export function BatchFillDialog({
     setSkipWeekend(true);
     setAutoNight(true);
     setOverwriteExisting(false);
+    setSelectedOfficeId('');
   }, [open, initialStart, initialEnd, monthStart, monthEnd]);
 
   const startDay = new Date(startDate);
@@ -130,6 +137,14 @@ export function BatchFillDialog({
         toast.error(t('batch_fill.failed_days', { count: failed }));
       }
 
+      if (selectedOfficeId && workspaceId && membershipId && userId) {
+        for (const day of workDays) {
+          try {
+            await upsertSiteAssignment(workspaceId, membershipId, userId, selectedOfficeId, toLocalDateStr(day));
+          } catch { /* non-fatal */ }
+        }
+      }
+
       onSaved();
       onOpenChange(false);
     } finally {
@@ -190,6 +205,21 @@ export function BatchFillDialog({
               <Input type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
             </div>
           </div>
+
+          {offices.length > 0 && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">{t('batch_fill.office')}</Label>
+              <Select value={selectedOfficeId} onValueChange={setSelectedOfficeId}>
+                <SelectTrigger><SelectValue placeholder={t('batch_fill.office_none')} /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">{t('batch_fill.office_none')}</SelectItem>
+                  {offices.map(o => (
+                    <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
 
           {!isDragMode && (
             <div className="space-y-1.5">

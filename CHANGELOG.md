@@ -1,3 +1,23 @@
+## 2026-05-17 — v3.41.1 Bug fixes: office-click crash, availability toggle, batch-fill office selector
+
+Three bug fixes on top of v3.41.0:
+
+1. **White-screen crash when clicking an office name in the capacity planner** — `highlightOfficeId` was defined in `WorkspaceDashboard` but never passed as a prop to the separate `WorkspaceSettings` component that references it (lines 1001–1002). Added `highlightOfficeId?: string | null` to `WorkspaceSettings` props and passed the value at the call site.
+
+2. **Availability toggle inaccessible on working days** — `canToggleAvail` had an incorrect `!daySegs.length && !hasOncall` guard that prevented employees from setting their availability on any day that already had time segments. Removed that guard; employees can now tap any day to cycle their availability regardless of recorded hours.
+
+3. **Batch fill dialog — office/telephely selector added** — `BatchFillDialog` now accepts `workspaceId`, `membershipId`, `userId`, and `offices` props. A new "Office / Site" dropdown lets the employee assign a telephely to all selected days at once. If an office is chosen, `upsertSiteAssignment` is called for every day in the batch after segments are written.
+
+### Frontend
+- `WorkspaceDashboard`: `WorkspaceSettings` now receives `highlightOfficeId` prop
+- `EmployeeMonthView`: `canToggleAvail` simplified; passes `workspaceId`/`membershipId`/`userId`/`offices` to `BatchFillDialog`
+- `BatchFillDialog`: new `offices` / `workspaceId` / `membershipId` / `userId` props; office selector UI; `upsertSiteAssignment` called per day when office is chosen
+
+### i18n — 2 new keys added to all 8 locale files (en, hu, de, at, cs, sk, pl, ro)
+`batch_fill.office`, `batch_fill.office_none`
+
+---
+
 ## 2026-05-17 — v3.41.0 Unified Employee Calendar + Claim Fix + Upcoming Schedule
 
 Three related improvements to the employee self-service portal:

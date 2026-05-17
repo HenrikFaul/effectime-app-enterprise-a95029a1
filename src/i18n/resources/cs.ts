@@ -923,6 +923,8 @@ const cs = {
     success: '{{ok}} dní vyplněno',
     all_skipped: 'Všechny {{count}} dny přeskočeny — již zaznamenány. Povolte přepsání.',
     failed_days: '{{count}} dní se nepodařilo uložit',
+    office: 'Pracoviště',
+    office_none: 'Bez pracoviště',
   },
   self_service: {
     greeting: 'Dobrý den{{name}}!',

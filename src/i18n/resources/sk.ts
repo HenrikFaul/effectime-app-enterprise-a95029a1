@@ -923,6 +923,8 @@ const sk = {
     success: '{{ok}} dní vyplnených',
     all_skipped: 'Všetky {{count}} dni preskočené — už zaznamenané. Povolte prepísanie.',
     failed_days: '{{count}} dní sa nepodarilo uložiť',
+    office: 'Pracovisko',
+    office_none: 'Bez pracoviska',
   },
   self_service: {
     greeting: 'Dobrý deň{{name}}!',
