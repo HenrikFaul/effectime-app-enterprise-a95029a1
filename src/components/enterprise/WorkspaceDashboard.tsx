@@ -36,6 +36,7 @@ import { PinnedReportsWidget } from './reports/PinnedReportsWidget';
 import { RuleTemplateLibrary } from './RuleTemplateLibrary';
 import { LeaveCalendar } from './LeaveCalendar';
 import { OfficeManager } from './OfficeManager';
+import { OfficeEditorDialog } from './OfficeEditorDialog';
 import { CompanyLeaveDayManager } from './CompanyLeaveDayManager';
 import { AdminLeaveOverride } from './AdminLeaveOverride';
 import { RolePermissionManager } from './RolePermissionManager';
@@ -145,15 +146,16 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   );
   const [internalTab, setInternalTab] = useState('members');
   const [recoveryMode, setRecoveryMode] = useState<boolean>(false);
-  const [highlightOfficeId, setHighlightOfficeId] = useState<string | null>(null);
+  const [plannerOfficeId, setPlannerOfficeId] = useState<string | null>(null);
+  const [plannerOfficeDialogOpen, setPlannerOfficeDialogOpen] = useState(false);
   const activeTab = externalTab || internalTab;
   const setActiveTab = (tab: string) => {
     if (onTabChange) onTabChange(tab);
     else setInternalTab(tab);
   };
   const handleNavigateToOffice = useCallback((officeId: string) => {
-    setHighlightOfficeId(officeId);
-    setActiveTab('settings');
+    setPlannerOfficeId(officeId);
+    setPlannerOfficeDialogOpen(true);
   }, []);
   const isAdmin = userRole === 'owner' || userRole === 'resourceAssistant';
   const { canView, canEdit } = useEnterprisePermissions(workspace.id, userRole);
@@ -555,7 +557,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
 
             {canView('settings') && (
               <TabsContent value="settings" data-help-region="workspace.settings">
-                <WorkspaceSettings workspace={workspace} userRole={userRole} userId={userId} onRefresh={onRefresh} canViewPermissionConfig={userRole === 'owner' || canView('permission_config')} canViewLayoutSetting={userRole === 'owner' || canView('layout_setting')} highlightOfficeId={highlightOfficeId} />
+                <WorkspaceSettings workspace={workspace} userRole={userRole} userId={userId} onRefresh={onRefresh} canViewPermissionConfig={userRole === 'owner' || canView('permission_config')} canViewLayoutSetting={userRole === 'owner' || canView('layout_setting')} />
                 {/* Plugin marketplace (Top-20 Rank 19, v3.30.0). Workspace
                     owner only; RPCs enforce. Enterprise tier required via
                     FeatureGate. */}
@@ -593,6 +595,13 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
           showEmail={true}
         />
       )}
+
+      <OfficeEditorDialog
+        workspaceId={workspace.id}
+        officeId={plannerOfficeId}
+        open={plannerOfficeDialogOpen}
+        onOpenChange={setPlannerOfficeDialogOpen}
+      />
     </SidebarProvider>
   );
 }
@@ -904,7 +913,7 @@ function InvitationList({ workspaceId, isAdmin }: { workspaceId: string; isAdmin
 }
 
 // ===== Workspace Settings =====
-function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPermissionConfig = true, canViewLayoutSetting = false, highlightOfficeId = null }: { workspace: Workspace; userRole?: string; userId: string; onRefresh: () => void; canViewPermissionConfig?: boolean; canViewLayoutSetting?: boolean; highlightOfficeId?: string | null }) {
+function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPermissionConfig = true, canViewLayoutSetting = false }: { workspace: Workspace; userRole?: string; userId: string; onRefresh: () => void; canViewPermissionConfig?: boolean; canViewLayoutSetting?: boolean }) {
   const { t } = useI18n();
   const [name, setName] = useState(workspace.name);
   const [description, setDescription] = useState(workspace.description || '');
@@ -998,8 +1007,8 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
         </SettingsSection>
       )}
 
-      <SettingsSection workspaceId={workspace.id} sectionKey="settings.offices" icon={<Settings className="h-4 w-4" />} title={t('settings_sections.offices')} forceOpen={!!highlightOfficeId}>
-        <OfficeManager workspaceId={workspace.id} highlightOfficeId={highlightOfficeId} />
+      <SettingsSection workspaceId={workspace.id} sectionKey="settings.offices" icon={<Settings className="h-4 w-4" />} title={t('settings_sections.offices')}>
+        <OfficeManager workspaceId={workspace.id} />
       </SettingsSection>
 
       {isAdmin && (
