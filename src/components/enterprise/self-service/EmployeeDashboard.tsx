@@ -5,7 +5,6 @@ import { AchievementsPanel } from '@/components/engagement/AchievementsPanel';
 import { OnboardingChecklist } from '@/components/customer-success/OnboardingChecklist';
 import { ClockInPanel } from '@/components/clock/ClockInPanel';
 import { ShiftMarketplacePanel } from '@/components/shift-marketplace/ShiftMarketplacePanel';
-import { AvailabilityCalendar } from './AvailabilityCalendar';
 import { OpenShiftPanel } from '@/components/shift-marketplace/OpenShiftPanel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,7 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import {
   Clock, CalendarCheck, FileText, ListChecks,
   TrendingUp, ArrowRight, AlertTriangle, CheckCircle2, Circle,
-  Hourglass, CalendarDays, Wallet,
+  Hourglass, CalendarDays, Wallet, MapPin,
 } from 'lucide-react';
 import { format, isPast, isWithinInterval, addDays } from 'date-fns';
 import { AttendancePeriodTotals, STATUS_BADGE_VARIANT, AttendancePeriodStatus } from '../time-attendance/types';
@@ -45,6 +44,13 @@ interface LeaveRequest {
   status: string;
   notes: string | null;
   created_at: string;
+}
+
+interface UpcomingAssignment {
+  id: string;
+  shift_date: string;
+  office_id: string | null;
+  office_name: string | null;
 }
 
 interface WorkflowTask {
@@ -101,6 +107,7 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
   const [quotas, setQuotas] = useState<QuotaBalance[]>([]);
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [tasks, setTasks] = useState<WorkflowTask[]>([]);
+  const [upcomingAssignments, setUpcomingAssignments] = useState<UpcomingAssignment[]>([]);
   const [loading, setLoading] = useState(true);
 
   const now = new Date();
@@ -162,7 +169,39 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
       .limit(8);
     setRequests((lr as LeaveRequest[]) || []);
 
-    // 6. Open workflow tasks assigned to me
+    // 6. Upcoming shift assignments (today + next 13 days)
+    const today = new Date();
+    const in14 = new Date(today); in14.setDate(today.getDate() + 13);
+    const todayISO = format(today, 'yyyy-MM-dd');
+    const in14ISO = format(in14, 'yyyy-MM-dd');
+    const { data: assignRaw } = await (supabase as any)
+      .from('enterprise_shift_assignments')
+      .select('id, shift_date, office_id')
+      .eq('workspace_id', workspaceId)
+      .eq('user_id', userId)
+      .gte('shift_date', todayISO)
+      .lte('shift_date', in14ISO)
+      .order('shift_date', { ascending: true })
+      .limit(14);
+
+    const assignList = (assignRaw as { id: string; shift_date: string; office_id: string | null }[]) || [];
+    const officeIds = [...new Set(assignList.map(a => a.office_id).filter(Boolean))] as string[];
+    let officeMap: Record<string, string> = {};
+    if (officeIds.length > 0) {
+      const { data: officesRaw } = await (supabase as any)
+        .from('enterprise_offices')
+        .select('id, name')
+        .in('id', officeIds);
+      (officesRaw as { id: string; name: string }[] || []).forEach(o => { officeMap[o.id] = o.name; });
+    }
+    setUpcomingAssignments(assignList.map(a => ({
+      id: a.id,
+      shift_date: a.shift_date,
+      office_id: a.office_id,
+      office_name: a.office_id ? (officeMap[a.office_id] ?? null) : null,
+    })));
+
+    // 7. Open workflow tasks assigned to me
     const { data: wt } = await (supabase as any)
       .from('enterprise_hr_workflow_tasks')
       .select('id, instance_id, title, description, due_date, status, enterprise_hr_workflow_instances(title)')
@@ -378,6 +417,50 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
         </Card>
       )}
 
+      {/* Upcoming shift assignments — answers "where am I assigned this week?" */}
+      {membershipId && (
+        <Card>
+          <CardHeader className="py-3 px-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="text-sm flex items-center gap-1.5">
+                <MapPin className="h-4 w-4 text-primary" />
+                {t('self_service.schedule_title')}
+              </CardTitle>
+              <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs shrink-0" onClick={() => onNavigateTab('time-attendance')}>
+                {t('self_service.schedule_nav')} <ArrowRight className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="px-4 pb-3">
+            {upcomingAssignments.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t('self_service.schedule_empty')}</p>
+            ) : (
+              <div className="space-y-1.5">
+                {upcomingAssignments.map(a => {
+                  const d = new Date(`${a.shift_date}T00:00:00`);
+                  const isToday = a.shift_date === format(now, 'yyyy-MM-dd');
+                  return (
+                    <div key={a.id} className={`flex items-center gap-2 text-sm rounded px-2 py-1.5 ${isToday ? 'bg-primary/5 border border-primary/20' : ''}`}>
+                      <span className={`text-xs tabular-nums shrink-0 ${isToday ? 'text-primary font-semibold' : 'text-muted-foreground'}`}>
+                        {format(d, 'MM.dd EEE', { locale: dateFnsLocale })}
+                      </span>
+                      {a.office_name ? (
+                        <span className="flex items-center gap-1 truncate">
+                          <MapPin className="h-3 w-3 shrink-0 text-sky-600" />
+                          <span className="truncate">{a.office_name}</span>
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">{t('attendance.no_site')}</span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Customer Success onboarding checklist (Top-20 Rank 17, v3.19.0).
           Floating widget that hides itself once all items are complete.
           Click-to-jump is wired via onNavigateTab. */}
@@ -399,11 +482,6 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
           design for the deskless-worker persona. */}
       {membershipId && (
         <ClockInPanel workspaceId={workspaceId} membershipId={membershipId} />
-      )}
-
-      {/* Availability calendar — employee submits available days for manager visibility */}
-      {membershipId && (
-        <AvailabilityCalendar workspaceId={workspaceId} membershipId={membershipId} userId={userId} />
       )}
 
       {/* Open shifts — first-come-first-served claim of manager-posted open slots */}

@@ -83,11 +83,17 @@ export function OpenShiftPanel({ workspaceId, membershipId }: Props) {
       await claim.mutateAsync(requestId);
       toast.success(t('open_shifts.claim_success'));
     } catch (err: any) {
-      const code = err?.message ?? '';
-      if (code.includes('request_not_open')) {
+      const msg = (err?.message ?? '') + (err?.code ?? '');
+      if (msg.includes('request_not_open')) {
         toast.error(t('open_shifts.already_filled'));
-      } else if (code.includes('not_member')) {
+      } else if (msg.includes('already_assigned')) {
+        toast.error(t('open_shifts.already_assigned'));
+      } else if (msg.includes('not_member')) {
         toast.error(t('open_shifts.not_member'));
+      } else if (msg.includes('not_authenticated')) {
+        toast.error(t('open_shifts.not_authenticated'));
+      } else if (msg.includes('request_not_found')) {
+        toast.error(t('open_shifts.not_found'));
       } else {
         toast.error(t('open_shifts.claim_error'));
       }

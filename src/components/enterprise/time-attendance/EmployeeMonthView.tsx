@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,20 +28,37 @@ import { TotalsSummary } from './TotalsSummary';
 import { OnCallDialog } from './OnCallDialog';
 import { useAuth } from '@/hooks/useAuth';
 import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
+import {
+  useMyAvailability,
+  useUpsertAvailability,
+  useDeleteAvailability,
+  type AvailabilityStatus,
+} from '@/hooks/useStaffAvailability';
 
 interface Props {
   workspaceId: string;
 }
 
 const DISPLAY_CONFIG_KEY = 'effectime_attendance_display_config';
-type DisplayConfig = { workHours: boolean; overtime: boolean; site: boolean };
+type DisplayConfig = { workHours: boolean; overtime: boolean; site: boolean; availability: boolean };
 function loadDisplayConfig(): DisplayConfig {
   try {
     const raw = localStorage.getItem(DISPLAY_CONFIG_KEY);
-    if (raw) return { workHours: true, overtime: true, site: true, ...JSON.parse(raw) };
+    if (raw) return { workHours: true, overtime: true, site: true, availability: true, ...JSON.parse(raw) };
   } catch { /* ignore */ }
-  return { workHours: true, overtime: true, site: true };
+  return { workHours: true, overtime: true, site: true, availability: true };
 }
+
+const STATUS_CYCLE: (AvailabilityStatus | null)[] = [null, 'available', 'preferred', 'unavailable'];
+function nextAvailStatus(current: AvailabilityStatus | null): AvailabilityStatus | null {
+  const idx = STATUS_CYCLE.indexOf(current);
+  return STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+}
+const AVAIL_CELL_CLASSES: Record<AvailabilityStatus, string> = {
+  available: 'ring-1 ring-green-400 bg-green-50 dark:bg-green-900/20',
+  preferred: 'ring-1 ring-blue-400 bg-blue-50 dark:bg-blue-900/20',
+  unavailable: 'ring-1 ring-red-400 bg-red-50 dark:bg-red-900/20',
+};
 
 export function EmployeeMonthView({ workspaceId }: Props) {
   const today = new Date();
@@ -69,6 +86,39 @@ export function EmployeeMonthView({ workspaceId }: Props) {
       return next;
     });
   };
+
+  // Availability (merged from AvailabilityCalendar — employee marks available days)
+  const userId = user?.id ?? null;
+  const membershipId = period?.membership_id ?? null;
+  const avFrom = format(startOfMonth(new Date(year, month - 1, 1)), 'yyyy-MM-dd');
+  const avTo = format(endOfMonth(new Date(year, month - 1, 1)), 'yyyy-MM-dd');
+  const { data: availRows = [] } = useMyAvailability(workspaceId, userId, avFrom, avTo);
+  const upsertAvail = useUpsertAvailability();
+  const deleteAvail = useDeleteAvailability();
+
+  const availByDate = useMemo(() => {
+    const m = new Map<string, { id: string; status: AvailabilityStatus }>();
+    availRows.forEach(r => m.set(r.availability_date, { id: r.id, status: r.status }));
+    return m;
+  }, [availRows]);
+
+  const handleToggleAvailability = useCallback(async (iso: string, e?: MouseEvent) => {
+    e?.stopPropagation();
+    if (!userId || !membershipId) return;
+    const existing = availByDate.get(iso) ?? null;
+    const next = nextAvailStatus(existing?.status ?? null);
+    if (next === null) {
+      if (existing) {
+        await deleteAvail.mutateAsync({ id: existing.id, workspaceId, userId }).catch(() => {
+          toast.error(t('availability.save_error'));
+        });
+      }
+    } else {
+      await upsertAvail.mutateAsync({ workspaceId, membershipId, userId, date: iso, status: next }).catch(() => {
+        toast.error(t('availability.save_error'));
+      });
+    }
+  }, [userId, membershipId, availByDate, workspaceId, upsertAvail, deleteAvail, t]);
 
   // Site assignments (from enterprise_shift_assignments)
   const [siteAssignments, setSiteAssignments] = useState<SiteAssignment[]>([]);
@@ -300,6 +350,12 @@ export function EmployeeMonthView({ workspaceId }: Props) {
                   >
                     {t('attendance.show_site')}
                   </DropdownMenuCheckboxItem>
+                  <DropdownMenuCheckboxItem
+                    checked={displayConfig.availability}
+                    onCheckedChange={v => updateDisplayConfig({ availability: v })}
+                  >
+                    {t('attendance.show_availability')}
+                  </DropdownMenuCheckboxItem>
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -390,6 +446,12 @@ export function EmployeeMonthView({ workspaceId }: Props) {
               const siteForDay = siteAssignments.find(sa => sa.shift_date === key);
               const officeName = siteForDay ? (offices.find(o => o.id === siteForDay.office_id)?.name ?? null) : null;
 
+              // Availability
+              const availEntry = availByDate.get(key) ?? null;
+              const availStatus = availEntry?.status ?? null;
+              // In non-edit mode, empty days are clickable to toggle availability
+              const canToggleAvail = !canEdit && !daySegs.length && !hasOncall && !!userId && !!membershipId;
+
               return (
                 <button
                   key={key}
@@ -399,16 +461,21 @@ export function EmployeeMonthView({ workspaceId }: Props) {
                   onPointerDown={(e) => handlePointerDown(e, key)}
                   onPointerUp={() => handlePointerUpOnDay(key)}
                   onClick={(e) => {
-                    // Block legacy click when drag was active (covered by pointerup)
                     if (canEdit) { e.preventDefault(); return; }
+                    if (canToggleAvail) { handleToggleAvailability(key, e); }
                   }}
-                  disabled={!canEdit && !daySegs.length && !hasOncall}
+                  disabled={false}
                   className={`p-2 rounded-md border text-left transition-colors min-h-[64px] flex flex-col gap-0.5 touch-none ${
+                    inDragPreview ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-950/30' :
+                    displayConfig.availability && availStatus ? AVAIL_CELL_CLASSES[availStatus] :
                     isWeekend ? 'bg-muted/30 border-muted' : 'bg-card'
                   } ${totalH > 0 ? 'border-primary/40' : ''} ${
-                    inDragPreview ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-950/30' : ''
-                  } ${canEdit ? 'cursor-pointer hover:bg-accent' : 'cursor-default'}`}
-                  title={canEdit ? t('attendance_view.day_edit_tooltip') : (totalH > 0 || hasOncall ? t('attendance_view.day_view_tooltip') : '')}
+                    canEdit ? 'cursor-pointer hover:bg-accent' :
+                    canToggleAvail ? 'cursor-pointer hover:bg-muted/50' : 'cursor-default'
+                  }`}
+                  title={canEdit ? t('attendance_view.day_edit_tooltip') :
+                    canToggleAvail ? t('availability.hint') :
+                    (totalH > 0 || hasOncall ? t('attendance_view.day_view_tooltip') : '')}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-mono">{format(d, 'd')}</span>
@@ -431,6 +498,15 @@ export function EmployeeMonthView({ workspaceId }: Props) {
                       <span className="truncate">{officeName}</span>
                     </span>
                   )}
+                  {displayConfig.availability && availStatus && (
+                    <span className={`text-[9px] font-medium leading-tight ${
+                      availStatus === 'available' ? 'text-green-700 dark:text-green-400' :
+                      availStatus === 'preferred' ? 'text-blue-700 dark:text-blue-400' :
+                      'text-red-600 dark:text-red-400'
+                    }`}>
+                      {t(`availability.status_${availStatus}` as any)}
+                    </span>
+                  )}
                   {daySegs.some(s => s.segment_type === 'overtime') && !displayConfig.overtime && (
                     <Badge variant="destructive" className="text-[8px] px-1 py-0 self-start">{t('attendance_view.overtime_badge')}</Badge>
                   )}
@@ -439,9 +515,24 @@ export function EmployeeMonthView({ workspaceId }: Props) {
             })}
           </div>
 
+          {/* Availability legend + hint */}
+          {displayConfig.availability && !canEdit && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              {(['available', 'preferred', 'unavailable'] as AvailabilityStatus[]).map(s => (
+                <span key={s} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border ${AVAIL_CELL_CLASSES[s]}`}>
+                  <span className={
+                    s === 'available' ? 'text-green-700 dark:text-green-400' :
+                    s === 'preferred' ? 'text-blue-700 dark:text-blue-400' :
+                    'text-red-600 dark:text-red-400'
+                  }>{t(`availability.status_${s}` as any)}</span>
+                </span>
+              ))}
+              <span className="ml-1">{t('availability.tap_to_cycle')}</span>
+            </div>
+          )}
           {/* Read-only hint */}
           {!serverReadOnly && !editMode && (
-            <p className="mt-3 text-xs text-muted-foreground">
+            <p className="mt-2 text-xs text-muted-foreground">
               {t('attendance_view.readonly_hint')}
             </p>
           )}

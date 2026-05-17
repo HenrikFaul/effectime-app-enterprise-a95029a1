@@ -1,3 +1,26 @@
+## 2026-05-17 — v3.41.0 Unified Employee Calendar + Claim Fix + Upcoming Schedule
+
+Three related improvements to the employee self-service portal:
+
+1. **Fix open-shift claim bug** — `claim_open_shift` RPC now explicitly raises `already_assigned` before attempting the INSERT (previously the silent `ON CONFLICT DO NOTHING` on `enterprise_shift_assignments` hid the conflict, letting the transaction silently succeed on the INSERT then fail on the missing RETURNING value). Frontend error handler extended to cover `not_authenticated`, `request_not_found`, and `already_assigned`.
+
+2. **Unified calendar** — `AvailabilityCalendar` is merged into `EmployeeMonthView` (Saját idő). Employees now mark availability (click to cycle available → preferred → unavailable → unmarked) directly in the same calendar that shows their time segments and office assignments. The standalone Availability card is removed from the self-service portal. A new "Availability" toggle is added to the display-config dropdown.
+
+3. **Upcoming schedule card** — A new "My upcoming schedule" card in the self-service portal shows the employee's next 14 days of office assignments in a scannable list, answering the critical question "which office am I assigned to today/this week?"
+
+### Database (migration `20260517210000_v3_41_0_fix_claim_open_shift.sql`)
+- `claim_open_shift` RPC: added explicit `already_assigned` guard before `enterprise_shift_assignments` INSERT; function is otherwise unchanged
+
+### Frontend
+- `EmployeeMonthView`: imports `useMyAvailability`, `useUpsertAvailability`, `useDeleteAvailability`; day cells show availability tint (green/blue/red) and label when `show_availability` is on; clicking an empty day in read-only mode cycles availability; availability legend shown below grid
+- `EmployeeDashboard`: removed `AvailabilityCalendar` block; added "My upcoming schedule" card loading 14 days of `enterprise_shift_assignments` with office names
+- `OpenShiftPanel`: error handler extended to map `already_assigned`, `not_authenticated`, `request_not_found` to specific i18n messages
+
+### i18n — 7 new keys added to all 8 locale files (en, hu, de, at, cs, sk, pl, ro)
+`open_shifts.not_authenticated`, `open_shifts.not_found`, `open_shifts.already_assigned`, `self_service.schedule_title`, `self_service.schedule_empty`, `self_service.schedule_nav`, `attendance.show_availability`
+
+---
+
 ## 2026-05-17 — v3.40.0 Structured Open Shifts — position FK, multi-skill, top-3 candidates, escalation, waitlist
 
 Replaces the free-text "Szükséges pozíció" input with structured position selection from the `enterprise_workspace_roles` catalog. Adds multi-skill requirements, an eligibility-based top-3 candidate shortlist with direct-notify option, configurable auto-escalation timeout, waitlist support for filled shifts, and automatic replacement search when an employee cancels their assignment.
