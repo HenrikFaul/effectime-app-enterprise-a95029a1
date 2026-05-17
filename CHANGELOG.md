@@ -1,3 +1,67 @@
+## 2026-05-17 — v3.42.0 DB: canonicalize `features.route_path` to `/w/:workspaceId/...` shape
+
+Aligns the `features` catalog with the v3.16.0 governance rule that every
+workspace-scoped route uses the `/w/<workspaceId>/<rest>` shape. The
+`route_path` column is consumed only by the Superadmin Feature Tiers tree
+(`FeatureTiersTab.tsx`) for grouping and search — no live browser
+navigation depends on it, so this change is cosmetic to end users and
+zero-regression to running flows.
+
+Two distinct defects were fixed in one transaction with five hard
+invariants that abort the migration on any unexpected outcome:
+
+- **111 legacy rows** were prefixed with `/app/...` (pre-v3.16.0 shape).
+  Rewritten with a literal prefix swap to `/w/:workspaceId/...`; all
+  downstream segments preserved verbatim.
+- **31 truncated rows** held the bare string `/w/:workspaceId` with no
+  leaf segment, so the Superadmin tree collapsed them all to the
+  workspace root and several pairs were indistinguishable. Each got a
+  leaf path derived from its existing `menu_path` breadcrumb (lowercase,
+  non-alphanumeric runs collapsed to a single `-`). No structure was
+  invented — `menu_path` already encoded the intended location.
+
+Post-migration distribution (verified): 142 canonical workspace-scoped
+rows, 30 platform-level rows (`/admin/*`, `/superadmin/*`, top-level),
+0 legacy `/app/`, 0 truncated.
+
+### Added
+- `db-audit/terminology_audit.md` — full audit of the
+  `feature_key` / `route_path` / `menu_path` / `module` columns plus the
+  `enterprise_role_permissions.feature_key` namespace clash (85 % orphan
+  rate documented).
+- `db-audit/role_model_normalization.md` — full audit of the five
+  parallel "role" concepts (`app_role`, `enterprise_role` enum,
+  `enterprise_role_definitions`, `enterprise_workspace_roles`,
+  free-form `business_role text` in 13 tables) and a 7-step migration
+  path to a single canonical model. Three blocker questions for product
+  are listed before any role-domain code is touched.
+
+### Changed
+- `public.features.route_path` — 142 rows updated.
+- `db-audit/master_inventory.md` — confirmed-unused section reconciled
+  with live state (the 4 tables + 1 function listed there were already
+  dropped on 2026-05-13 per `DELETION_CHANGELOG.md`; the inventory text
+  no longer implies pending action).
+
+### Not changed (deliberate, per no-regression mandate)
+- No `route_path` column, FK, RLS, or row was dropped.
+- No code consumer of `route_path` was modified —
+  `FeatureTiersTab.tsx`'s validation regex
+  (`^/[A-Za-z0-9/_\-:$.{}-]*$`) accepts every new value (verified by
+  Invariant C inside the migration).
+- The remaining duplicate `(route_path, menu_path)` pairs in the
+  Clock-in family and the Shift Marketplace family are pre-existing
+  data-shape questions for product, not migration artefacts.
+
+### Migration
+- `20260517_v3_42_0_features_route_path_canonical.sql` — atomic
+  transaction with five invariants (no legacy `/app/`, no truncated
+  workspace row, every value passes the Superadmin validation regex,
+  same non-null count pre/post, every rewritten `/app` row lands under
+  `/w/:workspaceId/`).
+
+---
+
 ## 2026-05-17 — v3.41.6 Fix: Open shift position selector shows all workspace positions
 
 ### Fixed
