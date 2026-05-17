@@ -651,6 +651,7 @@ const at = {
     show_overtime: 'Overtime',
     show_site: 'Site',
     show_availability: 'Verfügbarkeit',
+    assigned_badge: 'Eingeteilt',
     site_picker_label: 'Site (this day)',
     no_site: 'No site assigned',
     site_saved: 'Site saved',

@@ -301,7 +301,7 @@ export function OfficeEditorDialog({ workspaceId, officeId, open, onOpenChange, 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-3xl w-full">
         <DialogHeader>
           <DialogTitle>
             {isNew ? t('office_mgr.dialog_new_title') : t('office_mgr.dialog_edit_title')}

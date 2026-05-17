@@ -651,6 +651,7 @@ const ro = {
     show_overtime: 'Overtime',
     show_site: 'Site',
     show_availability: 'Disponibilitate',
+    assigned_badge: 'Repartizat',
     site_picker_label: 'Site (this day)',
     no_site: 'No site assigned',
     site_saved: 'Site saved',

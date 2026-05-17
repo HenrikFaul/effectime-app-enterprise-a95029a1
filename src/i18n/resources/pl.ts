@@ -793,6 +793,7 @@ const pl = {
     show_overtime: 'Nadgodziny',
     show_site: 'Oddział',
     show_availability: 'Dostępność',
+    assigned_badge: 'Przydzielono',
     site_picker_label: 'Oddział (ten dzień)',
     no_site: 'Brak przypisanego oddziału',
     site_saved: 'Oddział zapisany',

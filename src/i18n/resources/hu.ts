@@ -648,6 +648,7 @@ const hu = {
     show_overtime: 'Túlóra',
     show_site: 'Telephely',
     show_availability: 'Elérhetőség',
+    assigned_badge: 'Beosztva',
     site_picker_label: 'Telephely (ezen a napon)',
     no_site: 'Nincs telephely megadva',
     site_saved: 'Telephely mentve',

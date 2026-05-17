@@ -492,6 +492,11 @@ export function EmployeeMonthView({ workspaceId }: Props) {
                   {displayConfig.overtime && overtimeRanges.map((r, i) => (
                     <span key={i} className="text-[9px] tabular-nums text-amber-600 dark:text-amber-400 leading-tight">+{r}</span>
                   ))}
+                  {siteForDay && (
+                    <span className="text-[9px] font-semibold text-orange-600 dark:text-orange-400 leading-tight">
+                      {t('attendance.assigned_badge')}
+                    </span>
+                  )}
                   {displayConfig.site && officeName && (
                     <span className="text-[9px] text-sky-600 dark:text-sky-400 flex items-center gap-0.5 leading-tight">
                       <Building2 className="h-2 w-2 shrink-0" />
