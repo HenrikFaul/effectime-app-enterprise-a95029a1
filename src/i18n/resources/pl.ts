@@ -4381,6 +4381,9 @@ const pl = {
     skill_label: 'Wymagana umiejętność',
     any_role: 'Dowolna rola',
     any_skill: 'Dowolna umiejętność',
+    close_shift: 'Zamknij ogłoszenie',
+    cancelled_success: 'Ogłoszenie wolnej zmiany anulowane.',
+    cancel_error: 'Nie udało się anulować ogłoszenia. Spróbuj ponownie.',
   },
 } as const;
 

@@ -26,6 +26,7 @@ export function useOpenShiftRequests(workspaceId: string | null | undefined) {
         .from('enterprise_open_shift_requests')
         .select('*')
         .eq('workspace_id', workspaceId)
+        .in('status', ['open', 'filled'])
         .order('shift_date', { ascending: true });
       if (error) throw error;
       return (data ?? []) as OpenShiftRequest[];
@@ -45,8 +46,9 @@ export function useClaimOpenShift() {
       if (error) throw error;
       return data as { ok: boolean; assignment_id: string };
     },
-    onSuccess: (_data, _requestId, _ctx) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['open-shifts'] });
+      qc.invalidateQueries({ queryKey: ['shift-assignments'] });
     },
   });
 }
@@ -73,10 +75,26 @@ export function useCreateOpenShift() {
         _notes: notes ?? null,
       });
       if (error) throw error;
-      return data as string; // returns the new request id
+      return data as string;
     },
     onSuccess: (_data, { workspaceId }) => {
       qc.invalidateQueries({ queryKey: ['open-shifts', workspaceId] });
+    },
+  });
+}
+
+export function useCancelOpenShift() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (requestId: string) => {
+      const { data, error } = await (supabase as any).rpc('cancel_open_shift_request', {
+        _request_id: requestId,
+      });
+      if (error) throw error;
+      return data as { ok: boolean };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['open-shifts'] });
     },
   });
 }

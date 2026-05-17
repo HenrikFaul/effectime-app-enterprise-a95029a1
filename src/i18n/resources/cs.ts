@@ -4381,6 +4381,9 @@ const cs = {
     skill_label: 'Požadovaná dovednost',
     any_role: 'Libovolná role',
     any_skill: 'Libovolná dovednost',
+    close_shift: 'Zavřít inzerát',
+    cancelled_success: 'Inzerát volné směny zrušen.',
+    cancel_error: 'Nepodařilo se zrušit inzerát. Zkuste to znovu.',
   },
 } as const;
 
