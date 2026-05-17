@@ -1,3 +1,25 @@
+## 2026-05-17 — v3.41.2 Bug fixes: open-shift 409, OfficeEditorDialog wider, assigned badge in calendar
+
+Three bugs fixed:
+
+1. **Open shift posting 409 Conflict** — Root cause: `create_open_shift_request` had TWO overloads in the DB (6-param from v3.39.0 + 10-param from v3.40.0). Because ALL params have defaults in both, PostgREST cannot determine which to call → "ambiguous function call" → HTTP 409. Fix: drop the old 6-param overload via migration.
+
+2. **OfficeEditorDialog too narrow** — Dialog was `max-w-2xl`; fields were cramped. Changed to `max-w-3xl w-full` so all office fields fit comfortably.
+
+3. **Employee calendar missing "Beosztva" (Assigned) indicator** — `enterprise_shift_assignments` entries were already loaded but only showed the office name (when displayConfig.site=on). Added a dedicated orange "Beosztva" label that always appears whenever the employee has a formal shift assignment on a day, regardless of the site display toggle.
+
+### DB migration
+- `20260517220000_v3_41_2_drop_old_create_open_shift_overload.sql` — DROP FUNCTION the old 6-param overload. Applied to `oezlzzmzzvbvinuysxaz`.
+
+### Frontend
+- `OfficeEditorDialog`: `max-w-3xl w-full` (was `max-w-2xl`)
+- `EmployeeMonthView`: orange "Beosztva" badge always shown when `siteForDay` exists
+
+### i18n — 1 new key added to all 8 locale files
+`attendance.assigned_badge`
+
+---
+
 ## 2026-05-17 — v3.41.1 Bug fixes: office-click crash, availability toggle, batch-fill office selector
 
 Three bug fixes on top of v3.41.0:

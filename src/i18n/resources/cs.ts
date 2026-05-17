@@ -793,6 +793,7 @@ const cs = {
     show_overtime: 'Přesčas',
     show_site: 'Pracoviště',
     show_availability: 'Dostupnost',
+    assigned_badge: 'Přiřazeno',
     site_picker_label: 'Pracoviště (tento den)',
     no_site: 'Žádné pracoviště přiřazeno',
     site_saved: 'Pracoviště uloženo',

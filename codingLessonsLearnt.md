@@ -941,6 +941,14 @@ A workspace-picker `useState('')` került a `if (selectedWorkspaceId) return <Wo
 - **Javítás**: Az üres string sentinel-t `'__none__'`-ra cserélve mindenhol (useState init, useEffect reset, apply logika guard, SelectItem value prop). Minden más `Select`-ben is `'__none__'`-t vagy más érvényes nemüres értéket kell használni az "üres" állapot jelzésére.
 - **Megelőzés**: Radix UI `<SelectItem>`-nek SOHA ne adj üres string value-t. Mindig használj nemüres sentinelt (pl. `'__none__'`, `'none'`, `'_'`). Az üres string csak a `<Select value="">` szintjén van megengedve (a placeholder megjelenítéséhez), de a `<SelectItem>` szintjén nem.
 
+### [HIBA-079] PostgreSQL function overload + all-defaults → PostgREST 409 Ambiguous function call
+- **Dátum**: 2026-05-17
+- **Fájl**: `supabase/migrations/20260517200000_v3_40_0_structured_open_shifts.sql`
+- **Hibaüzenet**: HTTP 409 Conflict a `create_open_shift_request` RPC hívásakor — "ambiguous function call"
+- **Gyökérok**: A `create_open_shift_request` két overloaddal élt a DB-ben: egy 6-paraméteres (v3.39.0) és egy 10-paraméteres (v3.40.0). Mindkét függvény összes paramétere `DEFAULT` értékes volt. Ha MINDEN paraméternek van default értéke mindkét overloadban, PostgreSQL/PostgREST nem tudja meghatározni melyik változatot hívjuk → "ambiguous function call" → HTTP 409. (Nem UNIQUE constraint sértés, hanem overload ambiguitás!)
+- **Javítás**: Migration: `DROP FUNCTION IF EXISTS public.create_open_shift_request(uuid, uuid, date, text, uuid, text)` — eltávolítva a régi 6-paraméteres overload.
+- **Megelőzés**: Amikor egy meglévő függvényt `CREATE OR REPLACE FUNCTION`-nal frissítünk ÉS a signatúra megváltozik (új paramétereket adunk), a régi signatúrás függvényt explicit `DROP FUNCTION`-nal kell eltávolítani ugyanabban a migrációban. Soha ne hagyjunk ambiguitást okozó overloadokat a DB-ben. Minden `CREATE OR REPLACE` után ellenőrizd a `pg_proc` táblát: `SELECT proname, pg_get_function_arguments(oid) FROM pg_proc WHERE proname = 'function_name'`.
+
 ### [HIBA-078] Nested komponens scope — parent state nem elérhető child top-level függvényben
 - **Dátum**: 2026-05-17
 - **Fájl**: `src/components/enterprise/WorkspaceDashboard.tsx`

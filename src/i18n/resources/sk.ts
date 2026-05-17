@@ -793,6 +793,7 @@ const sk = {
     show_overtime: 'Nadčas',
     show_site: 'Pracovisko',
     show_availability: 'Dostupnosť',
+    assigned_badge: 'Priradené',
     site_picker_label: 'Pracovisko (tento deň)',
     no_site: 'Žiadne pracovisko priradené',
     site_saved: 'Pracovisko uložené',
