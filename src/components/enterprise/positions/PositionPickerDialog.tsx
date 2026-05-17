@@ -41,6 +41,13 @@ interface RoleSkill {
 export interface PositionPickerResult {
   positionRoleId: string;
   positionLabel: string;
+  /**
+   * Mirror of `positionLabel` for consumers that persist the picked position
+   * as a member's business_role string (e.g. InviteMemberDialog payload).
+   * Kept as an explicit field so the dependency is greppable and the picker
+   * is the single source of truth for the value.
+   */
+  business_role: string;
   seniority: Seniority;
   skillIds: string[];
 }
