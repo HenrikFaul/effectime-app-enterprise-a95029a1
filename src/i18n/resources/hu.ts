@@ -4598,6 +4598,9 @@ const hu = {
     skill_label: 'Szükséges készség',
     any_role: 'Bármely pozíció',
     any_skill: 'Bármely készség',
+    close_shift: 'Meghirdetés lezárása',
+    cancelled_success: 'A nyitott műszak meghirdetése törölve.',
+    cancel_error: 'Nem sikerült törölni a meghirdetést. Próbáld újra.',
   },
 } as const;
 

@@ -4561,6 +4561,9 @@ const ro = {
     skill_label: 'Competență necesară',
     any_role: 'Orice rol',
     any_skill: 'Orice competență',
+    close_shift: 'Închide anunțul',
+    cancelled_success: 'Anunțul turei deschise a fost anulat.',
+    cancel_error: 'Nu s-a putut anula anunțul. Încercați din nou.',
   },
 } as const;
 

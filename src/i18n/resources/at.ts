@@ -4561,6 +4561,9 @@ const at = {
     skill_label: 'Erforderliche Fähigkeit',
     any_role: 'Beliebige Rolle',
     any_skill: 'Beliebige Fähigkeit',
+    close_shift: 'Ausschreibung schließen',
+    cancelled_success: 'Offene Schicht-Ausschreibung abgebrochen.',
+    cancel_error: 'Ausschreibung konnte nicht abgebrochen werden. Erneut versuchen.',
   },
 } as const;
 

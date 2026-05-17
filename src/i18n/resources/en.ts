@@ -4610,6 +4610,9 @@ const en = {
     skill_label: 'Required skill',
     any_role: 'Any role',
     any_skill: 'Any skill',
+    close_shift: 'Close broadcast',
+    cancelled_success: 'Open shift broadcast cancelled.',
+    cancel_error: 'Could not cancel the broadcast. Try again.',
   },
 } as const;
 

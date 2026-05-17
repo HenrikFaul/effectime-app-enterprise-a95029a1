@@ -4381,6 +4381,9 @@ const sk = {
     skill_label: 'Požadovaná zručnosť',
     any_role: 'Ľubovoľná rola',
     any_skill: 'Ľubovoľná zručnosť',
+    close_shift: 'Zavrieť inzerát',
+    cancelled_success: 'Inzerát voľnej smeny zrušený.',
+    cancel_error: 'Nepodarilo sa zrušiť inzerát. Skúste to znova.',
   },
 } as const;
 
