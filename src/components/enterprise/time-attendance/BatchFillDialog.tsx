@@ -53,7 +53,7 @@ export function BatchFillDialog({
   const [skipWeekend, setSkipWeekend] = useState(true);
   const [autoNight, setAutoNight] = useState(true);
   const [overwriteExisting, setOverwriteExisting] = useState(false);
-  const [selectedOfficeId, setSelectedOfficeId] = useState<string>('');
+  const [selectedOfficeId, setSelectedOfficeId] = useState<string>('__none__');
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -66,7 +66,7 @@ export function BatchFillDialog({
     setSkipWeekend(true);
     setAutoNight(true);
     setOverwriteExisting(false);
-    setSelectedOfficeId('');
+    setSelectedOfficeId('__none__');
   }, [open, initialStart, initialEnd, monthStart, monthEnd]);
 
   const startDay = new Date(startDate);
@@ -137,7 +137,7 @@ export function BatchFillDialog({
         toast.error(t('batch_fill.failed_days', { count: failed }));
       }
 
-      if (selectedOfficeId && workspaceId && membershipId && userId) {
+      if (selectedOfficeId !== '__none__' && workspaceId && membershipId && userId) {
         for (const day of workDays) {
           try {
             await upsertSiteAssignment(workspaceId, membershipId, userId, selectedOfficeId, toLocalDateStr(day));
@@ -212,7 +212,7 @@ export function BatchFillDialog({
               <Select value={selectedOfficeId} onValueChange={setSelectedOfficeId}>
                 <SelectTrigger><SelectValue placeholder={t('batch_fill.office_none')} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">{t('batch_fill.office_none')}</SelectItem>
+                  <SelectItem value="__none__">{t('batch_fill.office_none')}</SelectItem>
                   {offices.map(o => (
                     <SelectItem key={o.id} value={o.id}>{o.name}</SelectItem>
                   ))}
