@@ -2782,6 +2782,7 @@ const en = {
     availability_indicator: 'Employee marked themselves available for this day',
     open_shift_section: 'Open shift broadcast',
     capacity_rules_title: 'Capacity rules',
+    assigned_label: 'Assigned',
   },
   smart_batch: {
     invalid_dates: 'Invalid dates',

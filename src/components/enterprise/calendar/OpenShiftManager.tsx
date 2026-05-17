@@ -100,12 +100,15 @@ export function OpenShiftManager({ workspaceId, officeId, shiftDate, businessRol
       {showSkillField && (
         <div className="space-y-1">
           <Label className="text-xs">{t('open_shifts.skill_label')}</Label>
-          <Select value={selectedSkillId} onValueChange={setSelectedSkillId}>
+          <Select
+            value={selectedSkillId || '__any__'}
+            onValueChange={v => setSelectedSkillId(v === '__any__' ? '' : v)}
+          >
             <SelectTrigger className="text-sm h-8">
               <SelectValue placeholder={t('open_shifts.any_skill')} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">{t('open_shifts.any_skill')}</SelectItem>
+              <SelectItem value="__any__">{t('open_shifts.any_skill')}</SelectItem>
               {availableSkills!.map(s => (
                 <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
               ))}

@@ -927,27 +927,56 @@ export function CoveragePlannerView({ workspaceId, userId }: Props) {
       {/* Open-shift-only sheet — for cells without a coverage rule (weekends, empty days) */}
       <Sheet open={!!openShiftCell} onOpenChange={(o) => { if (!o) setOpenShiftCell(null); }}>
         <SheetContent className="sm:max-w-md overflow-y-auto">
-          {openShiftCell && (
-            <>
-              <SheetHeader>
-                <SheetTitle className="text-2xl font-bold">{openShiftCell.office.name}</SheetTitle>
-                <SheetDescription className="text-base font-medium text-muted-foreground">
-                  {t('coverage_planner.open_shift_section')}
-                  <span className="block text-xs mt-0.5">
-                    {format(openShiftCell.date, 'yyyy. MMMM d. (EEEE)', { locale: hu })}
-                  </span>
-                </SheetDescription>
-              </SheetHeader>
-              <div className="mt-4">
-                <OpenShiftManager
-                  workspaceId={workspaceId}
-                  officeId={openShiftCell.office.id}
-                  shiftDate={format(openShiftCell.date, 'yyyy-MM-dd')}
-                  availableSkills={skills}
-                />
-              </div>
-            </>
-          )}
+          {openShiftCell && (() => {
+            const isoDate = format(openShiftCell.date, 'yyyy-MM-dd');
+            const assignedHere = shifts.filter(
+              s => s.office_id === openShiftCell.office.id && s.shift_date === isoDate
+            );
+            return (
+              <>
+                <SheetHeader>
+                  <SheetTitle className="text-2xl font-bold">{openShiftCell.office.name}</SheetTitle>
+                  <SheetDescription className="text-base font-medium text-muted-foreground">
+                    {t('coverage_planner.open_shift_section')}
+                    <span className="block text-xs mt-0.5">
+                      {format(openShiftCell.date, 'yyyy. MMMM d. (EEEE)', { locale: hu })}
+                    </span>
+                  </SheetDescription>
+                </SheetHeader>
+
+                {assignedHere.length > 0 && (
+                  <div className="mt-4 space-y-1.5">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      {t('coverage_planner.assigned_label')} ({assignedHere.length})
+                    </p>
+                    {assignedHere.map(s => {
+                      const mem = members.find(m => m.user_id === s.user_id);
+                      return (
+                        <div key={s.id} className="flex items-center gap-2 rounded border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/30 px-3 py-2 text-sm">
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                          <span className="font-medium">{mem?.display_name ?? s.user_id}</span>
+                          {(s.business_role || mem?.business_role) && (
+                            <span className="ml-auto text-xs text-muted-foreground truncate">
+                              {s.business_role ?? mem?.business_role}
+                            </span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+
+                <div className="mt-4">
+                  <OpenShiftManager
+                    workspaceId={workspaceId}
+                    officeId={openShiftCell.office.id}
+                    shiftDate={isoDate}
+                    availableSkills={skills}
+                  />
+                </div>
+              </>
+            );
+          })()}
         </SheetContent>
       </Sheet>
 

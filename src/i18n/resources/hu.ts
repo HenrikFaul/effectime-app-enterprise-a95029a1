@@ -2770,6 +2770,7 @@ const hu = {
     availability_indicator: 'A munkavállaló elérhetőnek jelölte magát erre a napra',
     open_shift_section: 'Nyitott műszak meghirdetése',
     capacity_rules_title: 'Kapacitásszabályok',
+    assigned_label: 'Beosztva',
   },
   smart_batch: {
     invalid_dates: 'Érvénytelen dátumok',
