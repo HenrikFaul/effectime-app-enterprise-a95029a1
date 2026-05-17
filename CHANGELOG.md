@@ -1,3 +1,16 @@
+## 2026-05-17 — v3.41.6 Fix: Open shift position selector shows all workspace positions
+
+### Fixed
+- `OpenShiftManager`: replaced `PositionPickerDialog` (catalog-only) with a flat `Select` dropdown
+  that loads all workspace positions from all three sources combined:
+  1. `enterprise_workspace_roles.name` — structured catalog positions
+  2. `enterprise_memberships.business_role` — free-text roles on member profiles
+  3. `enterprise_member_role_allocations.business_role` — role allocation strings
+  This ensures manually-added positions (e.g. "Optometrista") appear in open shift creation,
+  exactly matching the position list shown in the office coverage rule editor.
+- New hook `useWorkspaceAllPositions` created and used for unified position loading.
+- Candidate matching still works: `businessRole` string is passed to the RPC as before.
+
 ## 2026-05-17 — v3.41.5 Backend QA: RLS Index Coverage Sweep
 
 Systematic backend integrity audit following `BACKEND_BUGFIX_QA_UNIVERSAL_PROMPT.md`.
