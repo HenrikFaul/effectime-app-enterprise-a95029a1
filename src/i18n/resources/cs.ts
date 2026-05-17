@@ -2748,6 +2748,7 @@ const cs = {
     availability_indicator: 'Zaměstnanec se označil jako dostupný pro tento den',
     open_shift_section: 'Zveřejnit volnou směnu',
     capacity_rules_title: 'Pravidla kapacity',
+    assigned_label: 'Přiřazeno',
   },
   smart_batch: {
     invalid_dates: 'Neplatná data',
