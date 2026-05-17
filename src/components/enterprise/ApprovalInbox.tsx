@@ -10,11 +10,10 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Check, X, Filter, CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
-import { hu } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -32,6 +31,7 @@ const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'outline' | 'des
 
 export function ApprovalInbox({ workspaceId, userId }: Props) {
   const { t } = useI18n();
+  const dateFnsLocale = useDateLocale();
   const [requests, setRequests] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [memberInfo, setMemberInfo] = useState<Record<string, { team: string | null; role: string | null }>>({});
@@ -143,8 +143,8 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
           idempotencyKey: `leave-decision-${requestId}-${decision}`,
           templateData: {
             employeeName: reqUserAuth?.display_name || t('common.colleague'), decision,
-            startDate: format(new Date(req.start_date), 'yyyy.MM.dd', { locale: hu }),
-            endDate: format(new Date(req.end_date), 'yyyy.MM.dd', { locale: hu }),
+            startDate: format(new Date(req.start_date), 'yyyy.MM.dd', { locale: dateFnsLocale }),
+            endDate: format(new Date(req.end_date), 'yyyy.MM.dd', { locale: dateFnsLocale }),
             leaveType: t(`approval_inbox.type_${req.leave_type}` as any) || req.leave_type, reviewerName, reviewComment,
           },
         },
@@ -254,11 +254,11 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
               <PopoverTrigger asChild>
                 <Button variant="outline" className={cn("h-8 text-xs mt-0.5", !dateFrom && "text-muted-foreground")}>
                   <CalendarIcon className="mr-1 h-3 w-3" />
-                  {dateFrom ? format(dateFrom, 'MM.dd', { locale: hu }) : '–'}
+                  {dateFrom ? format(dateFrom, 'MM.dd', { locale: dateFnsLocale }) : '–'}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} locale={hu} className="p-3 pointer-events-auto" />
+                <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} locale={dateFnsLocale} className="p-3 pointer-events-auto" />
               </PopoverContent>
             </Popover>
           </div>
@@ -268,11 +268,11 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
               <PopoverTrigger asChild>
                 <Button variant="outline" className={cn("h-8 text-xs mt-0.5", !dateTo && "text-muted-foreground")}>
                   <CalendarIcon className="mr-1 h-3 w-3" />
-                  {dateTo ? format(dateTo, 'MM.dd', { locale: hu }) : '–'}
+                  {dateTo ? format(dateTo, 'MM.dd', { locale: dateFnsLocale }) : '–'}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={dateTo} onSelect={setDateTo} locale={hu} className="p-3 pointer-events-auto" />
+                <Calendar mode="single" selected={dateTo} onSelect={setDateTo} locale={dateFnsLocale} className="p-3 pointer-events-auto" />
               </PopoverContent>
             </Popover>
           </div>
@@ -331,7 +331,7 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
                       {req.is_half_day && <Badge variant="outline" className="text-[9px]">{req.half_day_period === 'morning' ? t('approval_inbox.half_day_morning') : t('approval_inbox.half_day_afternoon')}</Badge>}
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      {format(new Date(req.start_date), 'yyyy.MM.dd', { locale: hu })} – {format(new Date(req.end_date), 'yyyy.MM.dd', { locale: hu })}
+                      {format(new Date(req.start_date), 'yyyy.MM.dd', { locale: dateFnsLocale })} – {format(new Date(req.end_date), 'yyyy.MM.dd', { locale: dateFnsLocale })}
                       {mi?.team && <span className="ml-2">• {mi.team}</span>}
                       {mi?.role && <span className="ml-1 text-primary/70">({mi.role})</span>}
                     </p>

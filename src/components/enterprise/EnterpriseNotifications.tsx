@@ -4,9 +4,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Eye, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
-import { hu } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -28,7 +27,9 @@ const EVENT_ICONS: Record<string, string> = {
   'open_shift_broadcast': '📢',
 };
 
-function getLocalizedTitle(t: (key: string, vars?: Record<string, string>) => string, n: any): string {
+type TFn = (key: string, vars?: Record<string, string | number>) => string;
+
+function getLocalizedTitle(t: TFn, n: any): string {
   switch (n.event_type) {
     case 'shift_assigned': return t('enterprise_notifications.shift_confirmed');
     case 'open_shift_filled': return t('enterprise_notifications.open_shift_filled_title');
@@ -37,7 +38,7 @@ function getLocalizedTitle(t: (key: string, vars?: Record<string, string>) => st
   }
 }
 
-function getLocalizedMessage(t: (key: string, vars?: Record<string, string>) => string, n: any): string {
+function getLocalizedMessage(t: TFn, n: any): string {
   const dateMatch = (n.message ?? '').match(/\d{4}-\d{2}-\d{2}/);
   const date = dateMatch?.[0] ?? '';
   switch (n.event_type) {
@@ -50,6 +51,7 @@ function getLocalizedMessage(t: (key: string, vars?: Record<string, string>) => 
 
 export function EnterpriseNotifications({ workspaceId, userId }: Props) {
   const { t } = useI18n();
+  const dateFnsLocale = useDateLocale();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -76,9 +78,7 @@ export function EnterpriseNotifications({ workspaceId, userId }: Props) {
   const markAllRead = async () => {
     const unreadIds = notifications.filter(n => !n.is_read).map(n => n.id);
     if (unreadIds.length === 0) return;
-    for (const id of unreadIds) {
-      await supabase.from('enterprise_notifications').update({ is_read: true }).eq('id', id);
-    }
+    await supabase.from('enterprise_notifications').update({ is_read: true }).in('id', unreadIds);
     fetchNotifications();
   };
 
@@ -119,7 +119,7 @@ export function EnterpriseNotifications({ workspaceId, userId }: Props) {
                     </p>
                   )}
                   <p className="text-muted-foreground text-[10px] mt-0.5">
-                    {format(new Date(n.created_at), 'MM.dd HH:mm', { locale: hu })}
+                    {format(new Date(n.created_at), 'MM.dd HH:mm', { locale: dateFnsLocale })}
                   </p>
                 </div>
                 <div className="flex gap-0.5 shrink-0">

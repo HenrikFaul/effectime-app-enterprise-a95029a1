@@ -8,10 +8,9 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { CalendarIcon, Download, FileSpreadsheet } from 'lucide-react';
 import { format, eachDayOfInterval } from 'date-fns';
-import { hu } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -20,6 +19,7 @@ interface Props {
 
 export function ExportCenter({ workspaceId, userId }: Props) {
   const { t } = useI18n();
+  const dateFnsLocale = useDateLocale();
 
   const TYPE_MAP: Record<string, string> = {
     vacation: t('leave_request.type_vacation'),
@@ -185,11 +185,11 @@ export function ExportCenter({ workspaceId, userId }: Props) {
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-full mt-1 h-8 justify-start text-left text-xs", !startDate && "text-muted-foreground")}>
                     <CalendarIcon className="mr-1 h-3 w-3" />
-                    {startDate ? format(startDate, 'yyyy.MM.dd', { locale: hu }) : t('export_center.date_placeholder')}
+                    {startDate ? format(startDate, 'yyyy.MM.dd', { locale: dateFnsLocale }) : t('export_center.date_placeholder')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={startDate} onSelect={setStartDate} locale={hu} className={cn("p-3 pointer-events-auto")} />
+                  <Calendar mode="single" selected={startDate} onSelect={setStartDate} locale={dateFnsLocale} className={cn("p-3 pointer-events-auto")} />
                 </PopoverContent>
               </Popover>
             </div>
@@ -199,11 +199,11 @@ export function ExportCenter({ workspaceId, userId }: Props) {
                 <PopoverTrigger asChild>
                   <Button variant="outline" className={cn("w-full mt-1 h-8 justify-start text-left text-xs", !endDate && "text-muted-foreground")}>
                     <CalendarIcon className="mr-1 h-3 w-3" />
-                    {endDate ? format(endDate, 'yyyy.MM.dd', { locale: hu }) : t('export_center.date_placeholder')}
+                    {endDate ? format(endDate, 'yyyy.MM.dd', { locale: dateFnsLocale }) : t('export_center.date_placeholder')}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={endDate} onSelect={setEndDate} locale={hu} disabled={d => startDate ? d < startDate : false} className={cn("p-3 pointer-events-auto")} />
+                  <Calendar mode="single" selected={endDate} onSelect={setEndDate} locale={dateFnsLocale} disabled={d => startDate ? d < startDate : false} className={cn("p-3 pointer-events-auto")} />
                 </PopoverContent>
               </Popover>
             </div>

@@ -5,9 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
-import { hu } from 'date-fns/locale';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -15,6 +14,7 @@ interface Props {
 
 export function AuditLog({ workspaceId }: Props) {
   const { t } = useI18n();
+  const dateFnsLocale = useDateLocale();
   const [events, setEvents] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
@@ -117,7 +117,7 @@ export function AuditLog({ workspaceId }: Props) {
             {filteredEvents.map(e => (
               <div key={e.id} className="flex items-start gap-3 p-2 rounded-md border text-xs">
                 <div className="text-muted-foreground shrink-0 w-[120px]">
-                  {format(new Date(e.created_at), 'MM.dd HH:mm', { locale: hu })}
+                  {format(new Date(e.created_at), 'MM.dd HH:mm', { locale: dateFnsLocale })}
                 </div>
                 <div className="flex-1 min-w-0 space-y-0.5">
                   <div className="flex items-center gap-1.5 flex-wrap">

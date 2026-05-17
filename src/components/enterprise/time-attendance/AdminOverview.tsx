@@ -11,14 +11,13 @@ import {
 } from 'lucide-react';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { format, getYear, getMonth, addMonths, subMonths } from 'date-fns';
-import { hu } from 'date-fns/locale';
 import { toast } from 'sonner';
 import {
   listWorkspacePeriods, transitionPeriod, fetchPayrollExport, recordPayrollExport,
 } from './api';
 import { generateCSV, generateExcelXML, downloadFile } from '../import-export/utils/file-parser';
 import { STATUS_BADGE_VARIANT, type AdminPeriodRow } from './types';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -52,6 +51,7 @@ const PAYROLL_COLUMNS = [
 
 export function AdminOverview({ workspaceId }: Props) {
   const { t } = useI18n();
+  const dateFnsLocale = useDateLocale();
   const today = new Date();
   const [year, setYear] = useState(getYear(today));
   const [month, setMonth] = useState(getMonth(today) + 1);
@@ -163,7 +163,7 @@ export function AdminOverview({ workspaceId }: Props) {
           <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" variant="ghost" onClick={handlePrev}><ChevronLeft className="h-4 w-4" /></Button>
             <CardTitle className="text-base tabular-nums">
-              {format(new Date(year, month - 1, 1), 'yyyy. MMMM', { locale: hu })}
+              {format(new Date(year, month - 1, 1), 'yyyy. MMMM', { locale: dateFnsLocale })}
             </CardTitle>
             <Button size="sm" variant="ghost" onClick={handleNext}><ChevronRight className="h-4 w-4" /></Button>
             <div className="ml-auto flex items-center gap-2 flex-wrap">

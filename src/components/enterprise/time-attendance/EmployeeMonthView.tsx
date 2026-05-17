@@ -11,7 +11,6 @@ import {
   Pencil, Save, Zap, Info, SlidersHorizontal, Building2,
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend as dfIsWeekend, getYear, getMonth, addMonths, subMonths } from 'date-fns';
-import { hu } from 'date-fns/locale';
 import { toast } from 'sonner';
 import {
   getOrCreatePeriod, fetchPeriod, fetchSegments, fetchOnCallWindows,
@@ -28,7 +27,7 @@ import {
 import { TotalsSummary } from './TotalsSummary';
 import { OnCallDialog } from './OnCallDialog';
 import { useAuth } from '@/hooks/useAuth';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 
 interface Props {
   workspaceId: string;
@@ -48,6 +47,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
   const today = new Date();
   const { user } = useAuth();
   const { t } = useI18n();
+  const dateFnsLocale = useDateLocale();
   const [year, setYear] = useState(getYear(today));
   const [month, setMonth] = useState(getMonth(today) + 1); // 1-12
   const [period, setPeriod] = useState<AttendancePeriod | null>(null);
@@ -254,7 +254,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
           <div className="flex flex-wrap items-center gap-2">
             <Button size="sm" variant="ghost" onClick={handlePrevMonth} aria-label={t('attendance_view.prev_month')}><ChevronLeft className="h-4 w-4" /></Button>
             <CardTitle className="text-base tabular-nums">
-              {format(new Date(year, month - 1, 1), 'yyyy. MMMM', { locale: hu })}
+              {format(new Date(year, month - 1, 1), 'yyyy. MMMM', { locale: dateFnsLocale })}
             </CardTitle>
             <Button size="sm" variant="ghost" onClick={handleNextMonth} aria-label={t('attendance_view.next_month')}><ChevronRight className="h-4 w-4" /></Button>
             {period && (

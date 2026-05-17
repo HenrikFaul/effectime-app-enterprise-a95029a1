@@ -14,6 +14,16 @@ import pl from './resources/pl';
 import de from './resources/de';
 import at from './resources/at';
 import ro from './resources/ro';
+import {
+  enUS as dfEnUS,
+  hu as dfHu,
+  cs as dfCs,
+  sk as dfSk,
+  pl as dfPl,
+  de as dfDe,
+  ro as dfRo,
+} from 'date-fns/locale';
+import type { Locale as DateFnsLocale } from 'date-fns';
 
 type Bundle = typeof en;
 
@@ -215,4 +225,21 @@ export function useI18n(): I18nContextValue {
 
 export function useT() {
   return useI18n().t;
+}
+
+const DATE_FNS_LOCALE_MAP: Record<string, DateFnsLocale> = {
+  en: dfEnUS,
+  hu: dfHu,
+  cs: dfCs,
+  sk: dfSk,
+  pl: dfPl,
+  de: dfDe,
+  at: dfDe,
+  ro: dfRo,
+};
+
+/** Returns the date-fns Locale object matching the current app locale. */
+export function useDateLocale(): DateFnsLocale {
+  const { locale } = useI18n();
+  return DATE_FNS_LOCALE_MAP[locale] ?? dfEnUS;
 }

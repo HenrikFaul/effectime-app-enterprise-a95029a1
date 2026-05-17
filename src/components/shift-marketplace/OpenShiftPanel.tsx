@@ -7,9 +7,8 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { ClipboardList, Zap } from 'lucide-react';
 import { format } from 'date-fns';
-import { hu } from 'date-fns/locale';
 import { toast } from 'sonner';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 import { useOpenShiftRequests, useClaimOpenShift } from '@/hooks/useOpenShifts';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -43,15 +42,18 @@ function useMemberProfile(membershipId: string | undefined) {
 
 export function OpenShiftPanel({ workspaceId, membershipId }: Props) {
   const { t } = useI18n();
-  const { data: requests = [], isLoading } = useOpenShiftRequests(workspaceId);
-  const { data: memberProfile } = useMemberProfile(membershipId);
+  const dateFnsLocale = useDateLocale();
+  const { data: requests = [], isLoading: isShiftsLoading } = useOpenShiftRequests(workspaceId);
+  const { data: memberProfile, isLoading: isProfileLoading } = useMemberProfile(membershipId);
   const claim = useClaimOpenShift();
   const [claimingId, setClaimingId] = useState<string | null>(null);
+
+  const isLoading = isShiftsLoading || (!!membershipId && isProfileLoading);
 
   // Filter to only open shifts that match the member's role/skills (or have no requirement)
   const open = requests.filter(r => {
     if (r.status !== 'open') return false;
-    if (!memberProfile) return true; // no profile loaded yet, show all
+    if (!memberProfile) return !membershipId; // no membershipId → show all; ID given but loading → hide until ready
     const roleMatch = !r.business_role || r.business_role === memberProfile.businessRole;
     const skillMatch = !r.skill_id || memberProfile.skillIds.includes(r.skill_id);
     return roleMatch && skillMatch;
@@ -105,7 +107,7 @@ export function OpenShiftPanel({ workspaceId, membershipId }: Props) {
               >
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">
-                    {format(new Date(`${req.shift_date}T00:00:00`), 'EEEE, d MMMM', { locale: hu })}
+                    {format(new Date(`${req.shift_date}T00:00:00`), 'EEEE, d MMMM', { locale: dateFnsLocale })}
                   </p>
                   {(req.business_role || req.notes) && (
                     <p className="text-xs text-muted-foreground truncate">
@@ -131,7 +133,7 @@ export function OpenShiftPanel({ workspaceId, membershipId }: Props) {
                       <AlertDialogTitle>{t('open_shifts.confirm_title')}</AlertDialogTitle>
                       <AlertDialogDescription>
                         {t('open_shifts.confirm_desc', {
-                          date: format(new Date(`${req.shift_date}T00:00:00`), 'EEEE, d MMMM yyyy', { locale: hu }),
+                          date: format(new Date(`${req.shift_date}T00:00:00`), 'EEEE, d MMMM yyyy', { locale: dateFnsLocale }),
                         })}
                       </AlertDialogDescription>
                     </AlertDialogHeader>

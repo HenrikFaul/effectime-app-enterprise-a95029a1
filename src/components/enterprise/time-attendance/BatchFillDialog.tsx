@@ -7,12 +7,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Switch } from '@/components/ui/switch';
 import { Zap, Loader2, AlertTriangle } from 'lucide-react';
 import { format, eachDayOfInterval, isWeekend as dfIsWeekend, startOfMonth, endOfMonth } from 'date-fns';
-import { hu } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { upsertSegment, deleteSegment } from './api';
 import { nightHoursInRange } from './calculations';
 import { AttendanceSegment, AttendanceSegmentType } from './types';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 
 interface Props {
   open: boolean;
@@ -35,6 +34,7 @@ export function BatchFillDialog({
   initialStart, initialEnd, selectedDays, segments, onSaved,
 }: Props) {
   const { t } = useI18n();
+  const dateFnsLocale = useDateLocale();
   const monthStart = toLocalDateStr(startOfMonth(new Date(year, month - 1)));
   const monthEnd = toLocalDateStr(endOfMonth(new Date(year, month - 1)));
 
@@ -160,7 +160,7 @@ export function BatchFillDialog({
               <div className="rounded-md border bg-muted/30 p-2 max-h-40 overflow-y-auto space-y-0.5">
                 {selectedDays.map(d => (
                   <div key={toLocalDateStr(d)} className="text-xs px-1 py-0.5">
-                    {format(d, 'EEEE, MMM d.', { locale: hu })}
+                    {format(d, 'EEEE, MMM d.', { locale: dateFnsLocale })}
                   </div>
                 ))}
               </div>

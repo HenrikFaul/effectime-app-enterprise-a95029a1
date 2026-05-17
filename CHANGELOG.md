@@ -1,3 +1,18 @@
+## 2026-05-17 — v3.39.4 Dynamic date locale — 20 components switched to useDateLocale()
+
+Introduces `useDateLocale()` hook in `I18nProvider`. Every date-fns `format()` call and every `<Calendar locale=…>` prop across 20 enterprise components was hardcoded to Hungarian (`{ locale: hu }`). They now all read the user's active app locale at runtime, so Czech, Slovak, Polish, German, Austrian, Romanian, and English users see calendar headers, weekday abbreviations, and date strings in their own language. Also fixes a serial-loop performance bug in `markAllRead` (was N individual DB updates, now a single batch UPDATE).
+
+### New API
+- `useDateLocale(): DateFnsLocale` — exported from `src/i18n/I18nProvider.tsx`. Maps `en→enUS`, `hu→hu`, `cs→cs`, `sk→sk`, `pl→pl`, `de→de`, `at→de`, `ro→ro`.
+
+### Components updated (20 files)
+`CoveragePlannerView`, `TimelineView`, `SmartBatchScheduleDialog`, `OpenShiftPanel`, `EnterpriseNotifications`, `LeaveRequestDialog`, `ExportCenter`, `BlockedDateManager`, `HolidayManager`, `AuditLog`, `RuleTemplateLibrary`, `ReportingDashboard`, `LeaveRequestList`, `AdminLeaveOverride`, `DailyRuleManager`, `CompanyLeaveDayManager`, `LeaveCalendar`, `ApprovalInbox`, `EmployeeDashboard`, `AvailabilityCalendar`, `AdminOverview`, `BatchFillDialog`, `EmployeeMonthView`, `HRWorkflowInbox`.
+
+### Other fixes
+- `EnterpriseNotifications`: `markAllRead` replaced serial `for` loop with single `.in('id', unreadIds)` batch update — O(N) DB round-trips → O(1).
+- `EnterpriseNotifications`: helper function `t` param type corrected to `Record<string, string | number>` (matches `useI18n().t` signature).
+- `OpenShiftPanel`: `isLoading` now combines shift loading + profile loading so the member-role filter never causes a flicker from "show all" to "show filtered" on initial render.
+
 ## 2026-05-17 — v3.39.3 Code-audit bug-fix batch — localization, compact mode, type safety
 
 Resolves all issues found during the post-v3.39.0 comprehensive code audit: hardcoded Hungarian strings in CoveragePlannerView, compact-mode UX gap in OpenShiftManager (existing broadcasts hidden behind a non-functional badge), and a minor TypeScript type contract violation.
