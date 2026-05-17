@@ -2779,6 +2779,7 @@ const ro = {
     legend_available: 'Marcat ca disponibil de sine',
     availability_indicator: 'Angajatul s-a marcat disponibil pentru această zi',
     open_shift_section: 'Publicare tură deschisă',
+    capacity_rules_title: 'Reguli de capacitate',
   },
   smart_batch: {
     invalid_dates: 'Invalid dates',

@@ -434,13 +434,15 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                   </TabsContent>
                 </Tabs>
 
-                  {/* AI Copilot — full width below calendar content */}
+                  {/* AI Copilot — narrow, right-aligned below calendar content */}
                   <FeatureGate
                     workspaceId={workspace.id}
                     feature="ai_copilot_chat"
                     fallback={null}
                   >
-                    <CopilotPanel workspaceId={workspace.id} />
+                    <div className="max-w-sm ml-auto">
+                      <CopilotPanel workspaceId={workspace.id} />
+                    </div>
                   </FeatureGate>
                 </div>
               </TabsContent>
@@ -604,7 +606,6 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
   const [openCompanyDays, setOpenCompanyDays] = useState(false);
   const [openBlockedDates, setOpenBlockedDates] = useState(false);
   const [openDailyRules, setOpenDailyRules] = useState(false);
-  const [openOfficeCoverage, setOpenOfficeCoverage] = useState(false);
   const [openRuleTemplates, setOpenRuleTemplates] = useState(false);
 
   return (
@@ -744,18 +745,6 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
                 </Card>
               </CollapsibleTrigger>
               <CollapsibleContent className="mt-2"><DailyRuleManager workspaceId={workspaceId} userId={userId} /></CollapsibleContent>
-            </Collapsible>
-
-            <Collapsible open={openOfficeCoverage} onOpenChange={setOpenOfficeCoverage}>
-              <CollapsibleTrigger asChild>
-                <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
-                  <CardContent className="flex items-center justify-between py-2.5 px-4">
-                    <span className="text-xs font-medium">{t('ws_nav.section_coverage_rules')}</span>
-                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openOfficeCoverage ? 'rotate-180' : ''}`} />
-                  </CardContent>
-                </Card>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="mt-2"><OfficeCoverageRuleManager workspaceId={workspaceId} userId={userId} /></CollapsibleContent>
             </Collapsible>
 
             <Collapsible open={openRuleTemplates} onOpenChange={setOpenRuleTemplates}>
