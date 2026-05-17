@@ -4290,7 +4290,7 @@ const cs = {
   },
   ai_copilot: {
     title: 'AI plánovací Copilot',
-    powered_by: 'Claude Sonnet',
+    powered_by: 'Gemini',
     empty_prompt: 'Zeptejte se na otázku ohledně plánování v přirozeném jazyce — např. "Jak vypadá přesčas příští měsíc, když Alice půjde na dovolenou?"',
     placeholder: 'Zeptejte se na cokoli o plánování, pokrytí nebo organizaci pracovního prostoru…',
     role_you: 'Vy',

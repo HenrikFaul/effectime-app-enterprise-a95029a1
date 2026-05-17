@@ -1,8 +1,7 @@
 // Edge Function: ai-copilot
 // AI scheduling copilot for workforce planning.
-// Optional Claude integration: when ANTHROPIC_API_KEY is set, returns AI-generated
-// analysis and recommendations. Otherwise returns a friendly fallback so the UI
-// never breaks.
+// Uses Google Generative AI (Gemini) when GOOGLE_AI_API_KEY is set.
+// Returns a friendly fallback when the key is absent so the UI never breaks.
 //
 // Action: POST { workspace_id, conversation_id, instruction, model? }
 // Response: CopilotResponse (see useAiCopilot.ts for shape)
@@ -10,12 +9,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.98.0";
 import { corsHeaders } from "../_shared/cors.ts";
 
-const SUPABASE_URL      = Deno.env.get("SUPABASE_URL")!;
-const SERVICE_ROLE      = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const ANON_KEY          = Deno.env.get("SUPABASE_ANON_KEY")!;
-const ANTHROPIC_API_KEY = Deno.env.get("ANTHROPIC_API_KEY") ?? "";
+const SUPABASE_URL    = Deno.env.get("SUPABASE_URL")!;
+const SERVICE_ROLE    = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const ANON_KEY        = Deno.env.get("SUPABASE_ANON_KEY")!;
+const GOOGLE_AI_KEY   = Deno.env.get("GOOGLE_AI_API_KEY") ?? "";
 
-const DEFAULT_MODEL = "claude-sonnet-4-6";
+const DEFAULT_MODEL = "gemini-2.0-flash-lite";
 
 function jsonRes(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -24,7 +23,6 @@ function jsonRes(body: unknown, status = 200) {
   });
 }
 
-// Build a plain-text context summary from live workspace data.
 async function buildContextSummary(admin: ReturnType<typeof createClient>, workspaceId: string) {
   const now = new Date();
   const in90d = new Date(Date.now() + 90 * 86400_000).toISOString().slice(0, 10);
@@ -47,14 +45,13 @@ async function buildContextSummary(admin: ReturnType<typeof createClient>, works
   ]);
 
   return {
-    member_count:          membRes.count  ?? 0,
-    open_leave_requests:   leaveRes.count ?? 0,
-    shifts_next_90d:       shiftRes.count ?? 0,
-    open_violations:       violRes.count  ?? 0,
+    member_count:        membRes.count  ?? 0,
+    open_leave_requests: leaveRes.count ?? 0,
+    shifts_next_90d:     shiftRes.count ?? 0,
+    open_violations:     violRes.count  ?? 0,
   };
 }
 
-// Fetch recent conversation messages to include as context.
 async function getConversationHistory(
   admin: ReturnType<typeof createClient>,
   conversationId: string,
@@ -69,7 +66,6 @@ async function getConversationHistory(
   return ((data ?? []) as { role: string; content: string }[]).reverse();
 }
 
-// Store a message row (non-blocking on failure).
 async function storeMessage(
   admin: ReturnType<typeof createClient>,
   conversationId: string,
@@ -117,7 +113,6 @@ Deno.serve(async (req) => {
     if (!conversation_id) return jsonRes({ error: "conversation_id is required" }, 400);
     if (!instruction)     return jsonRes({ error: "instruction is required" }, 400);
 
-    // Verify workspace membership
     const { data: membership } = await admin
       .from("enterprise_memberships")
       .select("id")
@@ -128,20 +123,17 @@ Deno.serve(async (req) => {
 
     if (!membership) return jsonRes({ error: "Forbidden" }, 403);
 
-    // Build workspace context (parallel)
     const [contextSummary, history] = await Promise.all([
       buildContextSummary(admin, workspace_id),
       getConversationHistory(admin, conversation_id),
     ]);
 
-    // Store user message
     await storeMessage(admin, conversation_id, "user", instruction, null, null, null, null);
 
-    // No API key — return a friendly non-AI fallback
-    if (!ANTHROPIC_API_KEY) {
+    if (!GOOGLE_AI_KEY) {
       const fallbackContent =
         "AI analysis is not configured for this installation. " +
-        "To enable AI-powered scheduling insights, add ANTHROPIC_API_KEY to your Supabase secrets.";
+        "To enable AI-powered scheduling insights, add GOOGLE_AI_API_KEY to your Supabase secrets.";
       const fallbackPlan = {
         ai_available: false,
         analysis: fallbackContent,
@@ -156,7 +148,7 @@ Deno.serve(async (req) => {
         content: fallbackContent,
         structured_plan: fallbackPlan,
         context_summary: contextSummary,
-        hint: "Set ANTHROPIC_API_KEY in Supabase secrets to enable AI copilot.",
+        hint: "Set GOOGLE_AI_API_KEY in Supabase secrets to enable AI copilot.",
       });
     }
 
@@ -172,30 +164,35 @@ Deno.serve(async (req) => {
       "",
       "Respond in JSON with this exact shape:",
       '{ "analysis": "...", "recommendations": ["..."], "warnings": ["..."], "requires_human_review": false, "confidence": 0.9 }',
-      "Keep recommendations actionable and concise. Use the user\'s language (Hungarian or English).",
+      "Keep recommendations actionable and concise. Use the user's language (Hungarian or English).",
     ].join("\n");
 
-    // Build messages array: history + new user message
-    const messages = [
-      ...history
-        .filter((m) => m.role === "user" || m.role === "assistant")
-        .map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
-      { role: "user" as const, content: instruction },
-    ];
+    // Build Google AI contents array — roles must be "user" | "model" and alternate.
+    const contents = history
+      .filter((m) => m.role === "user" || m.role === "assistant")
+      .map((m) => ({
+        role: m.role === "assistant" ? "model" : "user",
+        parts: [{ text: m.content }],
+      }));
+    // Append the new user message
+    contents.push({ role: "user", parts: [{ text: instruction }] });
 
-    const aiResp = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_API_KEY,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({ model, max_tokens: 1024, system: systemPrompt, messages }),
-    });
+    const aiResp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GOOGLE_AI_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: systemPrompt }] },
+          contents,
+          generationConfig: { maxOutputTokens: 1024 },
+        }),
+      }
+    );
 
     if (!aiResp.ok) {
       const errText = await aiResp.text();
-      console.error("[ai-copilot] Anthropic API error:", errText);
+      console.error("[ai-copilot] Google AI error:", errText);
       const errContent = "AI request failed. Please try again.";
       const errPlan = { ai_available: true, error: "API request failed", analysis: errContent };
       await storeMessage(admin, conversation_id, "assistant", errContent, errPlan, model, null, null);
@@ -206,14 +203,12 @@ Deno.serve(async (req) => {
     }
 
     const aiResult = await aiResp.json();
-    const rawContent = (aiResult.content?.[0]?.text as string | undefined) ?? "";
-    const inputTokens  = (aiResult.usage?.input_tokens  as number | undefined) ?? null;
-    const outputTokens = (aiResult.usage?.output_tokens as number | undefined) ?? null;
+    const rawContent     = (aiResult.candidates?.[0]?.content?.parts?.[0]?.text as string | undefined) ?? "";
+    const inputTokens    = (aiResult.usageMetadata?.promptTokenCount        as number | undefined) ?? null;
+    const outputTokens   = (aiResult.usageMetadata?.candidatesTokenCount    as number | undefined) ?? null;
 
-    // Try to parse structured JSON from the response
     let structuredPlan: Record<string, unknown> | null = null;
     try {
-      // Handle markdown code fences if Claude wraps the JSON
       const jsonMatch = rawContent.match(/```json\s*([\s\S]*?)```/) ??
                         rawContent.match(/^\s*(\{[\s\S]*\})\s*$/);
       const jsonStr = jsonMatch ? jsonMatch[1] : rawContent;
