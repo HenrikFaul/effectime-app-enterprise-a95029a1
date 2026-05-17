@@ -933,6 +933,24 @@ A workspace-picker `useState('')` került a `if (selectedWorkspaceId) return <Wo
 
 ---
 
+### [HIBA-077] Radix UI `<Select.Item value="">` — üres string érték azonnali runtime crash-t okoz
+- **Dátum**: 2026-05-17
+- **Fájl**: `src/components/enterprise/time-attendance/BatchFillDialog.tsx`
+- **Hibaüzenet**: `Error: A <Select.Item /> must have a value prop that is not an empty string. This is because the Select value can be set to an empty string to clear the selection and show the placeholder.`
+- **Gyökérok**: Új office selector hozzáadásakor a "nincs telephely" opcióhoz `value=""` lett megadva. A Radix UI Select komponens validálja a SelectItem value-kat, és üres stringet nem fogad el — ez azonnal crash-t okoz a Dialog nyitásakor.
+- **Javítás**: Az üres string sentinel-t `'__none__'`-ra cserélve mindenhol (useState init, useEffect reset, apply logika guard, SelectItem value prop). Minden más `Select`-ben is `'__none__'`-t vagy más érvényes nemüres értéket kell használni az "üres" állapot jelzésére.
+- **Megelőzés**: Radix UI `<SelectItem>`-nek SOHA ne adj üres string value-t. Mindig használj nemüres sentinelt (pl. `'__none__'`, `'none'`, `'_'`). Az üres string csak a `<Select value="">` szintjén van megengedve (a placeholder megjelenítéséhez), de a `<SelectItem>` szintjén nem.
+
+### [HIBA-078] Nested komponens scope — parent state nem elérhető child top-level függvényben
+- **Dátum**: 2026-05-17
+- **Fájl**: `src/components/enterprise/WorkspaceDashboard.tsx`
+- **Hibaüzenet**: `ReferenceError: highlightOfficeId is not defined` — fehér képernyő
+- **Gyökérok**: A `highlightOfficeId` state a `WorkspaceDashboard` függvényen belül volt deklarálva (l. 148), de felhasználva a `WorkspaceSettings` KÜLÖN top-level komponens függvényben (l. 1001). A `WorkspaceSettings` nem closure, nem fér hozzá a parent state-hez — csak propsot kap.
+- **Javítás**: A `highlightOfficeId` propot hozzáadtuk a `WorkspaceSettings` interface-éhez, és átadtuk a call site-on.
+- **Megelőzés**: Amikor egy top-level (`function Foo()`) komponens a szülő state-jét használja, azt **mindig** propsként kell átadni. A szülő state csak closureban lévő inline komponensből érhető el automatikusan. Új prop hozzáadásakor ellenőrizd, hogy az összes call site megkapja-e.
+
+---
+
 ### [LESSON-EXPORT-086] Supabase profiles táblában nincs email oszlop — SECURITY DEFINER RPC a megoldás
 - **Dátum**: 2026-05-10
 - **Fájl**: `src/components/enterprise/import-export/utils/data-fetcher.ts`
