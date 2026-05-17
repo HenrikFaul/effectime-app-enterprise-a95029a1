@@ -28,15 +28,19 @@ functions + 11 enums + 82 triggers + 26 edge functions = **312 objects**.
 | Enums | 11 | 11 (all referenced by typed columns) | 0 | 0 | 0 |
 | **Total** | **312** | **249** | **52** | **5** | **6** |
 
-## Confirmed-unused (queued for backup + drop) — 6 objects
+## Confirmed-unused — 5 objects — **ALL DROPPED 2026-05-13**
 
-| Name | Type | Rows | Pass 1 | Pass 2 | Pass 3 | Iteration | Action |
-|---|---|---:|:-:|:-:|:-:|:-:|---|
-| `enterprise_ganttic_dependencies` | table | 0 | ❌ | ❌ | ❌ | ❌ | DROP |
-| `feature_gate_events` | table | 0 | ❌ | ❌ | ❌ | ❌ | DROP |
-| `enterprise_agile_capacity_events` | table | 0 | ❌ | ❌ | ❌ | ❌ | DROP |
-| `enterprise_agile_external_field_mappings` | table | 0 | ❌ | ❌ | ❌ | ❌ | DROP |
-| `ganttic_has_dependency_cycle(uuid,uuid,text,text)` | function | n/a | ❌ | ❌ | ❌ | ❌ | DROP |
+Status verified against live `information_schema` snapshot on 2026-05-17:
+none of these objects exist in the database anymore. See
+`db-audit/DELETION_CHANGELOG.md` for the drop migration and backups.
+
+| Name | Type | Status |
+|---|---|---|
+| `enterprise_ganttic_dependencies` | table | DROPPED |
+| `feature_gate_events` | table | DROPPED |
+| `enterprise_agile_capacity_events` | table | DROPPED |
+| `enterprise_agile_external_field_mappings` | table | DROPPED |
+| `ganttic_has_dependency_cycle(uuid,uuid,text,text)` | function | DROPPED |
 
 (❌ = "object NOT used" verdict from that pass; ✅ = object used; 🟡 =
 ambiguous.)
