@@ -43,7 +43,7 @@ export function useLaborCostForecast(workspaceId: string | null | undefined, mon
         _months_ahead: monthsAhead,
       });
       if (error) throw error;
-      return data as { ok: boolean; currency: string; forecast: LaborCostMonth[] };
+      return data as unknown as { ok: boolean; currency: string; forecast: LaborCostMonth[] };
     },
     enabled: !!workspaceId,
     staleTime: 5 * 60 * 1000,
@@ -58,7 +58,7 @@ export function useAbsenceRiskScores(workspaceId: string | null | undefined) {
         _workspace_id: workspaceId as string,
       });
       if (error) throw error;
-      return data as { ok: boolean; results: AbsenceRiskRow[] };
+      return data as unknown as { ok: boolean; results: AbsenceRiskRow[] };
     },
     enabled: !!workspaceId,
     staleTime: 5 * 60 * 1000,
@@ -74,7 +74,7 @@ export function useCoverageRiskHeatmap(workspaceId: string | null | undefined, d
         _days_ahead: daysAhead,
       });
       if (error) throw error;
-      return data as { ok: boolean; total_members: number; days: CoverageDay[] };
+      return data as unknown as { ok: boolean; total_members: number; days: CoverageDay[] };
     },
     enabled: !!workspaceId,
     staleTime: 5 * 60 * 1000,
