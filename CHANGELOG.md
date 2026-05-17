@@ -1,3 +1,70 @@
+## 2026-05-17 — v3.42.1 Build hygiene + ambiguous-items re-eval (no-regression)
+
+Two parallel cleanup streams, both strictly non-destructive per the
+operator mandate ("nem lehet semmi regresszió! ne töröld ezeket!"):
+
+**A) Pre-existing TypeScript build errors fixed (12 errors → 0).** All
+errors stemmed from drift between hand-written code and the regenerated
+`src/integrations/supabase/types.ts` (now includes
+`platform_audit_events`, stricter `Json` typing for `rpc()` results, etc.)
+plus three locale files that had copied an `export type EnglishBundle = typeof en;`
+line from `en.ts` without importing `en`. Fixes:
+
+- `src/components/enterprise/positions/PositionPickerDialog.tsx` —
+  added the missing `business_role: string` field to
+  `PositionPickerResult` (mirrors `positionLabel`) so the
+  `InviteMemberDialog` consumer compiles. **Dependency created, not
+  deleted**, per the operator's "ne ezeket töröld" rule.
+- `src/components/enterprise/InviteMemberDialog.tsx` — now type-clean
+  against the extended `PositionPickerResult`.
+- `src/components/enterprise/agile/FieldDiscovery.tsx` — Lucide icons do
+  not accept a `title` prop; wrapped the icon in a `<span title=…>`
+  instead (a11y-equivalent, no behavior change).
+- `src/components/superadmin/FeatureTiersTab.tsx` — removed obsolete
+  `@ts-expect-error` (types now include `platform_audit_events`); cast
+  the dynamic `payload.*` fields explicitly to satisfy the strict `Json`
+  shape on `.insert()`.
+- `src/components/superadmin/PlatformAuditLogTab.tsx` — removed obsolete
+  `@ts-expect-error` on the same table.
+- `src/hooks/usePluginMarketplace.ts` — cast `manifest` / `config`
+  (`Record<string, unknown>`) to the generated `Json` type on
+  `rpc()` calls.
+- `src/hooks/usePredictiveAnalytics.ts` — three `data as T` casts
+  rewritten as `data as unknown as T` (TS requires the unknown bridge
+  when narrowing the wide `Json` union to a concrete shape).
+- `src/hooks/useReseller.ts` — same `unknown` bridge for `ResellerUsage`.
+- `src/i18n/resources/{at,de,ro}.ts` — removed the stray
+  `export type EnglishBundle = typeof en;` line that referenced an
+  unimported `en` symbol. The canonical export lives in `en.ts`.
+
+No runtime behavior changed; all edits are type-level or wrapper-level.
+`bun run build` and `bun run build:dev` both pass with zero errors.
+
+**B) Ambiguous-items re-evaluation (governance only, zero schema
+changes).** Documented in
+`db-audit/ambiguous_items_reeval_v3.42.1.md`. Re-checked the five
+items previously parked in `db-audit/ambiguous_items.md` plus the dead
+`enterprise_workspace_roles` table:
+
+- `enterprise_attendance_audit` — row count grew **1 → 106** between
+  audits, proving a live writer. **Reclassified USED**, no longer
+  ambiguous. (Follow-up: trace and commit the writer as a proper
+  migration.)
+- `enterprise_integration_sync_log`, `enterprise_export_jobs`,
+  `leave_request_attachments` — still 0 rows, RLS + FK intact, **KEPT**
+  as designed-but-unwired infrastructure.
+- `import_enterprise_catalog_to_workspace` (function) — **KEPT** as
+  admin-invoked one-shot helper.
+- `enterprise_workspace_roles` — 0 rows, no FK in/out, no code consumer,
+  but **KEPT** per operator rule (never drop reserved tables; if a
+  dependency is missing, create the dependency).
+
+**Zero DROP statements.** No schema or RLS changed. The v3.42.0
+`features.route_path` canonical state (142 workspace + 30 platform)
+remains intact.
+
+---
+
 ## 2026-05-17 — v3.42.0 DB: canonicalize `features.route_path` to `/w/:workspaceId/...` shape
 
 Aligns the `features` catalog with the v3.16.0 governance rule that every
