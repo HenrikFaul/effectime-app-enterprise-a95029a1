@@ -165,7 +165,7 @@ export function useShiftCandidates({
     enabled: enabled && !!workspaceId && !!officeId && !!shiftDate,
     staleTime: STALE_MS,
     queryFn: async () => {
-      const [memRes, skillRes, assignRes, leaveRes, holidayRes, blockedRes, avRes] = await Promise.all([
+      const baseQueries = [
         (supabase as any).from('enterprise_memberships')
           .select('id,user_id,business_role,weekly_capacity_hours,base_working_hours')
           .eq('workspace_id', workspaceId)
@@ -196,9 +196,35 @@ export function useShiftCandidates({
           .eq('workspace_id', workspaceId)
           .eq('availability_date', shiftDate)
           .in('status', ['available', 'preferred']),
-      ]);
+        // When a role is requested, also check enterprise_member_role_allocations so members
+        // whose position is tracked there (not only in enterprise_memberships.business_role)
+        // are correctly included and scored.
+        businessRole
+          ? (supabase as any).from('enterprise_member_role_allocations')
+              .select('membership_id')
+              .eq('workspace_id', workspaceId)
+              .eq('business_role', businessRole)
+          : Promise.resolve({ data: [] }),
+      ] as const;
 
-      const memRows = (memRes.data ?? []) as any[];
+      const [memRes, skillRes, assignRes, leaveRes, holidayRes, blockedRes, avRes, allocRes] =
+        await Promise.all(baseQueries);
+
+      // membership_ids that carry the requested role via allocations table
+      const allocMembershipIds = new Set<string>(
+        ((allocRes.data ?? []) as any[]).map((a: any) => a.membership_id)
+      );
+
+      let memRows = (memRes.data ?? []) as any[];
+
+      // Hard-filter: when a specific role is requested, only consider members whose
+      // enterprise_memberships.business_role matches OR who have a matching allocation record.
+      // This prevents non-matching members from appearing in the candidate list at all.
+      if (businessRole) {
+        memRows = memRows.filter(
+          (m: any) => m.business_role === businessRole || allocMembershipIds.has(m.id)
+        );
+      }
       const userIds = memRows.map((m: any) => m.user_id);
       let nameMap: Record<string, string> = {};
       if (userIds.length > 0) {
@@ -218,7 +244,11 @@ export function useShiftCandidates({
         membership_id: m.id,
         user_id: m.user_id,
         display_name: nameMap[m.user_id] ?? m.user_id,
-        business_role: m.business_role ?? null,
+        // For members matched via allocations (not enterprise_memberships.business_role),
+        // surface the requested role so the eligibility engine scores them correctly.
+        business_role: (businessRole && allocMembershipIds.has(m.id) && m.business_role !== businessRole)
+          ? businessRole
+          : (m.business_role ?? null),
         weekly_capacity_hours: m.weekly_capacity_hours ?? 40,
         base_working_hours: m.base_working_hours ?? 8,
         skills: skillsByMem.get(m.id) ?? [],
