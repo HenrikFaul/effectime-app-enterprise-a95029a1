@@ -21,6 +21,8 @@ export interface OpenShiftRequest {
   created_at: string;
   respond_by_at: string | null;
   timeout_hours: number;
+  target_user_ids: string[];
+  notified_user_ids: string[];
 }
 
 const STALE_MS = 30_000;
