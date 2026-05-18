@@ -129,6 +129,21 @@ rows, 30 platform-level rows (`/admin/*`, `/superadmin/*`, top-level),
 
 ---
 
+## 2026-05-18 — v3.41.7 Fix: Open shift candidate list filtered strictly by position
+
+### Fixed
+- `useShiftCandidates`: when a `businessRole` is specified, candidates are now hard-filtered
+  to members who actually hold that position — matching against both
+  `enterprise_memberships.business_role` AND `enterprise_member_role_allocations.business_role`.
+  Previously, all active workspace members were returned regardless of their position,
+  causing unrelated members (e.g. Senior Backend Developer, Operations Lead) to appear
+  as candidates for position-specific shifts.
+- Members whose position is tracked only in `enterprise_member_role_allocations` (not in
+  `enterprise_memberships.business_role`) now appear correctly in the candidate shortlist
+  and receive the full role-match score bonus.
+
+---
+
 ## 2026-05-17 — v3.41.6 Fix: Open shift position selector shows all workspace positions
 
 ### Fixed
