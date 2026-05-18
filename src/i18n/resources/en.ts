@@ -4644,6 +4644,8 @@ const en = {
     notify_selected: 'Notify selected',
     notify_selected_success: 'Notification sent to {{count}} selected candidate(s).',
     broadcast_all: 'Broadcast to all matching',
+    pending_notified_badge: 'Pending',
+    pending_notified_tooltip: 'Already notified on an open request — waiting for response. Cannot re-notify until the timeout expires or they respond.',
     join_waitlist: 'Join waitlist',
     waitlist_joined: 'Added to the waitlist.',
     waitlist_error: 'Could not join waitlist. Try again.',

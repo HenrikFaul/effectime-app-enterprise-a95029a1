@@ -517,7 +517,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
                       : isWeekend ? 'bg-muted/30 border-muted' : 'bg-card'
                   } ${totalH > 0 ? 'border-primary/40' : ''} ${
                     canEdit ? 'cursor-pointer hover:bg-accent' :
-                    canEditAvail ? (isPast ? 'cursor-not-allowed opacity-60' : 'cursor-crosshair hover:ring-1 hover:ring-violet-300') :
+                    canEditAvail ? (isPast ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:ring-1 hover:ring-violet-300') :
                     'cursor-default'
                   }`}
                   title={canEdit ? t('attendance_view.day_edit_tooltip') :
