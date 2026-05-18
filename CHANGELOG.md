@@ -1,3 +1,26 @@
+## 2026-05-18 — v3.43.1 Refactor: Phase 1 nav restructure — Pozíciók, Csapatok, Készségek → Szervezet; sticky sub-tabs
+
+### Navigation restructuring — Phase 1
+Moved three items from **Erőforrások** into **Szervezet**, eliminating the definitional/operational overlap:
+
+| Was | Now |
+|---|---|
+| Erőforrások → Készségek tab | Szervezet → Készségek tab |
+| Erőforrások → Pozíciók kezelése collapsible | Szervezet → Pozíciók tab |
+| Erőforrások → Csapatok kezelése collapsible | Szervezet → Csapatok tab |
+
+Erőforrások is now a pure planning/allocation module (Dashboard, Hőtérkép, Projektek, Agile, Forgatókönyvek, Pénzügy, Kapacitás-hiány, Csapat jólléte, Bérszámfejtés).
+
+### Sticky sub-tab navigation fix
+`OrganizationModule` previously rendered its sub-tabs inside a Card, making them non-sticky. The component was rewritten to match the `ResourcesTab` pattern: the TabsList is now `sticky top-[calc(var(--ws-header-h)_+_var(--ws-main-tabs-h))] z-10` so it stays fixed below the main nav when scrolling — consistent with Calendar and Erőforrások sub-tabs.
+
+The Card wrapper around the entire Szervezet module was removed; content renders flat like the other tabs.
+
+### Localization
+New i18n keys: `organization.tabs.positions`, `organization.tabs.teams`, `organization.tabs.skills` in `en.ts` and `hu.ts`. `organization.subtitle` updated to mention positions, teams, skills.
+
+---
+
 ## 2026-05-18 — v3.43.0 Feature: Decline shift invitation + Intelligent suggestion in open-shift creation
 
 ### OpenShiftPanel — Decline button for invited shifts

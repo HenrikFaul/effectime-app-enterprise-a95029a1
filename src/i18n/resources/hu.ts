@@ -342,7 +342,7 @@ const hu = {
   },
   organization: {
     title: 'Szervezet',
-    subtitle: 'Hierarchia, vezetés, szerződések és automatikusan generált szervezeti diagram.',
+    subtitle: 'Hierarchia, pozíciók, csapatok, készségek, vezetés, szerződések és szervezeti diagram.',
     tabs: {
       structure: 'Felépítés',
       leadership: 'Vezetés',
@@ -351,6 +351,9 @@ const hu = {
       categories: 'Munkakategóriák',
       job_families: 'Munkacsaládok',
       chart: 'Szervezeti diagram',
+      positions: 'Pozíciók',
+      teams: 'Csapatok',
+      skills: 'Készségek',
     },
     structure: {
       title: 'Szervezeti felépítés',

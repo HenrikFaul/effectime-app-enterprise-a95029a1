@@ -342,7 +342,7 @@ const en = {
   },
   organization: {
     title: 'Organization',
-    subtitle: 'Hierarchy, leadership, contracts, and the auto-generated org chart.',
+    subtitle: 'Hierarchy, positions, teams, skills, leadership, contracts, and the auto-generated org chart.',
     tabs: {
       structure: 'Structure',
       leadership: 'Leadership',
@@ -351,6 +351,9 @@ const en = {
       categories: 'Work categories',
       job_families: 'Job families',
       chart: 'Org chart',
+      positions: 'Positions',
+      teams: 'Teams',
+      skills: 'Skills',
     },
     structure: {
       title: 'Organizational structure',
