@@ -45,7 +45,6 @@ BEGIN
                        ORDER BY o.name)
       FROM enterprise_offices o
       WHERE o.workspace_id = v_workspace_id
-        AND o.is_active = true
     ), '[]'::jsonb),
 
     -- Return ALL columns via to_jsonb so EmbedCapacityView gets business_roles[],
