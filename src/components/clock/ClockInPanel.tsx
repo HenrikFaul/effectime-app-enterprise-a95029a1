@@ -100,7 +100,7 @@ export function ClockInPanel({ workspaceId, membershipId, compact }: Props) {
   };
 
   return (
-    <Card className={isClockedIn ? 'border-emerald-300 bg-emerald-50/40 dark:bg-emerald-950/20' : ''}>
+    <Card className={`${compact ? 'h-full flex flex-col' : ''} ${isClockedIn ? 'border-emerald-300 bg-emerald-50/40 dark:bg-emerald-950/20' : ''}`}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-sm flex items-center gap-2">
@@ -114,7 +114,7 @@ export function ClockInPanel({ workspaceId, membershipId, compact }: Props) {
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
+      <CardContent className={compact ? 'flex flex-col gap-4 flex-1' : 'space-y-4'}>
         {/* Big live clock — hidden in compact mode */}
         {!compact && (
           <div className="text-center">
@@ -183,10 +183,10 @@ export function ClockInPanel({ workspaceId, membershipId, compact }: Props) {
           <p className="text-[11px] text-amber-600 dark:text-amber-400">{t('clock_in.manual_hint')}</p>
         )}
 
-        {/* Big action button */}
+        {/* Big action button — mt-auto in compact so it pins to the card bottom */}
         <Button
           size="lg"
-          className="w-full h-14 text-base"
+          className={`w-full h-14 text-base${compact ? ' mt-auto' : ''}`}
           onClick={handleSubmit}
           disabled={submitting}
           variant={isClockedIn ? 'destructive' : 'default'}
