@@ -262,7 +262,7 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Attendance stats card */}
         <Card>
           <CardHeader className="py-3 px-4">
