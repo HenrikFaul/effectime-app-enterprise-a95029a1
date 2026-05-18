@@ -21,6 +21,7 @@ import Enterprise from "./pages/Enterprise";
 import Unsubscribe from "./pages/Unsubscribe";
 import Reseller from "./pages/Reseller";
 import CandidateBook from "./pages/CandidateBook";
+import EmbedPage from "./pages/EmbedPage";
 import NotFound from "./pages/NotFound";
 import { InstallPwaPrompt } from "@/components/pwa/InstallPwaPrompt";
 
@@ -171,6 +172,7 @@ const App = () => (
                       <Route path="/unsubscribe" element={<Unsubscribe />} />
                       <Route path="/reseller" element={<ProtectedRoute><Reseller /></ProtectedRoute>} />
                       <Route path="/book/:token" element={<CandidateBook />} />
+                      <Route path="/embed/:view" element={<EmbedPage />} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </HashRouter>
