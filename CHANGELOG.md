@@ -1,3 +1,11 @@
+## 2026-05-18 — v3.42.7 Fix: compact OpenShiftManager shows full form on weekday coverage-rule days
+
+The "Nyitott műszak meghirdetése" panel rendered a stripped-down form (single "Meghirdetés" button, no candidate list, no "Kiválasztottak értesítése") when opened from a day that has a coverage rule assigned. Now compact mode renders the same full form as the standalone open-shift drawer: timeout field, top candidates with checkboxes, "Kiválasztottak értesítése" (violet) + "Meghirdetés az összes megfelelőnek" buttons, and pending-notification guard.
+
+The closed-state trigger (the compact badge/button at the top of the drawer) is preserved as-is.
+
+---
+
 ## 2026-05-18 — v3.42.6 Feature: OpenShiftPanel smart button states
 
 ### Button logic per shift row
