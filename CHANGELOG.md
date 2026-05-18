@@ -1,3 +1,33 @@
+## 2026-05-18 — v3.45.0 Feature: Embed SDK v2 — multi-view, customization params, snippet builder
+
+### New embed view: Shift Roster (`shift_roster`)
+Token holders can now embed a second view showing **who is working on which day** — a weekly grid with employee rows and day columns. Each cell shows the assigned role abbreviation (green badge) or empty. Grouped by office, filterable via `?office=<id>` URL param.
+
+### Customization URL params
+All embed views now accept optional query parameters:
+
+| Param | Values | Effect |
+|---|---|---|
+| `office` | office UUID | Filter to a single office |
+| `from` | `YYYY-MM-DD` | Set initial displayed week/month |
+| `mode` | `weekly` \| `monthly` | Capacity planner view mode (monthly = heatmap calendar) |
+
+### Monthly heatmap mode (capacity planner only)
+New **monthly calendar grid** in `EmbedCapacityView`: 7-column week rows, each cell colored by worst-case coverage status across all rules for that day (red gap / green met / amber over). Toggle W/M in the embed header or set `?mode=monthly` in the URL.
+
+### Snippet Builder in EmbedManager
+Each token row now has a **Snippet Builder** button (⚙). Opens a two-panel dialog:
+- Left: configure view, office filter, mode, iframe height
+- Right: live-updated `<iframe>` code — copy with one click
+
+### Token creation: view selection
+The create dialog now shows checkboxes for all available views (`capacity_planner`, `shift_roster`). The token's `allowed_views` array controls which views are accessible via that token.
+
+### DB: `get_embed_view_data` RPC
+Generic replacement for the view-specific RPC: accepts `_view text` parameter, validates `_view = ANY(allowed_views)`, and additionally returns `members: [{user_id, display_name, business_role, office_id}]` for the roster view. Old `get_embed_capacity_planner_data` untouched for backward compat.
+
+---
+
 ## 2026-05-18 — v3.44.0 Feature: Embed SDK — iframe capacity planner for third-party CRM integration
 
 ### Embed SDK overview

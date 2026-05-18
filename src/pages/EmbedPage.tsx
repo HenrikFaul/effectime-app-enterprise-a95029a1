@@ -1,11 +1,17 @@
 import { useParams, useSearchParams } from 'react-router-dom';
 import { EmbedCapacityView } from '@/components/embed/EmbedCapacityView';
+import { EmbedShiftRosterView } from '@/components/embed/EmbedShiftRosterView';
 import { AlertTriangle } from 'lucide-react';
 
 export default function EmbedPage() {
   const { view } = useParams<{ view: string }>();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get('token') ?? '';
+
+  const token       = searchParams.get('token') ?? '';
+  const office      = searchParams.get('office') ?? undefined;
+  const from        = searchParams.get('from') ?? undefined;
+  const modeParam   = searchParams.get('mode');
+  const mode        = (modeParam === 'monthly' || modeParam === 'weekly') ? modeParam : undefined;
 
   if (!token) {
     return (
@@ -24,7 +30,24 @@ export default function EmbedPage() {
   if (view === 'capacity_planner') {
     return (
       <div className="h-screen w-full overflow-hidden">
-        <EmbedCapacityView token={token} />
+        <EmbedCapacityView
+          token={token}
+          officeFilter={office}
+          initialFrom={from}
+          mode={mode}
+        />
+      </div>
+    );
+  }
+
+  if (view === 'shift_roster') {
+    return (
+      <div className="h-screen w-full overflow-hidden">
+        <EmbedShiftRosterView
+          token={token}
+          officeFilter={office}
+          initialFrom={from}
+        />
       </div>
     );
   }
@@ -34,7 +57,9 @@ export default function EmbedPage() {
       <div className="text-center p-8">
         <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-60" />
         <p className="font-medium">Unknown embed view: {view}</p>
-        <p className="text-xs mt-1">Supported views: <code>capacity_planner</code></p>
+        <p className="text-xs mt-1">
+          Supported: <code>capacity_planner</code>, <code>shift_roster</code>
+        </p>
       </div>
     </div>
   );
