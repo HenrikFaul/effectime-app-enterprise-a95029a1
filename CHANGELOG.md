@@ -1,3 +1,31 @@
+## 2026-05-18 — v3.42.3 Fix: create_open_shift_request null notified_user_ids (error 23502)
+
+**Root cause:** The final UPDATE step in `create_open_shift_request` set
+`notified_user_ids = (SELECT array_agg(DISTINCT n.user_id) ...)`. In
+PostgreSQL, `array_agg()` returns **NULL** (not `'{}'`) when the input is
+empty. When zero notification rows matched — e.g., the only role-matching
+member is the shift creator (excluded by `user_id <> v_uid`), or all
+matching members are via `enterprise_member_role_allocations` which the old
+WHERE clause didn't check — the UPDATE set `notified_user_ids = NULL`,
+violating the NOT NULL constraint and returning a 400 / error code 23502.
+
+**Fix 1 (critical — stops the crash):**
+Wrapped the `array_agg(...)` with `COALESCE(..., '{}'::uuid[])` so a
+zero-match aggregate is stored as an empty array, not NULL.
+
+**Fix 2 (completeness — parity with v3.41.7 candidate list):**
+Extended the notification candidate filter in `create_open_shift_request`
+to also match members via `enterprise_member_role_allocations` (the same
+source the frontend candidate picker already uses since v3.41.7). Before
+this fix, a member matched as an Optometrista candidate in the UI but
+received no notification if their `enterprise_memberships.business_role`
+was not 'Optometrista'.
+
+**Migration:** `20260518080000_v3_42_3_fix_notified_user_ids_null.sql`
+Applied live to `oezlzzmzzvbvinuysxaz`.
+
+---
+
 ## 2026-05-18 — v3.42.2 Premium UI/UX Refactor: design-system elevation pass
 
 Systematic visual upgrade across all base UI primitives and core surfaces
