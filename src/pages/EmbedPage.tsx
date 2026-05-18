@@ -29,25 +29,31 @@ export default function EmbedPage() {
 
   if (view === 'capacity_planner') {
     return (
-      <div className="h-screen w-full overflow-hidden">
-        <EmbedCapacityView
-          token={token}
-          officeFilter={office}
-          initialFrom={from}
-          mode={mode}
-        />
+      <div className="h-screen w-full overflow-hidden flex flex-col">
+        <div className="h-0.5 w-full bg-primary shrink-0" />
+        <div className="flex-1 overflow-hidden">
+          <EmbedCapacityView
+            token={token}
+            officeFilter={office}
+            initialFrom={from}
+            mode={mode}
+          />
+        </div>
       </div>
     );
   }
 
   if (view === 'shift_roster') {
     return (
-      <div className="h-screen w-full overflow-hidden">
-        <EmbedShiftRosterView
-          token={token}
-          officeFilter={office}
-          initialFrom={from}
-        />
+      <div className="h-screen w-full overflow-hidden flex flex-col">
+        <div className="h-0.5 w-full bg-primary shrink-0" />
+        <div className="flex-1 overflow-hidden">
+          <EmbedShiftRosterView
+            token={token}
+            officeFilter={office}
+            initialFrom={from}
+          />
+        </div>
       </div>
     );
   }

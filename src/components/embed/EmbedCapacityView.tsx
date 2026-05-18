@@ -4,6 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Plus, X, Loader2 } from 'lucide-react';
+import { EffectimeLogo } from '@/components/EffectimeLogo';
 import {
   addMonths, addWeeks, eachDayOfInterval, endOfMonth, endOfWeek,
   format, isWeekend, startOfMonth, startOfWeek, subMonths, subWeeks,
@@ -185,12 +186,9 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
     const roles     = ruleRoles(rule);
 
     return (
-      <div style={{
-        margin: '0', padding: '12px', background: '#1a2440',
-        borderTop: '2px solid #4f8cff', fontSize: 12,
-      }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <span style={{ fontWeight: 600, fontSize: 13 }}>
+      <div className="border-t-2 border-primary bg-card px-3 py-2.5 text-xs">
+        <div className="flex items-center justify-between mb-2">
+          <span className="font-semibold text-[13px] text-foreground">
             ✏️ {rule.name ?? roles.join(', ')} — {format(new Date(selected.date), 'MMM d')}
           </span>
           <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setSelected(null)}>
@@ -198,19 +196,19 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
           </Button>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <div className="grid grid-cols-2 gap-3">
           {/* Assigned */}
           <div>
-            <div style={{ color: '#9baacf', marginBottom: 6, fontSize: 11 }}>
+            <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1.5">
               BEOSZTOTT ({assigned.length}/{rule.min_headcount})
             </div>
             {assigned.length === 0 ? (
-              <div style={{ color: '#9baacf', fontStyle: 'italic' }}>Senki</div>
+              <div className="text-muted-foreground italic">Senki</div>
             ) : assigned.map(s => {
               const m = memberByUserId.get(s.user_id);
               return (
-                <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                  <span style={{ flex: 1 }}>{m?.display_name ?? s.user_id}</span>
+                <div key={s.id} className="flex items-center gap-1.5 mb-1">
+                  <span className="flex-1 truncate">{m?.display_name ?? s.user_id}</span>
                   <Button size="sm" variant="ghost"
                     className="h-5 w-5 p-0 text-destructive hover:text-destructive"
                     disabled={saving}
@@ -224,17 +222,17 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
 
           {/* Available */}
           <div>
-            <div style={{ color: '#9baacf', marginBottom: 6, fontSize: 11 }}>
+            <div className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide mb-1.5">
               ELÉRHETŐ ({available.length})
             </div>
-            <div style={{ maxHeight: 120, overflowY: 'auto' }}>
+            <div className="max-h-28 overflow-y-auto">
               {available.length === 0 ? (
-                <div style={{ color: '#9baacf', fontStyle: 'italic' }}>Mindenki beosztva</div>
+                <div className="text-muted-foreground italic">Mindenki beosztva</div>
               ) : available.map(m => (
-                <div key={m.user_id} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                  <span style={{ flex: 1 }}>{m.display_name}</span>
+                <div key={m.user_id} className="flex items-center gap-1.5 mb-1">
+                  <span className="flex-1 truncate">{m.display_name}</span>
                   <Button size="sm" variant="ghost"
-                    className="h-5 w-5 p-0 text-emerald-500 hover:text-emerald-400"
+                    className="h-5 w-5 p-0 text-primary hover:text-primary"
                     disabled={saving}
                     onClick={() => handleAssign(rule, selected.date, m)}>
                     {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
@@ -449,17 +447,17 @@ function Header({ label, onPrev, onNext, viewMode, onViewMode, loading, canWrite
   loading: boolean; canWrite: boolean;
 }) {
   return (
-    <div className="flex items-center gap-1 px-2 py-1.5 border-b shrink-0 flex-wrap">
+    <div className="flex items-center gap-1 px-2 py-1.5 border-b bg-card shrink-0 flex-wrap shadow-subtle">
       <Button size="icon" variant="ghost" className="h-6 w-6" onClick={onPrev}><ChevronLeft className="h-3.5 w-3.5" /></Button>
-      <span className="font-medium text-xs min-w-[130px] text-center">{label}</span>
+      <span className="font-display font-medium text-xs min-w-[130px] text-center">{label}</span>
       <Button size="icon" variant="ghost" className="h-6 w-6" onClick={onNext}><ChevronRight className="h-3.5 w-3.5" /></Button>
       <div className="ml-1 flex rounded-md border overflow-hidden text-[10px]">
         <button className={cn('px-2 py-0.5 transition-colors', viewMode === 'weekly' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted')} onClick={() => onViewMode('weekly')}>W</button>
         <button className={cn('px-2 py-0.5 transition-colors', viewMode === 'monthly' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted')} onClick={() => onViewMode('monthly')}>M</button>
       </div>
-      {canWrite && <Badge variant="outline" className="text-[9px] py-0 text-emerald-600 border-emerald-600/40">✏ szerkesztés</Badge>}
+      {canWrite && <Badge variant="outline" className="text-[9px] py-0 text-primary border-primary/40">✏ szerkesztés</Badge>}
       {loading && <span className="ml-1 text-[10px] text-muted-foreground animate-pulse">…</span>}
-      <Badge variant="outline" className="ml-auto text-[9px] py-0">Effectime</Badge>
+      <span className="ml-auto"><EffectimeLogo size={20} variant="full" /></span>
     </div>
   );
 }
