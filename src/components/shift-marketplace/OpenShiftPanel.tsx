@@ -5,11 +5,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { ClipboardList, Zap, Clock, Loader2 } from 'lucide-react';
+import { ClipboardList, Zap, Clock, Check, CheckCircle2, Loader2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
 import { useOpenShiftRequests, useClaimOpenShift, useJoinWaitlist } from '@/hooks/useOpenShifts';
+import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
 interface Props {
@@ -43,6 +44,8 @@ function useMemberProfile(membershipId: string | undefined) {
 export function OpenShiftPanel({ workspaceId, membershipId }: Props) {
   const { t } = useI18n();
   const dateFnsLocale = useDateLocale();
+  const { user } = useAuth();
+  const userId = user?.id ?? null;
   const { data: requests = [], isLoading: isShiftsLoading } = useOpenShiftRequests(workspaceId);
   const { data: memberProfile, isLoading: isProfileLoading } = useMemberProfile(membershipId);
   const claim = useClaimOpenShift();
@@ -124,85 +127,126 @@ export function OpenShiftPanel({ workspaceId, membershipId }: Props) {
           </p>
         ) : (
           <div className="space-y-2">
-            {open.map(req => (
-              <div
-                key={req.id}
-                className="flex items-center justify-between gap-2 rounded border px-3 py-2 bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {format(new Date(`${req.shift_date}T00:00:00`), 'EEEE, d MMMM', { locale: dateFnsLocale })}
-                  </p>
-                  {(req.business_role || req.notes) && (
-                    <p className="text-xs text-muted-foreground truncate">
-                      {[req.business_role, req.notes].filter(Boolean).join(' · ')}
-                    </p>
-                  )}
-                </div>
+            {open.map(req => {
+              // Was the current user personally targeted/invited for this shift?
+              const isInvited = !!userId && (
+                (req.target_user_ids ?? []).includes(userId) ||
+                // Targeted broadcast: target_user_ids is set AND non-empty
+                ((req.target_user_ids ?? []).length > 0 && (req.notified_user_ids ?? []).includes(userId))
+              );
 
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
+              return (
+                <div
+                  key={req.id}
+                  className={`flex items-center justify-between gap-2 rounded border px-3 py-2 ${
+                    isInvited
+                      ? 'bg-emerald-50/60 dark:bg-emerald-900/15 border-emerald-300 dark:border-emerald-700'
+                      : 'bg-amber-50/50 dark:bg-amber-900/10 border-amber-200 dark:border-amber-800'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {format(new Date(`${req.shift_date}T00:00:00`), 'EEEE, d MMMM', { locale: dateFnsLocale })}
+                    </p>
+                    {(req.business_role || req.notes) && (
+                      <p className="text-xs text-muted-foreground truncate">
+                        {[req.business_role, req.notes].filter(Boolean).join(' · ')}
+                      </p>
+                    )}
+                    {isInvited && (
+                      <p className="text-xs text-emerald-700 dark:text-emerald-400 font-medium mt-0.5">
+                        {t('open_shifts.invited_label')}
+                      </p>
+                    )}
+                  </div>
+
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="default"
+                        className={`shrink-0 gap-1 ${
+                          isInvited
+                            ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-0'
+                            : ''
+                        }`}
+                        disabled={claim.isPending && claimingId === req.id}
+                      >
+                        {claim.isPending && claimingId === req.id
+                          ? <Loader2 className="h-3 w-3 animate-spin" />
+                          : isInvited
+                            ? <Check className="h-3 w-3" />
+                            : <Zap className="h-3 w-3" />}
+                        {isInvited ? t('open_shifts.accept') : t('open_shifts.claim')}
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          {isInvited ? t('open_shifts.confirm_accept_title') : t('open_shifts.confirm_title')}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {t('open_shifts.confirm_desc', {
+                            date: format(new Date(`${req.shift_date}T00:00:00`), 'EEEE, d MMMM yyyy', { locale: dateFnsLocale }),
+                          })}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>{t('open_shifts.cancel')}</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => handleClaim(req.id)}>
+                          {isInvited ? t('open_shifts.accept') : t('open_shifts.confirm_claim')}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              );
+            })}
+
+            {/* Filled shifts */}
+            {filled.map(req => {
+              const iAssigned = !!userId && req.filled_by_user_id === userId;
+
+              return (
+                <div
+                  key={req.id}
+                  className={`flex items-center justify-between gap-2 rounded border px-3 py-2 ${
+                    iAssigned
+                      ? 'bg-emerald-50/60 dark:bg-emerald-900/15 border-emerald-300 dark:border-emerald-700'
+                      : 'bg-muted/30 border-muted-foreground/20 opacity-75'
+                  }`}
+                >
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {format(new Date(`${req.shift_date}T00:00:00`), 'EEEE, d MMMM', { locale: dateFnsLocale })}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {iAssigned ? t('open_shifts.assigned_to_you') : t('open_shifts.filled_label')}
+                      {req.business_role && ` · ${req.business_role}`}
+                    </p>
+                  </div>
+                  {iAssigned ? (
+                    <Badge className="shrink-0 gap-1 bg-emerald-600 hover:bg-emerald-600 text-white border-0">
+                      <CheckCircle2 className="h-3 w-3" />
+                      {t('open_shifts.assigned_badge')}
+                    </Badge>
+                  ) : membershipId && (
                     <Button
                       size="sm"
-                      variant="default"
-                      className="shrink-0 gap-1"
-                      disabled={claim.isPending && claimingId === req.id}
+                      variant="outline"
+                      className="shrink-0 gap-1 text-xs"
+                      disabled={joinWaitlist.isPending && waitlistingId === req.id}
+                      onClick={() => handleJoinWaitlist(req.id)}
                     >
-                      <Zap className="h-3 w-3" />
-                      {t('open_shifts.claim')}
+                      {joinWaitlist.isPending && waitlistingId === req.id
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : <Clock className="h-3 w-3" />}
+                      {t('open_shifts.join_waitlist')}
                     </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>{t('open_shifts.confirm_title')}</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        {t('open_shifts.confirm_desc', {
-                          date: format(new Date(`${req.shift_date}T00:00:00`), 'EEEE, d MMMM yyyy', { locale: dateFnsLocale }),
-                        })}
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>{t('open_shifts.cancel')}</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => handleClaim(req.id)}>
-                        {t('open_shifts.confirm_claim')}
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            ))}
-
-            {/* Filled shifts — show waitlist option */}
-            {filled.map(req => (
-              <div
-                key={req.id}
-                className="flex items-center justify-between gap-2 rounded border px-3 py-2 bg-muted/30 border-muted-foreground/20 opacity-75"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">
-                    {format(new Date(`${req.shift_date}T00:00:00`), 'EEEE, d MMMM', { locale: dateFnsLocale })}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {t('open_shifts.filled_label')}
-                    {req.business_role && ` · ${req.business_role}`}
-                  </p>
+                  )}
                 </div>
-                {membershipId && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="shrink-0 gap-1 text-xs"
-                    disabled={joinWaitlist.isPending && waitlistingId === req.id}
-                    onClick={() => handleJoinWaitlist(req.id)}
-                  >
-                    {joinWaitlist.isPending && waitlistingId === req.id
-                      ? <Loader2 className="h-3 w-3 animate-spin" />
-                      : <Clock className="h-3 w-3" />}
-                    {t('open_shifts.join_waitlist')}
-                  </Button>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </CardContent>

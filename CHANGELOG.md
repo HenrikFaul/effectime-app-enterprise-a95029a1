@@ -1,3 +1,17 @@
+## 2026-05-18 — v3.42.6 Feature: OpenShiftPanel smart button states
+
+### Button logic per shift row
+| State | Previous | New |
+|---|---|---|
+| Open shift, I was personally targeted (`target_user_ids` contains me) | "Igénylés" | **"Elfogad"** (green, checkmark, green card border, "Személyesen kaptál meghívást" subtitle) |
+| Open shift, general broadcast | "Igénylés" | "Igénylés" (unchanged) |
+| Filled shift, **I** am the assigned person (`filled_by_user_id === myId`) | "Várólistára feliratkozás" | **"Beosztva" badge** (green, CheckCircle2) |
+| Filled shift, claimed by someone else | "Várólistára feliratkozás" | "Várólistára feliratkozás" (unchanged) |
+
+The confirmation dialog title also adapts: invited users see "Elfogadod ezt a műszakot?" instead of "Igényled ezt a műszakot?".
+
+---
+
 ## 2026-05-18 — v3.42.5 Feature: pending-notification guard + cursor fix
 
 ### OpenShiftManager — duplicate notification prevention
