@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -53,11 +53,31 @@ export function OpenShiftPanel({ workspaceId, membershipId }: Props) {
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [waitlistingId, setWaitlistingId] = useState<string | null>(null);
 
+  // Employee's own shift assignments — used to hide irrelevant open shifts on occupied days
+  const { data: myAssignments = [] } = useQuery({
+    queryKey: ['my-shift-assignments', workspaceId, userId],
+    enabled: !!workspaceId && !!userId,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from('enterprise_shift_assignments')
+        .select('shift_date')
+        .eq('workspace_id', workspaceId)
+        .eq('user_id', userId);
+      return (data ?? []) as { shift_date: string }[];
+    },
+  });
+  const myAssignedDates = useMemo(() => new Set(myAssignments.map(a => a.shift_date)), [myAssignments]);
+
   const isLoading = isShiftsLoading || (!!membershipId && isProfileLoading);
 
   // Filter to open shifts matching member's role/skills, plus filled shifts (for waitlist)
+  // Shifts on days the employee is already assigned are hidden — except their own claimed shift
   const visible = requests.filter(r => {
     if (r.status === 'cancelled') return false;
+    // Always show the shift the user themselves was assigned to ("Beosztva" exception)
+    const isMyAssignment = r.status === 'filled' && !!userId && r.filled_by_user_id === userId;
+    if (!isMyAssignment && !!userId && myAssignedDates.has(r.shift_date)) return false;
     if (!memberProfile) return !membershipId;
     const roleMatch = !r.business_role || r.business_role === memberProfile.businessRole;
     const effectiveSkillIds: string[] = r.skill_ids?.length ? r.skill_ids : (r.skill_id ? [r.skill_id] : []);

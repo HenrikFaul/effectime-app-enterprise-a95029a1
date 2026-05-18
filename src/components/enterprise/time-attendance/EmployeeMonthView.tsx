@@ -2,13 +2,14 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } fr
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent,
   DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
   ChevronLeft, ChevronRight, ChevronDown, Send, AlertTriangle, Loader2, Phone, Plus, Lock,
-  Pencil, Save, Zap, Info, SlidersHorizontal, Building2, CalendarClock, CalendarCheck,
+  Pencil, Save, Zap, Info, SlidersHorizontal, Building2, CalendarClock, CalendarCheck, Eye,
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend as dfIsWeekend, getYear, getMonth, addMonths, subMonths } from 'date-fns';
 import { toast } from 'sonner';
@@ -73,6 +74,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
   const [batchOpen, setBatchOpen] = useState(false);
   const [batchInitialRange, setBatchInitialRange] = useState<{ start: Date | null; end: Date | null }>({ start: null, end: null });
   const [batchSelectedDays, setBatchSelectedDays] = useState<Date[] | null>(null);
+  const [dayInfoKey, setDayInfoKey] = useState<string | null>(null);
 
   // Display configuration
   const [displayConfig, setDisplayConfig] = useState<DisplayConfig>(loadDisplayConfig);
@@ -495,6 +497,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
               const availEntry = availByDate.get(key) ?? null;
               const availStatus = availEntry?.status ?? null;
               const isPast = key < format(today, 'yyyy-MM-dd');
+              const hasDayData = totalH > 0 || hasOncall || !!siteForDay || !!availStatus;
 
               return (
                 <button
@@ -506,9 +509,10 @@ export function EmployeeMonthView({ workspaceId }: Props) {
                   onPointerUp={() => handlePointerUpOnDay(key)}
                   onClick={(e) => {
                     if (canEdit || canEditAvail) { e.preventDefault(); return; }
+                    if (editMode === 'none' && hasDayData) setDayInfoKey(key);
                   }}
                   disabled={false}
-                  className={`p-2 rounded-md border text-left transition-colors min-h-[64px] flex flex-col gap-0.5 touch-none ${
+                  className={`group p-2 rounded-md border text-left transition-colors min-h-[64px] flex flex-col gap-0.5 touch-none ${
                     inDragPreview
                       ? canEditAvail
                         ? 'ring-2 ring-violet-400 bg-violet-50 dark:bg-violet-950/30'
@@ -518,15 +522,20 @@ export function EmployeeMonthView({ workspaceId }: Props) {
                   } ${totalH > 0 ? 'border-primary/40' : ''} ${
                     canEdit ? 'cursor-pointer hover:bg-accent' :
                     canEditAvail ? (isPast ? 'cursor-not-allowed opacity-60' : 'cursor-pointer hover:ring-1 hover:ring-violet-300') :
-                    'cursor-default'
+                    hasDayData ? 'cursor-pointer hover:bg-accent/50' : 'cursor-default'
                   }`}
                   title={canEdit ? t('attendance_view.day_edit_tooltip') :
                     canEditAvail ? (isPast ? '' : t('attendance_view.avail_edit_hint')) :
-                    (totalH > 0 || hasOncall ? t('attendance_view.day_view_tooltip') : '')}
+                    (hasDayData ? t('attendance_view.day_view_tooltip') : '')}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-mono">{format(d, 'd')}</span>
-                    {hasOncall && <Phone className="h-2.5 w-2.5 text-amber-600" />}
+                    <div className="flex items-center gap-0.5">
+                      {hasOncall && <Phone className="h-2.5 w-2.5 text-amber-600" />}
+                      {editMode === 'none' && hasDayData && (
+                        <Eye className="h-2.5 w-2.5 text-muted-foreground/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      )}
+                    </div>
                   </div>
                   {totalH > 0 ? (
                     <span className="text-[11px] tabular-nums font-medium">{totalH.toFixed(1)}h</span>
@@ -637,6 +646,104 @@ export function EmployeeMonthView({ workspaceId }: Props) {
           offices={offices}
         />
       )}
+
+      {/* Day info popup (view mode) */}
+      {(() => {
+        if (!dayInfoKey) return null;
+        const infoDate = new Date(`${dayInfoKey}T00:00:00`);
+        const infoSegs = segmentsByDay.get(dayInfoKey) || [];
+        const infoSite = siteAssignments.find(sa => sa.shift_date === dayInfoKey) ?? null;
+        const infoOfficeName = infoSite ? (offices.find(o => o.id === infoSite.office_id)?.name ?? null) : null;
+        const infoAvail = availByDate.get(dayInfoKey) ?? null;
+        const infoOncall = windows.filter(w => w.starts_at.slice(0, 10) === dayInfoKey);
+        const workSegs = infoSegs.filter(s => s.segment_type !== 'break');
+        const totalInfoH = workSegs.reduce((s, x) => s + durationHours(x.starts_at, x.ends_at), 0);
+        const hasInfo = infoSegs.length > 0 || !!infoSite || !!infoAvail || infoOncall.length > 0;
+
+        return (
+          <Dialog open={!!dayInfoKey} onOpenChange={(v) => { if (!v) setDayInfoKey(null); }}>
+            <DialogContent className="max-w-sm">
+              <DialogHeader>
+                <DialogTitle className="text-base">
+                  {t('attendance_view.day_info_title')} — {format(infoDate, 'EEEE, d MMMM', { locale: dateFnsLocale })}
+                </DialogTitle>
+              </DialogHeader>
+              {!hasInfo ? (
+                <p className="text-sm text-muted-foreground py-2">{t('attendance_view.day_info_no_data')}</p>
+              ) : (
+                <div className="space-y-3 py-1">
+                  {infoSegs.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t('attendance_view.day_info_work')}</p>
+                      <div className="space-y-1">
+                        {infoSegs.map(s => {
+                          const start = s.starts_at.slice(11, 16);
+                          const end = s.ends_at.slice(11, 16);
+                          const h = durationHours(s.starts_at, s.ends_at);
+                          const typeLabel = t(`attendance.segment_${s.segment_type}` as any);
+                          return (
+                            <div key={s.id} className="flex items-center justify-between text-sm">
+                              <span className={`text-xs ${
+                                s.segment_type === 'overtime' ? 'text-amber-600 dark:text-amber-400' :
+                                s.segment_type === 'break' ? 'text-muted-foreground' :
+                                'text-foreground'
+                              }`}>{typeLabel}: {start}–{end}</span>
+                              {s.segment_type !== 'break' && (
+                                <span className="text-xs tabular-nums text-muted-foreground">{h.toFixed(1)}h</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                        {workSegs.length > 1 && (
+                          <div className="flex items-center justify-between border-t pt-1 mt-1">
+                            <span className="text-xs font-medium">{t('attendance_view.day_info_total')}</span>
+                            <span className="text-xs tabular-nums font-semibold">{totalInfoH.toFixed(1)}h</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {infoOfficeName && (
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t('attendance_view.day_info_location')}</p>
+                      <div className="flex items-center gap-1.5 text-sm">
+                        <Building2 className="h-3.5 w-3.5 text-sky-500 shrink-0" />
+                        <span>{infoOfficeName}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {infoAvail && (
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t('attendance_view.day_info_availability')}</p>
+                      <span className={`text-sm font-medium ${
+                        infoAvail.status === 'available' ? 'text-green-700 dark:text-green-400' :
+                        infoAvail.status === 'preferred' ? 'text-blue-700 dark:text-blue-400' :
+                        'text-red-600 dark:text-red-400'
+                      }`}>{t(`availability.status_${infoAvail.status}` as any)}</span>
+                    </div>
+                  )}
+
+                  {infoOncall.length > 0 && (
+                    <div>
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-1">{t('attendance_view.day_info_oncall')}</p>
+                      <div className="space-y-0.5">
+                        {infoOncall.map(w => (
+                          <div key={w.id} className="flex items-center gap-1.5 text-sm">
+                            <Phone className="h-3 w-3 text-amber-600 shrink-0" />
+                            <span className="text-xs tabular-nums">{w.starts_at.slice(11, 16)}–{w.ends_at.slice(11, 16)}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
+        );
+      })()}
     </div>
   );
 }

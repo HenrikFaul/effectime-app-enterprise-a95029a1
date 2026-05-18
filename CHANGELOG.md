@@ -1,3 +1,24 @@
+## 2026-05-18 — v3.42.8 Feature: EmployeeMonthView day info popup + OpenShiftPanel assigned-day filter
+
+### EmployeeMonthView — day info popup (view mode)
+When the calendar is in view mode (`editMode === 'none'`) and a day cell has any recorded data (work segments, location assignment, availability status, or on-call windows), clicking the cell opens a summary dialog titled **"Nap összefoglalója"** showing:
+- Work time segments with type labels, time ranges, and per-segment duration; total hours shown when more than one work segment
+- Location / office assignment (Building2 icon, sky colour)
+- Availability status (green / blue / red)
+- On-call / standby windows with time range
+
+An `Eye` icon appears on hover in the top-right corner of each data-bearing cell as a visual affordance. Days with no data remain non-interactive. Note: "who assigned" is not shown — `SiteAssignment` does not carry an `assigned_by` field.
+
+### OpenShiftPanel — hide shifts on already-assigned days
+The employee's own `enterprise_shift_assignments` rows are queried at panel load. Any open-shift request whose `shift_date` matches a date the employee is already assigned to is hidden from the list — the employee cannot claim a shift on a day they are already scheduled.
+
+**Exception preserved:** if the request's `filled_by_user_id` equals the current user (i.e., they are the one assigned to *this specific open shift*), the "Beosztva" row is still shown as before.
+
+### Localization
+New keys added to `en.ts` and `hu.ts`: `attendance_view.day_info_title`, `day_info_no_data`, `day_info_work`, `day_info_total`, `day_info_location`, `day_info_oncall`, `day_info_availability`.
+
+---
+
 ## 2026-05-18 — v3.42.7 Fix: compact OpenShiftManager shows full form on weekday coverage-rule days
 
 The "Nyitott műszak meghirdetése" panel rendered a stripped-down form (single "Meghirdetés" button, no candidate list, no "Kiválasztottak értesítése") when opened from a day that has a coverage rule assigned. Now compact mode renders the same full form as the standalone open-shift drawer: timeout field, top candidates with checkboxes, "Kiválasztottak értesítése" (violet) + "Meghirdetés az összes megfelelőnek" buttons, and pending-notification guard.

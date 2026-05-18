@@ -1572,6 +1572,13 @@ const hu = {
     daily_breakdown: 'Napi bontás',
     overtime_badge: '+TÚL',
     readonly_hint: 'A szerkesztéshez kattints a fenti Szerkesztés gombra. A naptárt addig csak olvashatod.',
+    day_info_title: 'Nap összefoglalója',
+    day_info_no_data: 'Erre a napra nincs rögzített adat.',
+    day_info_work: 'Munkaidő',
+    day_info_total: 'Összesen:',
+    day_info_location: 'Helyszín',
+    day_info_oncall: 'Készenlét / Ügyelet',
+    day_info_availability: 'Elérhetőség',
   },
   landing: {
     nav_workspace: 'Munkaterület',
