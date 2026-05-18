@@ -51,7 +51,7 @@ export function OpenShiftManager({
     workspaceId, officeId, shiftDate,
     businessRole: selectedRoleName || businessRole || null,
     skillIds: selectedSkillIds.length > 0 ? selectedSkillIds : (selectedSkillId ? [selectedSkillId] : []),
-    enabled: showForm && !compact,
+    enabled: showForm,
   });
 
   const NONE_POS = '__none__';
@@ -149,7 +149,7 @@ export function OpenShiftManager({
       );
     }
     return (
-      <div className="rounded border p-3 space-y-2 bg-muted/30 min-w-[260px]">
+      <div className="rounded border p-3 space-y-3 bg-muted/30">
         {openShifts.map(req => (
           <div key={req.id} className="flex items-center gap-2 text-xs rounded border border-amber-300 bg-amber-50 dark:bg-amber-900/20 px-2 py-1.5">
             <Megaphone className="h-3 w-3 text-amber-600 shrink-0" />
@@ -170,43 +170,65 @@ export function OpenShiftManager({
           </div>
         ))}
 
-        {/* Position selector (compact) */}
+        <p className="text-xs font-medium text-muted-foreground">{t('open_shifts.post_hint')}</p>
+
+        {/* Position selector */}
         {!businessRole && (
-          <Select
-            value={selectedRoleName || NONE_POS}
-            onValueChange={v => {
-              setSelectedRoleName(v === NONE_POS ? '' : v);
-              setSelectedCandidateIds([]);
-            }}
-          >
-            <SelectTrigger className="text-xs h-7">
-              <SelectValue placeholder={t('open_shifts.select_position')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NONE_POS}>{t('open_shifts.any_role')}</SelectItem>
-              {allPositions.map(pos => (
-                <SelectItem key={pos} value={pos}>{pos}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-1">
+            <Label className="text-xs">{t('open_shifts.position_label')}</Label>
+            <Select
+              value={selectedRoleName || NONE_POS}
+              onValueChange={v => {
+                setSelectedRoleName(v === NONE_POS ? '' : v);
+                setSelectedCandidateIds([]);
+              }}
+            >
+              <SelectTrigger className="text-sm h-8">
+                <SelectValue placeholder={t('open_shifts.select_position')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={NONE_POS}>{t('open_shifts.any_role')}</SelectItem>
+                {allPositions.map(pos => (
+                  <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
 
+        {/* Skill selector */}
         {!skillId && availableSkills && availableSkills.length > 0 && selectedSkillIds.length === 0 && (
-          <Select
-            value={selectedSkillId || '__any__'}
-            onValueChange={v => setSelectedSkillId(v === '__any__' ? '' : v)}
-          >
-            <SelectTrigger className="text-sm h-7">
-              <SelectValue placeholder={t('open_shifts.any_skill')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__any__">{t('open_shifts.any_skill')}</SelectItem>
-              {availableSkills.map(s => (
-                <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-1">
+            <Label className="text-xs">{t('open_shifts.skill_label')}</Label>
+            <Select
+              value={selectedSkillId || '__any__'}
+              onValueChange={v => setSelectedSkillId(v === '__any__' ? '' : v)}
+            >
+              <SelectTrigger className="text-sm h-8">
+                <SelectValue placeholder={t('open_shifts.any_skill')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__any__">{t('open_shifts.any_skill')}</SelectItem>
+                {availableSkills.map(s => (
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
+
+        {/* Timeout */}
+        <div className="space-y-1">
+          <Label className="text-xs">{t('open_shifts.timeout_label')}</Label>
+          <Input
+            type="number"
+            min={1}
+            max={72}
+            value={timeoutHours}
+            onChange={e => setTimeoutHours(Number(e.target.value) || 3)}
+            className="text-sm h-8 w-32"
+          />
+        </div>
 
         <Textarea
           value={notes}
@@ -214,16 +236,84 @@ export function OpenShiftManager({
           placeholder={t('open_shifts.notes_placeholder')}
           className="text-sm min-h-[60px]"
         />
-        <div className="flex gap-2">
+
+        {/* Top candidates */}
+        <div className="space-y-1.5">
+          <div className="flex items-center gap-1.5">
+            <Users className="h-3.5 w-3.5 text-muted-foreground" />
+            <span className="text-xs font-medium">{t('open_shifts.top_candidates')}</span>
+            {candidatesLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+          </div>
+          {!candidatesLoading && availableCandidates.length === 0 && pendingCandidates.length === 0 ? (
+            <p className="text-xs text-muted-foreground italic">{t('open_shifts.no_candidates')}</p>
+          ) : (
+            <>
+              <p className="text-[11px] text-muted-foreground">{t('open_shifts.candidates_hint')}</p>
+              {availableCandidates.map(r => (
+                <label
+                  key={r.member.user_id}
+                  className="flex items-center gap-2 rounded border bg-card px-2 py-1.5 cursor-pointer hover:bg-accent transition"
+                >
+                  <Checkbox
+                    checked={selectedCandidateIds.includes(r.member.user_id)}
+                    onCheckedChange={v => {
+                      setSelectedCandidateIds(prev =>
+                        v ? [...prev, r.member.user_id] : prev.filter(id => id !== r.member.user_id)
+                      );
+                    }}
+                  />
+                  <span className="text-sm flex-1">{r.member.display_name}</span>
+                  {r.member.business_role && (
+                    <span className="text-[11px] text-muted-foreground">{r.member.business_role}</span>
+                  )}
+                  {r.issues.some(i => i.severity === 'warning') ? (
+                    <AlertTriangle className="h-3 w-3 text-amber-500 shrink-0" />
+                  ) : (
+                    <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />
+                  )}
+                </label>
+              ))}
+              {pendingCandidates.map(r => (
+                <div
+                  key={r.member.user_id}
+                  className="flex items-center gap-2 rounded border border-dashed bg-muted/30 px-2 py-1.5 opacity-60"
+                  title={t('open_shifts.pending_notified_tooltip')}
+                >
+                  <div className="h-4 w-4 shrink-0" />
+                  <span className="text-sm flex-1 text-muted-foreground">{r.member.display_name}</span>
+                  {r.member.business_role && (
+                    <span className="text-[11px] text-muted-foreground">{r.member.business_role}</span>
+                  )}
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 gap-0.5 h-4">
+                    <Clock className="h-2.5 w-2.5" />
+                    {t('open_shifts.pending_notified_badge')}
+                  </Badge>
+                </div>
+              ))}
+            </>
+          )}
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {selectedCandidateIds.length > 0 && (
+            <Button
+              size="sm"
+              onClick={() => handlePost(true)}
+              disabled={create.isPending}
+              className="gap-1 bg-violet-600 hover:bg-violet-700 text-white border-0"
+            >
+              {create.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Users className="h-3 w-3" />}
+              {t('open_shifts.notify_selected')} ({selectedCandidateIds.length})
+            </Button>
+          )}
           <Button size="sm" onClick={() => handlePost(false)} disabled={create.isPending} className="gap-1">
             {create.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Megaphone className="h-3 w-3" />}
-            {t('open_shifts.broadcast')}
+            {t('open_shifts.broadcast_all')}
           </Button>
           <Button size="sm" variant="ghost" onClick={resetForm}>
             {t('open_shifts.cancel')}
           </Button>
         </div>
-
       </div>
     );
   }
