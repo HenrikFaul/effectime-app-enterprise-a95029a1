@@ -1,3 +1,36 @@
+## 2026-05-18 — v3.44.0 Feature: Embed SDK — iframe capacity planner for third-party CRM integration
+
+### Embed SDK overview
+Workspace admins can now generate **signed embed tokens** that allow a third-party application (e.g. a customer's CRM) to display Effectime's **Capacity Planner** inside an `<iframe>` — no login, no Effectime account needed. Data stays on Effectime servers; the CRM only receives a read-only, real-time grid view.
+
+### How it works
+1. Admin opens **Developer Portal → Beágyazás** (Embed tab).
+2. Clicks **Új beágyazási token**, enters a label (e.g. "Optika CRM – kapacitásnézet").
+3. The dialog shows the raw token (save once) **and** a ready-to-paste `<iframe>` snippet.
+4. The CRM developer pastes the snippet into their portal — done. No coding.
+5. The iframe loads `/#/embed/capacity_planner?token=<token>`, which calls the SECURITY DEFINER RPC `get_embed_capacity_planner_data` (anon-callable) and renders a live, week-navigable coverage grid.
+6. Tokens can be revoked instantly; the iframe will stop loading on the next request.
+
+### New files
+| File | Purpose |
+|---|---|
+| `supabase/migrations/20260518140000_v3_44_0_embed_sdk.sql` | DB: `enterprise_embed_tokens` table + `create_embed_token`, `revoke_embed_token`, `get_embed_capacity_planner_data` RPCs |
+| `src/pages/EmbedPage.tsx` | Public route `/embed/:view?token=…` — no auth required |
+| `src/components/embed/EmbedCapacityView.tsx` | Read-only iframe-friendly weekly coverage grid |
+| `src/components/enterprise/developer/EmbedManager.tsx` | Token management UI in DeveloperPortal |
+
+### Changed files
+- `src/App.tsx` — added `/embed/:view` public route
+- `src/components/enterprise/developer/DeveloperPortal.tsx` — added **Beágyazás** tab with `EmbedManager`
+- `src/i18n/resources/en.ts` / `hu.ts` — all `embed.*` keys added
+
+### Security design
+- `get_embed_capacity_planner_data` is `SECURITY DEFINER` with `GRANT EXECUTE … TO anon`; it validates the token, checks `is_active` and `expires_at`, then returns JSONB — no RLS changes needed, no workspace data leaked to unauthenticated users without a valid token.
+- Token-based revocation is instant (sets `is_active = false`).
+- Embed views are read-only; no mutation RPCs are callable by anon.
+
+---
+
 ## 2026-05-18 — v3.43.1 Refactor: Phase 1 nav restructure — Pozíciók, Csapatok, Készségek → Szervezet; sticky sub-tabs
 
 ### Navigation restructuring — Phase 1

@@ -56,7 +56,9 @@ import {
   RefreshCw,
   Code2,
   Globe,
+  MonitorPlay,
 } from 'lucide-react';
+import { EmbedManager } from './EmbedManager';
 
 interface Props {
   workspaceId: string;
@@ -394,14 +396,21 @@ export function DeveloperPortal({ workspaceId, userId }: Props) {
             {t('developer.tab_webhooks')}
           </TabsTrigger>
           <TabsTrigger value="gateway" className="flex items-center gap-1.5">
-            {/* Top-20 Rank 9 (v3.24.0): public REST gateway docs surface. */}
             <Key className="h-3.5 w-3.5" />
             {t('integrations.api_gateway_title')}
+          </TabsTrigger>
+          <TabsTrigger value="embed" className="flex items-center gap-1.5">
+            <MonitorPlay className="h-3.5 w-3.5" />
+            {t('embed.tab_title')}
           </TabsTrigger>
         </TabsList>
 
         <TabsContent value="gateway" className="space-y-4 mt-4">
           <PublicApiGatewayPanel />
+        </TabsContent>
+
+        <TabsContent value="embed" className="mt-4">
+          <EmbedManager workspaceId={workspaceId} userId={userId} />
         </TabsContent>
 
         {/* ── API Keys Tab ────────────────────────────────────────────────── */}
