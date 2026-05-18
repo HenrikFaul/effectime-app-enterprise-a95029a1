@@ -1584,6 +1584,13 @@ const en = {
     daily_breakdown: 'Daily breakdown',
     overtime_badge: '+OT',
     readonly_hint: 'To edit, click the Edit button above. The calendar is read-only until then.',
+    day_info_title: 'Day summary',
+    day_info_no_data: 'No data recorded for this day.',
+    day_info_work: 'Work time',
+    day_info_total: 'Total:',
+    day_info_location: 'Location',
+    day_info_oncall: 'Standby / On-call',
+    day_info_availability: 'Availability',
   },
   landing: {
     nav_workspace: 'Workspace',
