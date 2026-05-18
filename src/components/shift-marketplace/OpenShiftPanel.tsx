@@ -5,11 +5,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
-import { ClipboardList, Zap, Clock, Check, CheckCircle2, Loader2 } from 'lucide-react';
+import { ClipboardList, Zap, Clock, Check, CheckCircle2, Loader2, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
-import { useOpenShiftRequests, useClaimOpenShift, useJoinWaitlist } from '@/hooks/useOpenShifts';
+import { useOpenShiftRequests, useClaimOpenShift, useJoinWaitlist, useDeclineOpenShift } from '@/hooks/useOpenShifts';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -51,8 +51,10 @@ export function OpenShiftPanel({ workspaceId, membershipId, noCard }: Props) {
   const { data: memberProfile, isLoading: isProfileLoading } = useMemberProfile(membershipId);
   const claim = useClaimOpenShift();
   const joinWaitlist = useJoinWaitlist();
+  const decline = useDeclineOpenShift();
   const [claimingId, setClaimingId] = useState<string | null>(null);
   const [waitlistingId, setWaitlistingId] = useState<string | null>(null);
+  const [decliningId, setDecliningId] = useState<string | null>(null);
 
   // Employee's own shift assignments — used to hide irrelevant open shifts on occupied days
   const { data: myAssignments = [] } = useQuery({
@@ -100,6 +102,18 @@ export function OpenShiftPanel({ workspaceId, membershipId, noCard }: Props) {
   });
   const open = visible.filter(r => r.status === 'open');
   const filled = visible.filter(r => r.status === 'filled');
+
+  const handleDecline = async (requestId: string) => {
+    setDecliningId(requestId);
+    try {
+      await decline.mutateAsync(requestId);
+      toast.success(t('open_shifts.decline_success'));
+    } catch {
+      toast.error(t('open_shifts.decline_error'));
+    } finally {
+      setDecliningId(null);
+    }
+  };
 
   const handleJoinWaitlist = async (requestId: string) => {
     setWaitlistingId(requestId);
@@ -173,45 +187,82 @@ export function OpenShiftPanel({ workspaceId, membershipId, noCard }: Props) {
               )}
             </div>
 
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  size="sm"
-                  variant="default"
-                  className={`shrink-0 gap-1 ${
-                    isInvited
-                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-0'
-                      : ''
-                  }`}
-                  disabled={claim.isPending && claimingId === req.id}
-                >
-                  {claim.isPending && claimingId === req.id
-                    ? <Loader2 className="h-3 w-3 animate-spin" />
-                    : isInvited
-                      ? <Check className="h-3 w-3" />
-                      : <Zap className="h-3 w-3" />}
-                  {isInvited ? t('open_shifts.accept') : t('open_shifts.claim')}
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>
-                    {isInvited ? t('open_shifts.confirm_accept_title') : t('open_shifts.confirm_title')}
-                  </AlertDialogTitle>
-                  <AlertDialogDescription>
-                    {t('open_shifts.confirm_desc', {
-                      date: format(new Date(`${req.shift_date}T00:00:00`), 'EEEE, d MMMM yyyy', { locale: dateFnsLocale }),
-                    })}
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>{t('open_shifts.cancel')}</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => handleClaim(req.id)}>
-                    {isInvited ? t('open_shifts.accept') : t('open_shifts.confirm_claim')}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Decline — only for personally invited shifts */}
+              {isInvited && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="gap-1 text-destructive border-destructive/40 hover:bg-destructive/10"
+                      disabled={decline.isPending && decliningId === req.id}
+                    >
+                      {decline.isPending && decliningId === req.id
+                        ? <Loader2 className="h-3 w-3 animate-spin" />
+                        : <X className="h-3 w-3" />}
+                      {t('open_shifts.decline')}
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>{t('open_shifts.confirm_decline_title')}</AlertDialogTitle>
+                      <AlertDialogDescription>{t('open_shifts.confirm_decline_desc')}</AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>{t('open_shifts.cancel')}</AlertDialogCancel>
+                      <AlertDialogAction
+                        className="bg-destructive hover:bg-destructive/90"
+                        onClick={() => handleDecline(req.id)}
+                      >
+                        {t('open_shifts.decline_confirm')}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+
+              {/* Accept / Claim */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className={`gap-1 ${
+                      isInvited
+                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-0'
+                        : ''
+                    }`}
+                    disabled={claim.isPending && claimingId === req.id}
+                  >
+                    {claim.isPending && claimingId === req.id
+                      ? <Loader2 className="h-3 w-3 animate-spin" />
+                      : isInvited
+                        ? <Check className="h-3 w-3" />
+                        : <Zap className="h-3 w-3" />}
+                    {isInvited ? t('open_shifts.accept') : t('open_shifts.claim')}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>
+                      {isInvited ? t('open_shifts.confirm_accept_title') : t('open_shifts.confirm_title')}
+                    </AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {t('open_shifts.confirm_desc', {
+                        date: format(new Date(`${req.shift_date}T00:00:00`), 'EEEE, d MMMM yyyy', { locale: dateFnsLocale }),
+                      })}
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>{t('open_shifts.cancel')}</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => handleClaim(req.id)}>
+                      {isInvited ? t('open_shifts.accept') : t('open_shifts.confirm_claim')}
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
           </div>
         );
       })}

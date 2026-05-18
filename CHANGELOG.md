@@ -1,3 +1,39 @@
+## 2026-05-18 — v3.43.1 Refactor: Phase 1 nav restructure — Pozíciók, Csapatok, Készségek → Szervezet; sticky sub-tabs
+
+### Navigation restructuring — Phase 1
+Moved three items from **Erőforrások** into **Szervezet**, eliminating the definitional/operational overlap:
+
+| Was | Now |
+|---|---|
+| Erőforrások → Készségek tab | Szervezet → Készségek tab |
+| Erőforrások → Pozíciók kezelése collapsible | Szervezet → Pozíciók tab |
+| Erőforrások → Csapatok kezelése collapsible | Szervezet → Csapatok tab |
+
+Erőforrások is now a pure planning/allocation module (Dashboard, Hőtérkép, Projektek, Agile, Forgatókönyvek, Pénzügy, Kapacitás-hiány, Csapat jólléte, Bérszámfejtés).
+
+### Sticky sub-tab navigation fix
+`OrganizationModule` previously rendered its sub-tabs inside a Card, making them non-sticky. The component was rewritten to match the `ResourcesTab` pattern: the TabsList is now `sticky top-[calc(var(--ws-header-h)_+_var(--ws-main-tabs-h))] z-10` so it stays fixed below the main nav when scrolling — consistent with Calendar and Erőforrások sub-tabs.
+
+The Card wrapper around the entire Szervezet module was removed; content renders flat like the other tabs.
+
+### Localization
+New i18n keys: `organization.tabs.positions`, `organization.tabs.teams`, `organization.tabs.skills` in `en.ts` and `hu.ts`. `organization.subtitle` updated to mention positions, teams, skills.
+
+---
+
+## 2026-05-18 — v3.43.0 Feature: Decline shift invitation + Intelligent suggestion in open-shift creation
+
+### OpenShiftPanel — Decline button for invited shifts
+When an employee receives a personal shift invitation (`isInvited = true`), they now see both **Elutasítás** (Decline, red outline) and **Elfogad** (Accept, green) buttons. Declining records a `'declined'` claim in `enterprise_open_shift_claims` and removes the user from `notified_user_ids` / `target_user_ids` on the request via the new `decline_open_shift_invitation` RPC — they won't be re-notified. The shift stays open for other colleagues.
+
+### OpenShiftManager — Intelligens javaslat button in candidate list
+The "Legjobb jelöltek" (Top candidates) header row now shows an **Intelligens javaslat** (✨) button whenever at least one eligible, non-pending candidate is available. Clicking it auto-selects the highest-ranked candidate's checkbox (same scoring as the CoveragePlannerView: role match → office priority → monthly shift load → eligibility score). The button appears in both the compact (drawer) and full form modes. This connects both staffing flows to the same `useShiftCandidates` ranking engine.
+
+### DB migration
+`20260518120000_v3_43_0_decline_open_shift_and_smart_suggestion.sql`: expands the `enterprise_open_shift_claims.status` CHECK constraint to include `'declined'`; adds `public.decline_open_shift_invitation(_request_id uuid)` RPC (SECURITY DEFINER).
+
+---
+
 ## 2026-05-18 — v3.42.9 Feature: Unified shift marketplace tab, past-shift filter, compact clock-in layout
 
 ### OpenShiftPanel — past shifts filtered out

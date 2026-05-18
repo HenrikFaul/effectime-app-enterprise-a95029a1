@@ -342,7 +342,7 @@ const en = {
   },
   organization: {
     title: 'Organization',
-    subtitle: 'Hierarchy, leadership, contracts, and the auto-generated org chart.',
+    subtitle: 'Hierarchy, positions, teams, skills, leadership, contracts, and the auto-generated org chart.',
     tabs: {
       structure: 'Structure',
       leadership: 'Leadership',
@@ -351,6 +351,9 @@ const en = {
       categories: 'Work categories',
       job_families: 'Job families',
       chart: 'Org chart',
+      positions: 'Positions',
+      teams: 'Teams',
+      skills: 'Skills',
     },
     structure: {
       title: 'Organizational structure',
@@ -4663,6 +4666,15 @@ const en = {
     waitlist_error: 'Could not join waitlist. Try again.',
     no_candidates: 'No eligible candidates found.',
     candidates_hint: 'Select candidates to notify directly, or broadcast to all matching members.',
+    decline: 'Decline',
+    confirm_decline_title: 'Decline shift invitation?',
+    confirm_decline_desc: 'You will not be assigned to this shift and will not receive further notifications about it. The shift remains open for other colleagues.',
+    decline_confirm: 'Decline',
+    decline_success: 'Shift invitation declined.',
+    decline_error: 'Could not decline invitation. Try again.',
+    intelligent_suggestion: 'Intelligent suggestion',
+    intelligent_suggestion_applied: 'Best candidate auto-selected.',
+    intelligent_suggestion_none: 'No eligible candidates available.',
   },
 } as const;
 
