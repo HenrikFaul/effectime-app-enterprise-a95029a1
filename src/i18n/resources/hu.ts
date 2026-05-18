@@ -4020,6 +4020,7 @@ const hu = {
     open_preview: 'Előnézet megnyitása',
     col_label: 'Név',
     col_views: 'Nézetek',
+    col_write: 'Írás',
     col_last_used: 'Utolsó használat',
     col_expires: 'Lejárat',
     col_snippet: 'Kód',
@@ -4051,6 +4052,10 @@ const hu = {
     mode_weekly: 'Heti',
     mode_monthly: 'Havi',
     copied: 'Másolva!',
+    can_write_field: 'Írási mód',
+    can_write_desc: 'A CRM kezelők közvetlenül a beágyazott nézetből tudják beosztani és eltávolítani a műszakokat.',
+    write_badge: 'Írható',
+    read_only_badge: 'Csak olvasható',
   },
   m365: {
     title: 'Microsoft 365 naptár',

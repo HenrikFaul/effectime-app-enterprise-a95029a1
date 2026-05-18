@@ -1,3 +1,37 @@
+## 2026-05-18 — v3.46.0 Feature: Embed write mode — CRM operators can manage shift assignments from embedded views
+
+### Write-enabled tokens
+The **Create Token** dialog now includes a **Write-enabled** checkbox. When checked, the token grants CRM operators the ability to assign and remove shift assignments directly from the embedded view — no Effectime login required. Tokens not checked remain strictly read-only.
+
+A **Write** / **Read-only** badge appears in the token list so admins can immediately see which tokens have write access.
+
+### Embedded write UI — Capacity Planner
+When `can_write = true` is returned by the embed token, the capacity planner weekly grid shows:
+- **Assigned names** in each coverage cell
+- **✏ szerkeszt** / **✕ bezár** buttons per cell to open a write panel
+- Write panel: left column lists currently-assigned members (with × remove button), right column lists available unassigned members (with + assign button)
+
+### Embedded write UI — Shift Roster
+When write mode is enabled, the roster weekly grid shows:
+- An amber **✏ write** badge in the header
+- **× button** next to each assigned shift badge (calls `embed_remove_shift`)
+- **+ button** on each empty cell for that member/day (calls `embed_assign_shift` directly, no extra picker needed)
+
+### DB: new RPCs (anon-callable, SECURITY DEFINER)
+- `embed_assign_shift(_token, _user_id, _office_id, _business_role, _shift_date, _skill_id)` — upserts a shift assignment; validates token + `can_write = true` + office in workspace
+- `embed_remove_shift(_token, _assignment_id)` — deletes a shift; validates token + `can_write = true` + assignment in workspace
+
+### DB: `can_write` column on `enterprise_embed_tokens`
+`ALTER TABLE enterprise_embed_tokens ADD COLUMN can_write boolean NOT NULL DEFAULT false`
+
+### Bugfix: `gen_random_bytes` not found
+`create_embed_token` was failing with `function gen_random_bytes(integer) does not exist` because `SET search_path = public` hides the `extensions` schema. Fixed by calling `extensions.gen_random_bytes(32)` explicitly.
+
+### DB: `get_embed_view_data` updated
+Now returns `can_write` at the top level and `membership_id` in each member row (needed for future member-specific operations).
+
+---
+
 ## 2026-05-18 — v3.45.0 Feature: Embed SDK v2 — multi-view, customization params, snippet builder
 
 ### New embed view: Shift Roster (`shift_roster`)
