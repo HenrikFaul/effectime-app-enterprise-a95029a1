@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
+import { EffectimeLogo } from '@/components/EffectimeLogo';
 import {
   addWeeks, eachDayOfInterval, endOfWeek, format, isWeekend, startOfWeek, subWeeks,
 } from 'date-fns';
@@ -152,12 +153,12 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
   return (
     <div className="flex flex-col h-full bg-background text-foreground text-xs">
       {/* Header */}
-      <div className="flex items-center gap-1 px-2 py-1.5 border-b shrink-0 flex-wrap">
+      <div className="flex items-center gap-1 px-2 py-1.5 border-b bg-card shrink-0 flex-wrap shadow-subtle">
         <Button size="icon" variant="ghost" className="h-6 w-6"
           onClick={() => setWeekStart(w => subWeeks(w, 1))}>
           <ChevronLeft className="h-3.5 w-3.5" />
         </Button>
-        <span className="font-medium text-xs min-w-[140px] text-center">
+        <span className="font-display font-medium text-xs min-w-[140px] text-center">
           {format(days[0], 'MMM d')} – {format(days[days.length - 1], 'MMM d, yyyy')}
         </span>
         <Button size="icon" variant="ghost" className="h-6 w-6"
@@ -166,11 +167,11 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
         </Button>
         {(loading || saving) && <span className="ml-1 text-[10px] text-muted-foreground animate-pulse">…</span>}
         {canWrite && (
-          <Badge variant="outline" className="ml-1 text-[9px] py-0 border-amber-400 text-amber-600">
-            ✏ write
+          <Badge variant="outline" className="ml-1 text-[9px] py-0 border-primary/40 text-primary">
+            ✏ szerkesztés
           </Badge>
         )}
-        <Badge variant="outline" className="ml-auto text-[9px] py-0">Effectime</Badge>
+        <span className="ml-auto"><EffectimeLogo size={20} variant="full" /></span>
       </div>
 
       {/* Grid */}
