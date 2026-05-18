@@ -172,32 +172,30 @@ export function OpenShiftManager({
 
         <p className="text-xs font-medium text-muted-foreground">{t('open_shifts.post_hint')}</p>
 
-        {/* Position selector */}
-        {!businessRole && (
-          <div className="space-y-1">
-            <Label className="text-xs">{t('open_shifts.position_label')}</Label>
-            <Select
-              value={selectedRoleName || NONE_POS}
-              onValueChange={v => {
-                setSelectedRoleName(v === NONE_POS ? '' : v);
-                setSelectedCandidateIds([]);
-              }}
-            >
-              <SelectTrigger className="text-sm h-8">
-                <SelectValue placeholder={t('open_shifts.select_position')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={NONE_POS}>{t('open_shifts.any_role')}</SelectItem>
-                {allPositions.map(pos => (
-                  <SelectItem key={pos} value={pos}>{pos}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
+        {/* Position selector — always shown in compact mode so rule-preset can be overridden */}
+        <div className="space-y-1">
+          <Label className="text-xs">{t('open_shifts.position_label')}</Label>
+          <Select
+            value={selectedRoleName || NONE_POS}
+            onValueChange={v => {
+              setSelectedRoleName(v === NONE_POS ? '' : v);
+              setSelectedCandidateIds([]);
+            }}
+          >
+            <SelectTrigger className="text-sm h-8">
+              <SelectValue placeholder={t('open_shifts.select_position')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={NONE_POS}>{t('open_shifts.any_role')}</SelectItem>
+              {allPositions.map(pos => (
+                <SelectItem key={pos} value={pos}>{pos}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
-        {/* Skill selector */}
-        {!skillId && availableSkills && availableSkills.length > 0 && selectedSkillIds.length === 0 && (
+        {/* Skill selector — always shown when skills are available */}
+        {availableSkills && availableSkills.length > 0 && (
           <div className="space-y-1">
             <Label className="text-xs">{t('open_shifts.skill_label')}</Label>
             <Select
