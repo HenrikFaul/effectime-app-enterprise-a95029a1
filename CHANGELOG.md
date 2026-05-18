@@ -1,3 +1,15 @@
+## 2026-05-18 — v3.42.5 Feature: pending-notification guard + cursor fix
+
+### OpenShiftManager — duplicate notification prevention
+When the manager opens the form to post a new open shift for the same workspace/date/position as an existing one that is still within its response window, candidates who were already notified (and have not yet accepted or declined) are shown in the candidate list as **locked** — greyed out, dashed border, "Folyamatban" badge with a clock icon. They cannot be checked or targeted until the timeout expires or they respond.
+
+Logic: query `enterprise_open_shift_requests` for open requests on the same workspace/date/business_role where `respond_by_at > now()`, collect their `notified_user_ids`, subtract users who already claimed (`enterprise_open_shift_claims.status = 'claimed'`), tag the remainder as `pendingNotified`.
+
+### EmployeeMonthView — cursor fix
+Changed availability-paint mode cursor from `cursor-crosshair` to `cursor-pointer` (past dates still show `cursor-not-allowed`).
+
+---
+
 ## 2026-05-18 — v3.42.4 Feature: OpenShiftManager targeted-notify fix + EmployeeMonthView dual-mode edit
 
 ### OpenShiftManager — targeted notification fix

@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { rankCandidates, type MemberInput, type RequirementInput, type EligibilityContext, type EligibilityResult } from '@/lib/coverageEligibility';
 
+export type ShiftCandidateResult = EligibilityResult & { pendingNotified: boolean };
+
 export interface OpenShiftRequest {
   id: string;
   workspace_id: string;
@@ -160,7 +162,7 @@ interface ShiftCandidatesArgs {
 export function useShiftCandidates({
   workspaceId, officeId, shiftDate, businessRole, skillIds, enabled = true,
 }: ShiftCandidatesArgs) {
-  return useQuery({
+  return useQuery<ShiftCandidateResult[]>({
     queryKey: ['shift-candidates', workspaceId, officeId, shiftDate, businessRole, skillIds],
     enabled: enabled && !!workspaceId && !!officeId && !!shiftDate,
     staleTime: STALE_MS,
@@ -275,7 +277,46 @@ export function useShiftCandidates({
         skill_ids: skillIds && skillIds.length > 0 ? skillIds : null,
       };
 
-      return rankCandidates(members, req, ctx) as EligibilityResult[];
+      const ranked = rankCandidates(members, req, ctx);
+
+      // Build the set of users who are already waiting on an open-shift request
+      // for the same workspace/date/role and whose respond_by_at hasn't passed yet.
+      // These users must not receive a duplicate notification until the timeout expires.
+      const pendingUserIds = new Set<string>();
+      if (businessRole) {
+        const pendingReqRes = await (supabase as any)
+          .from('enterprise_open_shift_requests')
+          .select('id, notified_user_ids')
+          .eq('workspace_id', workspaceId)
+          .eq('shift_date', shiftDate)
+          .eq('business_role', businessRole)
+          .eq('status', 'open')
+          .gt('respond_by_at', new Date().toISOString());
+
+        const pendingReqs = (pendingReqRes.data ?? []) as { id: string; notified_user_ids: string[] }[];
+        const pendingReqIds = pendingReqs.map(r => r.id);
+
+        const claimedUserIds = new Set<string>();
+        if (pendingReqIds.length > 0) {
+          const claimRes = await (supabase as any)
+            .from('enterprise_open_shift_claims')
+            .select('user_id')
+            .in('request_id', pendingReqIds)
+            .eq('status', 'claimed');
+          ((claimRes.data ?? []) as { user_id: string }[]).forEach(c => claimedUserIds.add(c.user_id));
+        }
+
+        pendingReqs.forEach(req => {
+          (req.notified_user_ids ?? []).forEach(uid => {
+            if (!claimedUserIds.has(uid)) pendingUserIds.add(uid);
+          });
+        });
+      }
+
+      return ranked.map(r => ({
+        ...r,
+        pendingNotified: pendingUserIds.has(r.member.user_id),
+      })) as ShiftCandidateResult[];
     },
   });
 }

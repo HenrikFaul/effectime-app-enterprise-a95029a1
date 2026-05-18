@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Megaphone, Loader2, X, Plus, Users, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Megaphone, Loader2, X, Plus, Users, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useCreateOpenShift, useOpenShiftRequests, useCancelOpenShift, useShiftCandidates } from '@/hooks/useOpenShifts';
@@ -60,7 +60,9 @@ export function OpenShiftManager({
     r => r.office_id === officeId && r.shift_date === shiftDate && r.status === 'open'
   );
 
-  const top3 = candidates.filter(c => c.isEligible).slice(0, 3);
+  const eligibleCandidates = candidates.filter(c => c.isEligible);
+  const availableCandidates = eligibleCandidates.filter(c => !c.pendingNotified).slice(0, 3);
+  const pendingCandidates = eligibleCandidates.filter(c => c.pendingNotified);
 
   const clearPosition = () => {
     setSelectedRoleName(businessRole ?? '');
@@ -354,12 +356,12 @@ export function OpenShiftManager({
               <span className="text-xs font-medium">{t('open_shifts.top_candidates')}</span>
               {candidatesLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
             </div>
-            {!candidatesLoading && top3.length === 0 ? (
+            {!candidatesLoading && availableCandidates.length === 0 && pendingCandidates.length === 0 ? (
               <p className="text-xs text-muted-foreground italic">{t('open_shifts.no_candidates')}</p>
             ) : (
               <>
                 <p className="text-[11px] text-muted-foreground">{t('open_shifts.candidates_hint')}</p>
-                {top3.map(r => (
+                {availableCandidates.map(r => (
                   <label
                     key={r.member.user_id}
                     className="flex items-center gap-2 rounded border bg-card px-2 py-1.5 cursor-pointer hover:bg-accent transition"
@@ -382,6 +384,23 @@ export function OpenShiftManager({
                       <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0" />
                     )}
                   </label>
+                ))}
+                {pendingCandidates.map(r => (
+                  <div
+                    key={r.member.user_id}
+                    className="flex items-center gap-2 rounded border border-dashed bg-muted/30 px-2 py-1.5 opacity-60"
+                    title={t('open_shifts.pending_notified_tooltip')}
+                  >
+                    <div className="h-4 w-4 shrink-0" />
+                    <span className="text-sm flex-1 text-muted-foreground">{r.member.display_name}</span>
+                    {r.member.business_role && (
+                      <span className="text-[11px] text-muted-foreground">{r.member.business_role}</span>
+                    )}
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0 gap-0.5 h-4">
+                      <Clock className="h-2.5 w-2.5" />
+                      {t('open_shifts.pending_notified_badge')}
+                    </Badge>
+                  </div>
                 ))}
               </>
             )}

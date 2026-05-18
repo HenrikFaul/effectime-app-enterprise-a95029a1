@@ -4632,6 +4632,8 @@ const hu = {
     notify_selected: 'Kiválasztottak értesítése',
     notify_selected_success: 'Értesítés elküldve {{count}} kiválasztott jelöltnek.',
     broadcast_all: 'Meghirdetés az összes megfelelőnek',
+    pending_notified_badge: 'Folyamatban',
+    pending_notified_tooltip: 'Már kapott értesítést erről a műszakról — még nem jelzett vissza. Nem értesíthető újra, amíg le nem telik az idő vagy választ nem ad.',
     join_waitlist: 'Várólistára feliratkozás',
     waitlist_joined: 'Felkerültél a várólistára.',
     waitlist_error: 'Nem sikerült a várólistára feliratkozni. Próbáld újra.',
