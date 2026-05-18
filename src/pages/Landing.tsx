@@ -156,13 +156,13 @@ export default function Landing() {
               {t('landing.features_desc')}
             </p>
           </div>
-          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+          <div className="grid gap-5 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
             {FEATURES.map(({ icon: Icon, title, description }) => (
-              <div key={title} className="group rounded-2xl border border-border bg-card p-6 flex flex-col gap-3 hover:border-primary/50 hover:shadow-elevated transition-all">
-                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/15 transition-colors">
+              <div key={title} className="group rounded-2xl border border-border/70 bg-card p-6 flex flex-col gap-3 shadow-subtle hover:border-primary/40 hover:shadow-elevated hover:-translate-y-0.5 transition-all duration-200">
+                <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/16 transition-colors duration-200">
                   <Icon className="h-5 w-5 text-primary" />
                 </div>
-                <h3 className="font-display font-semibold text-base">{title}</h3>
+                <h3 className="font-display font-semibold text-base tracking-tight">{title}</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
               </div>
             ))}

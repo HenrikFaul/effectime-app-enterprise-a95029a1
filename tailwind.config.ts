@@ -88,6 +88,8 @@ export default {
         elevated: "var(--shadow-elevated)",
         modal: "var(--shadow-modal)",
         glow: "var(--shadow-glow)",
+        premium: "var(--shadow-premium)",
+        subtle: "var(--shadow-subtle)",
       },
       keyframes: {
         "accordion-down": {
@@ -111,8 +113,8 @@ export default {
           to: { opacity: "1", transform: "translateY(0)" },
         },
         "shimmer": {
-          "0%": { backgroundPosition: "-200% 0" },
-          "100%": { backgroundPosition: "200% 0" },
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(100%)" },
         },
       },
       animation: {
@@ -121,7 +123,7 @@ export default {
         "fade-in": "fade-in 0.4s ease-out",
         "scale-in": "scale-in 0.2s ease-out",
         "slide-up": "slide-up 0.5s ease-out",
-        "shimmer": "shimmer 2s infinite linear",
+        "shimmer": "shimmer 1.6s infinite linear",
       },
     },
   },

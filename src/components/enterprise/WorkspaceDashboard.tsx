@@ -265,53 +265,57 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
           />
         )}
         <SidebarInset className="min-w-0 flex-1">
-          <header className="sticky top-0 z-30 border-b bg-background/95 backdrop-blur px-[var(--shell-pad-x,1rem)] py-2">
+          <header className="sticky top-0 z-30 border-b border-border/60 bg-background/96 backdrop-blur-sm shadow-subtle px-[var(--shell-pad-x,1rem)] py-0">
             <div
-              className="flex items-center justify-between gap-2 w-full"
+              className="flex items-center justify-between gap-2 w-full h-[var(--ws-header-h,53px)]"
               data-help-region={helpAnchorId}
             >
               <div className="flex items-center gap-2 min-w-0">
                 {layout === 'sidebar' ? (
-                  <SidebarTrigger />
+                  <SidebarTrigger className="h-7 w-7" />
                 ) : (
-                  <Button variant="ghost" size="icon" onClick={onBack} aria-label={t('ws_nav.back_to_workspaces')}>
-                    <ArrowLeft className="h-4 w-4" />
+                  <Button variant="ghost" size="icon" onClick={onBack} aria-label={t('ws_nav.back_to_workspaces')} className="h-7 w-7">
+                    <ArrowLeft className="h-3.5 w-3.5" />
                   </Button>
                 )}
-                <HelpButton />
-                <div className="min-w-0">
-                  <h1 className="text-base font-semibold truncate flex items-center gap-2">
-                    <span className="truncate">{workspace.name}</span>
+                <div className="min-w-0 hidden sm:block">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-semibold truncate text-foreground leading-none">{workspace.name}</span>
                     <WorkspaceTierBadge workspaceId={workspace.id} />
-                  </h1>
+                  </div>
                   {workspace.description && (
-                    <p className="text-xs text-muted-foreground truncate">{workspace.description}</p>
+                    <p className="text-[11px] text-muted-foreground truncate mt-0.5 leading-none">{workspace.description}</p>
                   )}
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 flex-wrap justify-end">
+              {/* Action cluster — icon-first, text only on larger screens */}
+              <div className="flex items-center gap-1 shrink-0">
+                <HelpButton />
                 {isAdmin && <CommandCenterButton workspaceId={workspace.id} onOpenTab={setActiveTab} recoveryMode={recoveryMode} />}
                 {isAdmin && <OrgPulseButton workspaceId={workspace.id} />}
                 <NotificationBell workspaceId={workspace.id} userId={userId} />
                 <DensityToggle workspaceId={workspace.id} />
-                <Button size="sm" variant="outline" onClick={() => setShowMyProfile(true)}>
-                  <User className="h-4 w-4 mr-1" /> {t('ws_nav.profile_btn')}
-                </Button>
+                <div className="w-px h-5 bg-border/60 mx-0.5 hidden md:block" aria-hidden />
                 {isAdmin && (
-                  <Button size="sm" onClick={() => setShowInvite(true)}>
-                    <UserPlus className="h-4 w-4 mr-1" /> {t('ws_nav.invite_btn')}
+                  <Button size="sm" variant="outline" onClick={() => setShowInvite(true)} className="hidden sm:flex h-7 text-xs gap-1 px-2.5">
+                    <UserPlus className="h-3.5 w-3.5" /> {t('ws_nav.invite_btn')}
                   </Button>
                 )}
-                <LanguageSelector />
-                <Button size="sm" variant="destructive" onClick={signOut} className="gap-1.5">
-                  <LogOut className="h-4 w-4" /> {t('ws_nav.sign_out_btn')}
+                <Button size="sm" variant="ghost" onClick={() => setShowMyProfile(true)} className="h-7 text-xs gap-1 px-2.5">
+                  <User className="h-3.5 w-3.5" />
+                  <span className="hidden md:inline">{t('ws_nav.profile_btn')}</span>
+                </Button>
+                <LanguageSelector size="sm" />
+                <Button size="sm" variant="ghost" onClick={signOut} className="h-7 text-xs gap-1 px-2.5 text-muted-foreground hover:text-destructive hover:bg-destructive/8">
+                  <LogOut className="h-3.5 w-3.5" />
+                  <span className="hidden lg:inline">{t('ws_nav.sign_out_btn')}</span>
                 </Button>
               </div>
             </div>
           </header>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className={layout === 'sidebar' ? 'sr-only' : 'sticky top-[var(--ws-header-h)] z-20 flex h-auto w-full justify-start gap-2 overflow-x-auto rounded-none border-b !bg-background shadow-sm px-[var(--shell-pad-x,1rem)] py-2.5'}>
+            <TabsList className={layout === 'sidebar' ? 'sr-only' : 'sticky top-[var(--ws-header-h)] z-20 flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-border/60 !bg-background/96 backdrop-blur-sm shadow-subtle px-[var(--shell-pad-x,1rem)] py-2'}>
               {WORKSPACE_TOP_NAV_ITEMS.map((item) => {
                 const Icon = item.icon;
                 const visible =
@@ -336,9 +340,9 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                   <TabsTrigger
                     key={item.value}
                     value={item.value}
-                    className="group h-11 shrink-0 gap-2 rounded-xl border border-transparent bg-transparent px-3.5 text-sm font-medium text-muted-foreground data-[state=active]:border-border data-[state=active]:bg-card data-[state=active]:text-foreground data-[state=active]:shadow-sm"
+                    className="group h-9 shrink-0 gap-1.5 rounded-lg border border-transparent bg-transparent px-3 text-sm font-medium text-muted-foreground transition-all duration-150 hover:text-foreground hover:bg-accent/50 data-[state=active]:border-primary/20 data-[state=active]:bg-primary/8 data-[state=active]:text-primary data-[state=active]:shadow-none"
                   >
-                    <Icon className="h-4 w-4" />
+                    <Icon className="h-3.5 w-3.5 shrink-0" />
                     <span>{t(item.i18nKey as any)}</span>
                   </TabsTrigger>
                 );
@@ -636,7 +640,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
       {isAdmin && (
         <Collapsible open={approvalsOpen} onOpenChange={setApprovalsOpen}>
           <CollapsibleTrigger asChild>
-            <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+            <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
               <CardContent className="flex items-center justify-between py-3 px-4">
                 <div className="flex items-center gap-2">
                   <Shield className="h-4 w-4 text-primary" />
@@ -661,7 +665,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
 
       <Collapsible open={requestsOpen} onOpenChange={setRequestsOpen}>
         <CollapsibleTrigger asChild>
-          <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+          <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
             <CardContent className="flex items-center justify-between py-3 px-4">
               <div className="flex items-center gap-2">
                 <FileText className="h-4 w-4 text-muted-foreground" />
@@ -679,7 +683,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
       {canViewRules && (
         <Collapsible open={rulesOpen} onOpenChange={setRulesOpen}>
           <CollapsibleTrigger asChild>
-            <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+            <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
               <CardContent className="flex items-center justify-between py-3 px-4">
                 <div className="flex items-center gap-2">
                   <ShieldAlert className="h-4 w-4 text-primary" />
@@ -692,7 +696,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
           <CollapsibleContent className="mt-2 space-y-2">
             <Collapsible open={openApprovalChain} onOpenChange={setOpenApprovalChain}>
               <CollapsibleTrigger asChild>
-                <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+                <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
                   <CardContent className="flex items-center justify-between py-2.5 px-4">
                     <span className="text-xs font-medium">{t('ws_nav.section_approval_chains')}</span>
                     <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openApprovalChain ? 'rotate-180' : ''}`} />
@@ -704,7 +708,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
 
             <Collapsible open={openLeaveTypes} onOpenChange={setOpenLeaveTypes}>
               <CollapsibleTrigger asChild>
-                <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+                <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
                   <CardContent className="flex items-center justify-between py-2.5 px-4">
                     <span className="text-xs font-medium">{t('ws_nav.section_leave_types')}</span>
                     <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openLeaveTypes ? 'rotate-180' : ''}`} />
@@ -716,7 +720,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
 
             <Collapsible open={openHolidays} onOpenChange={setOpenHolidays}>
               <CollapsibleTrigger asChild>
-                <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+                <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
                   <CardContent className="flex items-center justify-between py-2.5 px-4">
                     <span className="text-xs font-medium">{t('ws_nav.section_holidays')}</span>
                     <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openHolidays ? 'rotate-180' : ''}`} />
@@ -728,7 +732,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
 
             <Collapsible open={openCompanyDays} onOpenChange={setOpenCompanyDays}>
               <CollapsibleTrigger asChild>
-                <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+                <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
                   <CardContent className="flex items-center justify-between py-2.5 px-4">
                     <span className="text-xs font-medium">{t('ws_nav.section_company_days')}</span>
                     <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openCompanyDays ? 'rotate-180' : ''}`} />
@@ -740,7 +744,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
 
             <Collapsible open={openBlockedDates} onOpenChange={setOpenBlockedDates}>
               <CollapsibleTrigger asChild>
-                <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+                <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
                   <CardContent className="flex items-center justify-between py-2.5 px-4">
                     <span className="text-xs font-medium">{t('ws_nav.section_blocked_dates')}</span>
                     <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openBlockedDates ? 'rotate-180' : ''}`} />
@@ -752,7 +756,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
 
             <Collapsible open={openDailyRules} onOpenChange={setOpenDailyRules}>
               <CollapsibleTrigger asChild>
-                <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+                <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
                   <CardContent className="flex items-center justify-between py-2.5 px-4">
                     <span className="text-xs font-medium">{t('ws_nav.section_daily_rules')}</span>
                     <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openDailyRules ? 'rotate-180' : ''}`} />
@@ -764,7 +768,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
 
             <Collapsible open={openRuleTemplates} onOpenChange={setOpenRuleTemplates}>
               <CollapsibleTrigger asChild>
-                <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+                <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
                   <CardContent className="flex items-center justify-between py-2.5 px-4">
                     <span className="text-xs font-medium">{t('ws_nav.section_rule_templates')}</span>
                     <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openRuleTemplates ? 'rotate-180' : ''}`} />
@@ -791,7 +795,7 @@ function ReportsAndAuditTab({ workspaceId, userId }: { workspaceId: string; user
     <div className="space-y-4">
       <Collapsible open={auditOpen} onOpenChange={setAuditOpen}>
         <CollapsibleTrigger asChild>
-          <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+          <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
             <CardContent className="flex items-center justify-between py-3 px-4">
               <div className="flex items-center gap-2">
                 <History className="h-4 w-4 text-primary" />
@@ -808,7 +812,7 @@ function ReportsAndAuditTab({ workspaceId, userId }: { workspaceId: string; user
 
       <Collapsible open={exportOpen} onOpenChange={setExportOpen}>
         <CollapsibleTrigger asChild>
-          <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+          <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
             <CardContent className="flex items-center justify-between py-3 px-4">
               <div className="flex items-center gap-2">
                 <Download className="h-4 w-4 text-primary" />
@@ -825,7 +829,7 @@ function ReportsAndAuditTab({ workspaceId, userId }: { workspaceId: string; user
 
       <Collapsible open={reportsOpen} onOpenChange={setReportsOpen}>
         <CollapsibleTrigger asChild>
-          <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
+          <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
             <CardContent className="flex items-center justify-between py-3 px-4">
               <div className="flex items-center gap-2">
                 <BarChart3 className="h-4 w-4 text-primary" />
@@ -1247,18 +1251,18 @@ function SettingsSection({ workspaceId, sectionKey, icon, title, children, defau
   useEffect(() => { if (forceOpen) setOpen(true); }, [forceOpen]);
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <Card>
+      <Card className="overflow-hidden">
         <CollapsibleTrigger asChild>
-          <button className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors rounded-t-lg">
-            <div className="flex items-center gap-2">
-              {icon}
-              <span className="text-sm font-medium">{title}</span>
+          <button className="w-full flex items-center justify-between px-4 py-3 hover:bg-accent/40 transition-colors duration-150 rounded-t-xl group">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="text-primary/70 shrink-0">{icon}</span>
+              <span className="text-sm font-medium text-foreground truncate">{title}</span>
             </div>
-            <ChevronDown className={`h-4 w-4 transition-transform ${open ? 'rotate-180' : ''}`} />
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform duration-200 shrink-0 ${open ? 'rotate-180' : ''}`} />
           </button>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <div className="px-4 pb-4 pt-1 border-t">
+          <div className="px-4 pb-4 pt-2 border-t border-border/50">
             {children}
           </div>
         </CollapsibleContent>
