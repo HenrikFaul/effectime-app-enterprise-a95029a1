@@ -116,7 +116,7 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
 
   const handleAssign = async (member: Member, officeId: string, isoDate: string) => {
     setSaving(true);
-    await (supabase as any).rpc('embed_assign_shift', {
+    const { error: err } = await (supabase as any).rpc('embed_assign_shift', {
       _token: token,
       _user_id: member.user_id,
       _office_id: officeId,
@@ -125,13 +125,15 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
       _skill_id: null,
     });
     setSaving(false);
+    if (err) { console.error('embed_assign_shift error:', err.message); return; }
     load();
   };
 
   const handleRemove = async (shiftId: string) => {
     setSaving(true);
-    await (supabase as any).rpc('embed_remove_shift', { _token: token, _assignment_id: shiftId });
+    const { error: err } = await (supabase as any).rpc('embed_remove_shift', { _token: token, _assignment_id: shiftId });
     setSaving(false);
+    if (err) { console.error('embed_remove_shift error:', err.message); return; }
     load();
   };
 
