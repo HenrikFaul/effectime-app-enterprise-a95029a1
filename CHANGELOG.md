@@ -1,3 +1,16 @@
+## 2026-05-18 — v3.42.9 Feature: Unified shift marketplace tab, past-shift filter, compact clock-in layout
+
+### OpenShiftPanel — past shifts filtered out
+Open shift requests with `shift_date` before today are now excluded from the employee panel. Past shifts have no actionable value and only add noise; the filter runs client-side (`shift_date < todayStr`) in addition to the existing role/skill matching logic.
+
+### ShiftMarketplacePanel — "Nyitott műszakok" merged as first tab
+The standalone Open Shifts card has been removed from `EmployeeDashboard`. Its content is now the default/first tab ("Nyitott műszakok" / Open Shifts) inside the existing Shift Marketplace card. The tab renders `<OpenShiftPanel noCard />` so there is no Card-in-Card nesting. The trade offer tabs ("Elérhető cserék", "Saját ajánlatok") remain as the second and third tabs.
+
+### EmployeeDashboard — compact side-by-side Bélyegzés + Munkaidőnyilvántartás
+The attendance stats card and the ClockInPanel are now rendered in a responsive `grid-cols-1 md:grid-cols-2` side-by-side layout. `ClockInPanel` receives `compact=true` which suppresses the large live clock and the today's-timeline list, reducing vertical footprint. The attendance stat grid uses a fixed `grid-cols-2` (instead of `sm:grid-cols-4`) to fit the half-width column cleanly.
+
+---
+
 ## 2026-05-18 — v3.42.8 Feature: EmployeeMonthView day info popup + OpenShiftPanel assigned-day filter
 
 ### EmployeeMonthView — day info popup (view mode)
