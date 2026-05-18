@@ -3,7 +3,7 @@
 -- ── 1. Table ─────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.enterprise_embed_tokens (
   id           uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid        NOT NULL REFERENCES public.workspaces(id) ON DELETE CASCADE,
+  workspace_id uuid        NOT NULL REFERENCES public.enterprise_workspaces(id) ON DELETE CASCADE,
   created_by   uuid        NOT NULL REFERENCES auth.users(id),
   label        text        NOT NULL,
   token        text        NOT NULL UNIQUE DEFAULT encode(gen_random_bytes(32), 'hex'),
@@ -17,15 +17,16 @@ CREATE TABLE IF NOT EXISTS public.enterprise_embed_tokens (
 ALTER TABLE public.enterprise_embed_tokens ENABLE ROW LEVEL SECURITY;
 
 -- Workspace admins can manage their own embed tokens
-CREATE POLICY "workspace_admins_manage_embed_tokens"
+CREATE POLICY "workspace_owners_manage_embed_tokens"
   ON public.enterprise_embed_tokens
   FOR ALL
   USING (
     EXISTS (
-      SELECT 1 FROM public.workspace_members wm
-      WHERE wm.workspace_id = enterprise_embed_tokens.workspace_id
-        AND wm.user_id = auth.uid()
-        AND wm.role = 'admin'
+      SELECT 1 FROM public.enterprise_memberships em
+      WHERE em.workspace_id = enterprise_embed_tokens.workspace_id
+        AND em.user_id = auth.uid()
+        AND em.role = 'owner'
+        AND em.status = 'active'
     )
   );
 
@@ -43,12 +44,7 @@ DECLARE
   v_token text;
   v_id    uuid;
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM workspace_members wm
-    WHERE wm.workspace_id = _workspace_id
-      AND wm.user_id = auth.uid()
-      AND wm.role = 'admin'
-  ) THEN
+  IF NOT has_enterprise_role(_workspace_id, auth.uid(), ARRAY['owner'::enterprise_role]) THEN
     RAISE EXCEPTION 'Not authorized';
   END IF;
 
@@ -71,12 +67,7 @@ BEGIN
   UPDATE enterprise_embed_tokens
   SET is_active = false
   WHERE id = _token_id
-    AND EXISTS (
-      SELECT 1 FROM workspace_members wm
-      WHERE wm.workspace_id = enterprise_embed_tokens.workspace_id
-        AND wm.user_id = auth.uid()
-        AND wm.role = 'admin'
-    );
+    AND has_enterprise_role(enterprise_embed_tokens.workspace_id, auth.uid(), ARRAY['owner'::enterprise_role]);
 END;
 $$;
 
