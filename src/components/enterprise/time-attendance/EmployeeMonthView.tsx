@@ -99,6 +99,12 @@ export function EmployeeMonthView({ workspaceId }: Props) {
     return m;
   }, [availRows]);
 
+  // Edit-mode gate: the calendar is read-only by default; user must click the
+  // pencil to choose an edit mode. 'worktime' = full segment/schedule editing;
+  // 'availability' = paint availability status on days.
+  const [editMode, setEditMode] = useState<EditMode>('none');
+  const [availPaintStatus, setAvailPaintStatus] = useState<AvailabilityStatus>('available');
+
   const handleAvailPaint = useCallback(async (iso: string) => {
     if (!userId || !membershipId) return;
     const todayIso = format(today, 'yyyy-MM-dd');
@@ -113,12 +119,6 @@ export function EmployeeMonthView({ workspaceId }: Props) {
   // Site assignments (from enterprise_shift_assignments)
   const [siteAssignments, setSiteAssignments] = useState<SiteAssignment[]>([]);
   const [offices, setOffices] = useState<OfficeOption[]>([]);
-
-  // Edit-mode gate: the calendar is read-only by default; user must click the
-  // pencil to choose an edit mode. 'worktime' = full segment/schedule editing;
-  // 'availability' = paint availability status on days.
-  const [editMode, setEditMode] = useState<EditMode>('none');
-  const [availPaintStatus, setAvailPaintStatus] = useState<AvailabilityStatus>('available');
 
   // Drag-selection state for multi-day batch fill
   const dragRef = useRef<{
