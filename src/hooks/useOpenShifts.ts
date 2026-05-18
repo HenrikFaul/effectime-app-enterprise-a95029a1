@@ -58,6 +58,8 @@ export function useClaimOpenShift() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['open-shifts'] });
       qc.invalidateQueries({ queryKey: ['shift-assignments'] });
+      // Refresh the employee's own assignment set so the assigned-day filter stays current
+      qc.invalidateQueries({ queryKey: ['my-shift-assignments'] });
     },
   });
 }

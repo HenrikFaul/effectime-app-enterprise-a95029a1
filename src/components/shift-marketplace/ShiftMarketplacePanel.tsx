@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Handshake, Calendar, Loader2 } from 'lucide-react';
+import { Handshake, Calendar, ClipboardList, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useI18n } from '@/i18n/I18nProvider';
 import {
@@ -12,6 +12,7 @@ import {
   cancelTradeOffer,
   type ShiftTradeOffer,
 } from '@/hooks/useShiftMarketplace';
+import { OpenShiftPanel } from './OpenShiftPanel';
 
 interface Props {
   workspaceId: string;
@@ -29,7 +30,7 @@ interface Props {
  */
 export function ShiftMarketplacePanel({ workspaceId, membershipId }: Props) {
   const { t } = useI18n();
-  const [tab, setTab] = useState<'open' | 'mine'>('open');
+  const [tab, setTab] = useState<'shifts' | 'open' | 'mine'>('shifts');
   const { data: openOffers, isLoading: loadingOpen, refetch: refetchOpen } = useOpenTradeOffers(workspaceId);
   const { data: myOffers, isLoading: loadingMine, refetch: refetchMine } = useMyTradeOffers(workspaceId, membershipId);
   const [pending, setPending] = useState<string | null>(null);
@@ -116,6 +117,14 @@ export function ShiftMarketplacePanel({ workspaceId, membershipId }: Props) {
         <div className="inline-flex rounded-md border bg-background overflow-hidden self-start">
           <button
             type="button"
+            onClick={() => setTab('shifts')}
+            className={`px-3 py-1.5 text-xs flex items-center gap-1 ${tab === 'shifts' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
+          >
+            <ClipboardList className="h-3 w-3" />
+            {t('open_shifts.title')}
+          </button>
+          <button
+            type="button"
             onClick={() => setTab('open')}
             className={`px-3 py-1.5 text-xs ${tab === 'open' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}
           >
@@ -131,7 +140,9 @@ export function ShiftMarketplacePanel({ workspaceId, membershipId }: Props) {
         </div>
       </CardHeader>
       <CardContent>
-        {isLoading ? (
+        {tab === 'shifts' ? (
+          <OpenShiftPanel workspaceId={workspaceId} membershipId={membershipId} noCard />
+        ) : isLoading ? (
           <p className="text-xs text-muted-foreground">{t('common.loading')}</p>
         ) : shownOffers.length === 0 ? (
           <p className="text-xs text-muted-foreground py-4 text-center">

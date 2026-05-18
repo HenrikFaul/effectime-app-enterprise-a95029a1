@@ -12,6 +12,7 @@ import { useTodayClockEvents, clockEvent } from '@/hooks/useClockIn';
 interface Props {
   workspaceId: string;
   membershipId: string;
+  compact?: boolean;
 }
 
 /**
@@ -25,7 +26,7 @@ interface Props {
  * Designed for the deskless-worker persona (retail/factory/healthcare).
  * Large touch targets, big timestamp, clear verification feedback.
  */
-export function ClockInPanel({ workspaceId, membershipId }: Props) {
+export function ClockInPanel({ workspaceId, membershipId, compact }: Props) {
   const { t } = useI18n();
   const { data: events, refetch } = useTodayClockEvents(workspaceId, membershipId);
   const [method, setMethod] = useState<'gps' | 'qr' | 'nfc' | 'manual'>('gps');
@@ -101,21 +102,30 @@ export function ClockInPanel({ workspaceId, membershipId }: Props) {
   return (
     <Card className={isClockedIn ? 'border-emerald-300 bg-emerald-50/40 dark:bg-emerald-950/20' : ''}>
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm flex items-center gap-2">
-          <Clock className="h-4 w-4 text-primary" />
-          {t('clock_in.title')}
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <Clock className="h-4 w-4 text-primary" />
+            {t('clock_in.title')}
+          </CardTitle>
+          {compact && (
+            <span className="text-sm tabular-nums font-mono text-muted-foreground">
+              {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Big live clock */}
-        <div className="text-center">
-          <div className="text-4xl font-bold tabular-nums">
-            {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+        {/* Big live clock — hidden in compact mode */}
+        {!compact && (
+          <div className="text-center">
+            <div className="text-4xl font-bold tabular-nums">
+              {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </div>
           </div>
-          <div className="text-xs text-muted-foreground mt-1">
-            {now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </div>
-        </div>
+        )}
 
         {/* Status + hours worked */}
         <div className="flex items-center justify-between gap-2">
@@ -190,8 +200,8 @@ export function ClockInPanel({ workspaceId, membershipId }: Props) {
           )}
         </Button>
 
-        {/* Today's timeline */}
-        {todayEvents.length > 0 && (
+        {/* Today's timeline — hidden in compact mode */}
+        {!compact && todayEvents.length > 0 && (
           <div className="space-y-1 pt-2 border-t">
             <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
               {t('clock_in.today_timeline')}

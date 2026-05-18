@@ -5,7 +5,6 @@ import { AchievementsPanel } from '@/components/engagement/AchievementsPanel';
 import { OnboardingChecklist } from '@/components/customer-success/OnboardingChecklist';
 import { ClockInPanel } from '@/components/clock/ClockInPanel';
 import { ShiftMarketplacePanel } from '@/components/shift-marketplace/ShiftMarketplacePanel';
-import { OpenShiftPanel } from '@/components/shift-marketplace/OpenShiftPanel';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -263,45 +262,53 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
         </div>
       </div>
 
-      <Card>
-        <CardHeader className="py-3 px-4">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle className="text-sm flex items-center gap-1.5">
-              <Clock className="h-4 w-4 text-primary" />
-              {t('self_service.attendance_title', { month: monthLabel })}
-            </CardTitle>
-            <div className="flex items-center gap-2 shrink-0">
-              <Badge variant={statusVariant}>{statusLabel}</Badge>
-              <Button variant="ghost" size="sm" className="h-7 gap-1" onClick={() => onNavigateTab('time-attendance')}>
-                {t('self_service.open_timesheet')} <ArrowRight className="h-3.5 w-3.5" />
-              </Button>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+        {/* Attendance stats card */}
+        <Card>
+          <CardHeader className="py-3 px-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle className="text-sm flex items-center gap-1.5">
+                <Clock className="h-4 w-4 text-primary" />
+                {t('self_service.attendance_title', { month: monthLabel })}
+              </CardTitle>
+              <div className="flex items-center gap-2 shrink-0">
+                <Badge variant={statusVariant}>{statusLabel}</Badge>
+                <Button variant="ghost" size="sm" className="h-7 gap-1" onClick={() => onNavigateTab('time-attendance')}>
+                  {t('self_service.open_timesheet')} <ArrowRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
-          </div>
-        </CardHeader>
-        <CardContent className="px-4 pb-4">
-          {attendance?.status === 'returned' && attendance.return_reason && (
-            <div className="mb-3 rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-xs text-destructive">
-              <strong>{t('self_service.returned_prefix')}</strong> {attendance.return_reason}
-            </div>
-          )}
-          {totals ? (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <StatCard label={t('self_service.stat_worked')} value={`${(totals.worked_hours || 0).toFixed(1)} h`} icon={TrendingUp} />
-              <StatCard label={t('self_service.stat_overtime')} value={`${(totals.overtime_hours || 0).toFixed(1)} h`} icon={Clock}
-                accent={(totals.overtime_hours || 0) > 0 ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/20' : undefined}
-              />
-              <StatCard label={t('self_service.stat_expected')} value={`${(totals.expected_after_leave || 0).toFixed(1)} h`} icon={CalendarCheck} />
-              <StatCard label={t('self_service.stat_payroll')} value={`${(totals.payroll_total_hours || 0).toFixed(1)} h`} icon={Wallet} />
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              {attendance
-                ? t('self_service.no_segments')
-                : t('self_service.no_period', { month: monthLabel })}
-            </p>
-          )}
-        </CardContent>
-      </Card>
+          </CardHeader>
+          <CardContent className="px-4 pb-4">
+            {attendance?.status === 'returned' && attendance.return_reason && (
+              <div className="mb-3 rounded-md bg-destructive/10 border border-destructive/20 px-3 py-2 text-xs text-destructive">
+                <strong>{t('self_service.returned_prefix')}</strong> {attendance.return_reason}
+              </div>
+            )}
+            {totals ? (
+              <div className="grid grid-cols-2 gap-2">
+                <StatCard label={t('self_service.stat_worked')} value={`${(totals.worked_hours || 0).toFixed(1)} h`} icon={TrendingUp} />
+                <StatCard label={t('self_service.stat_overtime')} value={`${(totals.overtime_hours || 0).toFixed(1)} h`} icon={Clock}
+                  accent={(totals.overtime_hours || 0) > 0 ? 'bg-amber-50 border-amber-200 dark:bg-amber-950/20' : undefined}
+                />
+                <StatCard label={t('self_service.stat_expected')} value={`${(totals.expected_after_leave || 0).toFixed(1)} h`} icon={CalendarCheck} />
+                <StatCard label={t('self_service.stat_payroll')} value={`${(totals.payroll_total_hours || 0).toFixed(1)} h`} icon={Wallet} />
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                {attendance
+                  ? t('self_service.no_segments')
+                  : t('self_service.no_period', { month: monthLabel })}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Clock in/out — compact mode next to stats */}
+        {membershipId && (
+          <ClockInPanel workspaceId={workspaceId} membershipId={membershipId} compact />
+        )}
+      </div>
 
       {quotas.length > 0 && (
         <Card>
@@ -476,18 +483,6 @@ export function EmployeeDashboard({ workspaceId, userId, isAdmin, onNavigateTab 
           else if (key === 'member_skill_added') onNavigateTab?.('resources');
         }}
       />
-
-      {/* Clock in / out (Top-20 Rank 10, v3.22.0). GPS/QR/NFC method
-          selector + big live clock + today's timeline. Mobile-first
-          design for the deskless-worker persona. */}
-      {membershipId && (
-        <ClockInPanel workspaceId={workspaceId} membershipId={membershipId} />
-      )}
-
-      {/* Open shifts — first-come-first-served claim of manager-posted open slots */}
-      {membershipId && (
-        <OpenShiftPanel workspaceId={workspaceId} membershipId={membershipId} />
-      )}
 
       {/* Shift marketplace (Top-20 Rank 12, v3.21.0). Browse open offers
           + see status of your own offered shifts. Manager approval queue
