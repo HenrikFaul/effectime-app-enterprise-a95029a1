@@ -4651,6 +4651,15 @@ const hu = {
     waitlist_error: 'Nem sikerült a várólistára feliratkozni. Próbáld újra.',
     no_candidates: 'Nem található megfelelő jelölt.',
     candidates_hint: 'Válassz jelölteket közvetlen értesítéshez, vagy hirdesd meg az összes megfelelő tagnak.',
+    decline: 'Elutasítás',
+    confirm_decline_title: 'Elutasítja a műszak-meghívást?',
+    confirm_decline_desc: 'Nem lesz beosztva erre a műszakra, és nem kap több értesítést róla. A műszak nyitva marad más kollégák számára.',
+    decline_confirm: 'Elutasítás',
+    decline_success: 'A műszak-meghívást elutasítottad.',
+    decline_error: 'Nem sikerült elutasítani a meghívást. Próbáld újra.',
+    intelligent_suggestion: 'Intelligens javaslat',
+    intelligent_suggestion_applied: 'A legjobb jelölt automatikusan kiválasztva.',
+    intelligent_suggestion_none: 'Nincs elérhető megfelelő jelölt.',
   },
 } as const;
 

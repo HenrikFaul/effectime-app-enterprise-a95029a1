@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Megaphone, Loader2, X, Plus, Users, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
+import { Megaphone, Loader2, X, Plus, Users, CheckCircle2, AlertTriangle, Clock, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { useI18n } from '@/i18n/I18nProvider';
 import { useCreateOpenShift, useOpenShiftRequests, useCancelOpenShift, useShiftCandidates } from '@/hooks/useOpenShifts';
@@ -241,6 +241,23 @@ export function OpenShiftManager({
             <Users className="h-3.5 w-3.5 text-muted-foreground" />
             <span className="text-xs font-medium">{t('open_shifts.top_candidates')}</span>
             {candidatesLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+            {!candidatesLoading && availableCandidates.length > 0 && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="ml-auto h-6 px-2 text-[11px] gap-1 bg-emerald-600 hover:bg-emerald-700 text-white border-0"
+                onClick={() => {
+                  const best = availableCandidates[0];
+                  if (!best) { toast.info(t('open_shifts.intelligent_suggestion_none')); return; }
+                  setSelectedCandidateIds([best.member.user_id]);
+                  toast.success(t('open_shifts.intelligent_suggestion_applied'));
+                }}
+              >
+                <Sparkles className="h-3 w-3" />
+                {t('open_shifts.intelligent_suggestion')}
+              </Button>
+            )}
           </div>
           {!candidatesLoading && availableCandidates.length === 0 && pendingCandidates.length === 0 ? (
             <p className="text-xs text-muted-foreground italic">{t('open_shifts.no_candidates')}</p>
@@ -443,6 +460,23 @@ export function OpenShiftManager({
               <Users className="h-3.5 w-3.5 text-muted-foreground" />
               <span className="text-xs font-medium">{t('open_shifts.top_candidates')}</span>
               {candidatesLoading && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+              {!candidatesLoading && availableCandidates.length > 0 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="ml-auto h-6 px-2 text-[11px] gap-1 bg-emerald-600 hover:bg-emerald-700 text-white border-0"
+                  onClick={() => {
+                    const best = availableCandidates[0];
+                    if (!best) { toast.info(t('open_shifts.intelligent_suggestion_none')); return; }
+                    setSelectedCandidateIds([best.member.user_id]);
+                    toast.success(t('open_shifts.intelligent_suggestion_applied'));
+                  }}
+                >
+                  <Sparkles className="h-3 w-3" />
+                  {t('open_shifts.intelligent_suggestion')}
+                </Button>
+              )}
             </div>
             {!candidatesLoading && availableCandidates.length === 0 && pendingCandidates.length === 0 ? (
               <p className="text-xs text-muted-foreground italic">{t('open_shifts.no_candidates')}</p>

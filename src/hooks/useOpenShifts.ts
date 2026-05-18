@@ -121,6 +121,22 @@ export function useCancelOpenShift() {
   });
 }
 
+export function useDeclineOpenShift() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (requestId: string) => {
+      const { data, error } = await (supabase as any).rpc('decline_open_shift_invitation', {
+        _request_id: requestId,
+      });
+      if (error) throw error;
+      return data as { ok: boolean };
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['open-shifts'] });
+    },
+  });
+}
+
 export function useJoinWaitlist() {
   const qc = useQueryClient();
   return useMutation({

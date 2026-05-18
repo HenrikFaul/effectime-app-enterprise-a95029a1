@@ -1,3 +1,16 @@
+## 2026-05-18 — v3.43.0 Feature: Decline shift invitation + Intelligent suggestion in open-shift creation
+
+### OpenShiftPanel — Decline button for invited shifts
+When an employee receives a personal shift invitation (`isInvited = true`), they now see both **Elutasítás** (Decline, red outline) and **Elfogad** (Accept, green) buttons. Declining records a `'declined'` claim in `enterprise_open_shift_claims` and removes the user from `notified_user_ids` / `target_user_ids` on the request via the new `decline_open_shift_invitation` RPC — they won't be re-notified. The shift stays open for other colleagues.
+
+### OpenShiftManager — Intelligens javaslat button in candidate list
+The "Legjobb jelöltek" (Top candidates) header row now shows an **Intelligens javaslat** (✨) button whenever at least one eligible, non-pending candidate is available. Clicking it auto-selects the highest-ranked candidate's checkbox (same scoring as the CoveragePlannerView: role match → office priority → monthly shift load → eligibility score). The button appears in both the compact (drawer) and full form modes. This connects both staffing flows to the same `useShiftCandidates` ranking engine.
+
+### DB migration
+`20260518120000_v3_43_0_decline_open_shift_and_smart_suggestion.sql`: expands the `enterprise_open_shift_claims.status` CHECK constraint to include `'declined'`; adds `public.decline_open_shift_invitation(_request_id uuid)` RPC (SECURITY DEFINER).
+
+---
+
 ## 2026-05-18 — v3.42.9 Feature: Unified shift marketplace tab, past-shift filter, compact clock-in layout
 
 ### OpenShiftPanel — past shifts filtered out
