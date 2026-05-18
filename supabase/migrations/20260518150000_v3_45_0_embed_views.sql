@@ -65,15 +65,15 @@ BEGIN
     -- Member display names for roster view
     'members', COALESCE((
       SELECT jsonb_agg(jsonb_build_object(
-        'user_id',      m.user_id,
-        'display_name', COALESCE(p.display_name, p.full_name, m.user_id::text),
-        'business_role', m.business_role,
-        'office_id',    m.office_id
+        'user_id',       em.user_id,
+        'display_name',  COALESCE(p.display_name, em.user_id::text),
+        'business_role', em.business_role,
+        'office_id',     em.office_id
       ) ORDER BY COALESCE(p.display_name, p.full_name, ''))
-      FROM enterprise_memberships m
-      LEFT JOIN profiles p ON p.user_id = m.user_id
-      WHERE m.workspace_id = v_workspace_id
-        AND m.status = 'active'
+      FROM enterprise_memberships em
+      LEFT JOIN profiles p ON p.user_id = em.user_id
+      WHERE em.workspace_id = v_workspace_id
+        AND em.status = 'active'
     ), '[]'::jsonb),
 
     'holidays', COALESCE((
