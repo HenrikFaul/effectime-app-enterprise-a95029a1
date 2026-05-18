@@ -1,3 +1,59 @@
+## 2026-05-18 — v3.42.2 Premium UI/UX Refactor: design-system elevation pass
+
+Systematic visual upgrade across all base UI primitives and core surfaces
+to reach a premium, enterprise-grade SaaS aesthetic. **Zero functional
+regression** — only visual styling changed; no props, no APIs, no
+behavior altered.
+
+### Design tokens (`src/index.css`)
+- Foreground and background tokens refined for richer contrast depth
+- `--radius` tightened to `0.875rem` (sharper enterprise feel)
+- `--border` slightly darker for crisper edge definition
+- `--shadow-card` upgraded from near-invisible to a proper 2-layer
+  depth shadow (`0 1px 2px + 0 4px 16px`)
+- **New:** `--shadow-premium` — 3-layer deep shadow with subtle primary
+  tint, for high-value modal surfaces
+- **New:** `--shadow-subtle` — featherweight 1px shadow for headers and
+  toolbars
+- Dark mode shadow stack deepened for more immersive dark UI
+- **New utility classes:** `.shadow-premium`, `.shadow-subtle`,
+  `.surface-elevated`, `.section-divider`
+- `@media (prefers-reduced-motion)` global rule: all animations and
+  transitions suppressed at 0.01ms; accessibility requirement met
+
+### Tailwind config (`tailwind.config.ts`)
+- Added `premium` and `subtle` to the `boxShadow` extension map
+- `shimmer` keyframe rewritten to use `transform: translateX` for GPU-
+  accelerated pseudo-element sweep (replaces `backgroundPosition`)
+
+### Base UI primitives
+| File | Change |
+|------|--------|
+| `card.tsx` | `rounded-xl`, `border-border/70`, `shadow-card`, `transition-shadow`; padding `p-5`; CardTitle smaller + tighter tracking |
+| `button.tsx` | `rounded-lg`, `transition-all duration-200`, `active:scale-[0.98]`; default h-9; primary hover: shadow lift + 1px y-shift; added subtle destructive ghost hover |
+| `badge.tsx` | `text-[0.7rem] font-medium tracking-wide`; new `subtle` variant; `outline` border fixed; `BadgeVariant` type exported |
+| `input.tsx` | `h-9`, `rounded-lg`, `placeholder:text-muted-foreground/70`, `transition-colors`, no ring-offset flash |
+| `select.tsx` | Trigger `h-9 rounded-lg`; content `rounded-xl shadow-elevated border-border/70`; item `rounded-lg focus:bg-accent/60` |
+| `dialog.tsx` | `rounded-2xl shadow-modal`; overlay `bg-black/50 backdrop-blur-sm`; close button `rounded-lg p-1 hover:bg-accent/60` |
+| `popover.tsx` | `rounded-xl shadow-elevated border-border/70` |
+| `dropdown-menu.tsx` | Content + sub-content `rounded-xl shadow-elevated`; all items `rounded-lg focus:bg-accent/60` |
+| `avatar.tsx` | Fallback bg changed from flat `bg-muted` to `bg-primary/10 text-primary font-medium` |
+| `skeleton.tsx` | Replaced `animate-pulse` with directional shimmer sweep via `::before` pseudo-element; `bg-muted/70` base |
+| `sidebar.tsx` | `SidebarMenuButton` active state: `bg-sidebar-primary/10 text-sidebar-primary font-semibold`; items `rounded-lg`; `transition-colors duration-150` |
+
+### WorkspaceDashboard (`WorkspaceDashboard.tsx`)
+- Header height-constrained to `53px`; `shadow-subtle backdrop-blur-sm`
+- All action buttons `h-7`; text labels hidden on small screens
+- Sign-out: replaced destructive solid with `ghost hover:text-destructive`
+- Tab triggers: refined active state with `bg-primary/8 text-primary
+  border-primary/20`; `rounded-lg h-9`
+
+### Landing page (`Landing.tsx`)
+- Feature cards: `shadow-subtle hover:-translate-y-0.5 border-border/70
+  transition-all duration-200`
+
+---
+
 ## 2026-05-17 — v3.42.1 Build hygiene + ambiguous-items re-eval (no-regression)
 
 Two parallel cleanup streams, both strictly non-destructive per the
