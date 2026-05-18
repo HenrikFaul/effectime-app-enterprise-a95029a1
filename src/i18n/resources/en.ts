@@ -4032,6 +4032,7 @@ const en = {
     open_preview: 'Open preview',
     col_label: 'Label',
     col_views: 'Views',
+    col_write: 'Write',
     col_last_used: 'Last used',
     col_expires: 'Expires',
     col_snippet: 'Snippet',
@@ -4063,6 +4064,10 @@ const en = {
     mode_weekly: 'Weekly',
     mode_monthly: 'Monthly',
     copied: 'Copied!',
+    can_write_field: 'Write-enabled',
+    can_write_desc: 'Allow CRM operators to assign and remove shift assignments directly from the embedded view.',
+    write_badge: 'Write',
+    read_only_badge: 'Read-only',
   },
   m365: {
     title: 'Microsoft 365 calendar',

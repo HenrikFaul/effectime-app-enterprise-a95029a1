@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import {
   addWeeks, eachDayOfInterval, endOfWeek, format, isWeekend, startOfWeek, subWeeks,
 } from 'date-fns';
@@ -16,9 +16,11 @@ interface Shift {
 interface Member {
   user_id: string; display_name: string;
   business_role: string | null; office_id: string | null;
+  membership_id: string;
 }
 
 interface EmbedData {
+  can_write: boolean;
   offices: Office[];
   shift_assignments: Shift[];
   members: Member[];
@@ -44,6 +46,7 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
   const [data, setData]     = useState<EmbedData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]   = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const days = useMemo(() =>
     eachDayOfInterval({ start: weekStart, end: endOfWeek(weekStart, { weekStartsOn: 1 }) }),
@@ -53,7 +56,7 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
   const from = format(days[0], 'yyyy-MM-dd');
   const to   = format(days[days.length - 1], 'yyyy-MM-dd');
 
-  useEffect(() => {
+  const load = () => {
     setLoading(true);
     setError(null);
     (supabase as any)
@@ -63,7 +66,11 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
         setData(result);
         setLoading(false);
       });
-  }, [token, from, to]);
+  };
+
+  useEffect(() => { load(); }, [token, from, to]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const canWrite = data?.can_write ?? false;
 
   const holidaySet = useMemo(() => new Set(data?.holidays ?? []), [data]);
 
@@ -72,8 +79,6 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
     return officeFilter ? all.filter(o => o.id === officeFilter) : all;
   }, [data, officeFilter]);
 
-  // Group members: if office filter, show all members with shifts in that office.
-  // Otherwise group by their primary office.
   const membersByOffice = useMemo(() => {
     const map = new Map<string, Member[]>();
     offices.forEach(o => map.set(o.id, []));
@@ -82,17 +87,14 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
     const shifts  = data?.shift_assignments ?? [];
 
     if (officeFilter) {
-      // Show members who have at least one shift in the filtered office this week
       const relevantUserIds = new Set(shifts.filter(s => s.office_id === officeFilter).map(s => s.user_id));
       map.set(officeFilter, members.filter(m => relevantUserIds.has(m.user_id)));
     } else {
-      // Group by primary office (office_id on membership), fall back to first shift office
       members.forEach(m => {
         const primaryOffice = m.office_id;
         if (primaryOffice && map.has(primaryOffice)) {
           map.get(primaryOffice)!.push(m);
         } else {
-          // find first shift this week for a fallback office
           const shift = shifts.find(s => s.user_id === m.user_id);
           const oid = shift?.office_id;
           if (oid && map.has(oid)) {
@@ -111,6 +113,27 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
     });
     return map;
   }, [data]);
+
+  const handleAssign = async (member: Member, officeId: string, isoDate: string) => {
+    setSaving(true);
+    await (supabase as any).rpc('embed_assign_shift', {
+      _token: token,
+      _user_id: member.user_id,
+      _office_id: officeId,
+      _business_role: member.business_role ?? null,
+      _shift_date: isoDate,
+      _skill_id: null,
+    });
+    setSaving(false);
+    load();
+  };
+
+  const handleRemove = async (shiftId: string) => {
+    setSaving(true);
+    await (supabase as any).rpc('embed_remove_shift', { _token: token, _assignment_id: shiftId });
+    setSaving(false);
+    load();
+  };
 
   if (error) {
     return (
@@ -139,7 +162,12 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
           onClick={() => setWeekStart(w => addWeeks(w, 1))}>
           <ChevronRight className="h-3.5 w-3.5" />
         </Button>
-        {loading && <span className="ml-1 text-[10px] text-muted-foreground animate-pulse">…</span>}
+        {(loading || saving) && <span className="ml-1 text-[10px] text-muted-foreground animate-pulse">…</span>}
+        {canWrite && (
+          <Badge variant="outline" className="ml-1 text-[9px] py-0 border-amber-400 text-amber-600">
+            ✏ write
+          </Badge>
+        )}
         <Badge variant="outline" className="ml-auto text-[9px] py-0">Effectime</Badge>
       </div>
 
@@ -212,12 +240,33 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
                               isWeekend(d) && !isHol && 'bg-muted/20',
                             )}>
                             {shift ? (
-                              <div className="inline-flex items-center justify-center rounded text-[10px] font-medium px-1 py-0.5 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 max-w-[40px] truncate"
-                                title={shift.business_role ?? undefined}>
-                                {shift.business_role
-                                  ? shift.business_role.slice(0, 4)
-                                  : '✓'}
+                              <div className="inline-flex items-center gap-0.5">
+                                <div className="inline-flex items-center justify-center rounded text-[10px] font-medium px-1 py-0.5 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 max-w-[36px] truncate"
+                                  title={shift.business_role ?? undefined}>
+                                  {shift.business_role
+                                    ? shift.business_role.slice(0, 4)
+                                    : '✓'}
+                                </div>
+                                {canWrite && (
+                                  <button
+                                    disabled={saving}
+                                    onClick={() => handleRemove(shift.id)}
+                                    className="h-4 w-4 flex items-center justify-center rounded text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-40"
+                                    title="Remove shift"
+                                  >
+                                    <X className="h-2.5 w-2.5" />
+                                  </button>
+                                )}
                               </div>
+                            ) : canWrite ? (
+                              <button
+                                disabled={saving}
+                                onClick={() => handleAssign(member, office.id, iso)}
+                                className="h-5 w-5 mx-auto flex items-center justify-center rounded text-muted-foreground/30 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors disabled:opacity-40"
+                                title="Assign shift"
+                              >
+                                <Plus className="h-3 w-3" />
+                              </button>
                             ) : (
                               <span className="text-muted-foreground/30">—</span>
                             )}

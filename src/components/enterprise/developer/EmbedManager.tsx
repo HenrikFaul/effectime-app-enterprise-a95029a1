@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Plus, Copy, XCircle, CheckCircle2, RefreshCw, Code2, ExternalLink, Settings2 } from 'lucide-react';
+import { Plus, Copy, XCircle, CheckCircle2, RefreshCw, Code2, ExternalLink, Settings2, Pencil } from 'lucide-react';
 
 interface Props {
   workspaceId: string;
@@ -34,6 +34,7 @@ interface EmbedToken {
   id: string;
   label: string;
   allowed_views: string[];
+  can_write: boolean;
   is_active: boolean;
   last_used_at: string | null;
   expires_at: string | null;
@@ -73,6 +74,7 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
   const [createOpen, setCreateOpen]   = useState(false);
   const [labelInput, setLabelInput]   = useState('');
   const [selectedViews, setSelectedViews] = useState<EmbedView[]>(['capacity_planner']);
+  const [canWrite, setCanWrite]       = useState(false);
   const [creating, setCreating]       = useState(false);
 
   // Reveal new token
@@ -96,7 +98,7 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
     const [tokRes, offRes] = await Promise.all([
       (supabase as any)
         .from('enterprise_embed_tokens')
-        .select('id,label,allowed_views,is_active,last_used_at,expires_at,created_at')
+        .select('id,label,allowed_views,can_write,is_active,last_used_at,expires_at,created_at')
         .eq('workspace_id', workspaceId)
         .order('created_at', { ascending: false }),
       (supabase as any)
@@ -120,6 +122,7 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
       _workspace_id: workspaceId,
       _label: labelInput.trim(),
       _allowed_views: selectedViews,
+      _can_write: canWrite,
     });
     setCreating(false);
     if (error || !data?.[0]) { toast.error(t('embed.toast_create_error')); return; }
@@ -177,7 +180,7 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
           <h3 className="text-sm font-semibold">{t('embed.section_title')}</h3>
           <p className="text-xs text-muted-foreground mt-0.5">{t('embed.section_subtitle')}</p>
         </div>
-        <Button size="sm" onClick={() => { setLabelInput(''); setSelectedViews(['capacity_planner']); setCreateOpen(true); }}>
+        <Button size="sm" onClick={() => { setLabelInput(''); setSelectedViews(['capacity_planner']); setCanWrite(false); setCreateOpen(true); }}>
           <Plus className="h-4 w-4 mr-1" />
           {t('embed.create_token')}
         </Button>
@@ -209,6 +212,7 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
                 <TableRow>
                   <TableHead>{t('embed.col_label')}</TableHead>
                   <TableHead>{t('embed.col_views')}</TableHead>
+                  <TableHead>{t('embed.col_write')}</TableHead>
                   <TableHead>{t('embed.col_last_used')}</TableHead>
                   <TableHead>{t('embed.col_expires')}</TableHead>
                   <TableHead className="text-right">{t('embed.col_actions')}</TableHead>
@@ -226,6 +230,16 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
                           </Badge>
                         ))}
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {tok.can_write ? (
+                        <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-600 gap-1">
+                          <Pencil className="h-2.5 w-2.5" />
+                          {t('embed.write_badge')}
+                        </Badge>
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground">{t('embed.read_only_badge')}</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">
                       {tok.last_used_at ? format(new Date(tok.last_used_at), 'yyyy-MM-dd HH:mm') : t('embed.never')}
@@ -298,6 +312,19 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
                   </div>
                 </div>
               ))}
+            </div>
+            <div className="flex items-start gap-2 rounded-md border p-2.5 bg-amber-50/40 dark:bg-amber-950/10">
+              <Checkbox
+                id="can-write"
+                checked={canWrite}
+                onCheckedChange={v => setCanWrite(!!v)}
+              />
+              <div>
+                <Label htmlFor="can-write" className="font-medium cursor-pointer text-sm">
+                  {t('embed.can_write_field')}
+                </Label>
+                <p className="text-xs text-muted-foreground">{t('embed.can_write_desc')}</p>
+              </div>
             </div>
             <p className="text-xs text-muted-foreground">{t('embed.create_hint')}</p>
           </div>
