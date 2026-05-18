@@ -4,11 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent,
-  DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  ChevronLeft, ChevronRight, Send, AlertTriangle, Loader2, Phone, Plus, Lock,
-  Pencil, Save, Zap, Info, SlidersHorizontal, Building2,
+  ChevronLeft, ChevronRight, ChevronDown, Send, AlertTriangle, Loader2, Phone, Plus, Lock,
+  Pencil, Save, Zap, Info, SlidersHorizontal, Building2, CalendarClock, CalendarCheck,
 } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, isWeekend as dfIsWeekend, getYear, getMonth, addMonths, subMonths } from 'date-fns';
 import { toast } from 'sonner';
@@ -49,11 +49,8 @@ function loadDisplayConfig(): DisplayConfig {
   return { workHours: true, overtime: true, site: true, availability: true };
 }
 
-const STATUS_CYCLE: (AvailabilityStatus | null)[] = [null, 'available', 'preferred', 'unavailable'];
-function nextAvailStatus(current: AvailabilityStatus | null): AvailabilityStatus | null {
-  const idx = STATUS_CYCLE.indexOf(current);
-  return STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
-}
+type EditMode = 'none' | 'worktime' | 'availability';
+
 const AVAIL_CELL_CLASSES: Record<AvailabilityStatus, string> = {
   available: 'ring-1 ring-green-400 bg-green-50 dark:bg-green-900/20',
   preferred: 'ring-1 ring-blue-400 bg-blue-50 dark:bg-blue-900/20',
@@ -102,33 +99,26 @@ export function EmployeeMonthView({ workspaceId }: Props) {
     return m;
   }, [availRows]);
 
-  const handleToggleAvailability = useCallback(async (iso: string, e?: MouseEvent) => {
-    e?.stopPropagation();
+  const handleAvailPaint = useCallback(async (iso: string) => {
     if (!userId || !membershipId) return;
+    const todayIso = format(today, 'yyyy-MM-dd');
+    if (iso < todayIso) return; // block past dates
     const existing = availByDate.get(iso) ?? null;
-    const next = nextAvailStatus(existing?.status ?? null);
-    if (next === null) {
-      if (existing) {
-        await deleteAvail.mutateAsync({ id: existing.id, workspaceId, userId }).catch(() => {
-          toast.error(t('availability.save_error'));
-        });
-      }
-    } else {
-      await upsertAvail.mutateAsync({ workspaceId, membershipId, userId, date: iso, status: next }).catch(() => {
-        toast.error(t('availability.save_error'));
-      });
-    }
-  }, [userId, membershipId, availByDate, workspaceId, upsertAvail, deleteAvail, t]);
+    if (existing?.status === availPaintStatus) return; // already correct, skip
+    await upsertAvail.mutateAsync({ workspaceId, membershipId, userId, date: iso, status: availPaintStatus }).catch(() => {
+      toast.error(t('availability.save_error'));
+    });
+  }, [userId, membershipId, availByDate, workspaceId, availPaintStatus, upsertAvail, today, t]);
 
   // Site assignments (from enterprise_shift_assignments)
   const [siteAssignments, setSiteAssignments] = useState<SiteAssignment[]>([]);
   const [offices, setOffices] = useState<OfficeOption[]>([]);
 
   // Edit-mode gate: the calendar is read-only by default; user must click the
-  // pencil to enter edit mode, then save to commit + exit. The server-side
-  // status (submitted/approved/locked/exported) overrides this — if the period
-  // is not editable on the server, edit mode is unavailable.
-  const [editMode, setEditMode] = useState(false);
+  // pencil to choose an edit mode. 'worktime' = full segment/schedule editing;
+  // 'availability' = paint availability status on days.
+  const [editMode, setEditMode] = useState<EditMode>('none');
+  const [availPaintStatus, setAvailPaintStatus] = useState<AvailabilityStatus>('available');
 
   // Drag-selection state for multi-day batch fill
   const dragRef = useRef<{
@@ -175,10 +165,10 @@ export function EmployeeMonthView({ workspaceId }: Props) {
   useEffect(() => { reload(); /* eslint-disable-line react-hooks/exhaustive-deps */ }, [workspaceId, year, month]);
 
   // Leaving edit mode whenever month changes or status flips to non-editable
-  useEffect(() => { setEditMode(false); }, [year, month]);
+  useEffect(() => { setEditMode('none'); }, [year, month]);
   useEffect(() => {
     if (period && ['submitted', 'approved', 'locked', 'exported'].includes(period.status)) {
-      setEditMode(false);
+      setEditMode('none');
     }
   }, [period?.status]);
 
@@ -194,8 +184,9 @@ export function EmployeeMonthView({ workspaceId }: Props) {
 
   // Server-side read-only (the state machine forbids edits)
   const serverReadOnly = !period || ['submitted', 'approved', 'locked', 'exported'].includes(period.status);
-  // Effective read-only: edit mode must also be ON to actually edit
-  const canEdit = !serverReadOnly && editMode;
+  // Effective edit permissions — only active in the matching mode
+  const canEdit = !serverReadOnly && editMode === 'worktime';
+  const canEditAvail = editMode === 'availability' && !!userId && !!membershipId;
 
   const handleSubmit = async () => {
     if (!period) return;
@@ -207,7 +198,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
     try {
       await transitionPeriod(period.id, 'submitted');
       toast.success(t('attendance_view.submit_success'));
-      setEditMode(false);
+      setEditMode('none');
       reload();
     } catch (e: any) {
       toast.error(e?.message || t('attendance_view.submit_failed'));
@@ -246,7 +237,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
   }, []);
 
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLButtonElement>, dateStr: string) => {
-    if (!canEdit) return;
+    if (!canEdit && !canEditAvail) return;
     // Only respond to primary button / touch / pen
     if (e.pointerType === 'mouse' && e.button !== 0) return;
     dragRef.current = {
@@ -254,7 +245,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
       hovered: new Set([dateStr]), moved: false,
     };
     setDragPreview(new Set([dateStr]));
-  }, [canEdit]);
+  }, [canEdit, canEditAvail]);
 
   const handleGridPointerMove = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     if (!dragRef.current.active) return;
@@ -277,6 +268,12 @@ export function EmployeeMonthView({ workspaceId }: Props) {
     const hovered = Array.from(dragRef.current.hovered).sort();
     resetDrag();
 
+    if (canEditAvail) {
+      // Availability paint mode: paint every hovered day
+      hovered.forEach(d => handleAvailPaint(d));
+      return;
+    }
+
     if (!moved || hovered.length <= 1) {
       // Plain click → open day editor
       setEditingDate(new Date(dateStr));
@@ -288,7 +285,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
     setBatchSelectedDays(selectedDates);
     setBatchInitialRange({ start: selectedDates[0], end: selectedDates[selectedDates.length - 1] });
     setBatchOpen(true);
-  }, [resetDrag]);
+  }, [resetDrag, canEditAvail, handleAvailPaint]);
 
   // ─── Render ────────────────────────────────────────────────────────────────
 
@@ -317,6 +314,12 @@ export function EmployeeMonthView({ workspaceId }: Props) {
               <Badge variant="default" className="ml-1 gap-1 bg-amber-500 hover:bg-amber-500/90 text-amber-50">
                 <Pencil className="h-3 w-3" />
                 {t('attendance_view.editing_open_badge')}
+              </Badge>
+            )}
+            {canEditAvail && (
+              <Badge variant="default" className="ml-1 gap-1 bg-violet-600 hover:bg-violet-600 text-white">
+                <CalendarCheck className="h-3 w-3" />
+                {t('attendance_view.editing_avail_badge')}
               </Badge>
             )}
 
@@ -359,10 +362,23 @@ export function EmployeeMonthView({ workspaceId }: Props) {
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              {!serverReadOnly && !editMode && (
-                <Button size="sm" variant="default" onClick={() => setEditMode(true)} title={t('attendance_view.tooltip_edit')}>
-                  <Pencil className="h-3 w-3 mr-1" /> {t('attendance_view.btn_edit_short')}
-                </Button>
+              {!serverReadOnly && editMode === 'none' && (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button size="sm" variant="default" title={t('attendance_view.tooltip_edit')}>
+                      <Pencil className="h-3 w-3 mr-1" /> {t('attendance_view.btn_edit_short')}
+                      <ChevronDown className="h-3 w-3 ml-1" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setEditMode('worktime')}>
+                      <CalendarClock className="h-3.5 w-3.5 mr-2" /> {t('attendance_view.edit_worktime')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setEditMode('availability')}>
+                      <CalendarCheck className="h-3.5 w-3.5 mr-2" /> {t('attendance_view.edit_availability')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               )}
               {canEdit && (
                 <>
@@ -376,12 +392,17 @@ export function EmployeeMonthView({ workspaceId }: Props) {
                   <Button size="sm" variant="outline" onClick={() => setOncallOpen(true)}>
                     <Phone className="h-3 w-3 mr-1" /> {t('attendance_view.btn_record_oncall')}
                   </Button>
-                  <Button size="sm" variant="default" onClick={() => setEditMode(false)} title={t('attendance_view.tooltip_save_changes')}>
+                  <Button size="sm" variant="default" onClick={() => setEditMode('none')} title={t('attendance_view.tooltip_save_changes')}>
                     <Save className="h-3 w-3 mr-1" /> {t('attendance_view.btn_save_changes')}
                   </Button>
                 </>
               )}
-              {!serverReadOnly && !editMode && period && segments.length > 0 && (
+              {canEditAvail && (
+                <Button size="sm" variant="default" className="bg-violet-600 hover:bg-violet-700 text-white border-0" onClick={() => setEditMode('none')}>
+                  <Save className="h-3 w-3 mr-1" /> {t('attendance_view.btn_save_availability')}
+                </Button>
+              )}
+              {!serverReadOnly && editMode === 'none' && period && segments.length > 0 && (
                 <Button size="sm" onClick={handleSubmit}>
                   <Send className="h-3 w-3 mr-1" /> {t('attendance_view.btn_submit_short')}
                 </Button>
@@ -404,6 +425,30 @@ export function EmployeeMonthView({ workspaceId }: Props) {
               </div>
             </div>
           )}
+          {canEditAvail && (
+            <div className="mt-2 p-3 rounded-md bg-violet-50 dark:bg-violet-950/20 border border-violet-200 dark:border-violet-900">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-xs font-medium text-violet-800 dark:text-violet-200">{t('attendance_view.avail_paint_label')}:</span>
+                {(['available', 'preferred', 'unavailable'] as AvailabilityStatus[]).map(s => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setAvailPaintStatus(s)}
+                    className={`px-2.5 py-0.5 rounded-full text-xs border font-medium transition-all ${
+                      availPaintStatus === s
+                        ? s === 'available' ? 'bg-green-600 text-white border-green-600 shadow-sm'
+                          : s === 'preferred' ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                          : 'bg-red-600 text-white border-red-600 shadow-sm'
+                        : 'bg-background border-border text-muted-foreground hover:bg-accent'
+                    }`}
+                  >
+                    {t(`availability.status_${s}` as any)}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-xs text-violet-700 dark:text-violet-300">{t('attendance_view.avail_edit_hint')}</p>
+            </div>
+          )}
         </CardHeader>
       </Card>
 
@@ -417,7 +462,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
           <div
             className="grid grid-cols-7 gap-1.5 select-none"
             onPointerMove={handleGridPointerMove}
-            style={{ touchAction: canEdit ? 'none' : 'auto' }}
+            style={{ touchAction: (canEdit || canEditAvail) ? 'none' : 'auto' }}
           >
             {t('attendance_view.days_short').split(',').map(d => (
               <div key={d} className="text-[10px] uppercase tracking-wide text-muted-foreground text-center pb-1">{d}</div>
@@ -449,8 +494,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
               // Availability
               const availEntry = availByDate.get(key) ?? null;
               const availStatus = availEntry?.status ?? null;
-              // In non-edit mode, empty days are clickable to toggle availability
-              const canToggleAvail = !canEdit && !!userId && !!membershipId;
+              const isPast = key < format(today, 'yyyy-MM-dd');
 
               return (
                 <button
@@ -461,20 +505,23 @@ export function EmployeeMonthView({ workspaceId }: Props) {
                   onPointerDown={(e) => handlePointerDown(e, key)}
                   onPointerUp={() => handlePointerUpOnDay(key)}
                   onClick={(e) => {
-                    if (canEdit) { e.preventDefault(); return; }
-                    if (canToggleAvail) { handleToggleAvailability(key, e); }
+                    if (canEdit || canEditAvail) { e.preventDefault(); return; }
                   }}
                   disabled={false}
                   className={`p-2 rounded-md border text-left transition-colors min-h-[64px] flex flex-col gap-0.5 touch-none ${
-                    inDragPreview ? 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-950/30' :
-                    displayConfig.availability && availStatus ? AVAIL_CELL_CLASSES[availStatus] :
-                    isWeekend ? 'bg-muted/30 border-muted' : 'bg-card'
+                    inDragPreview
+                      ? canEditAvail
+                        ? 'ring-2 ring-violet-400 bg-violet-50 dark:bg-violet-950/30'
+                        : 'ring-2 ring-amber-400 bg-amber-50 dark:bg-amber-950/30'
+                      : displayConfig.availability && availStatus ? AVAIL_CELL_CLASSES[availStatus]
+                      : isWeekend ? 'bg-muted/30 border-muted' : 'bg-card'
                   } ${totalH > 0 ? 'border-primary/40' : ''} ${
                     canEdit ? 'cursor-pointer hover:bg-accent' :
-                    canToggleAvail ? 'cursor-pointer hover:bg-muted/50' : 'cursor-default'
+                    canEditAvail ? (isPast ? 'cursor-not-allowed opacity-60' : 'cursor-crosshair hover:ring-1 hover:ring-violet-300') :
+                    'cursor-default'
                   }`}
                   title={canEdit ? t('attendance_view.day_edit_tooltip') :
-                    canToggleAvail ? t('availability.hint') :
+                    canEditAvail ? (isPast ? '' : t('attendance_view.avail_edit_hint')) :
                     (totalH > 0 || hasOncall ? t('attendance_view.day_view_tooltip') : '')}
                 >
                   <div className="flex items-center justify-between">
@@ -484,7 +531,7 @@ export function EmployeeMonthView({ workspaceId }: Props) {
                   {totalH > 0 ? (
                     <span className="text-[11px] tabular-nums font-medium">{totalH.toFixed(1)}h</span>
                   ) : (
-                    canEdit && <Plus className="h-3 w-3 text-muted-foreground/50" />
+                    canEdit && !isPast && <Plus className="h-3 w-3 text-muted-foreground/50" />
                   )}
                   {displayConfig.workHours && regularRange && (
                     <span className="text-[9px] tabular-nums text-emerald-700 dark:text-emerald-400 leading-tight">{regularRange}</span>
@@ -520,8 +567,8 @@ export function EmployeeMonthView({ workspaceId }: Props) {
             })}
           </div>
 
-          {/* Availability legend + hint */}
-          {displayConfig.availability && !canEdit && (
+          {/* Availability legend */}
+          {displayConfig.availability && editMode === 'none' && (
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
               {(['available', 'preferred', 'unavailable'] as AvailabilityStatus[]).map(s => (
                 <span key={s} className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded border ${AVAIL_CELL_CLASSES[s]}`}>
@@ -532,11 +579,10 @@ export function EmployeeMonthView({ workspaceId }: Props) {
                   }>{t(`availability.status_${s}` as any)}</span>
                 </span>
               ))}
-              <span className="ml-1">{t('availability.tap_to_cycle')}</span>
             </div>
           )}
           {/* Read-only hint */}
-          {!serverReadOnly && !editMode && (
+          {!serverReadOnly && editMode === 'none' && (
             <p className="mt-2 text-xs text-muted-foreground">
               {t('attendance_view.readonly_hint')}
             </p>

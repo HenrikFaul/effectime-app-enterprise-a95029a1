@@ -1,3 +1,18 @@
+## 2026-05-18 — v3.42.4 Feature: OpenShiftManager targeted-notify fix + EmployeeMonthView dual-mode edit
+
+### OpenShiftManager — targeted notification fix
+- **Bug fix:** "Kiválasztottak értesítése" button was showing the same "broadcast to all" toast regardless of which button was clicked. Now shows a distinct `notify_selected_success` toast with the exact count of notified candidates.
+- **Visual distinction:** The "Kiválasztottak értesítése" button is now rendered in violet (`bg-violet-600`) to clearly differentiate it from the primary broadcast button.
+
+### EmployeeMonthView — two-mode gated edit system
+- **Default: read-only.** The calendar is fully read-only until the user explicitly picks an edit mode.
+- **Edit dropdown:** Clicking the Edit button now shows two options — *Munkaidő szerkesztése* (worktime/schedule editing, existing behaviour) and *Elérhetőség szerkesztése* (availability-paint mode, new).
+- **Availability paint mode:** A violet toolbar appears showing three status buttons (Elérhető / Preferált / Nem elérhető). Clicking or dragging across days paints them with the selected status. Past dates are blocked (cursor shows not-allowed, writes are rejected). Cells show a violet highlight ring in drag preview. Mode exits via "Kész" (Done) button.
+- **No more free-click toggling:** Removed the old behaviour where clicking any day outside edit mode would silently cycle availability status.
+- **Localization:** All new user-facing strings added to both `en.ts` and `hu.ts` in the same commit.
+
+---
+
 ## 2026-05-18 — v3.42.3 Fix: create_open_shift_request null notified_user_ids (error 23502)
 
 **Root cause:** The final UPDATE step in `create_open_shift_request` set

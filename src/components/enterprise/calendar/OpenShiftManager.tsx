@@ -82,7 +82,11 @@ export function OpenShiftManager({
         timeoutHours,
         targetUserIds,
       });
-      toast.success(t('open_shifts.posted_success'));
+      if (targetOnly) {
+        toast.success(t('open_shifts.notify_selected_success', { count: String(targetUserIds.length) }));
+      } else {
+        toast.success(t('open_shifts.posted_success'));
+      }
       resetForm();
     } catch {
       toast.error(t('open_shifts.post_error'));
@@ -387,10 +391,9 @@ export function OpenShiftManager({
             {selectedCandidateIds.length > 0 && (
               <Button
                 size="sm"
-                variant="secondary"
                 onClick={() => handlePost(true)}
                 disabled={create.isPending}
-                className="gap-1"
+                className="gap-1 bg-violet-600 hover:bg-violet-700 text-white border-0"
               >
                 {create.isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Users className="h-3 w-3" />}
                 {t('open_shifts.notify_selected')} ({selectedCandidateIds.length})
