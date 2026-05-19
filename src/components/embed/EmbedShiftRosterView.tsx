@@ -9,6 +9,9 @@ import {
 } from 'date-fns';
 import { cn } from '@/lib/utils';
 
+// Hungarian day abbreviations (getDay(): 0=Sun,1=Mon,...,6=Sat)
+const HU_DAYS = ['V', 'H', 'K', 'Sze', 'Cs', 'P', 'Szo'];
+
 interface Office { id: string; name: string; city: string | null }
 interface Shift {
   id: string; user_id: string; office_id: string;
@@ -150,48 +153,50 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
     );
   }
 
+  const weekLabel = `${format(days[0], 'yyyy. MMM d.')} — ${format(days[days.length - 1], 'MMM d.')}`;
+
   return (
-    <div className="flex flex-col h-full bg-background text-foreground text-xs">
+    <div className="flex flex-col h-full bg-background text-foreground">
       {/* Header */}
-      <div className="flex items-center gap-1 px-2 py-1.5 border-b bg-card shrink-0 flex-wrap shadow-subtle">
-        <Button size="icon" variant="ghost" className="h-6 w-6"
+      <div className="flex items-center gap-2 px-3 py-2 border-b bg-card shrink-0 flex-wrap shadow-subtle">
+        <Button size="icon" variant="ghost" className="h-7 w-7"
           onClick={() => setWeekStart(w => subWeeks(w, 1))}>
-          <ChevronLeft className="h-3.5 w-3.5" />
+          <ChevronLeft className="h-4 w-4" />
         </Button>
-        <span className="font-display font-medium text-xs min-w-[140px] text-center">
-          {format(days[0], 'MMM d')} – {format(days[days.length - 1], 'MMM d, yyyy')}
+        <span className="font-display font-medium text-sm text-foreground">
+          {weekLabel}
         </span>
-        <Button size="icon" variant="ghost" className="h-6 w-6"
+        <Button size="icon" variant="ghost" className="h-7 w-7"
           onClick={() => setWeekStart(w => addWeeks(w, 1))}>
-          <ChevronRight className="h-3.5 w-3.5" />
+          <ChevronRight className="h-4 w-4" />
         </Button>
-        {(loading || saving) && <span className="ml-1 text-[10px] text-muted-foreground animate-pulse">…</span>}
+        {(loading || saving) && <span className="text-[10px] text-muted-foreground animate-pulse">…</span>}
         {canWrite && (
-          <Badge variant="outline" className="ml-1 text-[9px] py-0 border-primary/40 text-primary">
+          <Badge variant="outline" className="text-[9px] py-0 border-primary/40 text-primary">
             ✏ szerkesztés
           </Badge>
         )}
-        <span className="ml-auto"><EffectimeLogo size={20} variant="full" /></span>
+        <span className="ml-auto"><EffectimeLogo size={22} variant="full" /></span>
       </div>
 
       {/* Grid */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto min-h-0">
         {loading ? (
-          <div className="space-y-2 p-3">
+          <div className="space-y-2 p-4">
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-8 bg-muted animate-pulse rounded" />
+              <div key={i} className="h-9 bg-muted animate-pulse rounded-lg" />
             ))}
           </div>
         ) : offices.length === 0 ? (
-          <div className="flex items-center justify-center h-24 text-muted-foreground">
-            No offices configured
+          <div className="flex items-center justify-center h-24 text-muted-foreground text-xs">
+            Nincs telephelyi beállítás
           </div>
         ) : (
           <table className="w-full border-collapse text-xs">
             <thead>
               <tr>
-                <th className="sticky left-0 z-10 bg-background text-left px-2 py-1.5 font-medium border-b border-r min-w-[110px]">
-                  Employee
+                <th className="sticky left-0 z-10 bg-background text-left px-3 py-2 font-medium border-b border-r min-w-[120px] text-muted-foreground">
+                  Munkavállaló
                 </th>
                 {days.map(d => {
                   const iso = format(d, 'yyyy-MM-dd');
@@ -199,12 +204,12 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
                   return (
                     <th key={iso}
                       className={cn(
-                        'text-center px-1 py-1.5 font-medium border-b min-w-[46px]',
+                        'text-center px-1 py-2 font-medium border-b min-w-[50px]',
                         isHol && 'bg-rose-50 dark:bg-rose-950/20',
                         isWeekend(d) && !isHol && 'bg-muted/40',
                       )}>
-                      <div>{format(d, 'EEE')}</div>
-                      <div className="text-muted-foreground font-normal">{format(d, 'd')}</div>
+                      <div className="text-xs">{HU_DAYS[d.getDay()]}</div>
+                      <div className="text-muted-foreground font-normal text-[11px]">{format(d, 'd')}</div>
                     </th>
                   );
                 })}
@@ -221,12 +226,12 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
                     </td>
                   </tr>,
                   ...(members.length > 0 ? members.map(member => (
-                    <tr key={member.user_id} className="border-b hover:bg-muted/20">
-                      <td className="sticky left-0 bg-background px-2 py-1 border-r font-medium truncate max-w-[110px]"
+                    <tr key={member.user_id} className="border-b hover:bg-muted/20 transition-colors">
+                      <td className="sticky left-0 bg-background px-3 py-1.5 border-r truncate max-w-[120px]"
                         title={member.display_name}>
-                        {member.display_name}
+                        <div className="text-xs font-medium text-foreground truncate">{member.display_name}</div>
                         {member.business_role && (
-                          <div className="text-[10px] text-muted-foreground opacity-70 font-normal truncate">
+                          <div className="text-[10px] text-muted-foreground font-normal truncate mt-0.5">
                             {member.business_role}
                           </div>
                         )}
@@ -279,8 +284,8 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
                     </tr>
                   )) : [
                     <tr key={`empty-${office.id}`} className="border-b">
-                      <td className="sticky left-0 bg-background px-2 py-1 border-r text-[11px] text-muted-foreground italic" colSpan={days.length + 1}>
-                        No staff assigned this week
+                      <td className="sticky left-0 bg-background px-3 py-2 border-r text-xs text-muted-foreground italic" colSpan={days.length + 1}>
+                        Ezen a héten nincs beosztott
                       </td>
                     </tr>,
                   ]),
