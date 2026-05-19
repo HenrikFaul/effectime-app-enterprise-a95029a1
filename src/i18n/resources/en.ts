@@ -4076,6 +4076,8 @@ const en = {
     read_only_badge: 'Read-only',
     builder_member: 'Team member (user ID)',
     builder_member_hint: 'Paste the user_id UUID of the member whose schedule to show.',
+    view_multi: 'Combined view (all tabs)',
+    view_multi_desc: 'All allowed views in a single embed — switch between them with tabs. One iframe, all features.',
   },
   m365: {
     title: 'Microsoft 365 calendar',

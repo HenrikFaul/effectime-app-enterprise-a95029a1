@@ -4,6 +4,7 @@ import { EmbedShiftRosterView } from '@/components/embed/EmbedShiftRosterView';
 import { EmbedLeaveCalendarView } from '@/components/embed/EmbedLeaveCalendarView';
 import { EmbedOfficeHeadcountView } from '@/components/embed/EmbedOfficeHeadcountView';
 import { EmbedMemberScheduleView } from '@/components/embed/EmbedMemberScheduleView';
+import { EmbedMultiView } from '@/components/embed/EmbedMultiView';
 import { AlertTriangle } from 'lucide-react';
 
 const BRAND_STRIPE = <div className="h-0.5 w-full bg-primary shrink-0" />;
@@ -17,28 +18,47 @@ function EmbedShell({ children }: { children: React.ReactNode }) {
   );
 }
 
+const SINGLE_VIEWS = ['capacity_planner', 'shift_roster', 'leave_calendar', 'office_headcount', 'member_schedule'];
+
 export default function EmbedPage() {
   const { view } = useParams<{ view: string }>();
   const [searchParams] = useSearchParams();
 
-  const token    = searchParams.get('token') ?? '';
-  const office   = searchParams.get('office') ?? undefined;
-  const from     = searchParams.get('from') ?? undefined;
-  const member   = searchParams.get('member') ?? undefined;
+  const token     = searchParams.get('token') ?? '';
+  const office    = searchParams.get('office') ?? undefined;
+  const from      = searchParams.get('from') ?? undefined;
+  const member    = searchParams.get('member') ?? undefined;
   const modeParam = searchParams.get('mode');
-  const mode     = (modeParam === 'monthly' || modeParam === 'weekly') ? modeParam : undefined;
+  const mode      = (modeParam === 'monthly' || modeParam === 'weekly') ? modeParam : undefined;
 
   if (!token) {
     return (
       <div className="flex items-center justify-center h-screen text-sm text-destructive">
         <div className="text-center p-8">
           <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-60" />
-          <p className="font-medium">Hiányzó beágyazási token</p>
+          <p className="font-semibold">Hiányzó beágyazási token</p>
           <p className="text-xs text-muted-foreground mt-1">
             Add meg a <code>?token=…</code> paramétert az iframe URL-ben.
           </p>
         </div>
       </div>
+    );
+  }
+
+  if (view === 'multi') {
+    const viewsParam = searchParams.get('views') ?? '';
+    const views = viewsParam.split(',').map(v => v.trim()).filter(v => SINGLE_VIEWS.includes(v));
+    return (
+      <EmbedShell>
+        <EmbedMultiView
+          token={token}
+          views={views}
+          officeFilter={office}
+          initialFrom={from}
+          member={member}
+          mode={mode}
+        />
+      </EmbedShell>
     );
   }
 
@@ -80,7 +100,7 @@ export default function EmbedPage() {
         <div className="flex items-center justify-center h-screen text-sm text-muted-foreground">
           <div className="text-center p-8">
             <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-60" />
-            <p className="font-medium">Hiányzó <code>member</code> paraméter</p>
+            <p className="font-semibold">Hiányzó <code>member</code> paraméter</p>
             <p className="text-xs mt-1">Add meg a csapattag user_id-jét: <code>?member=…</code></p>
           </div>
         </div>
@@ -93,14 +113,13 @@ export default function EmbedPage() {
     );
   }
 
-  const supported = ['capacity_planner', 'shift_roster', 'leave_calendar', 'office_headcount', 'member_schedule'];
   return (
     <div className="flex items-center justify-center h-screen text-sm text-muted-foreground">
       <div className="text-center p-8">
         <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-60" />
-        <p className="font-medium">Ismeretlen nézet: {view}</p>
+        <p className="font-semibold">Ismeretlen nézet: {view}</p>
         <p className="text-xs mt-1">
-          Elérhető nézetek: <code>{supported.join(', ')}</code>
+          Elérhető nézetek: <code>{[...SINGLE_VIEWS, 'multi'].join(', ')}</code>
         </p>
       </div>
     </div>

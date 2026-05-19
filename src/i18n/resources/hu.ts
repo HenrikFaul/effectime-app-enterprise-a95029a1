@@ -4064,6 +4064,8 @@ const hu = {
     read_only_badge: 'Csak olvasható',
     builder_member: 'Csapattag (user ID)',
     builder_member_hint: 'Illeszd be annak a csapattagnak a user_id UUID-ját, akinek a menetrendjét megjeleníteni szeretnéd.',
+    view_multi: 'Kombinált nézet (összes tab)',
+    view_multi_desc: 'Minden engedélyezett nézet egyetlen beágyazásban — tab sávval váltani közöttük. Egy iframe, minden funkció.',
   },
   m365: {
     title: 'Microsoft 365 naptár',
