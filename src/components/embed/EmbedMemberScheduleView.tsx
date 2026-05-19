@@ -30,6 +30,7 @@ interface EmbedData {
 }
 
 const HU_DAYS = ['V', 'H', 'K', 'Sze', 'Cs', 'P', 'Szo'];
+const TODAY = format(new Date(), 'yyyy-MM-dd');
 
 export interface EmbedMemberScheduleViewProps {
   token: string;
@@ -68,7 +69,7 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
       });
   }, [token, from, to]);
 
-  const member   = useMemo(() => (data?.members ?? []).find(m => m.user_id === memberId), [data, memberId]);
+  const member    = useMemo(() => (data?.members ?? []).find(m => m.user_id === memberId), [data, memberId]);
   const officeMap = useMemo(() => {
     const m = new Map<string, Office>();
     (data?.offices ?? []).forEach(o => m.set(o.id, o));
@@ -106,15 +107,15 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
   if (error) return (
     <div className="flex flex-col items-center justify-center h-full min-h-48 text-sm text-destructive p-6 text-center gap-2">
       <AlertTriangle className="h-8 w-8 opacity-60" />
-      <p className="font-medium">Embed token hiba</p>
+      <p className="font-semibold">Embed token hiba</p>
       <p className="text-xs text-muted-foreground">{error}</p>
     </div>
   );
 
   if (!loading && !member) return (
     <div className="flex flex-col items-center justify-center h-full min-h-48 text-sm text-muted-foreground p-6 text-center gap-2">
-      <User className="h-8 w-8 opacity-40" />
-      <p className="font-medium">Ismeretlen csapattag</p>
+      <User className="h-8 w-8 opacity-30" />
+      <p className="font-semibold text-foreground">Ismeretlen csapattag</p>
       <p className="text-xs">A megadott felhasználó nem található a munkaterületen.</p>
     </div>
   );
@@ -126,26 +127,33 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setWeekStart(w => subWeeks(w, 1))}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <span className="font-display font-medium text-sm text-foreground">{weekLabel}</span>
+        <span className="font-display font-semibold text-sm text-foreground">{weekLabel}</span>
         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setWeekStart(w => addWeeks(w, 1))}>
           <ChevronRight className="h-4 w-4" />
         </Button>
-        {loading && <span className="text-[10px] text-muted-foreground animate-pulse">…</span>}
+        {loading && <span className="text-[10px] text-muted-foreground animate-pulse ml-1">…</span>}
         <span className="ml-auto"><EffectimeLogo size={22} variant="full" /></span>
       </div>
 
       {/* Member identity bar */}
-      {member && !loading && (
-        <div className="px-4 py-2.5 border-b bg-card shrink-0 flex items-center gap-2">
-          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+      {(member || loading) && (
+        <div className="px-4 py-2.5 border-b bg-card shrink-0 flex items-center gap-3">
+          <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
             <User className="h-4 w-4 text-primary" />
           </div>
-          <div>
-            <div className="text-sm font-semibold text-foreground">{member.display_name}</div>
-            {member.business_role && (
-              <div className="text-xs text-muted-foreground">{member.business_role}</div>
-            )}
-          </div>
+          {loading ? (
+            <div className="space-y-1.5 flex-1">
+              <div className="h-3.5 w-32 bg-muted animate-pulse rounded" />
+              <div className="h-2.5 w-20 bg-muted animate-pulse rounded" />
+            </div>
+          ) : member && (
+            <div>
+              <div className="text-sm font-semibold text-foreground">{member.display_name}</div>
+              {member.business_role && (
+                <div className="text-[11px] text-muted-foreground mt-0.5">{member.business_role}</div>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -154,24 +162,29 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
         {loading ? (
           <div className="grid grid-cols-7 gap-2">
             {Array.from({ length: 7 }).map((_, i) => (
-              <div key={i} className="h-24 bg-muted animate-pulse rounded-xl" />
+              <div key={i} className="h-24 bg-muted animate-pulse rounded-xl" style={{ opacity: 1 - i * 0.1 }} />
             ))}
           </div>
         ) : (
           <div className="grid grid-cols-7 gap-2 h-full">
             {days.map(d => {
-              const iso    = format(d, 'yyyy-MM-dd');
-              const isHol  = holidaySet.has(iso) || blockedSet.has(iso);
+              const iso     = format(d, 'yyyy-MM-dd');
+              const isHol   = holidaySet.has(iso) || blockedSet.has(iso);
               const onLeave = leaveSet.has(iso);
               const shift   = shiftByDate.get(iso);
               const office  = shift ? officeMap.get(shift.office_id) : null;
-              const isToday = iso === format(new Date(), 'yyyy-MM-dd');
+              const isToday = iso === TODAY;
+              const isWknd  = isWeekend(d);
 
-              const bgClass = isHol ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/40'
-                : onLeave ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/40'
-                : shift ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/40'
-                : isWeekend(d) ? 'bg-muted/30 border-border/50'
-                : 'bg-card border-border';
+              const bgClass = isHol
+                ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200/80 dark:border-amber-800/30'
+                : onLeave
+                ? 'bg-rose-50 dark:bg-rose-950/20 border-rose-200/80 dark:border-rose-800/30'
+                : shift
+                ? 'bg-emerald-50 dark:bg-emerald-950/20 border-emerald-200/80 dark:border-emerald-800/30'
+                : isWknd
+                ? 'bg-muted/20 border-border/30'
+                : 'bg-card border-border/60';
 
               return (
                 <div key={iso} className={cn(
@@ -179,37 +192,36 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
                   bgClass,
                   isToday && 'ring-2 ring-primary ring-offset-1',
                 )}>
-                  {/* Day label */}
+                  {/* Day number (large) + abbreviation (small) */}
                   <div className="text-center">
                     <div className={cn(
-                      'text-[10px] font-semibold uppercase tracking-wide',
-                      isToday ? 'text-primary' : 'text-muted-foreground',
-                    )}>{HU_DAYS[d.getDay()]}</div>
-                    <div className={cn(
-                      'text-base font-bold leading-tight',
-                      isToday && 'text-primary',
+                      'text-base font-bold leading-none',
+                      isToday ? 'text-primary' : 'text-foreground',
                     )}>{format(d, 'd')}</div>
+                    <div className={cn(
+                      'text-[9px] font-semibold uppercase tracking-widest mt-0.5',
+                      isToday ? 'text-primary/70' : 'text-muted-foreground/50',
+                    )}>{HU_DAYS[d.getDay()]}</div>
                   </div>
 
                   {/* Status badge */}
-                  <div className="flex-1 flex items-center justify-center">
+                  <div className="flex-1 flex items-center justify-center w-full">
                     {isHol ? (
-                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold text-center leading-tight">
-                        Ünnep
+                      <span className="inline-flex items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-[9px] font-bold px-1.5 py-0.5 tracking-wide">
+                        ÜNN
                       </span>
                     ) : onLeave ? (
-                      <span className="text-[10px] text-rose-600 dark:text-rose-400 font-semibold text-center leading-tight">
-                        Táv.
+                      <span className="inline-flex items-center justify-center rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 text-[9px] font-bold px-1.5 py-0.5 tracking-wide">
+                        TÁV
                       </span>
                     ) : office ? (
-                      <span className="text-[10px] text-emerald-700 dark:text-emerald-400 font-semibold text-center leading-tight truncate w-full text-center px-0.5"
+                      <span
+                        className="inline-flex items-center justify-center rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 text-[9px] font-semibold px-1.5 py-0.5 w-full text-center truncate"
                         title={office.name}>
-                        {office.name.length > 10 ? office.name.slice(0, 9) + '…' : office.name}
+                        {office.name.length > 9 ? office.name.slice(0, 8) + '…' : office.name}
                       </span>
-                    ) : isWeekend(d) ? (
-                      <span className="text-[10px] text-muted-foreground/50">–</span>
                     ) : (
-                      <span className="text-[10px] text-muted-foreground/50">–</span>
+                      <span className="text-muted-foreground/25 text-[11px]">·</span>
                     )}
                   </div>
                 </div>
@@ -220,15 +232,18 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-3 px-3 py-1.5 border-t bg-background text-[10px] text-muted-foreground shrink-0 flex-wrap">
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-3 h-3 rounded-sm bg-emerald-100 dark:bg-emerald-900/40" /> Irodai jelenlét
+      <div className="flex items-center gap-3 px-3 py-1.5 border-t bg-background shrink-0 flex-wrap">
+        <span className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+          <span className="inline-block w-2.5 h-2.5 rounded-sm bg-emerald-100 dark:bg-emerald-900/40 shrink-0" />
+          Irodai jelenlét
         </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-3 h-3 rounded-sm bg-rose-100 dark:bg-rose-900/40" /> Távollét
+        <span className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+          <span className="inline-block w-2.5 h-2.5 rounded-sm bg-rose-100 dark:bg-rose-900/40 shrink-0" />
+          Távollét
         </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-3 h-3 rounded-sm bg-amber-100 dark:bg-amber-900/40" /> Ünnepnap
+        <span className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+          <span className="inline-block w-2.5 h-2.5 rounded-sm bg-amber-100 dark:bg-amber-900/40 shrink-0" />
+          Ünnepnap
         </span>
       </div>
     </div>

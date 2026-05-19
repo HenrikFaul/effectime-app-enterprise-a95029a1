@@ -24,6 +24,7 @@ interface EmbedData {
 }
 
 const HU_DAYS = ['V', 'H', 'K', 'Sze', 'Cs', 'P', 'Szo'];
+const TODAY = format(new Date(), 'yyyy-MM-dd');
 
 export interface EmbedLeaveCalendarViewProps {
   token: string;
@@ -62,11 +63,10 @@ export function EmbedLeaveCalendarView({ token, officeFilter: _officeFilter, ini
       });
   }, [token, from, to]);
 
-  const holidaySet  = useMemo(() => new Set(data?.holidays ?? []), [data]);
-  const blockedSet  = useMemo(() => new Set(data?.blocked_dates ?? []), [data]);
-  const members     = useMemo(() => data?.members ?? [], [data]);
+  const holidaySet = useMemo(() => new Set(data?.holidays ?? []), [data]);
+  const blockedSet = useMemo(() => new Set(data?.blocked_dates ?? []), [data]);
+  const members    = useMemo(() => data?.members ?? [], [data]);
 
-  // Build a set of "user_id::YYYY-MM-DD" for on-leave days
   const leaveSet = useMemo(() => {
     const s = new Set<string>();
     (data?.leave_requests ?? []).forEach(lr => {
@@ -82,7 +82,6 @@ export function EmbedLeaveCalendarView({ token, officeFilter: _officeFilter, ini
 
   const weekLabel = `${format(days[0], 'yyyy. MMM d.')} — ${format(days[days.length - 1], 'MMM d.')}`;
 
-  // Count absences per day (for header summary)
   const absentCountByDay = useMemo(() => {
     return days.map(d => {
       const iso = format(d, 'yyyy-MM-dd');
@@ -93,7 +92,7 @@ export function EmbedLeaveCalendarView({ token, officeFilter: _officeFilter, ini
   if (error) return (
     <div className="flex flex-col items-center justify-center h-full min-h-48 text-sm text-destructive p-6 text-center gap-2">
       <AlertTriangle className="h-8 w-8 opacity-60" />
-      <p className="font-medium">Embed token hiba</p>
+      <p className="font-semibold">Embed token hiba</p>
       <p className="text-xs text-muted-foreground">{error}</p>
     </div>
   );
@@ -105,24 +104,27 @@ export function EmbedLeaveCalendarView({ token, officeFilter: _officeFilter, ini
         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setWeekStart(w => subWeeks(w, 1))}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <span className="font-display font-medium text-sm text-foreground">{weekLabel}</span>
+        <span className="font-display font-semibold text-sm text-foreground">{weekLabel}</span>
         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setWeekStart(w => addWeeks(w, 1))}>
           <ChevronRight className="h-4 w-4" />
         </Button>
-        {loading && <span className="text-[10px] text-muted-foreground animate-pulse">…</span>}
+        {loading && <span className="text-[10px] text-muted-foreground animate-pulse ml-1">…</span>}
         <span className="ml-auto"><EffectimeLogo size={22} variant="full" /></span>
       </div>
 
       {/* Legend */}
-      <div className="flex items-center gap-3 px-3 py-1.5 border-b bg-background text-[10px] text-muted-foreground shrink-0">
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-3 h-3 rounded-sm bg-rose-200 dark:bg-rose-900/60" /> Szabadság / távollét
+      <div className="flex items-center gap-4 px-3 py-1.5 border-b bg-background shrink-0">
+        <span className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+          <span className="inline-block w-2.5 h-2.5 rounded-sm bg-rose-200 dark:bg-rose-900/60 shrink-0" />
+          Szabadság / távollét
         </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-3 h-3 rounded-sm bg-amber-100 dark:bg-amber-900/40" /> Ünnepnap
+        <span className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+          <span className="inline-block w-2.5 h-2.5 rounded-sm bg-amber-200 dark:bg-amber-900/40 shrink-0" />
+          Ünnepnap
         </span>
-        <span className="flex items-center gap-1">
-          <span className="inline-block w-3 h-3 rounded-sm bg-muted" /> Hétvége
+        <span className="flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+          <span className="inline-block w-2.5 h-2.5 rounded-sm bg-muted shrink-0" />
+          Hétvége
         </span>
       </div>
 
@@ -130,33 +132,48 @@ export function EmbedLeaveCalendarView({ token, officeFilter: _officeFilter, ini
       <div className="flex-1 overflow-auto min-h-0">
         {loading ? (
           <div className="space-y-2 p-4">
-            {Array.from({ length: 6 }).map((_, i) => <div key={i} className="h-9 bg-muted animate-pulse rounded-lg" />)}
+            <div className="h-6 w-1/4 bg-muted animate-pulse rounded-lg" />
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="h-10 bg-muted animate-pulse rounded-lg" style={{ opacity: 1 - i * 0.12 }} />
+            ))}
           </div>
         ) : members.length === 0 ? (
-          <div className="flex items-center justify-center h-24 text-xs text-muted-foreground">
-            Nincsenek aktív csapattagok
+          <div className="flex flex-col items-center justify-center h-full min-h-32 gap-2 text-muted-foreground">
+            <AlertTriangle className="h-6 w-6 opacity-30" />
+            <span className="text-xs">Nincsenek aktív csapattagok</span>
           </div>
         ) : (
           <table className="w-full border-collapse text-xs">
-            <thead>
-              <tr>
-                <th className="sticky left-0 z-10 bg-background text-left px-3 py-2 font-medium border-b border-r min-w-[130px] text-muted-foreground">
-                  Munkavállaló
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-background/95 backdrop-blur-sm">
+                <th className="sticky left-0 z-20 bg-background/95 text-left px-3 py-2.5 border-b border-r min-w-[130px]">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                    Munkavállaló
+                  </span>
                 </th>
                 {days.map((d, i) => {
-                  const iso = format(d, 'yyyy-MM-dd');
-                  const isHol = holidaySet.has(iso) || blockedSet.has(iso);
-                  const absentCount = absentCountByDay[i];
+                  const iso          = format(d, 'yyyy-MM-dd');
+                  const isHol        = holidaySet.has(iso) || blockedSet.has(iso);
+                  const isToday      = iso === TODAY;
+                  const absentCount  = absentCountByDay[i];
                   return (
                     <th key={iso} className={cn(
-                      'text-center px-1 py-2 font-medium border-b min-w-[52px]',
-                      isHol && 'bg-amber-50 dark:bg-amber-950/20',
-                      isWeekend(d) && !isHol && 'bg-muted/40',
+                      'text-center px-1 py-2 border-b min-w-[52px] transition-colors',
+                      isHol   ? 'bg-amber-50/80 dark:bg-amber-950/20' :
+                      isToday ? 'bg-primary/5' :
+                      isWeekend(d) ? 'bg-muted/30' : '',
                     )}>
-                      <div className="text-xs">{HU_DAYS[d.getDay()]}</div>
-                      <div className="text-muted-foreground font-normal text-[11px]">{format(d, 'd')}</div>
+                      <div className={cn(
+                        'text-sm font-bold leading-none',
+                        isToday ? 'text-primary' : 'text-foreground',
+                      )}>{format(d, 'd')}</div>
+                      <div className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/50 mt-0.5">
+                        {HU_DAYS[d.getDay()]}
+                      </div>
                       {absentCount > 0 && !isHol && (
-                        <div className="text-[9px] text-rose-500 font-semibold mt-0.5">−{absentCount}</div>
+                        <span className="inline-flex items-center justify-center mt-0.5 min-w-[16px] h-4 rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 text-[9px] font-bold px-1">
+                          −{absentCount}
+                        </span>
                       )}
                     </th>
                   );
@@ -166,31 +183,35 @@ export function EmbedLeaveCalendarView({ token, officeFilter: _officeFilter, ini
             <tbody>
               {members.map(member => (
                 <tr key={member.user_id} className="border-b hover:bg-muted/10 transition-colors">
-                  <td className="sticky left-0 bg-background px-3 py-1.5 border-r max-w-[130px]">
+                  <td className="sticky left-0 bg-background px-3 py-2 border-r max-w-[130px]">
                     <div className="text-xs font-medium text-foreground truncate">{member.display_name}</div>
                     {member.business_role && (
-                      <div className="text-[10px] text-muted-foreground truncate mt-0.5">{member.business_role}</div>
+                      <div className="text-[10px] text-muted-foreground/70 truncate mt-0.5">{member.business_role}</div>
                     )}
                   </td>
                   {days.map(d => {
                     const iso     = format(d, 'yyyy-MM-dd');
                     const isHol   = holidaySet.has(iso) || blockedSet.has(iso);
                     const onLeave = leaveSet.has(`${member.user_id}::${iso}`);
+                    const isToday = iso === TODAY;
                     return (
                       <td key={iso} className={cn(
-                        'text-center px-1 py-1.5',
-                        isHol    && 'bg-amber-50 dark:bg-amber-950/20',
-                        onLeave  && !isHol && 'bg-rose-50 dark:bg-rose-950/30',
-                        isWeekend(d) && !isHol && !onLeave && 'bg-muted/20',
+                        'text-center px-1 py-1.5 transition-colors',
+                        isHol    ? 'bg-amber-50/80 dark:bg-amber-950/20' :
+                        onLeave  ? 'bg-rose-50 dark:bg-rose-950/20' :
+                        isToday  ? 'bg-primary/5' :
+                        isWeekend(d) ? 'bg-muted/15' : '',
                       )}>
                         {isHol ? (
-                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Ünn.</span>
+                          <span className="inline-flex items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-[9px] font-bold px-1.5 py-0.5 tracking-wide">
+                            ÜNN
+                          </span>
                         ) : onLeave ? (
-                          <span className="inline-flex items-center justify-center rounded-md bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300 text-[10px] font-medium px-1.5 py-0.5">
+                          <span className="inline-flex items-center justify-center rounded-full bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300 text-[9px] font-bold px-1.5 py-0.5 tracking-wide">
                             TÁV
                           </span>
                         ) : (
-                          <span className="text-muted-foreground/30 text-[10px]">—</span>
+                          <span className="text-muted-foreground/25 text-[11px]">·</span>
                         )}
                       </td>
                     );

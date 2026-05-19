@@ -2,15 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
+import { AlertTriangle, Check, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
 import { EffectimeLogo } from '@/components/EffectimeLogo';
 import {
   addWeeks, eachDayOfInterval, endOfWeek, format, isWeekend, startOfWeek, subWeeks,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
 
-// Hungarian day abbreviations (getDay(): 0=Sun,1=Mon,...,6=Sat)
 const HU_DAYS = ['V', 'H', 'K', 'Sze', 'Cs', 'P', 'Szo'];
+const TODAY = format(new Date(), 'yyyy-MM-dd');
 
 interface Office { id: string; name: string; city: string | null }
 interface Shift {
@@ -22,7 +22,6 @@ interface Member {
   business_role: string | null; office_id: string | null;
   membership_id: string;
 }
-
 interface EmbedData {
   can_write: boolean;
   offices: Office[];
@@ -47,10 +46,10 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
     return startOfWeek(new Date(), { weekStartsOn: 1 });
   });
 
-  const [data, setData]     = useState<EmbedData | null>(null);
+  const [data, setData]       = useState<EmbedData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError]   = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
+  const [error, setError]     = useState<string | null>(null);
+  const [saving, setSaving]   = useState(false);
 
   const days = useMemo(() =>
     eachDayOfInterval({ start: weekStart, end: endOfWeek(weekStart, { weekStartsOn: 1 }) }),
@@ -74,8 +73,7 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
 
   useEffect(() => { load(); }, [token, from, to]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const canWrite = data?.can_write ?? false;
-
+  const canWrite   = data?.can_write ?? false;
   const holidaySet = useMemo(() => new Set(data?.holidays ?? []), [data]);
 
   const offices = useMemo(() => {
@@ -101,9 +99,7 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
         } else {
           const shift = shifts.find(s => s.user_id === m.user_id);
           const oid = shift?.office_id;
-          if (oid && map.has(oid)) {
-            map.get(oid)!.push(m);
-          }
+          if (oid && map.has(oid)) map.get(oid)!.push(m);
         }
       });
     }
@@ -141,17 +137,13 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
     load();
   };
 
-  if (error) {
-    return (
-      <div className="flex items-center justify-center h-full min-h-48 text-sm text-destructive p-6 text-center">
-        <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-60" />
-        <div className="mt-1">
-          <p className="font-medium">Embed token error</p>
-          <p className="text-xs text-muted-foreground mt-1">{error}</p>
-        </div>
-      </div>
-    );
-  }
+  if (error) return (
+    <div className="flex flex-col items-center justify-center h-full min-h-48 text-sm text-destructive p-6 text-center gap-2">
+      <AlertTriangle className="h-8 w-8 opacity-60" />
+      <p className="font-semibold">Embed token hiba</p>
+      <p className="text-xs text-muted-foreground">{error}</p>
+    </div>
+  );
 
   const weekLabel = `${format(days[0], 'yyyy. MMM d.')} — ${format(days[days.length - 1], 'MMM d.')}`;
 
@@ -163,16 +155,14 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
           onClick={() => setWeekStart(w => subWeeks(w, 1))}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <span className="font-display font-medium text-sm text-foreground">
-          {weekLabel}
-        </span>
+        <span className="font-display font-semibold text-sm text-foreground">{weekLabel}</span>
         <Button size="icon" variant="ghost" className="h-7 w-7"
           onClick={() => setWeekStart(w => addWeeks(w, 1))}>
           <ChevronRight className="h-4 w-4" />
         </Button>
-        {(loading || saving) && <span className="text-[10px] text-muted-foreground animate-pulse">…</span>}
+        {(loading || saving) && <span className="text-[10px] text-muted-foreground animate-pulse ml-1">…</span>}
         {canWrite && (
-          <Badge variant="outline" className="text-[9px] py-0 border-primary/40 text-primary">
+          <Badge variant="outline" className="text-[9px] py-0 border-primary/40 text-primary font-semibold">
             ✏ szerkesztés
           </Badge>
         )}
@@ -183,33 +173,44 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
       <div className="flex-1 overflow-auto min-h-0">
         {loading ? (
           <div className="space-y-2 p-4">
+            <div className="h-6 w-1/4 bg-muted animate-pulse rounded-lg" />
             {Array.from({ length: 5 }).map((_, i) => (
-              <div key={i} className="h-9 bg-muted animate-pulse rounded-lg" />
+              <div key={i} className="h-10 bg-muted animate-pulse rounded-lg" style={{ opacity: 1 - i * 0.15 }} />
             ))}
           </div>
         ) : offices.length === 0 ? (
-          <div className="flex items-center justify-center h-24 text-muted-foreground text-xs">
-            Nincs telephelyi beállítás
+          <div className="flex flex-col items-center justify-center h-full min-h-32 gap-2 text-muted-foreground">
+            <AlertTriangle className="h-6 w-6 opacity-30" />
+            <span className="text-xs">Nincs telephelyi beállítás</span>
           </div>
         ) : (
           <table className="w-full border-collapse text-xs">
-            <thead>
-              <tr>
-                <th className="sticky left-0 z-10 bg-background text-left px-3 py-2 font-medium border-b border-r min-w-[120px] text-muted-foreground">
-                  Munkavállaló
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-background/95 backdrop-blur-sm">
+                <th className="sticky left-0 z-20 bg-background/95 text-left px-3 py-2.5 border-b border-r min-w-[120px]">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                    Munkavállaló
+                  </span>
                 </th>
                 {days.map(d => {
-                  const iso = format(d, 'yyyy-MM-dd');
-                  const isHol = holidaySet.has(iso);
+                  const iso     = format(d, 'yyyy-MM-dd');
+                  const isHol   = holidaySet.has(iso);
+                  const isToday = iso === TODAY;
                   return (
                     <th key={iso}
                       className={cn(
-                        'text-center px-1 py-2 font-medium border-b min-w-[50px]',
-                        isHol && 'bg-rose-50 dark:bg-rose-950/20',
-                        isWeekend(d) && !isHol && 'bg-muted/40',
+                        'text-center px-1 py-2 border-b min-w-[50px] transition-colors',
+                        isHol   ? 'bg-amber-50/80 dark:bg-amber-950/20' :
+                        isToday ? 'bg-primary/5' :
+                        isWeekend(d) ? 'bg-muted/30' : '',
                       )}>
-                      <div className="text-xs">{HU_DAYS[d.getDay()]}</div>
-                      <div className="text-muted-foreground font-normal text-[11px]">{format(d, 'd')}</div>
+                      <div className={cn(
+                        'text-sm font-bold leading-none',
+                        isToday ? 'text-primary' : 'text-foreground',
+                      )}>{format(d, 'd')}</div>
+                      <div className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/50 mt-0.5">
+                        {HU_DAYS[d.getDay()]}
+                      </div>
                     </th>
                   );
                 })}
@@ -221,46 +222,55 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
                 return [
                   <tr key={`hdr-${office.id}`}>
                     <td colSpan={days.length + 1}
-                      className="sticky left-0 bg-muted/50 px-2 py-1 font-semibold border-b text-[11px] uppercase tracking-wide text-muted-foreground">
-                      {office.name}{office.city ? ` · ${office.city}` : ''}
+                      className="sticky left-0 bg-muted/20 px-3 py-1.5 border-b">
+                      <div className="flex items-center gap-2">
+                        <div className="h-3 w-0.5 rounded-full bg-primary/50 shrink-0" />
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                          {office.name}{office.city ? ` · ${office.city}` : ''}
+                        </span>
+                      </div>
                     </td>
                   </tr>,
                   ...(members.length > 0 ? members.map(member => (
-                    <tr key={member.user_id} className="border-b hover:bg-muted/20 transition-colors">
-                      <td className="sticky left-0 bg-background px-3 py-1.5 border-r truncate max-w-[120px]"
+                    <tr key={member.user_id} className="border-b hover:bg-muted/15 transition-colors">
+                      <td className="sticky left-0 bg-background px-3 py-2 border-r truncate max-w-[120px]"
                         title={member.display_name}>
                         <div className="text-xs font-medium text-foreground truncate">{member.display_name}</div>
                         {member.business_role && (
-                          <div className="text-[10px] text-muted-foreground font-normal truncate mt-0.5">
+                          <div className="text-[10px] text-muted-foreground/70 truncate mt-0.5">
                             {member.business_role}
                           </div>
                         )}
                       </td>
                       {days.map(d => {
-                        const iso = format(d, 'yyyy-MM-dd');
-                        const shift = shiftMap.get(`${member.user_id}::${iso}`);
-                        const isHol = holidaySet.has(iso);
+                        const iso     = format(d, 'yyyy-MM-dd');
+                        const shift   = shiftMap.get(`${member.user_id}::${iso}`);
+                        const isHol   = holidaySet.has(iso);
+                        const isToday = iso === TODAY;
                         return (
                           <td key={iso}
                             className={cn(
-                              'text-center px-0.5 py-1',
-                              isHol && 'bg-rose-50 dark:bg-rose-950/20',
-                              isWeekend(d) && !isHol && 'bg-muted/20',
+                              'text-center px-1 py-1.5 transition-colors',
+                              isHol   ? 'bg-amber-50/80 dark:bg-amber-950/20' :
+                              isToday ? 'bg-primary/5' :
+                              isWeekend(d) ? 'bg-muted/15' : '',
                             )}>
                             {shift ? (
                               <div className="inline-flex items-center gap-0.5">
-                                <div className="inline-flex items-center justify-center rounded text-[10px] font-medium px-1 py-0.5 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 max-w-[36px] truncate"
+                                <span className={cn(
+                                  'inline-flex items-center justify-center rounded-full text-[10px] font-semibold px-1.5 py-0.5 gap-0.5',
+                                  'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300',
+                                )}
                                   title={shift.business_role ?? undefined}>
                                   {shift.business_role
-                                    ? shift.business_role.slice(0, 4)
-                                    : '✓'}
-                                </div>
+                                    ? <span className="max-w-[30px] truncate">{shift.business_role.slice(0, 4)}</span>
+                                    : <Check className="h-2.5 w-2.5" />}
+                                </span>
                                 {canWrite && (
                                   <button
                                     disabled={saving}
                                     onClick={() => handleRemove(shift.id)}
-                                    className="h-4 w-4 flex items-center justify-center rounded text-muted-foreground/50 hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-40"
-                                    title="Remove shift"
+                                    className="h-4 w-4 flex items-center justify-center rounded-full text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30"
                                   >
                                     <X className="h-2.5 w-2.5" />
                                   </button>
@@ -270,13 +280,12 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
                               <button
                                 disabled={saving}
                                 onClick={() => handleAssign(member, office.id, iso)}
-                                className="h-5 w-5 mx-auto flex items-center justify-center rounded text-muted-foreground/30 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors disabled:opacity-40"
-                                title="Assign shift"
+                                className="h-6 w-6 mx-auto flex items-center justify-center rounded-full text-muted-foreground/30 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors disabled:opacity-30"
                               >
                                 <Plus className="h-3 w-3" />
                               </button>
                             ) : (
-                              <span className="text-muted-foreground/30">—</span>
+                              <span className="text-muted-foreground/25 text-[11px]">·</span>
                             )}
                           </td>
                         );
@@ -284,7 +293,7 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
                     </tr>
                   )) : [
                     <tr key={`empty-${office.id}`} className="border-b">
-                      <td className="sticky left-0 bg-background px-3 py-2 border-r text-xs text-muted-foreground italic" colSpan={days.length + 1}>
+                      <td className="sticky left-0 bg-background px-3 py-2 border-r text-xs text-muted-foreground/60 italic" colSpan={days.length + 1}>
                         Ezen a héten nincs beosztott
                       </td>
                     </tr>,

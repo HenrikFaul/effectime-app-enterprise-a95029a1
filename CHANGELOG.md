@@ -1,3 +1,73 @@
+## 2026-05-19 — v3.47.1 Fix + Enhancement: Embed Snippet Builder token bug fix + ultra-premium UI refactor for all 5 embed views
+
+### Critical bug fix — Snippet Builder now uses the correct token
+The Snippet Builder was inserting the token record's internal UUID into the generated `?token=` URL parameter instead of the raw 64-character hex token string. The generated iframes were therefore always returning an auth error. Fixed by:
+- Adding `token: string` to the `EmbedToken` TypeScript interface
+- Including `token` in the Supabase `select()` query
+- Passing `builderToken.token` (raw hex) instead of `builderToken.id` (UUID) to `buildEmbedUrl`
+
+### Ultra-premium visual refactor — all 5 embed views
+All embed components (Capacity Planner, Shift Roster, Leave Calendar, Office Headcount, Member Schedule) have been visually refactored to match the design quality expected by enterprise CRM integrations:
+
+**Typography hierarchy:**
+- Date numbers are now the primary label: `text-sm font-bold` in foreground
+- Day abbreviations are now secondary: `text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/50`
+- Column/row labels use `text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70`
+- Header dates use `font-display font-semibold`
+
+**Today column highlight:**
+- All table views now highlight today's column with `bg-primary/5`
+- Today's date number renders in `text-primary`
+- `ring-1 ring-inset ring-primary/30` on data cells within today's column where applicable
+
+**Office group rows:**
+- Left accent bar: `h-3 w-0.5 rounded-full bg-primary/50`
+- Subtle `bg-muted/20` background instead of heavier muted/50
+
+**Status badges (consistent across all views):**
+- `TÁV` (leave): `rounded-full bg-rose-100 text-rose-700 text-[9px] font-bold px-1.5 py-0.5`
+- `ÜNN` (holiday): `rounded-full bg-amber-100 text-amber-700 text-[9px] font-bold px-1.5 py-0.5`
+- Office present: `rounded-full bg-emerald-100 text-emerald-700` pill
+- Empty slot: `·` middle-dot (lower visual noise than `—`)
+
+**Sticky table headers:**
+- All 4 table views use `sticky top-0 z-10 bg-background/95 backdrop-blur-sm` on `<thead>`
+- Sticky name column uses `z-20` to stay above the day headers when scrolling
+
+**Loading skeletons:**
+- Progressive opacity: `style={{ opacity: 1 - i * 0.15 }}` on skeleton rows
+- Vary widths: title row + content rows for realistic skeleton
+
+**Absent count badge (Leave Calendar):**
+- Changed from plain text `−N` to a proper `rounded-full bg-rose-100 text-rose-600 font-bold` pill
+
+**Capacity planner cell counts:**
+- Reformatted to `have / need` pattern with muted separator and italic need value
+- `isOver` state (over-staffed) now gets distinct amber tone instead of emerald
+
+**Write panel (Capacity Planner):**
+- Added a `have/need fő` badge in the panel header next to the date
+- Badge color: rose if understaffed, emerald if staffed
+
+---
+
+## 2026-05-18 — v3.47.0 Feature: 3 new CRM embed views + 2 standalone API RPCs
+
+### New embed views
+- `leave_calendar`: Weekly grid of approved absences per team member with absence-count badge per column header and rose/amber cell highlights
+- `office_headcount`: Per-office actual/required headcount per day with progress bars (green = ok, red = gap) — designed as a compact CRM micro-widget
+- `member_schedule`: 7-card weekly personal schedule for one team member — office presence, leave, and holidays in a single card grid with today ring
+
+### New standalone API RPCs (anon-callable, SECURITY DEFINER)
+- `check_member_availability(_token, _user_id, _date)` → text — returns `'in_office' | 'on_leave' | 'not_scheduled' | 'not_found'`
+- `get_team_headcount(_token, _from_date, _to_date)` → jsonb — returns offices + rules + shifts for full headcount calculation
+
+### Route and EmbedPage
+- `EmbedPage` handles all 5 views with `EmbedShell` wrapper (brand stripe + overflow container)
+- `?member=<user_id>` param for `member_schedule` view
+
+---
+
 ## 2026-05-18 — v3.46.0 Feature: Embed write mode — CRM operators can manage shift assignments from embedded views
 
 ### Write-enabled tokens
