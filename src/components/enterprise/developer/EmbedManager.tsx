@@ -155,24 +155,35 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
   const revokedTokens = tokens.filter(t => !t.is_active);
 
   // Build live snippet for builder
-  const builderUrl = builderToken?.token
-    ? buildEmbedUrl(builderToken.token, builderView, {
-        office:  builderOffice  || undefined,
-        mode:    builderMode !== 'weekly' ? builderMode : undefined,
-        member:  builderView === 'member_schedule' ? builderMember || undefined : undefined,
-      })
-    : '';
+  const builderUrl = (() => {
+    if (!builderToken?.token) return '';
+    if (builderView === '__multi__') {
+      const base = window.location.origin;
+      const views = (builderToken.allowed_views ?? []).join(',');
+      const sp = new URLSearchParams({ token: builderToken.token, views });
+      if (builderOffice) sp.set('office', builderOffice);
+      if (builderMember) sp.set('member', builderMember);
+      return `${base}/#/embed/multi?${sp.toString()}`;
+    }
+    return buildEmbedUrl(builderToken.token, builderView, {
+      office:  builderOffice  || undefined,
+      mode:    builderMode !== 'weekly' ? builderMode : undefined,
+      member:  builderView === 'member_schedule' ? builderMember || undefined : undefined,
+    });
+  })();
   const builderSnippet = builderUrl ? buildIframeSnippet(builderUrl, Number(builderHeight) || 500) : '';
 
   const openBuilder = (tok: EmbedToken) => {
     setBuilderToken(tok);
-    setBuilderView(tok.allowed_views[0] ?? 'capacity_planner');
+    // Default to multi-view if token has more than one allowed view
+    setBuilderView(tok.allowed_views.length > 1 ? '__multi__' : (tok.allowed_views[0] ?? 'capacity_planner'));
     setBuilderOffice('');
     setBuilderMode('weekly');
     setBuilderHeight('500');
   };
 
   const viewLabel: Record<string, string> = {
+    __multi__:        t('embed.view_multi'),
     capacity_planner: t('embed.view_capacity_planner'),
     shift_roster:     t('embed.view_shift_roster'),
     leave_calendar:   t('embed.view_leave_calendar'),
@@ -396,6 +407,11 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    {(builderToken?.allowed_views ?? []).length > 1 && (
+                      <SelectItem value="__multi__" className="text-xs font-semibold">
+                        ◈ {t('embed.view_multi')}
+                      </SelectItem>
+                    )}
                     {(builderToken?.allowed_views ?? []).map(v => (
                       <SelectItem key={v} value={v} className="text-xs">{viewLabel[v] ?? v}</SelectItem>
                     ))}
@@ -435,7 +451,7 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
                 </div>
               )}
 
-              {builderView === 'member_schedule' && (
+              {(builderView === 'member_schedule' || builderView === '__multi__') && (
                 <div className="space-y-1.5">
                   <Label className="text-xs">{t('embed.builder_member')}</Label>
                   <Input
@@ -445,6 +461,16 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
                     placeholder="user_id (UUID)"
                   />
                   <p className="text-[10px] text-muted-foreground">{t('embed.builder_member_hint')}</p>
+                </div>
+              )}
+
+              {builderView === '__multi__' && (builderToken?.allowed_views ?? []).length > 1 && (
+                <div className="rounded-md border bg-muted/30 px-3 py-2 text-[10px] text-muted-foreground space-y-0.5">
+                  <p className="font-semibold text-foreground">{t('embed.view_multi')}</p>
+                  <p>{t('embed.view_multi_desc')}</p>
+                  <p className="font-medium text-foreground/70 mt-1">
+                    {(builderToken?.allowed_views ?? []).map(v => viewLabel[v] ?? v).join(' · ')}
+                  </p>
                 </div>
               )}
 
