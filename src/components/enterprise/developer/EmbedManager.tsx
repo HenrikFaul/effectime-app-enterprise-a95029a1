@@ -32,6 +32,7 @@ interface Props {
 
 interface EmbedToken {
   id: string;
+  token: string;
   label: string;
   allowed_views: string[];
   can_write: boolean;
@@ -47,12 +48,12 @@ const ALL_VIEWS = ['capacity_planner', 'shift_roster', 'leave_calendar', 'office
 type EmbedView = (typeof ALL_VIEWS)[number];
 
 function buildEmbedUrl(
-  tokenId: string,
+  rawToken: string,
   view: string,
   params: { office?: string; from?: string; mode?: string; member?: string },
 ): string {
   const base = window.location.origin;
-  const sp = new URLSearchParams({ token: tokenId });
+  const sp = new URLSearchParams({ token: rawToken });
   if (params.office) sp.set('office', params.office);
   if (params.from)   sp.set('from', params.from);
   if (params.mode && params.mode !== 'weekly') sp.set('mode', params.mode);
@@ -100,7 +101,7 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
     const [tokRes, offRes] = await Promise.all([
       (supabase as any)
         .from('enterprise_embed_tokens')
-        .select('id,label,allowed_views,can_write,is_active,last_used_at,expires_at,created_at')
+        .select('id,token,label,allowed_views,can_write,is_active,last_used_at,expires_at,created_at')
         .eq('workspace_id', workspaceId)
         .order('created_at', { ascending: false }),
       (supabase as any)
@@ -154,8 +155,8 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
   const revokedTokens = tokens.filter(t => !t.is_active);
 
   // Build live snippet for builder
-  const builderUrl = builderToken
-    ? buildEmbedUrl(builderToken.id, builderView, {
+  const builderUrl = builderToken?.token
+    ? buildEmbedUrl(builderToken.token, builderView, {
         office:  builderOffice  || undefined,
         mode:    builderMode !== 'weekly' ? builderMode : undefined,
         member:  builderView === 'member_schedule' ? builderMember || undefined : undefined,

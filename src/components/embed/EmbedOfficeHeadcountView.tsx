@@ -24,6 +24,7 @@ interface EmbedData {
 }
 
 const HU_DAYS = ['V', 'H', 'K', 'Sze', 'Cs', 'P', 'Szo'];
+const TODAY = format(new Date(), 'yyyy-MM-dd');
 
 function ruleAppliesOn(r: CoverageRule, iso: string, dow: number): boolean {
   if (r.rule_date) return r.rule_date === iso;
@@ -78,16 +79,15 @@ export function EmbedOfficeHeadcountView({ token, officeFilter, initialFrom }: E
   const holidaySet = useMemo(() => new Set(data?.holidays ?? []), [data]);
   const blockedSet = useMemo(() => new Set(data?.blocked_dates ?? []), [data]);
 
-  // For each office+day: count actual shifts and required headcount
   const cellData = useMemo(() => {
-    const shifts  = data?.shift_assignments ?? [];
-    const rules   = data?.coverage_rules ?? [];
+    const shifts = data?.shift_assignments ?? [];
+    const rules  = data?.coverage_rules ?? [];
     const result = new Map<string, { have: number; need: number }>();
     for (const office of offices) {
       for (const d of days) {
-        const iso = format(d, 'yyyy-MM-dd');
-        const dow = d.getDay();
-        const key = `${office.id}::${iso}`;
+        const iso  = format(d, 'yyyy-MM-dd');
+        const dow  = d.getDay();
+        const key  = `${office.id}::${iso}`;
         const have = shifts.filter(s => s.office_id === office.id && s.shift_date === iso).length;
         const need = rules
           .filter(r => r.office_id === office.id && ruleAppliesOn(r, iso, dow))
@@ -103,7 +103,7 @@ export function EmbedOfficeHeadcountView({ token, officeFilter, initialFrom }: E
   if (error) return (
     <div className="flex flex-col items-center justify-center h-full min-h-48 text-sm text-destructive p-6 text-center gap-2">
       <AlertTriangle className="h-8 w-8 opacity-60" />
-      <p className="font-medium">Embed token hiba</p>
+      <p className="font-semibold">Embed token hiba</p>
       <p className="text-xs text-muted-foreground">{error}</p>
     </div>
   );
@@ -115,11 +115,11 @@ export function EmbedOfficeHeadcountView({ token, officeFilter, initialFrom }: E
         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setWeekStart(w => subWeeks(w, 1))}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
-        <span className="font-display font-medium text-sm text-foreground">{weekLabel}</span>
+        <span className="font-display font-semibold text-sm text-foreground">{weekLabel}</span>
         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setWeekStart(w => addWeeks(w, 1))}>
           <ChevronRight className="h-4 w-4" />
         </Button>
-        {loading && <span className="text-[10px] text-muted-foreground animate-pulse">…</span>}
+        {loading && <span className="text-[10px] text-muted-foreground animate-pulse ml-1">…</span>}
         <span className="ml-auto"><EffectimeLogo size={22} variant="full" /></span>
       </div>
 
@@ -127,30 +127,43 @@ export function EmbedOfficeHeadcountView({ token, officeFilter, initialFrom }: E
       <div className="flex-1 overflow-auto min-h-0">
         {loading ? (
           <div className="space-y-2 p-4">
-            {Array.from({ length: 4 }).map((_, i) => <div key={i} className="h-12 bg-muted animate-pulse rounded-lg" />)}
+            <div className="h-6 w-1/4 bg-muted animate-pulse rounded-lg" />
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="h-14 bg-muted animate-pulse rounded-lg" style={{ opacity: 1 - i * 0.15 }} />
+            ))}
           </div>
         ) : offices.length === 0 ? (
-          <div className="flex items-center justify-center h-24 text-xs text-muted-foreground">
-            Nincs telephelyi beállítás
+          <div className="flex flex-col items-center justify-center h-full min-h-32 gap-2 text-muted-foreground">
+            <AlertTriangle className="h-6 w-6 opacity-30" />
+            <span className="text-xs">Nincs telephelyi beállítás</span>
           </div>
         ) : (
           <table className="w-full border-collapse text-xs">
-            <thead>
-              <tr>
-                <th className="sticky left-0 z-10 bg-background text-left px-3 py-2 font-medium border-b border-r min-w-[140px] text-muted-foreground">
-                  Telephely
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-background/95 backdrop-blur-sm">
+                <th className="sticky left-0 z-20 bg-background/95 text-left px-3 py-2.5 border-b border-r min-w-[140px]">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+                    Telephely
+                  </span>
                 </th>
                 {days.map(d => {
-                  const iso   = format(d, 'yyyy-MM-dd');
-                  const isHol = holidaySet.has(iso) || blockedSet.has(iso);
+                  const iso     = format(d, 'yyyy-MM-dd');
+                  const isHol   = holidaySet.has(iso) || blockedSet.has(iso);
+                  const isToday = iso === TODAY;
                   return (
                     <th key={iso} className={cn(
-                      'text-center px-1 py-2 font-medium border-b min-w-[56px]',
-                      isHol        && 'bg-amber-50 dark:bg-amber-950/20',
-                      isWeekend(d) && !isHol && 'bg-muted/40',
+                      'text-center px-1 py-2 border-b min-w-[56px] transition-colors',
+                      isHol   ? 'bg-amber-50/80 dark:bg-amber-950/20' :
+                      isToday ? 'bg-primary/5' :
+                      isWeekend(d) ? 'bg-muted/30' : '',
                     )}>
-                      <div className="text-xs">{HU_DAYS[d.getDay()]}</div>
-                      <div className="text-muted-foreground font-normal text-[11px]">{format(d, 'd')}</div>
+                      <div className={cn(
+                        'text-sm font-bold leading-none',
+                        isToday ? 'text-primary' : 'text-foreground',
+                      )}>{format(d, 'd')}</div>
+                      <div className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/50 mt-0.5">
+                        {HU_DAYS[d.getDay()]}
+                      </div>
                     </th>
                   );
                 })}
@@ -159,33 +172,40 @@ export function EmbedOfficeHeadcountView({ token, officeFilter, initialFrom }: E
             <tbody>
               {offices.map(office => (
                 <tr key={office.id} className="border-b hover:bg-muted/10 transition-colors">
-                  <td className="sticky left-0 bg-background px-3 py-2 border-r max-w-[140px]">
+                  <td className="sticky left-0 bg-background px-3 py-2.5 border-r max-w-[140px]">
                     <div className="text-xs font-semibold text-foreground truncate">{office.name}</div>
                     {office.city && (
-                      <div className="text-[10px] text-muted-foreground mt-0.5">{office.city}</div>
+                      <div className="text-[10px] text-muted-foreground/70 mt-0.5">{office.city}</div>
                     )}
                   </td>
                   {days.map(d => {
-                    const iso   = format(d, 'yyyy-MM-dd');
-                    const isHol = holidaySet.has(iso) || blockedSet.has(iso);
-                    const cell  = cellData.get(`${office.id}::${iso}`) ?? { have: 0, need: 0 };
+                    const iso     = format(d, 'yyyy-MM-dd');
+                    const isHol   = holidaySet.has(iso) || blockedSet.has(iso);
+                    const isToday = iso === TODAY;
+                    const cell    = cellData.get(`${office.id}::${iso}`) ?? { have: 0, need: 0 };
 
                     if (isWeekend(d) && !isHol && cell.need === 0) {
-                      return <td key={iso} className="bg-muted/20 text-center text-muted-foreground/30 text-[10px]">—</td>;
+                      return (
+                        <td key={iso} className={cn('text-center', isToday ? 'bg-primary/5' : 'bg-muted/15')}>
+                          <span className="text-muted-foreground/25 text-[11px]">·</span>
+                        </td>
+                      );
                     }
 
                     if (isHol) {
                       return (
-                        <td key={iso} className="bg-amber-50 dark:bg-amber-950/20 text-center">
-                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-medium">Ünn.</span>
+                        <td key={iso} className="bg-amber-50/80 dark:bg-amber-950/20 text-center py-2">
+                          <span className="inline-flex items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 text-[9px] font-bold px-1.5 py-0.5">
+                            ÜNN
+                          </span>
                         </td>
                       );
                     }
 
                     if (cell.need === 0) {
                       return (
-                        <td key={iso} className={cn('text-center', isWeekend(d) && 'bg-muted/20')}>
-                          <span className="text-muted-foreground/30 text-[10px]">—</span>
+                        <td key={iso} className={cn('text-center', isToday ? 'bg-primary/5' : isWeekend(d) ? 'bg-muted/15' : '')}>
+                          <span className="text-muted-foreground/25 text-[11px]">·</span>
                         </td>
                       );
                     }
@@ -196,28 +216,26 @@ export function EmbedOfficeHeadcountView({ token, officeFilter, initialFrom }: E
 
                     return (
                       <td key={iso} className={cn(
-                        'px-2 py-1.5 text-center',
-                        isGap && 'bg-rose-50 dark:bg-rose-950/30',
-                        isOk  && 'bg-emerald-50 dark:bg-emerald-950/30',
+                        'px-2 py-2 text-center',
+                        isGap && 'bg-rose-50 dark:bg-rose-950/20',
+                        isOk  && 'bg-emerald-50 dark:bg-emerald-950/20',
+                        isToday && 'ring-1 ring-inset ring-primary/30',
                       )}>
-                        {/* Count */}
                         <div className={cn(
-                          'flex items-center justify-center gap-0.5 font-semibold text-xs mb-1',
+                          'flex items-center justify-center gap-0.5 font-bold text-xs mb-1.5',
                           isGap && 'text-rose-700 dark:text-rose-400',
                           isOk  && 'text-emerald-700 dark:text-emerald-400',
                         )}>
                           {isOk
                             ? <CheckCircle2 className="h-3 w-3 shrink-0" />
                             : <AlertTriangle className="h-3 w-3 shrink-0" />}
-                          {cell.need}/{cell.have}
+                          <span>{cell.have}</span>
+                          <span className="font-normal text-[10px] opacity-50">/</span>
+                          <span className="font-normal text-[10px] opacity-70">{cell.need}</span>
                         </div>
-                        {/* Progress bar */}
-                        <div className="w-full h-1.5 rounded-full bg-black/10 dark:bg-white/10 overflow-hidden">
+                        <div className="w-full h-2 rounded-full bg-black/8 dark:bg-white/10 overflow-hidden">
                           <div
-                            className={cn(
-                              'h-full rounded-full transition-all',
-                              isOk  ? 'bg-emerald-500' : 'bg-rose-500',
-                            )}
+                            className={cn('h-full rounded-full transition-all', isOk ? 'bg-emerald-500' : 'bg-rose-500')}
                             style={{ width: `${pct}%` }}
                           />
                         </div>
