@@ -12,6 +12,10 @@ import { cn } from '@/lib/utils';
 const HU_DAYS = ['V', 'H', 'K', 'Sze', 'Cs', 'P', 'Szo'];
 const TODAY = format(new Date(), 'yyyy-MM-dd');
 
+// "Senior Frontend Developer" → "SFD", "Backend Developer" → "BD"
+const roleAbbrev = (role: string) =>
+  role.split(/\s+/).map(w => w[0]?.toUpperCase() ?? '').join('');
+
 interface Office { id: string; name: string; city: string | null }
 interface Shift {
   id: string; user_id: string; office_id: string;
@@ -263,7 +267,7 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
                                 )}
                                   title={shift.business_role ?? undefined}>
                                   {shift.business_role
-                                    ? <span className="max-w-[30px] truncate">{shift.business_role.slice(0, 4)}</span>
+                                    ? <span title={shift.business_role}>{roleAbbrev(shift.business_role)}</span>
                                     : <Check className="h-2.5 w-2.5" />}
                                 </span>
                                 {canWrite && (

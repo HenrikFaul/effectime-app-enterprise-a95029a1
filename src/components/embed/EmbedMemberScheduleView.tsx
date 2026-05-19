@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, ChevronLeft, ChevronRight, User } from 'lucide-react';
+import { AlertTriangle, ChevronLeft, ChevronRight, Loader2, Plus, User, X } from 'lucide-react';
 import { EffectimeLogo } from '@/components/EffectimeLogo';
 import {
   addWeeks, eachDayOfInterval, endOfWeek, format, isWeekend, startOfWeek, subWeeks,
 } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface Member {
   user_id: string; display_name: string;
@@ -21,6 +22,7 @@ interface LeaveRequest {
   user_id: string; start_date: string; end_date: string;
 }
 interface EmbedData {
+  can_write: boolean;
   offices: Office[];
   members: Member[];
   shift_assignments: Shift[];
@@ -47,9 +49,11 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
     return startOfWeek(new Date(), { weekStartsOn: 1 });
   });
 
-  const [data, setData]       = useState<EmbedData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState<string | null>(null);
+  const [data, setData]         = useState<EmbedData | null>(null);
+  const [loading, setLoading]   = useState(true);
+  const [error, setError]       = useState<string | null>(null);
+  const [saving, setSaving]     = useState<string | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const days = useMemo(() =>
     eachDayOfInterval({ start: weekStart, end: endOfWeek(weekStart, { weekStartsOn: 1 }) }),
@@ -67,17 +71,19 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
         if (err) { setError(err.message); setLoading(false); return; }
         setData(result); setLoading(false);
       });
-  }, [token, from, to]);
+  }, [token, from, to, refreshKey]);
 
   const member    = useMemo(() => (data?.members ?? []).find(m => m.user_id === memberId), [data, memberId]);
+  const offices   = useMemo(() => data?.offices ?? [], [data]);
   const officeMap = useMemo(() => {
     const m = new Map<string, Office>();
-    (data?.offices ?? []).forEach(o => m.set(o.id, o));
+    offices.forEach(o => m.set(o.id, o));
     return m;
-  }, [data]);
+  }, [offices]);
 
-  const holidaySet = useMemo(() => new Set(data?.holidays ?? []), [data]);
-  const blockedSet = useMemo(() => new Set(data?.blocked_dates ?? []), [data]);
+  const canWrite    = data?.can_write ?? false;
+  const holidaySet  = useMemo(() => new Set(data?.holidays ?? []), [data]);
+  const blockedSet  = useMemo(() => new Set(data?.blocked_dates ?? []), [data]);
 
   const leaveSet = useMemo(() => {
     const s = new Set<string>();
@@ -101,6 +107,39 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
       .forEach(s => m.set(s.shift_date, s));
     return m;
   }, [data, memberId]);
+
+  // Primary office to use when assigning: member's own, or first available
+  const assignOfficeId = useMemo(() => {
+    if (member?.office_id && officeMap.has(member.office_id)) return member.office_id;
+    return offices[0]?.id ?? null;
+  }, [member, offices, officeMap]);
+
+  const handleAssign = async (isoDate: string) => {
+    if (!assignOfficeId) return;
+    setSaving(isoDate);
+    const { error: err } = await (supabase as any).rpc('embed_assign_shift', {
+      _token:         token,
+      _user_id:       memberId,
+      _office_id:     assignOfficeId,
+      _business_role: member?.business_role ?? null,
+      _shift_date:    isoDate,
+      _skill_id:      null,
+    });
+    setSaving(null);
+    if (err) { toast.error('Hiba a beosztásnál: ' + err.message); return; }
+    setRefreshKey(k => k + 1);
+  };
+
+  const handleRemove = async (shiftId: string) => {
+    setSaving(shiftId);
+    const { error: err } = await (supabase as any).rpc('embed_remove_shift', {
+      _token:         token,
+      _assignment_id: shiftId,
+    });
+    setSaving(null);
+    if (err) { toast.error('Hiba a törlésnél: ' + err.message); return; }
+    setRefreshKey(k => k + 1);
+  };
 
   const weekLabel = `${format(days[0], 'yyyy. MMM d.')} — ${format(days[days.length - 1], 'MMM d.')}`;
 
@@ -131,7 +170,12 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
         <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => setWeekStart(w => addWeeks(w, 1))}>
           <ChevronRight className="h-4 w-4" />
         </Button>
-        {loading && <span className="text-[10px] text-muted-foreground animate-pulse ml-1">…</span>}
+        {(loading || saving) && <span className="text-[10px] text-muted-foreground animate-pulse ml-1">…</span>}
+        {canWrite && (
+          <span className="inline-flex items-center gap-1 text-[9px] font-semibold px-2 py-0.5 rounded-full border border-primary/40 text-primary ml-1">
+            ✏ szerkesztés
+          </span>
+        )}
         <span className="ml-auto"><EffectimeLogo size={22} variant="full" /></span>
       </div>
 
@@ -162,7 +206,7 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
         {loading ? (
           <div className="grid grid-cols-7 gap-2">
             {Array.from({ length: 7 }).map((_, i) => (
-              <div key={i} className="h-24 bg-muted animate-pulse rounded-xl" style={{ opacity: 1 - i * 0.1 }} />
+              <div key={i} className="h-28 bg-muted animate-pulse rounded-xl" style={{ opacity: 1 - i * 0.1 }} />
             ))}
           </div>
         ) : (
@@ -175,6 +219,9 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
               const office  = shift ? officeMap.get(shift.office_id) : null;
               const isToday = iso === TODAY;
               const isWknd  = isWeekend(d);
+              const isSaving = saving === iso || saving === shift?.id;
+              const canAssign = canWrite && !isHol && !onLeave && !isWknd && !shift && !!assignOfficeId;
+              const canRemove = canWrite && !!shift;
 
               const bgClass = isHol
                 ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200/80 dark:border-amber-800/30'
@@ -188,11 +235,11 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
 
               return (
                 <div key={iso} className={cn(
-                  'rounded-xl border flex flex-col items-center p-2 gap-1 min-h-[80px] transition-colors',
+                  'rounded-xl border flex flex-col items-center p-2 gap-1 min-h-[88px] transition-colors',
                   bgClass,
                   isToday && 'ring-2 ring-primary ring-offset-1',
                 )}>
-                  {/* Day number (large) + abbreviation (small) */}
+                  {/* Day number + abbreviation */}
                   <div className="text-center">
                     <div className={cn(
                       'text-base font-bold leading-none',
@@ -224,6 +271,27 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
                       <span className="text-muted-foreground/25 text-[11px]">·</span>
                     )}
                   </div>
+
+                  {/* Write controls */}
+                  {isSaving ? (
+                    <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/60" />
+                  ) : canAssign ? (
+                    <button
+                      onClick={() => handleAssign(iso)}
+                      className="w-full flex items-center justify-center gap-0.5 rounded-full bg-primary/10 hover:bg-primary/20 text-primary text-[9px] font-bold py-0.5 transition-colors"
+                    >
+                      <Plus className="h-2.5 w-2.5" />
+                      Beoszt
+                    </button>
+                  ) : canRemove ? (
+                    <button
+                      onClick={() => handleRemove(shift!.id)}
+                      className="w-full flex items-center justify-center gap-0.5 rounded-full bg-destructive/10 hover:bg-destructive/20 text-destructive text-[9px] font-bold py-0.5 transition-colors"
+                    >
+                      <X className="h-2.5 w-2.5" />
+                      Töröl
+                    </button>
+                  ) : null}
                 </div>
               );
             })}
