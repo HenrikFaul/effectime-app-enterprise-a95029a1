@@ -43,19 +43,20 @@ interface EmbedToken {
 
 interface Office { id: string; name: string; city: string | null }
 
-const ALL_VIEWS = ['capacity_planner', 'shift_roster'] as const;
+const ALL_VIEWS = ['capacity_planner', 'shift_roster', 'leave_calendar', 'office_headcount', 'member_schedule'] as const;
 type EmbedView = (typeof ALL_VIEWS)[number];
 
 function buildEmbedUrl(
   tokenId: string,
   view: string,
-  params: { office?: string; from?: string; mode?: string },
+  params: { office?: string; from?: string; mode?: string; member?: string },
 ): string {
   const base = window.location.origin;
   const sp = new URLSearchParams({ token: tokenId });
   if (params.office) sp.set('office', params.office);
   if (params.from)   sp.set('from', params.from);
   if (params.mode && params.mode !== 'weekly') sp.set('mode', params.mode);
+  if (params.member) sp.set('member', params.member);
   return `${base}/#/embed/${view}?${sp.toString()}`;
 }
 
@@ -85,6 +86,7 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
   const [builderView, setBuilderView]   = useState<string>('capacity_planner');
   const [builderOffice, setBuilderOffice] = useState<string>('');
   const [builderMode, setBuilderMode]   = useState<string>('weekly');
+  const [builderMember, setBuilderMember] = useState<string>('');
   const [builderHeight, setBuilderHeight] = useState<string>('500');
 
   // Copy states
@@ -154,8 +156,9 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
   // Build live snippet for builder
   const builderUrl = builderToken
     ? buildEmbedUrl(builderToken.id, builderView, {
-        office: builderOffice || undefined,
-        mode: builderMode !== 'weekly' ? builderMode : undefined,
+        office:  builderOffice  || undefined,
+        mode:    builderMode !== 'weekly' ? builderMode : undefined,
+        member:  builderView === 'member_schedule' ? builderMember || undefined : undefined,
       })
     : '';
   const builderSnippet = builderUrl ? buildIframeSnippet(builderUrl, Number(builderHeight) || 500) : '';
@@ -171,6 +174,9 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
   const viewLabel: Record<string, string> = {
     capacity_planner: t('embed.view_capacity_planner'),
     shift_roster:     t('embed.view_shift_roster'),
+    leave_calendar:   t('embed.view_leave_calendar'),
+    office_headcount: t('embed.view_office_headcount'),
+    member_schedule:  t('embed.view_member_schedule'),
   };
 
   return (
@@ -425,6 +431,19 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
                       <SelectItem value="monthly" className="text-xs">{t('embed.mode_monthly')}</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+              )}
+
+              {builderView === 'member_schedule' && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">{t('embed.builder_member')}</Label>
+                  <Input
+                    className="h-8 text-xs font-mono"
+                    value={builderMember}
+                    onChange={e => setBuilderMember(e.target.value.trim())}
+                    placeholder="user_id (UUID)"
+                  />
+                  <p className="text-[10px] text-muted-foreground">{t('embed.builder_member_hint')}</p>
                 </div>
               )}
 
