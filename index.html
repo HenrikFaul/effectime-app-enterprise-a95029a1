@@ -1,14 +1,23 @@
 <!doctype html>
-<html lang="en">
+<html lang="hu">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>Effectime</title>
-    <meta name="description" content="Effectime – enterprise erőforrás-, szabadság- és kapacitástervezés.">
+    <title>Effectime – Kapacitástervező, Szabadságkezelő és Műszakbeosztó Platform</title>
+    <meta name="description" content="Valós idejű csapatnaptár, szabadságkezelés és kapacitástervezés közép- és nagyvállalatoknak. Próbálja ki díjmentesen – regisztráció 2 perc.">
     <meta name="author" content="Effectime" />
-    <link rel="icon" href="/effectime-favicon.svg?v=3" type="image/svg+xml" />
-    <link rel="alternate icon" href="/favicon.ico?v=3" sizes="any" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=3" />
+    <link rel="canonical" href="https://effectime.app/" />
+
+    <!-- Hreflang -->
+    <link rel="alternate" hreflang="hu" href="https://effectime.app/" />
+    <link rel="alternate" hreflang="en" href="https://effectime.app/" />
+    <link rel="alternate" hreflang="x-default" href="https://effectime.app/" />
+
+    <!-- Icons -->
+    <link rel="icon" href="/effectime-favicon.svg" type="image/svg+xml" />
+    <link rel="alternate icon" href="/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
     <!-- PWA manifest (v3.32.0 — Top-20 Rank 7) -->
     <link rel="manifest" href="/manifest.webmanifest" />
     <meta name="theme-color" content="#0ea5e9" />
@@ -16,20 +25,197 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Effectime" />
 
+    <!-- Open Graph -->
     <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/540bdae5-156f-4193-96d4-eb1e3eebce17/id-preview-faeb197e--1f5d90f4-8f30-481b-adc1-f044a3751e7b.lovable.app-1772954020610.png">
+    <meta property="og:url" content="https://effectime.app/" />
+    <meta property="og:locale" content="hu_HU" />
+    <meta property="og:locale:alternate" content="en_GB" />
+    <meta property="og:title" content="Effectime – Kapacitástervező, Szabadságkezelő és Műszakbeosztó Platform" />
+    <meta property="og:description" content="Valós idejű csapatnaptár, szabadságkezelés és kapacitástervezés közép- és nagyvállalatoknak. Próbálja ki díjmentesen." />
+    <meta property="og:image" content="https://effectime.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Effectime – vállalati kapacitástervező és műszakbeosztó platform" />
 
+    <!-- Twitter Card -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@Effectime" />
-    <meta name="twitter:image" content="https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/540bdae5-156f-4193-96d4-eb1e3eebce17/id-preview-faeb197e--1f5d90f4-8f30-481b-adc1-f044a3751e7b.lovable.app-1772954020610.png">
-    <meta property="og:title" content="Effectime">
-  <meta name="twitter:title" content="Effectime">
-  <meta property="og:description" content="Enterprise erőforrás-, szabadság- és kapacitástervezés.">
-  <meta name="twitter:description" content="Enterprise erőforrás-, szabadság- és kapacitástervezés.">
-</head>
+    <meta name="twitter:title" content="Effectime – Kapacitástervező, Szabadságkezelő és Műszakbeosztó Platform" />
+    <meta name="twitter:description" content="Valós idejű csapatnaptár, szabadságkezelés és kapacitástervezés közép- és nagyvállalatoknak. Próbálja ki díjmentesen." />
+    <meta name="twitter:image" content="https://effectime.app/og-image.png" />
+    <meta name="twitter:image:alt" content="Effectime – vállalati kapacitástervező és műszakbeosztó platform" />
+
+    <!-- Performance: preconnect to Supabase -->
+    <link rel="preconnect" href="https://oezlzzmzzvbvinuysxaz.supabase.co" crossorigin />
+    <link rel="dns-prefetch" href="https://oezlzzmzzvbvinuysxaz.supabase.co" />
+
+    <!-- Structured Data: Organization -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "Effectime",
+      "url": "https://effectime.app/",
+      "logo": "https://effectime.app/effectime-favicon.svg",
+      "description": "Vállalati kapacitástervező, szabadságkezelő és műszakbeosztó platform közép- és nagyvállalatoknak.",
+      "foundingCountry": "HU",
+      "inLanguage": ["hu", "en"],
+      "sameAs": [
+        "https://twitter.com/Effectime"
+      ]
+    }
+    </script>
+
+    <!-- Structured Data: SoftwareApplication -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Effectime",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web, Android, iOS",
+      "url": "https://effectime.app/",
+      "inLanguage": ["hu", "en", "cs", "sk", "pl", "de", "ro"],
+      "description": "Valós idejű csapatnaptár, műszakbeosztás, szabadságkezelés és kapacitástervezés egy platformon. CRM beágyazás és Microsoft 365 integráció.",
+      "featureList": [
+        "Műszakbeosztás és erőforrás-tervezés",
+        "Szabadság- és hiányzáskezelés",
+        "Kapacitástervező",
+        "Jóváhagyási munkafolyamatok",
+        "CRM beágyazási SDK",
+        "Microsoft 365 / Outlook integráció",
+        "Irodai létszámkövetés",
+        "Viszonteladói portál"
+      ],
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "HUF",
+        "description": "Ingyenes regisztráció – díjmentes kipróbálás"
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Effectime",
+        "url": "https://effectime.app/"
+      }
+    }
+    </script>
+
+    <!-- Structured Data: FAQPage -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Mi az az Effectime?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Az Effectime egy vállalati workforce management platform, amely egységesíti a műszakbeosztást, kapacitástervezést, szabadságkezelést és jóváhagyási folyamatokat. Magyar kkv és enterprise szervezetek számára készült."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Hogyan működik a műszakbeosztás az Effectime-ban?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Az Effectime heti nézetű beosztási rácsot kínál irodák és csapatok szerint. A menedzserek egy kattintással rendelhetnek be munkatársakat, jelölhetik a hiányzásokat és láthatják a napi kapacitást valós időben."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Milyen integrációkat támogat az Effectime?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Az Effectime integrálódik a Microsoft 365 (Outlook naptár) rendszerrel, és CRM beágyazási SDK-t kínál, amellyel bármely CRM rendszerbe iframe-ként beágyazható a workforce adat."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Mennyibe kerül az Effectime?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Az Effectime ingyenesen kipróbálható – a regisztráció pár percet vesz igénybe, kártyaadatok nélkül. Fizetős enterprise csomag is elérhető nagyobb csapatok és magasabb szintű integrációs igények esetén."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "GDPR-kompatibilis az Effectime?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Igen. Az Effectime EU-s adatközpontokat használ, az adatkezelés az Európai Unió GDPR-előírásainak megfelelően történik. Az adatfeldolgozási megállapodás (DPA) elérhető vállalati ügyfelek számára."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Lehet-e az Effectime-t beágyazni más CRM rendszerbe?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Igen. Az Effectime CRM Embed SDK segítségével egyetlen iframe-kóddal beágyazható a műszakbeosztás, kapacitástervező, távollétnaptár és létszámkövetés bármely belső rendszerbe, token-alapú hitelesítéssel."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Hány fős csapatnál ajánlott az Effectime?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Az Effectime 5 főtől több száz fős csapatokig skálázódik. Leginkább 20–500 fős középvállalatok számára optimális, ahol a kézi Excel-alapú beosztás már nem hatékony."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Milyen nyelveken érhető el az Effectime?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Az Effectime magyarul, angolul, csehül, szlovákul, lengyelül, németül, osztrák némettel és románul is elérhető. A felület nyelve a felhasználói beállításoktól függően automatikusan váltódik."
+          }
+        }
+      ]
+    }
+    </script>
+
+    <!-- Structured Data: WebSite (for Sitelinks Searchbox eligibility) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "Effectime",
+      "url": "https://effectime.app/",
+      "inLanguage": "hu",
+      "description": "Vállalati kapacitástervező, szabadságkezelő és műszakbeosztó platform."
+    }
+    </script>
+  </head>
 
   <body>
     <div id="root"></div>
+    <!-- Noscript fallback: content visible to crawlers that don't execute JS -->
+    <noscript>
+      <div style="font-family:sans-serif;max-width:900px;margin:40px auto;padding:0 24px">
+        <h1>Effectime – Kapacitástervező, Szabadságkezelő és Műszakbeosztó Platform</h1>
+        <p>Valós idejű csapatnaptár, szabadságkezelés és kapacitástervezés közép- és nagyvállalatoknak. Próbálja ki díjmentesen – regisztráció 2 perc.</p>
+        <h2>Mindent egy helyen</h2>
+        <ul>
+          <li><strong>Egységes csapatnaptár</strong> – Átlátható csapat- és erőforrásnaptár valós időben</li>
+          <li><strong>Műszakbeosztás</strong> – Heti beosztási rács irodák és csapatok szerint</li>
+          <li><strong>Kapacitástervezés</strong> – Napi kapacitás vs. igény követése</li>
+          <li><strong>Szabadság- és kérelemkezelés</strong> – Jóváhagyási folyamatok automatizálva</li>
+          <li><strong>CRM beágyazási SDK</strong> – Workforce adatok iframe-ként bármely CRM-be</li>
+          <li><strong>Microsoft 365 integráció</strong> – Outlook naptár szinkronizáció</li>
+        </ul>
+        <h2>Miért válassza az Effectime-t?</h2>
+        <ul>
+          <li>Korlátlan munkaterület tagok</li>
+          <li>Jóváhagyási munkafolyamatok</li>
+          <li>iCal / naptár integráció</li>
+          <li>Email értesítések</li>
+          <li>GDPR-kompatibilis EU adatkezelés</li>
+          <li>Dedikált ügyfélszolgálat</li>
+        </ul>
+        <p><a href="https://effectime.app/#/auth">Ingyenes regisztráció</a></p>
+      </div>
+    </noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

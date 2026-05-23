@@ -1,13 +1,13 @@
 {
   "name": "Effectime — Workforce Intelligence",
   "short_name": "Effectime",
-  "description": "Enterprise workforce, leave, and capacity planning",
+  "description": "Vállalati kapacitástervező, szabadságkezelő és műszakbeosztó platform",
   "start_url": "/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#ffffff",
   "theme_color": "#0ea5e9",
-  "lang": "en",
+  "lang": "hu",
   "scope": "/",
   "icons": [
     {
@@ -26,14 +26,14 @@
   "categories": ["business", "productivity"],
   "shortcuts": [
     {
-      "name": "Clock in",
-      "short_name": "Clock in",
+      "name": "Bejelentkezés",
+      "short_name": "Bejelentk.",
       "url": "/#/app?tab=my-portal",
       "icons": [{ "src": "/effectime-favicon.svg", "sizes": "any" }]
     },
     {
-      "name": "Leave request",
-      "short_name": "Leave",
+      "name": "Szabadságkérelem",
+      "short_name": "Szabadság",
       "url": "/#/app?tab=requests",
       "icons": [{ "src": "/effectime-favicon.svg", "sizes": "any" }]
     }
