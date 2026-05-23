@@ -3,7 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
 import { DensityProvider } from "@/hooks/useDensity";
@@ -11,19 +11,30 @@ import { I18nProvider } from "@/i18n/I18nProvider";
 import { HelpRegistryProvider } from "@/lib/help/registry";
 import { HelpDrawer } from "@/components/help/HelpDrawer";
 
-import Auth from "./pages/Auth";
+// Landing is loaded eagerly — it is the only public, SEO-critical page
 import Landing from "./pages/Landing";
-import Profile from "./pages/Profile";
-import ResetPassword from "./pages/ResetPassword";
-import Admin from "./pages/Admin";
-import Superadmin from "./pages/Superadmin";
-import Enterprise from "./pages/Enterprise";
-import Unsubscribe from "./pages/Unsubscribe";
-import Reseller from "./pages/Reseller";
-import CandidateBook from "./pages/CandidateBook";
-import EmbedPage from "./pages/EmbedPage";
-import NotFound from "./pages/NotFound";
 import { InstallPwaPrompt } from "@/components/pwa/InstallPwaPrompt";
+
+// All other pages are lazy-loaded to keep the initial JS bundle small
+const Auth         = lazy(() => import("./pages/Auth"));
+const Profile      = lazy(() => import("./pages/Profile"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Admin        = lazy(() => import("./pages/Admin"));
+const Superadmin   = lazy(() => import("./pages/Superadmin"));
+const Enterprise   = lazy(() => import("./pages/Enterprise"));
+const Unsubscribe  = lazy(() => import("./pages/Unsubscribe"));
+const Reseller     = lazy(() => import("./pages/Reseller"));
+const CandidateBook = lazy(() => import("./pages/CandidateBook"));
+const EmbedPage    = lazy(() => import("./pages/EmbedPage"));
+const NotFound     = lazy(() => import("./pages/NotFound"));
+
+function PageLoader() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+    </div>
+  );
+}
 
 const queryClient = new QueryClient();
 const HASH_ROUTE_QUERY_KEYS = new Set(['redirect', 'oauth', 'email_activation_token', 'select', 'tab', 'ws', 'invite']);
@@ -159,22 +170,24 @@ const App = () => (
                 <OAuthCallbackGuard>
                   <HashRouter>
                     <SpaRedirectHandler />
-                    <Routes>
-                      <Route path="/" element={<Landing />} />
-                      <Route path="/app" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
-                      <Route path="/w/:workspaceId" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
-                      <Route path="/enterprise" element={<ProtectedRoute><Navigate to="/app" replace /></ProtectedRoute>} />
-                      <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-                      <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
-                      <Route path="/reset-password" element={<ResetPassword />} />
-                      <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-                      <Route path="/superadmin" element={<ProtectedRoute><Superadmin /></ProtectedRoute>} />
-                      <Route path="/unsubscribe" element={<Unsubscribe />} />
-                      <Route path="/reseller" element={<ProtectedRoute><Reseller /></ProtectedRoute>} />
-                      <Route path="/book/:token" element={<CandidateBook />} />
-                      <Route path="/embed/:view" element={<EmbedPage />} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
+                    <Suspense fallback={<PageLoader />}>
+                      <Routes>
+                        <Route path="/" element={<Landing />} />
+                        <Route path="/app" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
+                        <Route path="/w/:workspaceId" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
+                        <Route path="/enterprise" element={<ProtectedRoute><Navigate to="/app" replace /></ProtectedRoute>} />
+                        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                        <Route path="/auth" element={<PublicRoute><Auth /></PublicRoute>} />
+                        <Route path="/reset-password" element={<ResetPassword />} />
+                        <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+                        <Route path="/superadmin" element={<ProtectedRoute><Superadmin /></ProtectedRoute>} />
+                        <Route path="/unsubscribe" element={<Unsubscribe />} />
+                        <Route path="/reseller" element={<ProtectedRoute><Reseller /></ProtectedRoute>} />
+                        <Route path="/book/:token" element={<CandidateBook />} />
+                        <Route path="/embed/:view" element={<EmbedPage />} />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </Suspense>
                   </HashRouter>
                 </OAuthCallbackGuard>
               </TooltipProvider>

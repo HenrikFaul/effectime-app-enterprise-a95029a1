@@ -1,0 +1,47 @@
+# Effectime
+
+> Effectime is a Hungarian-primary enterprise workforce management platform offering shift scheduling, capacity planning, leave management, and CRM embed SDK.
+
+## About
+
+Effectime is a web-based SaaS platform designed for Hungarian SMEs and enterprises to manage their workforce efficiently. It provides real-time team calendars, shift rosters, capacity planning, leave approval workflows, and embeddable workforce widgets for CRM systems.
+
+- **Primary language**: Hungarian (also available in English, Czech, Slovak, Polish, German, Romanian)
+- **Target market**: Hungary and Central Eastern Europe
+- **Business model**: Freemium workspace with enterprise tier upgrade
+- **Founded**: Budapest, Hungary
+
+## Products and features
+
+- **Műszakbeosztás (Shift Scheduling)**: Weekly shift assignment grid per office location with write permissions
+- **Kapacitástervező (Capacity Planner)**: Daily capacity vs. staffing need tracking per team/office
+- **Távollétek (Leave Management)**: Team leave calendar with configurable approval chains
+- **Irodai létszám (Office Headcount)**: Daily headcount tracking across office locations
+- **CRM Embed SDK**: Token-gated iframe embeds — bring workforce data into any CRM system
+- **Microsoft 365 Integration**: Outlook calendar synchronization
+- **Jóváhagyási lánc (Approval Chains)**: Multi-level leave and schedule approval workflows
+- **Viszonteladói portál (Reseller Portal)**: Partner management for resellers
+
+## Key facts
+
+- Supports 8 languages: Hungarian, English, Czech, Slovak, Polish, German (AT), Romanian
+- GDPR-compliant, EU data residency
+- Free registration available at https://effectime.app/
+- PWA installable on Android and iOS
+- Multi-tenant workspace architecture
+
+## Pricing
+
+Free tier available. Enterprise tier available for larger teams requiring advanced integrations, approval workflows, and CRM embed SDK.
+
+## Contact
+
+Website: https://effectime.app/
+
+## Use cases
+
+- Managing shift schedules for 20–500 person teams
+- Replacing Excel-based leave tracking with automated approval workflows
+- Embedding workforce data into Salesforce, HubSpot, or custom CRM systems
+- Capacity planning for hybrid office/remote teams
+- Compliance with Hungarian labor law (Mt. törvény) leave entitlement rules
