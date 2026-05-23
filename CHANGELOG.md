@@ -1,3 +1,71 @@
+## 2026-05-23 — v3.48.0 Feature: SEO Phase 1 + Phase 2 — on-page optimisation, structured data, code splitting
+
+### SEO Phase 1 quick wins (index.html)
+- `lang="hu"` (was `"en"`) — critical Google language signal fix
+- Keyword-rich `<title>` 60 chars with primary HU cluster (was "Effectime" — 9 chars)
+- Expanded `<meta name="description">` 148 chars with conversion CTA (was 65 chars)
+- `<link rel="canonical" href="https://effectime.app/">`
+- hreflang: `hu`, `en`, `x-default`
+- `og:url`, `og:locale` (hu_HU), `og:locale:alternate` (en_GB)
+- `<link rel="preconnect">` + `dns-prefetch` for Supabase CDN
+- Favicon query strings removed (`?v=3` → clean paths)
+
+### Structured data (JSON-LD) — 4 blocks
+- `Organization` — name, url, logo, sameAs stubs for social profiles
+- `SoftwareApplication` — applicationCategory, operatingSystem, offers (free tier)
+- `FAQPage` — 8 HU Q&As covering shift scheduling, leave management, pricing, languages
+- `WebSite` — SearchAction with query-input for sitelinks searchbox
+
+### noscript fallback — fixes SEOptimer "Rendered Content" finding
+Full HU text content added to `<noscript>`: H1, 7 feature descriptions, 5 benefits, CTA.
+SEOptimer saw only 209 words (JS-rendered content invisible to crawlers).
+Fallback provides 2500+ words to bots without JavaScript.
+
+### New public files
+- `public/sitemap.xml` — single canonical URL with hreflang annotations
+- `public/llms.txt` — LLM discovery file (GEO standard; fixes SEOptimer GEO grade F)
+
+### Updated public files
+- `public/robots.txt` — `Sitemap:` directive added
+- `public/manifest.webmanifest` — `"lang": "hu"`, HU shortcut names
+
+### Performance — code splitting for mobile LCP (was 9.8s)
+- All non-Landing pages converted to `React.lazy()` + `<Suspense fallback={<PageLoader />}>`
+- Vite `manualChunks` added: react/router, tanstack-query, supabase-js, 6 Radix primitives, date-fns
+- Estimated initial JS bundle: ~2.1 MB (was ~4.3 MB — 48% reduction)
+- Enterprise chunk (1.7 MB) is now deferred; Landing stays eager and SEO-unaffected
+
+### SEO/outputs/ — 12 deliverable files
+Full 9-agent SEO programme results: audit (18 issues), keyword research (12 clusters), on-page content, technical plan, internal linking, competitor analysis (8 competitors), topical authority roadmap (5 pillars, 50+ pages), schema/E-E-A-T plan, 38-item action backlog, executive summary, implementation roadmap, KPI dashboard.
+
+---
+
+## 2026-05-23 — v3.47.2 Fix: revoke_embed_token silent failure + missing v3.47.0 DB migration
+
+### Bug fix — revoke_embed_token no longer silently succeeds
+Previously: non-owner callers (or calls with non-existent token IDs) received `void` with
+no error. The `UPDATE` silently matched 0 rows. Fixed by adding `GET DIAGNOSTICS
+v_rows_updated = ROW_COUNT` and raising `P0001` if 0 rows updated.
+
+**Verification:** `SELECT revoke_embed_token(gen_random_uuid())` now raises
+`P0001: Token not found or you are not authorised to revoke it`.
+
+No frontend changes needed — `handleRevoke` already checks `if (error) { toast.error(...) }`.
+
+**Migration:** `supabase/migrations/20260523100000_v3_47_1_fix_revoke_embed_token_silent_failure.sql`
+
+### Bug fix — v3.47.0 migration gap closed
+`20260519100000_v3_47_0_embed_new_views_and_rpcs.sql` existed in the repo but had
+never been applied to the production database. Both `check_member_availability` and
+`get_team_headcount` RPCs were absent from production. Applied retroactively and verified.
+
+### E2E full-stack verification — 93/100
+Ran the full `end_to_end_full_stack_verification.prompt` across all 14 routes, 55+ RPCs,
+and 143 tables. See `full-stack-e2e-prompt-ecosystem/e2e_evidence_report.md` for full
+evidence, scoring, changed files, and residual risks.
+
+---
+
 ## 2026-05-19 — v3.47.1 Fix + Enhancement: Embed Snippet Builder token bug fix + ultra-premium UI refactor for all 5 embed views
 
 ### Critical bug fix — Snippet Builder now uses the correct token
