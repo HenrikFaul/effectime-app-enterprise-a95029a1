@@ -40,6 +40,10 @@
     --warning: 38 90% 48%;
     --warning-foreground: 0 0% 100%;
 
+    --info: 210 90% 50%;
+    --info-foreground: 0 0% 100%;
+
+
     --vote-good: 152 58% 40%;
     --vote-maybe: 38 90% 48%;
     --vote-bad: 0 70% 50%;
