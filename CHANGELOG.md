@@ -1,4 +1,34 @@
-## 2026-06-02 — v3.49.0 Design: Design system audit + `--info` semantic token + roadmap (A-phase of design role sweep)
+## 2026-06-02 — v3.49.1 Accessibility: WCAG 2.2 audit baseline (B-phase audit-only)
+
+**Lens:** Senior Accessibility Specialist + Senior UI/UX Designer.
+
+### Scope
+Audit-only PR — zero code touched, zero regression possible. Captures the WCAG 2.2 baseline so the B1–B7 fix batches can land in isolated, screenshot-QA'd PRs.
+
+### New document
+- `db-audit/a11y_audit_v3.49.1.md` — full inventory + severity matrix:
+  - **P0 Critical:** 109 icon-only `<Button size="icon">` instances missing `aria-label` across 60 files (top 13 ranked)
+  - **P1 High:** 26 `h-screen` uses across 16 files (mobile viewport bug — should be `h-dvh`)
+  - **P2 Medium:** 39 hardcoded `id="..."` occurrences in 10 list/dialog files (duplicate-id risk)
+  - **P3 Medium:** empty-state inconsistency (no unified `<EmptyState>` primitive)
+  - WCAG SC mapping for every finding
+  - 7-batch fix roadmap (B1–B7) with per-batch risk rating
+  - per-batch verification protocol (build + SR spot-check + keyboard walk + Lighthouse)
+
+### Already-OK (verified)
+- Radix/shadcn primitives ARIA-correct out of the box
+- `prefers-reduced-motion` globally honoured
+- Semantic token palette meets AA contrast in light + dark
+- Sidebar collapsed-mode labels via `tooltip` prop
+
+### Files
+- `db-audit/a11y_audit_v3.49.1.md` — new
+- `versioning/02062602_v3.49.1_a11y-audit-baseline.md` — new
+- `marketing/marketing_values/20260602_v3.49.1_a11y-audit-baseline_marketing_value.md` — new
+
+---
+
+
 
 **Lens applied:** Senior Design System Lead + Senior UI/UX Designer + Senior Accessibility Specialist (per attached role briefs).
 
