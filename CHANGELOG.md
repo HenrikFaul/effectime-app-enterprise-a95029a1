@@ -1,4 +1,69 @@
-## 2026-05-23 — v3.48.0 Feature: SEO Phase 1 + Phase 2 — on-page optimisation, structured data, code splitting
+## 2026-06-02 — v3.49.1 Accessibility: WCAG 2.2 audit baseline (B-phase audit-only)
+
+**Lens:** Senior Accessibility Specialist + Senior UI/UX Designer.
+
+### Scope
+Audit-only PR — zero code touched, zero regression possible. Captures the WCAG 2.2 baseline so the B1–B7 fix batches can land in isolated, screenshot-QA'd PRs.
+
+### New document
+- `db-audit/a11y_audit_v3.49.1.md` — full inventory + severity matrix:
+  - **P0 Critical:** 109 icon-only `<Button size="icon">` instances missing `aria-label` across 60 files (top 13 ranked)
+  - **P1 High:** 26 `h-screen` uses across 16 files (mobile viewport bug — should be `h-dvh`)
+  - **P2 Medium:** 39 hardcoded `id="..."` occurrences in 10 list/dialog files (duplicate-id risk)
+  - **P3 Medium:** empty-state inconsistency (no unified `<EmptyState>` primitive)
+  - WCAG SC mapping for every finding
+  - 7-batch fix roadmap (B1–B7) with per-batch risk rating
+  - per-batch verification protocol (build + SR spot-check + keyboard walk + Lighthouse)
+
+### Already-OK (verified)
+- Radix/shadcn primitives ARIA-correct out of the box
+- `prefers-reduced-motion` globally honoured
+- Semantic token palette meets AA contrast in light + dark
+- Sidebar collapsed-mode labels via `tooltip` prop
+
+### Files
+- `db-audit/a11y_audit_v3.49.1.md` — new
+- `versioning/02062602_v3.49.1_a11y-audit-baseline.md` — new
+- `marketing/marketing_values/20260602_v3.49.1_a11y-audit-baseline_marketing_value.md` — new
+
+---
+
+
+
+**Lens applied:** Senior Design System Lead + Senior UI/UX Designer + Senior Accessibility Specialist (per attached role briefs).
+
+### Scope
+Anti-regression foundation pass for the three-phase design sweep (A: design system, B: accessibility, C: UX copy). This PR ships ONLY additive token + audit + roadmap — zero existing class renamed, zero component visually changed.
+
+### Additive token
+- `--info` / `--info-foreground` added to `:root` (sky 210° 50%) and `.dark` (sky 210° 60%).
+- Tailwind mapped: `bg-info`, `text-info`, `border-info`, `bg-info/10`, `text-info-foreground`.
+- **Why:** the 648 hardcoded color audit (see below) found a structural gap — every info-style panel used `bg-blue-50 text-blue-700` because no semantic blue token existed. Now they can migrate.
+
+### New audit document
+- `db-audit/design_system_audit.md` — full inventory:
+  - token-foundation status (all 9 families OK after this PR)
+  - 648 hardcoded color occurrences across 86 files, top-18 offenders ranked
+  - replacement matrix (`bg-blue-50` → `bg-info/10`, `text-green-700` → `text-success`, …)
+  - state-matrix gap analysis (empty-states are ad-hoc — backlog item)
+  - 8-batch prioritized roadmap (A0–A8) targeting ≤100 hardcoded uses by v3.45
+  - accessibility-by-default contract for all future component PRs
+
+### Anti-regression guarantees
+- No class renamed or removed.
+- All existing components render identically (tokens are pure addition).
+- No new color introduced in component code in this PR; the migration is documented as a backlog, not executed bulk.
+
+### Files
+- `src/index.css` — `--info` token in `:root` and `.dark`
+- `tailwind.config.ts` — `info` color mapping
+- `db-audit/design_system_audit.md` — new
+- `versioning/02062601_v3.49.0_design-system-audit-and-info-token.md` — new
+- `marketing/marketing_values/20260602_v3.49.0_design-system-audit_marketing_value.md` — new
+
+---
+
+
 
 ### SEO Phase 1 quick wins (index.html)
 - `lang="hu"` (was `"en"`) — critical Google language signal fix
