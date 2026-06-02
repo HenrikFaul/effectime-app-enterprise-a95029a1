@@ -2909,6 +2909,63 @@ export type Database = {
           },
         ]
       }
+      enterprise_embed_tokens: {
+        Row: {
+          allowed_views: string[]
+          can_write: boolean
+          created_at: string
+          created_by: string
+          expires_at: string | null
+          id: string
+          is_active: boolean
+          label: string
+          last_used_at: string | null
+          token: string
+          workspace_id: string
+        }
+        Insert: {
+          allowed_views?: string[]
+          can_write?: boolean
+          created_at?: string
+          created_by: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          label: string
+          last_used_at?: string | null
+          token?: string
+          workspace_id: string
+        }
+        Update: {
+          allowed_views?: string[]
+          can_write?: boolean
+          created_at?: string
+          created_by?: string
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean
+          label?: string
+          last_used_at?: string | null
+          token?: string
+          workspace_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "enterprise_embed_tokens_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_org_pulse_membership"
+            referencedColumns: ["workspace_id"]
+          },
+          {
+            foreignKeyName: "enterprise_embed_tokens_workspace_id_fkey"
+            columns: ["workspace_id"]
+            isOneToOne: false
+            referencedRelation: "enterprise_workspaces"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       enterprise_escalation_rules: {
         Row: {
           created_at: string
@@ -9468,6 +9525,10 @@ export type Database = {
         }
         Returns: Json
       }
+      check_member_availability: {
+        Args: { _date: string; _token: string; _user_id: string }
+        Returns: string
+      }
       claim_open_shift: { Args: { _request_id: string }; Returns: Json }
       clock_event: {
         Args: {
@@ -9493,6 +9554,19 @@ export type Database = {
           _workspace_id: string
         }
         Returns: Json
+      }
+      create_embed_token: {
+        Args: {
+          _allowed_views?: string[]
+          _can_write?: boolean
+          _expires_at?: string
+          _label: string
+          _workspace_id: string
+        }
+        Returns: {
+          id: string
+          token: string
+        }[]
       }
       create_open_shift_request: {
         Args: {
@@ -9534,6 +9608,10 @@ export type Database = {
         Args: { _category?: string; _workspace_id: string }
         Returns: string
       }
+      decline_open_shift_invitation: {
+        Args: { _request_id: string }
+        Returns: Json
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -9552,6 +9630,21 @@ export type Database = {
         Args: { _body_html: string; _vars: Json }
         Returns: string
       }
+      embed_assign_shift: {
+        Args: {
+          _business_role: string
+          _office_id: string
+          _shift_date: string
+          _skill_id?: string
+          _token: string
+          _user_id: string
+        }
+        Returns: string
+      }
+      embed_remove_shift: {
+        Args: { _assignment_id: string; _token: string }
+        Returns: Json
+      }
       enforce_data_retention: { Args: never; Returns: undefined }
       engagement_record_event: {
         Args: {
@@ -9564,6 +9657,23 @@ export type Database = {
       enqueue_email: {
         Args: { payload: Json; queue_name: string }
         Returns: number
+      }
+      get_embed_capacity_planner_data: {
+        Args: { _from_date: string; _to_date: string; _token: string }
+        Returns: Json
+      }
+      get_embed_view_data: {
+        Args: {
+          _from_date: string
+          _to_date: string
+          _token: string
+          _view: string
+        }
+        Returns: Json
+      }
+      get_team_headcount: {
+        Args: { _from_date?: string; _to_date?: string; _token: string }
+        Returns: Json
       }
       get_user_ids_by_emails: {
         Args: { p_emails: string[] }
@@ -9759,6 +9869,7 @@ export type Database = {
         Args: { _reseller_id: string; _theme_config: Json }
         Returns: Json
       }
+      revoke_embed_token: { Args: { _token_id: string }; Returns: undefined }
       seed_default_access_systems: {
         Args: { p_workspace_id: string }
         Returns: undefined
