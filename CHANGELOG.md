@@ -1,4 +1,39 @@
-## 2026-05-23 — v3.48.0 Feature: SEO Phase 1 + Phase 2 — on-page optimisation, structured data, code splitting
+## 2026-06-02 — v3.49.0 Design: Design system audit + `--info` semantic token + roadmap (A-phase of design role sweep)
+
+**Lens applied:** Senior Design System Lead + Senior UI/UX Designer + Senior Accessibility Specialist (per attached role briefs).
+
+### Scope
+Anti-regression foundation pass for the three-phase design sweep (A: design system, B: accessibility, C: UX copy). This PR ships ONLY additive token + audit + roadmap — zero existing class renamed, zero component visually changed.
+
+### Additive token
+- `--info` / `--info-foreground` added to `:root` (sky 210° 50%) and `.dark` (sky 210° 60%).
+- Tailwind mapped: `bg-info`, `text-info`, `border-info`, `bg-info/10`, `text-info-foreground`.
+- **Why:** the 648 hardcoded color audit (see below) found a structural gap — every info-style panel used `bg-blue-50 text-blue-700` because no semantic blue token existed. Now they can migrate.
+
+### New audit document
+- `db-audit/design_system_audit.md` — full inventory:
+  - token-foundation status (all 9 families OK after this PR)
+  - 648 hardcoded color occurrences across 86 files, top-18 offenders ranked
+  - replacement matrix (`bg-blue-50` → `bg-info/10`, `text-green-700` → `text-success`, …)
+  - state-matrix gap analysis (empty-states are ad-hoc — backlog item)
+  - 8-batch prioritized roadmap (A0–A8) targeting ≤100 hardcoded uses by v3.45
+  - accessibility-by-default contract for all future component PRs
+
+### Anti-regression guarantees
+- No class renamed or removed.
+- All existing components render identically (tokens are pure addition).
+- No new color introduced in component code in this PR; the migration is documented as a backlog, not executed bulk.
+
+### Files
+- `src/index.css` — `--info` token in `:root` and `.dark`
+- `tailwind.config.ts` — `info` color mapping
+- `db-audit/design_system_audit.md` — new
+- `versioning/02062601_v3.49.0_design-system-audit-and-info-token.md` — new
+- `marketing/marketing_values/20260602_v3.49.0_design-system-audit_marketing_value.md` — new
+
+---
+
+
 
 ### SEO Phase 1 quick wins (index.html)
 - `lang="hu"` (was `"en"`) — critical Google language signal fix
