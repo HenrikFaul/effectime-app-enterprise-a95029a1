@@ -152,38 +152,55 @@ export default function Landing() {
             </div>
           </div>
 
-          {/* Marquee — trusted by */}
+          {/* Marquee — pilot partners with real logos */}
           <div className="relative mx-auto w-full max-w-[min(1280px,92vw)] mt-20">
             <div className="text-center text-[11px] uppercase tracking-[0.2em] text-white/40 mb-5 font-semibold">
-              Csapatok, akik már velünk terveznek
+              {t('landing.trusted_by')}
             </div>
-            <div className="marquee">
-              <div className="marquee-track">
-                {['PANELLAKO.HU', 'HOBBEAST', 'PUBAPP'].map((n) => (
-                  <span key={n} className="text-white/40 font-display font-bold text-xl tracking-wider whitespace-nowrap hover:text-white/80 transition-colors">{n}</span>
-                ))}
-              </div>
-              <div className="marquee-track" aria-hidden>
-                {['PANELLAKO.HU', 'HOBBEAST', 'PUBAPP'].map((n) => (
-                  <span key={n + '2'} className="text-white/40 font-display font-bold text-xl tracking-wider whitespace-nowrap">{n}</span>
-                ))}
-              </div>
+            <div className="marquee marquee--wide">
+              {[0, 1].map((dup) => (
+                <div key={dup} className="marquee-track" aria-hidden={dup === 1 ? true : undefined}>
+                  {[
+                    { name: 'PanelLakó.hu', logo: panellakoLogo, href: 'https://panellako.hu' },
+                    { name: 'Hobbeast', logo: hobbeastLogo, href: 'https://expericentre.com' },
+                    { name: 'PubApp', logo: null, href: null },
+                  ].map((p) => (
+                    <a
+                      key={p.name + dup}
+                      href={p.href ?? undefined}
+                      target={p.href ? '_blank' : undefined}
+                      rel={p.href ? 'noreferrer noopener' : undefined}
+                      className="flex items-center gap-3 px-2 opacity-70 hover:opacity-100 transition-opacity"
+                    >
+                      {p.logo ? (
+                        <img src={p.logo} alt={`${p.name} logo`} className="h-9 w-9 rounded-lg object-contain bg-white/5 p-0.5" />
+                      ) : (
+                        <span className="h-9 w-9 rounded-lg bg-gradient-to-br from-primary/30 to-accent/30 grid place-items-center text-white font-display font-bold text-sm">PA</span>
+                      )}
+                      <span className="text-white/80 font-display font-bold text-lg tracking-wide whitespace-nowrap">{p.name}</span>
+                    </a>
+                  ))}
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Stat band */}
-          <div className="relative mx-auto w-full max-w-[min(1280px,92vw)] mt-14 grid grid-cols-2 lg:grid-cols-4 gap-px rounded-2xl border border-white/10 bg-white/10 overflow-hidden backdrop-blur-md">
-            {([
-              [t('landing.stat_1_value'), t('landing.stat_1_label')],
-              [t('landing.stat_2_value'), t('landing.stat_2_label')],
-              [t('landing.stat_3_value'), t('landing.stat_3_label')],
-              [t('landing.stat_4_value'), t('landing.stat_4_label')],
-            ] as const).map(([v, l]) => (
-              <div key={l} className="bg-[hsl(228_32%_8%)] p-6 text-center">
-                <div className="font-display text-3xl sm:text-4xl font-bold text-gradient-animate">{v}</div>
-                <div className="text-xs sm:text-sm text-white/55 mt-1">{l}</div>
-              </div>
-            ))}
+          {/* Stat band — honest, source-anchored */}
+          <div className="relative mx-auto w-full max-w-[min(1280px,92vw)] mt-14">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-px rounded-2xl border border-white/10 bg-white/10 overflow-hidden backdrop-blur-md">
+              {([
+                [t('landing.stat_1_value'), t('landing.stat_1_label')],
+                [t('landing.stat_2_value'), t('landing.stat_2_label')],
+                [t('landing.stat_3_value'), t('landing.stat_3_label')],
+                [t('landing.stat_4_value'), t('landing.stat_4_label')],
+              ] as const).map(([v, l]) => (
+                <div key={l} className="bg-[hsl(228_32%_8%)] p-6 text-center">
+                  <div className="font-display text-3xl sm:text-4xl font-bold text-gradient-animate">{v}</div>
+                  <div className="text-xs sm:text-sm text-white/55 mt-1">{l}</div>
+                </div>
+              ))}
+            </div>
+            <p className="text-[11px] text-white/40 mt-3 text-center px-4">{t('landing.stats_footnote')}</p>
           </div>
         </section>
 
