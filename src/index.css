@@ -403,3 +403,86 @@
     .float-tilt { transform: none; }
   }
 }
+
+/* =========================================================================
+   v3.49.7 — In-app "WOW" polish layer (purely additive, zero regression).
+   Touches: body ambient backdrop, focus-visible ring, scrollbar refinement,
+   tabular numerics, soft pop animation utility, KPI shine utility.
+   Does NOT alter component DOM, props, or behavior.
+   ========================================================================= */
+@layer base {
+  html, body, #root { min-height: 100%; }
+
+  body {
+    background-color: hsl(var(--background));
+    background-image:
+      radial-gradient(1200px 600px at 8% -10%, hsl(var(--primary) / 0.07), transparent 60%),
+      radial-gradient(900px 500px at 100% 0%, hsl(var(--accent) / 0.06), transparent 65%),
+      radial-gradient(700px 500px at 50% 110%, hsl(var(--primary) / 0.04), transparent 70%);
+    background-attachment: fixed;
+  }
+
+  /* Premium focus-visible — accessible 3:1 contrast halo on every interactive element */
+  *:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px hsl(var(--background)),
+      0 0 0 4px hsl(var(--primary) / 0.55),
+      0 0 0 8px hsl(var(--primary) / 0.18);
+    border-radius: 0.5rem;
+    transition: box-shadow 140ms ease-out;
+  }
+
+  /* Tabular figures for numbers everywhere — aligned KPIs, tables, dashboards */
+  .tabular-nums, table, [data-numeric], .font-mono { font-variant-numeric: tabular-nums; }
+
+  /* Refined scrollbars (WebKit + Firefox) */
+  * { scrollbar-width: thin; scrollbar-color: hsl(var(--muted-foreground) / 0.35) transparent; }
+  *::-webkit-scrollbar { width: 10px; height: 10px; }
+  *::-webkit-scrollbar-track { background: transparent; }
+  *::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.3);
+    border: 2px solid transparent;
+    background-clip: content-box;
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary) / 0.55); background-clip: content-box; }
+
+  /* Subtle entrance for app surfaces — applied via existing animate-fade-in classes */
+  @keyframes wow-rise {
+    0% { opacity: 0; transform: translateY(6px); }
+    100% { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Selection accent */
+  ::selection { background: hsl(var(--primary) / 0.25); color: hsl(var(--foreground)); }
+}
+
+@layer utilities {
+  /* Soft "pop" hover — opt-in via className="kpi-pop" on any card */
+  .kpi-pop { transition: transform 220ms cubic-bezier(.2,.8,.2,1), box-shadow 220ms ease-out; }
+  .kpi-pop:hover { transform: translateY(-3px); box-shadow: var(--shadow-elevated); }
+
+  /* Number shine — subtle gradient sweep on big KPI numbers (opt-in) */
+  .kpi-shine {
+    background: linear-gradient(110deg,
+      hsl(var(--primary)) 0%, hsl(var(--accent)) 50%, hsl(var(--primary)) 100%);
+    background-size: 220% auto;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: text-shimmer 8s linear infinite;
+  }
+
+  /* Glass header — opt-in via className="glass-header" */
+  .glass-header {
+    background: hsl(var(--card) / 0.72);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border-bottom: 1px solid hsl(var(--border) / 0.6);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .kpi-pop, .kpi-pop:hover { transition: none; transform: none; }
+    .kpi-shine { animation: none; }
+  }
+}
+
