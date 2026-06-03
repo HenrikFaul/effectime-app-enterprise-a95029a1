@@ -1,73 +1,58 @@
-## Mit fogok csinálni
+## Cél
+A landing page (`src/pages/Landing.tsx` által használt `landing.*` kulcsok) magyar szövegeinek lektorálása és újraírása marketing-, SEO- és nyelvi szempontból. Gombfeliratokat NEM módosítunk. Az EN kulcsok közül csak azokat csiszoljuk, ahol a HU változtatás miatt szemantikai eltérés keletkezne — egyébként az angol érintetlen marad.
 
-Négy munkacsomagot vittem fel sorrendben. Mindegyik **külön PR / külön verzió** lesz a `AGENTS.md` + `CLAUDE.md` szabályai szerint (rebase `origin/main`, `CHANGELOG.md`, `versioning/*.md`, `marketing/marketing_values/*.md`). Először **csak auditot és terveket** írok kódváltozás nélkül — utána egyenként végrehajtjuk, mert mindegyik regresszió-kockázatos és a governance kifejezetten tiltja a „break already working functionality"-t.
+## Azonosított főbb problémák a jelenlegi HU szövegben
 
----
+**1. T/V (tegezés/magázás) keveredése — törésvonal a hangnemben**
+- Magázás: „Próbálja ki már ma", „Regisztráljon ingyenesen", „Kezdje el ingyen"
+- Tegezés: „Lásd egy nézetben", „Cseréld le a táblázatot", „Hozd létre", „Hívd meg"
+- → Egységes **tegezés** (modern B2B SaaS norma HU-ban, Absentify, Mention, Notion HU is ezt használja). Gombokat nem írjuk át.
 
-### 1. csomag — Terminológia-audit (tier / feature / routing domain)
+**2. Anglicizmusok / magyartalan kifejezések**
+- „people ops" → „HR-műveletekhez" / „napi HR-működéshez"
+- „accrual szabályok" → „felhalmozási szabályok"
+- „post-itek" → „cetlik"
+- „Sérthetetlen audit napló / log" → „változtathatatlan audit napló"
+- „Alapból enterprise szintű" → „Vállalati szint alapból"
+- „auditált egyenlegek" megmarad (szakszó), de pontosítva
 
-**Cél:** egyetlen canonical szótár a `feature_key`, `route_path`, `menu_path`, `module`, `enterprise_role_permissions.feature_key` mezőkre.
+**3. Nyelvtani / ragozási hibák**
+- „Hozd létre a munkaterületed" → „Hozd létre a munkaterületedet" (tárgyrag)
+- „Olyan szabványokra építve, amit … elvár" → „amiket … elvárnak" (számbeli egyeztetés)
+- „70%-kal csökkent a szabadság-adminisztráció" → „70%-kal csökkent a szabadságok adminisztrációja"
+- „Tömeges import vagy meghívók" → „Tömeges importtal vagy meghívókkal"
 
-**Lépések:**
-1. `db-audit/` és `src/` átfésülése: minden `feature_key`, `route_path`, `menu_path`, `module` előfordulás listázása (DB + kód).
-2. Duplikátum/szinonima mátrix: melyik kulcs hányféle néven él (`time-tracking` vs `timeTracking` vs `time_tracking` stb.).
-3. Canonical map javaslat (snake_case, egy igazságforrás: `features` tábla).
-4. Deliverable: `db-audit/terminology_audit.md` + javasolt rename-migration vázlat (NEM futtatva).
+**4. Konverziós / SEO szempont (értékfókusz, kulcsszavak)**
+- `hero_subtitle`: „Az Effectime platformmal" redundáns; tömörítés + fő kulcsszó („szabadságkezelés", „kapacitástervezés") elöl
+- `trusted_by`: „Operatív csapatok bíznak benne 14 országban" — „benne" antecedens nélkül → „14 ország operatív csapatai bíznak bennünk"
+- `stat_4_label`: „Ország, ahol használják" → „Ország használja"
+- `showcase_title`: „Mindent, ami a people ops-hoz kell" → „Minden, ami a napi HR-működéshez kell"
+- `s3_title`: „Két héttel előre lásd a hiányokat" → „Lásd a hiányokat két héttel korábban" (természetesebb mondatdallam)
+- `s4_title`: „Jóváhagyások a csapatod sebességén" → „Jóváhagyások a csapatod tempójában"
+- `testimonial_3_quote`: szóhasználat finomítás („…ez a legnagyobb dicséret, amit szoftvernek adhatunk.")
+- `faq_5_a`: „Aktív felhasználónként havidíjas, havi vagy éves számlázással." → „Aktív felhasználónkénti havidíj, havi vagy éves elszámolással. 50 fő felett mennyiségi kedvezmény jár."
 
-**Nincs kódváltozás ebben a körben** — csak audit dokumentum.
+**5. Érintett kulcsok (kb. 45–50 db a `landing.*` blokkban)**
+Hero (subtitle), trusted_by, mind a 4 stat label, problem (title/desc + 3 kártya), showcase (title/desc), s1–s4 (title/desc/bullet/mock egyes feliratok), how (title/desc + 3 lépés), vs (desc + néhány sor), proof (title + 3 testimonial), trust (title/desc + 4 chip), faq (összes Q/A), final (desc).
 
----
+**Gombfeliratok és nav linkek (NEM nyúlunk hozzájuk):**
+`btn_*`, `nav_*`, `s1_mock_approve/decline`, `final_cta`, `final_cta_secondary`, `cta_*` címkék.
 
-### 2. csomag — Role / position normalizáció
+## Technikai részletek
 
-**Cél:** a jelenleg 5-féle „role" fogalom (`app_role`, `enterprise_role` enum, `enterprise_role_definitions`, `enterprise_workspace_roles`, `business_role` szabad szöveg, + `position`) egyetlen koherens modellbe rendezése.
+- Egyetlen fájl módosul: `src/i18n/resources/hu.ts` (sorok ~1586–1750, `landing:` blokk).
+- EN (`src/i18n/resources/en.ts`) változatlan — a meglévő EN szöveg jó, és a HU módosítások nem érintik a kulcsok szemantikáját.
+- Komponens (`src/pages/Landing.tsx`) nem módosul.
+- Stílus: B2B-szakmai, határozott, tegező, kerüljük a felesleges anglicizmust, de a meghonosodott szakszavakat (SLA, audit napló, SSO, GDPR, ISO 27001, iCal) megtartjuk.
+- Karakterhossz: a hero subtitle 160 karakter alatt marad (meta-konzisztencia), a FAQ válaszok 2 mondatban.
 
-**Lépések:**
-1. Minden role-szerű mező és tábla teljes inventárja: oszlop, típus, használat (kód+RLS+UI).
-2. Konfliktus-térkép: hol ütköznek (pl. ugyanaz a user kap-e `app_role`-t ÉS `enterprise_workspace_role`-t, mi a precedence).
-3. Canonical model javaslat — várhatóan:
-   - **platform-szint:** `app_role` (super admin, user) — marad
-   - **workspace-szint:** `enterprise_workspace_roles` (owner, admin, member) — marad, ez a canonical
-   - **HR-szint:** `position` (job title szabad szöveg) — marad, NEM role
-   - **business_role / enterprise_role enum / enterprise_role_definitions:** deprecate vagy egyesítés
-4. Deliverable: `db-audit/role_model_normalization.md` + migration path lépésekre bontva (backfill → dual-write → cutover → drop). NEM futtatva.
+## Governance lépések a kódmódosítás után
+1. `CHANGELOG.md` – új patch verzió (v3.49.3) HU copy lektor.
+2. `versioning/03062602_v3.49.3_landing-hu-copy-rewrite.md`
+3. `marketing/marketing_values/20260603_v3.49.3_landing-hu-copy-rewrite_marketing_value.md`
+4. Vizuális regresszió nincs — csak szöveg.
 
-**Nincs kódváltozás ebben a körben** — csak terv.
-
----
-
-### 3. csomag — DB cleanup (confirmed-unused)
-
-**Cél:** a `db-audit/master_inventory.md` szerinti 5 tábla + 1 függvény biztonságos drop-ja.
-
-**Lépések:**
-1. `feature_gate_events` sorsa előbb eldöntendő — a tiering doksi még említi → ellenőrzöm hivatkozik-e élő kód, ha nem, dropolható.
-2. Mindegyik objektumra friss `pg_catalog` + `rg` keresés: tényleg nulla referencia kódból és DB triggerekből/view-kből.
-3. Egy migráció, ami mindet `DROP ... CASCADE` nélkül, függőség-helyes sorrendben dobja, `IF EXISTS` őrzéssel.
-4. `CHANGELOG.md` + `versioning/*.md` + `marketing/marketing_values/*.md` az `AGENTS.md` szerint.
-
-**Ez a csomag már futtat migrációt** — külön user-jóváhagyással.
-
----
-
-### 4. csomag — Konkrét feladat
-
-Miután a fenti 3 auditdokumentum kész és átnéztük, megkérdezem **melyik konkrét feature/bug** kerüljön sorra. A fenti auditok alapján már tisztább lesz, hogy melyik domainben érdemes haladni.
-
----
-
-## Végrehajtási sorrend ebben a session-ben
-
-1. **MOST:** 1. csomag audit (terminology_audit.md) — read-only
-2. **Utána:** 2. csomag audit (role_model_normalization.md) — read-only
-3. **Utána:** 3. csomag drop-migráció **terv** szövegesen, és megkérdezem mehet-e az élesítés
-4. **Utána:** 4. csomag — megkérdezem mi a konkrét feladat
-
-Minden lépés után megállok és visszajelzést kérek, mert a governance „smallest regression-risk solution" és „re-check affected flows after every change" előírásokat tartalmaz — nem futtatok 4 nagy átalakítást egyszerre, jóváhagyás nélkül.
-
-## Amit NEM teszek meg jóváhagyás nélkül
-
-- Rename-migráció futtatása (1. csomag)
-- Role-tábla összevonás vagy enum drop (2. csomag)
-- Tényleges `DROP TABLE` (3. csomag)
-- Új feature kódolása (4. csomag)
+## Nem ezen feladat hatókörében
+- Auth oldal (`auth_page.*`) szövegei — külön körben, ha kéred.
+- Gombfeliratok és navigáció.
+- EN copy átírása (csak ha kifejezetten kéred).

@@ -1,4 +1,23 @@
-## 2026-06-03 — v3.49.2 Accessibility B1: viewport unit sweep (`h-screen` → `h-dvh`)
+## 2026-06-03 — v3.49.3 Landing page HU copy lectorate (marketing + SEO pass)
+
+**Lens:** Senior UX Writer + Marketing/SEO manager + HU proofreader.
+
+### Scope
+Pure copy revision for the Hungarian landing page (`landing.*` keys in `src/i18n/resources/hu.ts`). No component, layout, button label, or English copy changed. Targets: T/V (tegezés/magázás) unification, removal of anglicisms (`people ops`, `accrual`, `post-itek`, `Row-level security`, `Sérthetetlen audit log`), grammar fixes (`Hozd létre a munkaterületed` → `…munkaterületedet`; `amit elvár` → `amiket elvárnak`; `70%-kal csökkent a szabadság-adminisztráció` → `…szabadságok adminisztrációja`), and conversion-oriented rephrasing of hero subtitle, problem cards, showcase block, vs-table, testimonials, trust block and FAQ.
+
+### Files touched (1)
+`src/i18n/resources/hu.ts` (landing block, ~150 keys reviewed, ~55 edited).
+
+### Anti-regression
+Text-only change in a single locale resource. Keys, value types, interpolation placeholders (`{{year}}`) and gomb-/nav-feliratok unchanged. EN copy untouched.
+
+### Follow-ups
+- Auth page (`auth_page.*`) HU copy lectorate — same pass, separate PR.
+- B2 a11y batch (admin/settings icon-button `aria-label`).
+
+---
+
+
 
 **Lens:** Senior Accessibility Specialist + Senior UI/UX Designer.
 
