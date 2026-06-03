@@ -155,17 +155,17 @@ export default function Landing() {
           {/* Marquee — trusted by */}
           <div className="relative mx-auto w-full max-w-[min(1280px,92vw)] mt-20">
             <div className="text-center text-[11px] uppercase tracking-[0.2em] text-white/40 mb-5 font-semibold">
-              Magyar és európai csapatok bizalmából
+              Csapatok, akik már velünk terveznek
             </div>
             <div className="marquee">
               <div className="marquee-track">
-                {['HUNGAROCONTROL', 'MOL GROUP', 'OTP', 'MAGYAR TELEKOM', 'WIZZ AIR', 'RICHTER', 'MVM', 'BUDAPEST AIRPORT', 'K&H', 'ERSTE'].map((n) => (
-                  <span key={n} className="text-white/35 font-display font-bold text-xl tracking-wider whitespace-nowrap hover:text-white/70 transition-colors">{n}</span>
+                {['PANELLAKO.HU', 'HOBBEAST', 'PUBAPP'].map((n) => (
+                  <span key={n} className="text-white/40 font-display font-bold text-xl tracking-wider whitespace-nowrap hover:text-white/80 transition-colors">{n}</span>
                 ))}
               </div>
               <div className="marquee-track" aria-hidden>
-                {['HUNGAROCONTROL', 'MOL GROUP', 'OTP', 'MAGYAR TELEKOM', 'WIZZ AIR', 'RICHTER', 'MVM', 'BUDAPEST AIRPORT', 'K&H', 'ERSTE'].map((n) => (
-                  <span key={n + '2'} className="text-white/35 font-display font-bold text-xl tracking-wider whitespace-nowrap">{n}</span>
+                {['PANELLAKO.HU', 'HOBBEAST', 'PUBAPP'].map((n) => (
+                  <span key={n + '2'} className="text-white/40 font-display font-bold text-xl tracking-wider whitespace-nowrap">{n}</span>
                 ))}
               </div>
             </div>
