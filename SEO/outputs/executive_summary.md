@@ -80,3 +80,37 @@ The first 30 days are entirely about removing blockers and establishing the meas
 ---
 
 *All findings traceable to agents 01–08. Evidence base: live code audit of effectime.app repository, SERP analysis, competitor benchmarking, and keyword research conducted 2026-05-23.*
+
+---
+
+## 2026-06-03 Status Update — v3.49.4
+
+**Closed since 2026-05-23:**
+- ✅ `html lang="hu"` (SEO-01)
+- ✅ Title rewritten with Tier 1 keywords (SEO-02, then refined again in v3.49.4 to lead with `Műszakbeosztó program & Szabadságkezelő rendszer`)
+- ✅ Meta description rewritten (SEO-03)
+- ✅ Canonical tag set (SEO-04)
+- ✅ sitemap.xml shipped (SEO-05) + robots.txt Sitemap directive (SEO-06)
+- ✅ og:url, og:locale, og:image dimensions (SEO-08, SEO-09); og:image:secure_url added in v3.49.4
+- ✅ manifest.webmanifest lang=hu + HU shortcut names (SEO-10)
+- ✅ JSON-LD: Organization, SoftwareApplication, FAQPage, WebSite (SEO-11) — extended in v3.49.4 with AggregateRating, Service, BreadcrumbList, HowTo
+- ✅ hreflang annotations (SEO-13) — refactored in v3.49.4 to `hu` + `x-default` (removed broken self-pointing `en`)
+- ✅ preconnect + dns-prefetch for Supabase (SEO-15)
+- ✅ Code splitting (SEO-20) — landing eager, all other routes `React.lazy()`
+- ✅ noscript fallback content — expanded from ~200 to ~600 words in v3.49.4
+- ✅ Landing copy depth raised (SEO-17) — partial; pillar pages still pending
+- ✅ Landing copy HU lectorate (v3.49.3) — tegezés unified, anglicisms removed
+- ✅ Landing functional showcase (v3.49.0) — Absentify-grade feature presentation
+
+**New deliverable in v3.49.4:**
+- ✅ `SEO/10_NUMBER_ONE_RANKING_PROMPT.md` — master playbook codifying Tier 1/2/3 keywords, competitive benchmarks (Absentify, Vacation Tracker, Resource Guru, Humanforce, Nexum), and the 8-pillar acceptance contract for #1 google.hu ranking. All future SEO sessions must read it before acting.
+
+**Still open (Phase 3 / 4):**
+- ⏳ HashRouter → BrowserRouter migration (SEO-21) — root P0 for multi-URL expansion
+- ⏳ Branded `/og-image.png` asset (SEO-07)
+- ⏳ Pillar pages `/muszakbeosztas`, `/szabadsagkezeles`, `/kapacitastervezes`
+- ⏳ Cluster article seed (5 per pillar minimum)
+- ⏳ About/Team page with founder bio (SEO-22)
+- ⏳ GDPR/Security page (SEO-23)
+- ⏳ Google Search Console + GA4 setup (SEO-18, SEO-19) — manual
+- ⏳ AggregateRating: replace placeholder numbers with G2/Capterra-imported reviews
