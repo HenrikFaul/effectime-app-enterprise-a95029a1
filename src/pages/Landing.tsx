@@ -317,7 +317,7 @@ export default function Landing() {
               ].map(({ icon: Icon, t: text }) => (
                 <div key={text} className="rounded-xl border border-border bg-card p-5 flex items-start gap-3 shadow-subtle">
                   <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                    <Icon className="h-4.5 w-4.5" />
+                    <Icon className="h-4 w-4" />
                   </div>
                   <div className="text-sm font-medium leading-snug pt-1.5">{text}</div>
                 </div>
