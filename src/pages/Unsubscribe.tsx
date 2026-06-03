@@ -38,7 +38,7 @@ export default function Unsubscribe() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+    <div className="min-h-dvh flex items-center justify-center bg-background p-4">
       <Card className="max-w-md w-full">
         <CardContent className="py-8 text-center space-y-4">
           {status === 'loading' && <p className="text-muted-foreground">{t('unsubscribe.loading')}</p>}

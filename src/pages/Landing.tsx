@@ -30,7 +30,7 @@ export default function Landing() {
   }, [user, searchParams, navigate]);
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
+    <div className="min-h-dvh bg-background text-foreground flex flex-col">
       {/* Nav */}
       <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
         <div

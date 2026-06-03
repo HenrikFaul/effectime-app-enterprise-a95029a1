@@ -58,7 +58,7 @@ const ResetPassword = () => {
         <div className="fixed top-4 right-4 z-50">
           <LanguageSelector size="sm" align="end" />
         </div>
-        <div className="flex min-h-screen items-center justify-center bg-background p-4">
+        <div className="flex min-h-dvh items-center justify-center bg-background p-4">
           <Card className="w-full max-w-md rounded-2xl">
             <CardContent className="p-6 text-center text-muted-foreground">
               {t('reset_password.invalid_link')}
@@ -77,7 +77,7 @@ const ResetPassword = () => {
       <div className="fixed top-4 right-4 z-50">
         <LanguageSelector size="sm" align="end" />
       </div>
-      <div className="flex min-h-screen items-center justify-center bg-background p-4">
+      <div className="flex min-h-dvh items-center justify-center bg-background p-4">
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}

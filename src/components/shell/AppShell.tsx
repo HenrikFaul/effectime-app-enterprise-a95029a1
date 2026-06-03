@@ -23,7 +23,7 @@ interface AppShellProps {
  */
 export function AppShell({ children, sidebar, topbar, mainClassName }: AppShellProps) {
   return (
-    <div className="min-h-screen w-full bg-background text-foreground flex overflow-x-hidden">
+    <div className="min-h-dvh w-full bg-background text-foreground flex overflow-x-hidden">
       {sidebar}
       <div className="flex min-w-0 flex-1 flex-col">
         {topbar}
