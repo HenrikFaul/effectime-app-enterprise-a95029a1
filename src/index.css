@@ -302,4 +302,104 @@
     .help-highlight-ring { animation: none; }
     .help-target-hover { transition: none; }
   }
+
+  /* ============ WOW landing utilities ============ */
+
+  .aurora-mesh { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+  .aurora-mesh::before, .aurora-mesh::after {
+    content: ""; position: absolute; border-radius: 9999px; filter: blur(80px);
+    opacity: 0.55; mix-blend-mode: screen;
+  }
+  .aurora-mesh::before {
+    width: 55vw; height: 55vw; left: -10vw; top: -15vw;
+    background: radial-gradient(circle at 30% 30%, hsl(172 80% 55% / 0.85), transparent 60%);
+    animation: aurora-float-a 18s ease-in-out infinite alternate;
+  }
+  .aurora-mesh::after {
+    width: 50vw; height: 50vw; right: -10vw; bottom: -15vw;
+    background: radial-gradient(circle at 70% 70%, hsl(262 80% 65% / 0.75), transparent 60%);
+    animation: aurora-float-b 22s ease-in-out infinite alternate;
+  }
+  @keyframes aurora-float-a {
+    0% { transform: translate3d(0,0,0) scale(1); }
+    100% { transform: translate3d(8vw,6vh,0) scale(1.15); }
+  }
+  @keyframes aurora-float-b {
+    0% { transform: translate3d(0,0,0) scale(1); }
+    100% { transform: translate3d(-6vw,-4vh,0) scale(1.2); }
+  }
+
+  .grid-overlay {
+    background-image:
+      linear-gradient(to right, hsl(0 0% 100% / 0.06) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(0 0% 100% / 0.06) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+  }
+
+  .text-gradient-animate {
+    background: linear-gradient(110deg,
+      hsl(172 85% 65%) 0%, hsl(190 95% 75%) 25%, hsl(262 85% 75%) 50%,
+      hsl(190 95% 75%) 75%, hsl(172 85% 65%) 100%);
+    background-size: 250% auto;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: text-shimmer 6s linear infinite;
+  }
+  @keyframes text-shimmer { to { background-position: -250% center; } }
+
+  .glow-pulse { position: relative; isolation: isolate; }
+  .glow-pulse::before {
+    content: ""; position: absolute; inset: -2px; border-radius: inherit;
+    background: linear-gradient(135deg, hsl(172 80% 55%), hsl(262 80% 65%));
+    filter: blur(14px); opacity: 0.7; z-index: -1;
+    animation: glow-breathe 2.8s ease-in-out infinite;
+  }
+  @keyframes glow-breathe {
+    0%,100% { opacity: 0.45; transform: scale(0.98); }
+    50% { opacity: 0.9; transform: scale(1.04); }
+  }
+
+  .float-tilt {
+    transform: perspective(1800px) rotateY(-9deg) rotateX(5deg);
+    animation: float-y 7s ease-in-out infinite;
+  }
+  @keyframes float-y {
+    0%,100% { transform: perspective(1800px) rotateY(-9deg) rotateX(5deg) translateY(0); }
+    50% { transform: perspective(1800px) rotateY(-9deg) rotateX(5deg) translateY(-12px); }
+  }
+
+  .marquee {
+    display: flex; overflow: hidden;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+            mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  }
+  .marquee-track {
+    display: flex; gap: 3rem; animation: marquee-scroll 32s linear infinite;
+    flex-shrink: 0; min-width: 100%; padding-right: 3rem;
+  }
+  @keyframes marquee-scroll { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+
+  .dark-surface {
+    --background: 228 32% 6%;
+    --foreground: 220 22% 96%;
+    --card: 228 24% 11%;
+    --card-foreground: 220 22% 96%;
+    --muted: 228 18% 14%;
+    --muted-foreground: 220 12% 70%;
+    --border: 228 20% 20%;
+    --primary: 172 80% 55%;
+    --primary-foreground: 228 32% 6%;
+    --accent: 262 80% 68%;
+    background: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .aurora-mesh::before, .aurora-mesh::after,
+    .text-gradient-animate, .glow-pulse::before,
+    .float-tilt, .marquee-track {
+      animation: none !important;
+    }
+    .float-tilt { transform: none; }
+  }
 }
