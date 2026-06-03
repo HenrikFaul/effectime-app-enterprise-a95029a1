@@ -1,3 +1,38 @@
+## 2026-06-03 — v3.49.5 BrowserRouter migration + 3 SEO pillar pages
+
+**Lens:** Senior SEO Strategist + Frontend Engineer.
+
+### Scope
+Ships SEO-21 (HashRouter → BrowserRouter) and pillar tickets SEO-24/25/26 from `SEO/10_NUMBER_ONE_RANKING_PROMPT.md`. Three crawlable kategóriaoldal goes live: `/muszakbeosztas`, `/szabadsagkezeles`, `/kapacitastervezes` — each with full per-route SEO meta, BreadcrumbList + FAQPage + Service JSON-LD, canonical, hreflang.
+
+### Router
+- `HashRouter` → `BrowserRouter`. Inverted `HashRouteBridge`: `/#/auth?ws=1` legacy bookmarks now rewrite to `/auth?ws=1`. Supabase OAuth fragment (`#access_token=`) untouched — `OAuthCallbackGuard` still works.
+
+### SEO infrastructure
+- Added `react-helmet-async`; `<HelmetProvider>` wraps `<App />` in `src/main.tsx`.
+- New `src/components/seo/SeoHead.tsx` — per-route head primitive (title, description, canonical, hreflang, OG, Twitter, BreadcrumbList + extra JSON-LD).
+- New `src/components/seo/PillarPageLayout.tsx` — shared semantic layout (H1, sections, FAQ, breadcrumb nav, related links). Tokens-only.
+- Removed static `<link rel="canonical">` from `index.html` — per-route Helmet owns canonical; prevents duplicate-canonical regression.
+- `src/pages/Landing.tsx` now uses `<SeoHead path="/">` so `/` keeps a canonical.
+
+### Pillar pages
+- `/muszakbeosztas` — H1 "Műszakbeosztó program – heti rács, sablonok, automatikus ellenőrzés", 3 content sections, 5-Q FAQ.
+- `/szabadsagkezeles` — H1 "Szabadságkezelő rendszer – Mt.-konform, jóváhagyási folyamattal", Mt. compliance content, 5-Q FAQ.
+- `/kapacitastervezes` — H1 "Kapacitástervező szoftver – valós idejű kapacitás vs. igény", Jira/ADO content, 5-Q FAQ.
+- Each carries: exact-match Tier 1 primary keyword in `<title>` first 30 chars, 150–160 char meta description, self-canonical, BreadcrumbList + FAQPage + Service schema, internal links to the other 2 pillars (hub-spoke).
+
+### Sitemap
+- `public/sitemap.xml`: +3 URLs with hreflang annotations, weekly cadence, priority 0.9.
+
+### Files touched
+new: `src/components/seo/SeoHead.tsx`, `src/components/seo/PillarPageLayout.tsx`, `src/pages/pillars/{Muszakbeosztas,Szabadsagkezeles,Kapacitastervezes}.tsx`, `versioning/03062604_v3.49.5_browserrouter-pillar-pages.md`, `marketing/marketing_values/20260603_v3.49.5_browserrouter-pillar-pages_marketing_value.md`.
+edit: `src/main.tsx`, `src/App.tsx`, `src/pages/Landing.tsx`, `index.html`, `public/sitemap.xml`, `package.json`, `SEO/outputs/09_seo_action_backlog.md`.
+
+### GSC reindex playbook
+See `versioning/03062604_v3.49.5_browserrouter-pillar-pages.md` § "GSC reindex playbook" — submit sitemap + URL Inspection "Request Indexing" on the 3 new URLs.
+
+---
+
 ## 2026-06-03 — v3.49.4 SEO meta + schema deep optimization & #1 ranking playbook
 
 **Lens:** Senior SEO Strategist + Schema/Structured Data Specialist + GEO (AI search) Engineer.
