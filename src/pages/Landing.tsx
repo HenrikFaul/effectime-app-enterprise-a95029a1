@@ -13,6 +13,8 @@ import { useT } from '@/i18n/I18nProvider';
 import { LanguageSelector } from '@/components/i18n/LanguageSelector';
 import { cn } from '@/lib/utils';
 import SeoHead from '@/components/seo/SeoHead';
+import panellakoLogo from '@/assets/partner-logos/panellako.png';
+import hobbeastLogo from '@/assets/partner-logos/hobbeast.png';
 
 export default function Landing() {
   const navigate = useNavigate();
