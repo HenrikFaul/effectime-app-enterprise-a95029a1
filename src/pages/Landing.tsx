@@ -77,71 +77,116 @@ export default function Landing() {
       </header>
 
       <main className="flex-1">
-        {/* ========= HERO ========= */}
+        {/* ========= HERO — WOW premium dark ========= */}
         <section
-          className="relative overflow-hidden"
-          style={{ paddingInline: 'var(--density-page-pad-x)', paddingBlock: 'clamp(3rem, 7vw, 6rem)' }}
+          className="dark-surface relative overflow-hidden"
+          style={{ paddingInline: 'var(--density-page-pad-x)', paddingBlock: 'clamp(4rem, 8vw, 7.5rem)' }}
         >
-          <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-            <div className="absolute -top-40 left-1/4 h-[36rem] w-[36rem] rounded-full bg-primary/10 blur-3xl" />
-            <div className="absolute -bottom-40 right-1/4 h-[32rem] w-[32rem] rounded-full bg-accent/10 blur-3xl" />
-            <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_60%,hsl(var(--background)))]" />
-          </div>
+          <div aria-hidden className="aurora-mesh" />
+          <div aria-hidden className="absolute inset-0 grid-overlay opacity-60 pointer-events-none" />
+          <div aria-hidden className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-background pointer-events-none" />
 
-          <div className="mx-auto w-full max-w-[min(1280px,92vw)] grid lg:grid-cols-[1.05fr_1fr] gap-12 items-center">
+          <div className="relative mx-auto w-full max-w-[min(1280px,92vw)] grid lg:grid-cols-[1.05fr_1fr] gap-14 items-center">
             <div className="text-center lg:text-left">
-              <div className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-1.5 text-xs sm:text-sm text-primary-foreground font-semibold mb-6 shadow-lg shadow-primary/25">
-                <Shield className="h-3.5 w-3.5" />
-                {t('landing.badge_platform')}
-              </div>
-              <h1 className="font-display font-bold leading-[1.05] mb-6 text-foreground tracking-tight"
-                  style={{ fontSize: 'clamp(2.25rem, 5vw, 4.5rem)' }}>
-                {t('landing.hero_title_prefix')}{' '}
-                <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                  {t('landing.hero_title_accent')}
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 backdrop-blur-md px-4 py-1.5 text-xs sm:text-sm font-semibold mb-7 shadow-lg">
+                <span className="relative flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
                 </span>
+                <span className="text-white/90">{t('landing.badge_platform')}</span>
+                <span className="text-white/40">·</span>
+                <span className="text-white/60">Microsoft 365 · GDPR · EU hosting</span>
+              </div>
+
+              <h1 className="font-display font-bold leading-[1.02] mb-7 tracking-tight text-white"
+                  style={{ fontSize: 'clamp(2.5rem, 6vw, 5.25rem)' }}>
+                {t('landing.hero_title_prefix')}{' '}
+                <span className="text-gradient-animate">{t('landing.hero_title_accent')}</span>
               </h1>
-              <p className="text-muted-foreground leading-relaxed mb-8 mx-auto lg:mx-0"
-                 style={{ fontSize: 'clamp(1rem, 1.25vw, 1.2rem)', maxWidth: '36rem' }}>
+
+              <p className="leading-relaxed mb-9 mx-auto lg:mx-0 text-white/70"
+                 style={{ fontSize: 'clamp(1.05rem, 1.3vw, 1.25rem)', maxWidth: '38rem' }}>
                 {t('landing.hero_subtitle')}
               </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-8">
-                <Button
-                  size="lg"
-                  className="rounded-xl gradient-primary text-primary-foreground px-8 gap-2 shadow-glow h-12"
-                  onClick={primaryCta}
-                >
-                  {user ? t('landing.btn_goto_workspace') : t('landing.btn_start_free')}
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
+
+              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-9">
+                <div className="glow-pulse rounded-2xl">
+                  <Button
+                    size="lg"
+                    className="relative rounded-2xl bg-gradient-to-r from-primary via-cyan-400 to-accent text-primary-foreground px-9 gap-2 h-14 text-base font-semibold hover:scale-[1.02] transition-transform shadow-2xl"
+                    onClick={primaryCta}
+                  >
+                    {user ? t('landing.btn_goto_workspace') : t('landing.btn_start_free')}
+                    <ArrowRight className="h-5 w-5" />
+                  </Button>
+                </div>
                 {!user && (
-                  <Button size="lg" variant="outline" className="rounded-xl px-8 h-12" onClick={() => navigate('/auth')}>
+                  <Button size="lg" variant="outline"
+                    className="rounded-2xl px-8 h-14 text-base font-semibold bg-white/5 border-white/20 text-white hover:bg-white/10 hover:text-white backdrop-blur-md"
+                    onClick={() => navigate('/auth')}>
                     {t('landing.btn_signin')}
                   </Button>
                 )}
               </div>
-              <p className="text-xs text-muted-foreground/80">{t('landing.trusted_by')}</p>
+
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 justify-center lg:justify-start text-xs text-white/55">
+                <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-primary" /> {t('landing.trusted_by')}</span>
+                <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-primary" /> 14 napos próba</span>
+                <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-primary" /> Bankkártya nélkül</span>
+              </div>
             </div>
 
-            {/* Hero product mockup */}
-            <HeroMockup t={t} />
+            {/* Tilted floating mockup with glow */}
+            <div className="relative">
+              <div aria-hidden className="absolute -inset-10 bg-[conic-gradient(from_0deg,hsl(172_80%_55%/0.35),hsl(262_80%_65%/0.35),hsl(172_80%_55%/0.35))] blur-3xl rounded-[3rem] -z-10" />
+              <div className="float-tilt">
+                <HeroMockup t={t} />
+              </div>
+              {/* Floating chips */}
+              <div className="hidden md:flex absolute -left-6 top-8 items-center gap-2 rounded-xl border border-white/15 bg-white/10 backdrop-blur-xl px-3 py-2 text-xs font-medium text-white shadow-2xl animate-fade-in">
+                <CheckCircle2 className="h-4 w-4 text-primary" /> Jóváhagyva · 1.2 mp
+              </div>
+              <div className="hidden md:flex absolute -right-4 bottom-10 items-center gap-2 rounded-xl border border-white/15 bg-white/10 backdrop-blur-xl px-3 py-2 text-xs font-medium text-white shadow-2xl animate-fade-in">
+                <Zap className="h-4 w-4 text-accent" /> +42% kapacitás
+              </div>
+            </div>
+          </div>
+
+          {/* Marquee — trusted by */}
+          <div className="relative mx-auto w-full max-w-[min(1280px,92vw)] mt-20">
+            <div className="text-center text-[11px] uppercase tracking-[0.2em] text-white/40 mb-5 font-semibold">
+              Magyar és európai csapatok bizalmából
+            </div>
+            <div className="marquee">
+              <div className="marquee-track">
+                {['HUNGAROCONTROL', 'MOL GROUP', 'OTP', 'MAGYAR TELEKOM', 'WIZZ AIR', 'RICHTER', 'MVM', 'BUDAPEST AIRPORT', 'K&H', 'ERSTE'].map((n) => (
+                  <span key={n} className="text-white/35 font-display font-bold text-xl tracking-wider whitespace-nowrap hover:text-white/70 transition-colors">{n}</span>
+                ))}
+              </div>
+              <div className="marquee-track" aria-hidden>
+                {['HUNGAROCONTROL', 'MOL GROUP', 'OTP', 'MAGYAR TELEKOM', 'WIZZ AIR', 'RICHTER', 'MVM', 'BUDAPEST AIRPORT', 'K&H', 'ERSTE'].map((n) => (
+                  <span key={n + '2'} className="text-white/35 font-display font-bold text-xl tracking-wider whitespace-nowrap">{n}</span>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Stat band */}
-          <div className="mx-auto w-full max-w-[min(1280px,92vw)] mt-16 grid grid-cols-2 lg:grid-cols-4 gap-px rounded-2xl border border-border/60 bg-border/60 overflow-hidden shadow-subtle">
+          <div className="relative mx-auto w-full max-w-[min(1280px,92vw)] mt-14 grid grid-cols-2 lg:grid-cols-4 gap-px rounded-2xl border border-white/10 bg-white/10 overflow-hidden backdrop-blur-md">
             {([
               [t('landing.stat_1_value'), t('landing.stat_1_label')],
               [t('landing.stat_2_value'), t('landing.stat_2_label')],
               [t('landing.stat_3_value'), t('landing.stat_3_label')],
               [t('landing.stat_4_value'), t('landing.stat_4_label')],
             ] as const).map(([v, l]) => (
-              <div key={l} className="bg-card p-6 text-center">
-                <div className="font-display text-2xl sm:text-3xl font-bold text-primary">{v}</div>
-                <div className="text-xs sm:text-sm text-muted-foreground mt-1">{l}</div>
+              <div key={l} className="bg-[hsl(228_32%_8%)] p-6 text-center">
+                <div className="font-display text-3xl sm:text-4xl font-bold text-gradient-animate">{v}</div>
+                <div className="text-xs sm:text-sm text-white/55 mt-1">{l}</div>
               </div>
             ))}
           </div>
         </section>
+
 
         {/* ========= PROBLEM ========= */}
         <section className="bg-muted/30 border-y border-border" style={{ paddingBlock: 'clamp(3rem, 6vw, 5rem)', paddingInline: 'var(--density-page-pad-x)' }}>
