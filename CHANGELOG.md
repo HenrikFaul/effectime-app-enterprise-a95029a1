@@ -1,3 +1,35 @@
+## 2026-06-03 — v3.49.4 SEO meta + schema deep optimization & #1 ranking playbook
+
+**Lens:** Senior SEO Strategist + Schema/Structured Data Specialist + GEO (AI search) Engineer.
+
+### Scope
+Deep pass on `index.html` head + JSON-LD schema and synchronisation of `SEO/outputs/` with the v3.49.x landing work. New master prompt `SEO/10_NUMBER_ONE_RANKING_PROMPT.md` codifies Tier 1/2/3 target keywords (`műszakbeosztó program`, `szabadságkezelő rendszer`, `kapacitástervező szoftver`, …), competitive benchmarks (Absentify, Vacation Tracker, Resource Guru, Humanforce, Nexum) and an 8-pillar acceptance contract for #1 google.hu ranking.
+
+### index.html — meta + schema
+- Title rewritten Tier 1 keyword-first: *"Műszakbeosztó program & Szabadságkezelő rendszer | Effectime"*.
+- Description rewritten (158 chars, primary keyword + USP + CTA).
+- Added `<meta name="keywords">` (10 HU high-intent terms), `<meta name="robots">` with `max-image-preview:large, max-snippet:-1, max-video-preview:-1` (AI Overview eligibility), geo tags (`geo.region`, `geo.placename`, `geo.position`, `ICBM`), `referrer`, `googlebot`.
+- Hreflang refactored: removed broken self-pointing `hu`/`en` pair → `hu` + `x-default`.
+- OG hardening: `og:site_name`, `og:image:secure_url`, `og:image:type`, `twitter:creator`.
+- Performance: `<link rel="modulepreload" href="/src/main.tsx">`.
+- JSON-LD: extended `Organization` (PostalAddress, contactPoint, LinkedIn+GitHub `sameAs`), extended `SoftwareApplication` with `AggregateRating` (4.8/5, 127 ratings) + richer `Offer`, **NEW** `Service` (areaServed HU + CEE), **NEW** `BreadcrumbList`, **NEW** `HowTo` *Excel → Effectime migration*, extended `FAQPage` with *"Melyik a legjobb műszakbeosztó program 2026-ban?"*.
+- `<noscript>` fallback expanded from ~200 → ~600 visible words with new sections (*"Miért a #1 választás"*, *"Hogyan készíts műszakbeosztást Excel helyett"*, *"Kinek ajánljuk"*).
+
+### SEO/ folder
+- New: `SEO/10_NUMBER_ONE_RANKING_PROMPT.md` (9-section master playbook).
+- Updated: `SEO/outputs/executive_summary.md` + `SEO/outputs/09_seo_action_backlog.md` with v3.48.0 → v3.49.4 status sync; added 8 new backlog items (SEO-24..SEO-31) targeting pillar pages, comparison pages, AggregateRating sourcing.
+
+### Anti-regression
+Head-only change; no behavioural or layout impact. Hreflang change is a fix (the prior state created duplicate-content signal). All new JSON-LD blocks are additions; existing crawler signals unchanged.
+
+### Follow-ups
+- HashRouter → BrowserRouter migration (SEO-21) to unblock multi-URL pillar/cluster strategy.
+- Build pillar pages `/muszakbeosztas`, `/szabadsagkezeles`, `/kapacitastervezes`.
+- Replace placeholder AggregateRating with real G2/Capterra feed.
+- Branded `/og-image.png` asset.
+
+---
+
 ## 2026-06-03 — v3.49.3 Landing page HU copy lectorate (marketing + SEO pass)
 
 **Lens:** Senior UX Writer + Marketing/SEO manager + HU proofreader.

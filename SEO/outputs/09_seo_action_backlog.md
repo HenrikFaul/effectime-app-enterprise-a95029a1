@@ -43,3 +43,37 @@
 | SEO-36 | No CRM Embed SDK dedicated landing page — globally unique differentiator has zero search presence | P3 | Copywriter / Dev | M | CRM Embed SDK page captures a zero-competition global keyword cluster; developer-focused content (npm install, iframe API, webhooks) also attracts backlinks from dev communities | Impressions for "CRM embed SDK", "workforce widget API"; developer referral traffic | 2026-07-11 | SEO-21 |
 | SEO-37 | No reseller / partner program page — reseller SEO cluster identified as score-29 opportunity with zero HU competition | P3 | Founder / Business Dev | M | Partner/reseller page captures BOFU queries from Hungarian IT consultancies and system integrators; also creates a backlink acquisition channel | Impressions for "HR szoftver viszonteladó", "Effectime partner program"; partner inquiry form submissions | 2026-07-25 | SEO-21 |
 | SEO-38 | No case studies / customer references — E-E-A-T "Experience" signal missing; enterprise buyers require social proof | P3 | Founder / Marketing | L | 2–3 published case studies with company name, employee count, outcome metrics satisfy enterprise procurement requirements and provide E-E-A-T signals | Case study pages indexed; organic impressions for reference company names; enterprise trial conversion rate | 2026-08-01 | SEO-21, SEO-22 |
+
+---
+
+## 2026-06-03 Status Update — v3.49.4
+
+| action_id | status |
+|---|---|
+| SEO-01 | ✅ DONE (v3.48.0) |
+| SEO-02 | ✅ DONE (v3.48.0, refined v3.49.4 — Tier 1 head-keyword title) |
+| SEO-03 | ✅ DONE (v3.48.0, refined v3.49.4) |
+| SEO-04 | ✅ DONE (v3.48.0) |
+| SEO-05 | ✅ DONE (v3.48.0) |
+| SEO-06 | ✅ DONE (v3.48.0) |
+| SEO-08 | ✅ DONE (v3.48.0) |
+| SEO-09 | ✅ DONE (v3.48.0) |
+| SEO-10 | ✅ DONE (v3.48.0) |
+| SEO-11 | ✅ DONE (v3.48.0) — extended in v3.49.4 with AggregateRating, Service, BreadcrumbList, HowTo |
+| SEO-13 | ✅ DONE (v3.48.0) — refactored v3.49.4 to `hu` + `x-default` |
+| SEO-15 | ✅ DONE (v3.48.0) |
+| SEO-17 | 🟡 PARTIAL — landing extended (v3.49.0, v3.49.3); pillar pages still pending |
+| SEO-20 | ✅ DONE (v3.48.0) |
+
+### New backlog items (added v3.49.4 from `10_NUMBER_ONE_RANKING_PROMPT.md`)
+
+| action_id | issue | priority | owner | effort |
+|---|---|---|---|---|
+| SEO-24 | Build pillar page `/muszakbeosztas` with H1 = exact-match primary keyword, 2000+ words, 5 cluster article internal links | P0 | Content + Dev | L |
+| SEO-25 | Build pillar page `/szabadsagkezeles` | P0 | Content + Dev | L |
+| SEO-26 | Build pillar page `/kapacitastervezes` | P0 | Content + Dev | L |
+| SEO-27 | Comparison pages: `Effectime vs Absentify`, `Effectime vs Vacation Tracker` (AI Overview citation magnets) | P1 | Content | M |
+| SEO-28 | Replace placeholder AggregateRating numbers with G2/Capterra-imported review feed | P1 | Marketing + Dev | M |
+| SEO-29 | Generate branded `/og-image.png` 1200×630 (replaces current placeholder) | P1 | Design | S |
+| SEO-30 | Publish 5 cluster articles per pillar (Mt. compliance, Excel-to-Effectime, M365 integration, agile capacity, rotating shifts) | P1 | Content | XL |
+| SEO-31 | Public statistics / data-led press piece per quarter (HU workforce admin survey) — repeatable backlink magnet | P2 | Marketing | XL |
