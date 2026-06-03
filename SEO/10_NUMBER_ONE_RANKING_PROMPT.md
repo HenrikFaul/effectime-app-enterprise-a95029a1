@@ -20,43 +20,71 @@ If a proposed change does not measurably help that goal, deprioritize it.
 
 These keywords are the **acceptance contract**. Every landing page revision, every schema change, every blog post must be checked against this list.
 
-### Tier 1 — Head terms (must rank #1 on google.hu)
+### Tier 1 — Head terms (must rank #1 on google.hu) — 10 keywords
 
 | Keyword | Intent | Current target page |
 |---|---|---|
 | `műszakbeosztó program` | Commercial / category | `/` (Landing) |
+| `műszakbeosztó szoftver` | Commercial | `/` (Landing) |
+| `online műszakbeosztás` | Commercial | `/` (Landing) |
 | `szabadságkezelő rendszer` | Commercial / category | `/` (Landing) |
+| `szabadságnyilvántartó program` | Commercial | `/` (Landing) |
 | `kapacitástervező szoftver` | Commercial / category | `/` (Landing) |
-| `műszakbeosztás szoftver` | Commercial | `/` (Landing) |
+| `erőforrás tervező szoftver` | Commercial | `/` (Landing) |
 | `beosztáskészítő program` | Commercial | `/` (Landing) |
+| `beosztáskészítő szoftver` | Commercial | `/` (Landing) |
+| `munkaidő nyilvántartó szoftver` | Commercial | `/` (Landing) |
 
-### Tier 2 — Mid-tail (top 3 on google.hu within 6 months)
+### Tier 2 — Mid-tail (top 3 on google.hu within 6 months) — 17 keywords
 
-- `workforce management magyar`
-- `csapatnaptár szoftver`
-- `távollétkezelő rendszer`
-- `jelenlétkezelő szoftver`
-- `HR szoftver kkv`
-- `szabadság nyilvántartó program`
-- `műszakbeosztó Excel helyett`
-- `online beosztás készítő`
+- `workforce management magyar`, `WFM rendszer`
+- `csapatnaptár szoftver`, `csapatnaptár online`, `közös naptár csapatnak`
+- `távollétkezelő rendszer`, `távollét nyilvántartás`, `online szabadságkérés`
+- `jelenlétkezelő szoftver`, `jelenléti ív program`, `munkaidő nyilvántartás online`
+- `HR szoftver kkv`, `HR rendszer magyar`, `kkv HR megoldás`
+- `projekt kapacitás tervezés`
+- `műszakbeosztó Excel helyett`, `beosztás Excel helyett`
 
-### Tier 3 — Long-tail / AI Overview triggers (own the answer)
+### Tier 3 — Long-tail, AI Overview & comparison triggers — 20 keywords
 
 - `hogyan készítsek műszakbeosztást Excel helyett`
 - `legjobb műszakbeosztó program 2026`
+- `legjobb szabadságkezelő rendszer 2026`
+- `ingyenes műszakbeosztó program`
 - `ingyenes szabadságkezelő kkv-knak`
 - `Microsoft 365 csapatnaptár integráció`
+- `Outlook szabadság naptár`
+- `Teams beosztás integráció`
 - `műszakbeosztó CRM-be ágyazva`
 - `hány órát dolgozhat egy munkavállaló műszakban`
-- `szabadság felhalmozási szabályok`
+- `szabadság felhalmozási szabályok Mt.`
 - `mennyibe kerül egy workforce management szoftver`
+- `GDPR megfelelő HR szoftver`
+- `EU adatközpont HR szoftver`
+- `magyar nyelvű HR szoftver`
+- `Absentify alternatíva`
+- `Vacation Tracker alternatíva`
+- `Resource Guru alternatíva`
+- `Humanforce alternatíva`
+- `Nexum alternatíva`
 
-### Tier 4 — International (later, when EN route ships)
+### Tier 4 — Vertical / industry long-tail (high commercial intent) — 5 keywords
+
+- `vendéglátás beosztás szoftver`
+- `gyártás műszakbeosztás`
+- `egészségügy műszakbeosztás`
+- `IT csapat kapacitás tervezés`
+- `multi-tenant HR platform`
+
+**Total tracked HU keywords: 52** (10 Tier 1 + 17 Tier 2 + 20 Tier 3 + 5 Tier 4).
+All 52 are present in `index.html` `<meta name="keywords">` (v3.49.6) and must reappear in the visible HU landing copy + `<noscript>` fallback (semantic density target: each Tier 1 term ≥3×, each Tier 2 ≥2×, each Tier 3 ≥1×).
+
+### Tier 5 — International (later, when EN route ships)
 
 - `workforce management software Hungary`
 - `absence management for SMEs`
 - `Microsoft 365 shift scheduling`
+
 
 ---
 
