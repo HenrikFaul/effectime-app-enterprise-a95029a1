@@ -1,4 +1,5 @@
 import { createRoot } from "react-dom/client";
+import { HelmetProvider } from "react-helmet-async";
 import App from "./App.tsx";
 import "./index.css";
 import { registerEffectimeServiceWorker, captureInstallPrompt } from "./lib/pwa/registerSW";
@@ -9,4 +10,8 @@ import { registerEffectimeServiceWorker, captureInstallPrompt } from "./lib/pwa/
 captureInstallPrompt();
 void registerEffectimeServiceWorker();
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  <HelmetProvider>
+    <App />
+  </HelmetProvider>,
+);

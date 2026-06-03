@@ -14,7 +14,9 @@
     <meta name="rating" content="General" />
     <meta name="revisit-after" content="7 days" />
     <meta name="referrer" content="strict-origin-when-cross-origin" />
-    <link rel="canonical" href="https://effectime.app/" />
+    <!-- v3.49.5: canonical removed from static head. Per-route canonical is
+         emitted via react-helmet-async (SeoHead). Landing/auth/etc rely on
+         Google's self-canonicalization. Pillar pages set their own canonical. -->
 
     <!-- Geo targeting: HU primary market -->
     <meta name="geo.region" content="HU" />

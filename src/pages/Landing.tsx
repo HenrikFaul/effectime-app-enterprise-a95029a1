@@ -12,6 +12,7 @@ import { EffectimeLogo } from '@/components/EffectimeLogo';
 import { useT } from '@/i18n/I18nProvider';
 import { LanguageSelector } from '@/components/i18n/LanguageSelector';
 import { cn } from '@/lib/utils';
+import SeoHead from '@/components/seo/SeoHead';
 
 export default function Landing() {
   const navigate = useNavigate();
@@ -31,6 +32,12 @@ export default function Landing() {
 
   return (
     <div className="min-h-dvh bg-background text-foreground flex flex-col">
+      <SeoHead
+        title="Műszakbeosztó program & Szabadságkezelő rendszer | Effectime"
+        description="Műszakbeosztó program, szabadságkezelő rendszer és kapacitástervező egy platformon. Microsoft 365 integráció, CRM beágyazás. Próbáld ki ingyen – regisztráció 2 perc."
+        path="/"
+        keywords="műszakbeosztó program, szabadságkezelő rendszer, kapacitástervező szoftver, workforce management magyar, csapatnaptár szoftver, távollétkezelő rendszer, beosztáskészítő program, jelenlétkezelő szoftver, HR szoftver kkv, Excel helyett műszakbeosztás"
+      />
       {/* Nav */}
       <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
         <div
