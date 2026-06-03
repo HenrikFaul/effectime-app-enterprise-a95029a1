@@ -397,27 +397,41 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ========= FINAL CTA ========= */}
-        <section style={{ paddingBlock: 'clamp(3rem, 6vw, 5rem)', paddingInline: 'var(--density-page-pad-x)' }}>
-          <div className="mx-auto w-full max-w-[min(1100px,92vw)] relative overflow-hidden rounded-3xl border border-primary/30 bg-gradient-to-br from-primary/10 via-card to-accent/10 p-10 sm:p-14 text-center shadow-elevated">
-            <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
-              <div className="absolute -top-32 -left-32 h-72 w-72 rounded-full bg-primary/20 blur-3xl" />
-              <div className="absolute -bottom-32 -right-32 h-72 w-72 rounded-full bg-accent/20 blur-3xl" />
-            </div>
-            <Eyebrow>{t('landing.final_eyebrow')}</Eyebrow>
-            <h2 className="font-display font-bold text-3xl sm:text-5xl mt-3 tracking-tight">{t('landing.final_title')}</h2>
-            <p className="text-muted-foreground mt-4 max-w-xl mx-auto">{t('landing.final_desc')}</p>
-            <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-              <Button size="lg" className="rounded-xl gradient-primary text-primary-foreground px-8 gap-2 shadow-glow h-12" onClick={primaryCta}>
-                {user ? t('landing.btn_goto_workspace') : t('landing.final_cta')}
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-              <Button size="lg" variant="outline" className="rounded-xl px-8 h-12" onClick={() => navigate('/auth')}>
-                {t('landing.final_cta_secondary')}
-              </Button>
+        {/* ========= FINAL CTA — WOW ========= */}
+        <section style={{ paddingBlock: 'clamp(4rem, 7vw, 6rem)', paddingInline: 'var(--density-page-pad-x)' }}>
+          <div className="dark-surface mx-auto w-full max-w-[min(1100px,92vw)] relative overflow-hidden rounded-[2rem] border border-white/10 p-10 sm:p-16 text-center shadow-2xl">
+            <div aria-hidden className="aurora-mesh" />
+            <div aria-hidden className="absolute inset-0 grid-overlay opacity-50 pointer-events-none" />
+            <div className="relative">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 text-white/90 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur-md">
+                <Sparkles className="h-3 w-3 text-primary" />
+                {t('landing.final_eyebrow')}
+              </div>
+              <h2 className="font-display font-bold text-4xl sm:text-6xl mt-5 tracking-tight text-white leading-[1.05]">
+                {t('landing.final_title').split(' ').slice(0, -2).join(' ')}{' '}
+                <span className="text-gradient-animate">{t('landing.final_title').split(' ').slice(-2).join(' ')}</span>
+              </h2>
+              <p className="text-white/70 mt-5 max-w-xl mx-auto text-lg">{t('landing.final_desc')}</p>
+              <div className="mt-9 flex flex-col sm:flex-row gap-4 justify-center">
+                <div className="glow-pulse rounded-2xl">
+                  <Button size="lg" className="rounded-2xl bg-gradient-to-r from-primary via-cyan-400 to-accent text-primary-foreground px-9 gap-2 h-14 text-base font-semibold hover:scale-[1.02] transition-transform shadow-2xl" onClick={primaryCta}>
+                    {user ? t('landing.btn_goto_workspace') : t('landing.final_cta')}
+                    <ArrowRight className="h-5 w-5" />
+                  </Button>
+                </div>
+                <Button size="lg" variant="outline" className="rounded-2xl px-8 h-14 text-base font-semibold bg-white/5 border-white/20 text-white hover:bg-white/10 hover:text-white backdrop-blur-md" onClick={() => navigate('/auth')}>
+                  {t('landing.final_cta_secondary')}
+                </Button>
+              </div>
+              <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-2 justify-center text-xs text-white/55">
+                <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-primary" /> 14 napos próba</span>
+                <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-primary" /> Bankkártya nélkül</span>
+                <span className="flex items-center gap-1.5"><Check className="h-3.5 w-3.5 text-primary" /> 2 perces beállítás</span>
+              </div>
             </div>
           </div>
         </section>
+
       </main>
 
       <footer className="border-t border-border py-8">
