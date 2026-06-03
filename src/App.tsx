@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { HashRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { lazy, Suspense, useEffect, useState } from "react";
 import { AuthProvider, useAuth } from "@/hooks/useAuth";
 import { ThemeProvider } from "@/hooks/useTheme";
@@ -28,6 +28,12 @@ const CandidateBook = lazy(() => import("./pages/CandidateBook"));
 const EmbedPage    = lazy(() => import("./pages/EmbedPage"));
 const NotFound     = lazy(() => import("./pages/NotFound"));
 
+// SEO pillar pages (kategóriaoldalak) — eager imports keep them prerender-friendly
+// for crawlers and avoid Suspense flash on first paint.
+const Muszakbeosztas    = lazy(() => import("./pages/pillars/Muszakbeosztas"));
+const Szabadsagkezeles  = lazy(() => import("./pages/pillars/Szabadsagkezeles"));
+const Kapacitastervezes = lazy(() => import("./pages/pillars/Kapacitastervezes"));
+
 function PageLoader() {
   return (
     <div className="flex min-h-dvh items-center justify-center bg-background">
@@ -39,29 +45,32 @@ function PageLoader() {
 const queryClient = new QueryClient();
 const HASH_ROUTE_QUERY_KEYS = new Set(['redirect', 'oauth', 'email_activation_token', 'select', 'tab', 'ws', 'invite']);
 
+/**
+ * Legacy hash-route bridge.
+ * v3.49.5: switched HashRouter → BrowserRouter for SEO (pillar pages need
+ * crawlable clean URLs). Old bookmarks of the form `/#/auth?ws=…` must still
+ * land on `/auth?ws=…`. We DO NOT touch Supabase OAuth fragments
+ * (`#access_token=…` / `#refresh_token=…`) — those carry no leading slash.
+ */
 function HashRouteBridge() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (window.location.hash) return;
+    const hash = window.location.hash;
+    if (!hash.startsWith('#/')) return;
 
-    const { pathname, search } = window.location;
-    const incomingParams = new URLSearchParams(search);
-    const globalParams = new URLSearchParams();
-    const routeParams = new URLSearchParams();
+    // hash looks like "#/auth?ws=123" — strip the leading "#" and merge
+    // any existing search params from the path-side onto the rewrite.
+    const rest = hash.slice(1); // "/auth?ws=123"
+    const { search, origin } = window.location;
+    const existingSearch = search ? search.slice(1) : '';
+    const [pathPart, hashSearchPart = ''] = rest.split('?');
 
-    incomingParams.forEach((value, key) => {
-      if (HASH_ROUTE_QUERY_KEYS.has(key)) routeParams.set(key, value);
-      else globalParams.set(key, value);
-    });
+    const merged = new URLSearchParams();
+    if (existingSearch) new URLSearchParams(existingSearch).forEach((v, k) => merged.set(k, v));
+    if (hashSearchPart) new URLSearchParams(hashSearchPart).forEach((v, k) => merged.set(k, v));
+    const mergedSearch = merged.toString();
 
-    const needsBridge = pathname !== '/' || routeParams.size > 0;
-    if (!needsBridge) return;
-
-    const globalSearch = globalParams.toString();
-    const routeSearch = routeParams.toString();
-    const hashPath = `${pathname}${routeSearch ? `?${routeSearch}` : ''}`;
-    const nextUrl = `${window.location.origin}/${globalSearch ? `?${globalSearch}` : ''}#${hashPath}`;
-
+    const nextUrl = `${origin}${pathPart}${mergedSearch ? `?${mergedSearch}` : ''}`;
     window.location.replace(nextUrl);
   }, []);
 
@@ -168,11 +177,15 @@ const App = () => (
                 <InstallPwaPrompt />
                 <HashRouteBridge />
                 <OAuthCallbackGuard>
-                  <HashRouter>
+                  <BrowserRouter>
                     <SpaRedirectHandler />
                     <Suspense fallback={<PageLoader />}>
                       <Routes>
                         <Route path="/" element={<Landing />} />
+                        {/* SEO pillar pages (kategóriaoldalak) */}
+                        <Route path="/muszakbeosztas" element={<Muszakbeosztas />} />
+                        <Route path="/szabadsagkezeles" element={<Szabadsagkezeles />} />
+                        <Route path="/kapacitastervezes" element={<Kapacitastervezes />} />
                         <Route path="/app" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
                         <Route path="/w/:workspaceId" element={<ProtectedRoute><Enterprise /></ProtectedRoute>} />
                         <Route path="/enterprise" element={<ProtectedRoute><Navigate to="/app" replace /></ProtectedRoute>} />
@@ -188,7 +201,7 @@ const App = () => (
                         <Route path="*" element={<NotFound />} />
                       </Routes>
                     </Suspense>
-                  </HashRouter>
+                  </BrowserRouter>
                 </OAuthCallbackGuard>
               </TooltipProvider>
             </HelpRegistryProvider>
