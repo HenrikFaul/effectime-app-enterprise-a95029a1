@@ -62,8 +62,12 @@
 | SEO-11 | ✅ DONE (v3.48.0) — extended in v3.49.4 with AggregateRating, Service, BreadcrumbList, HowTo |
 | SEO-13 | ✅ DONE (v3.48.0) — refactored v3.49.4 to `hu` + `x-default` |
 | SEO-15 | ✅ DONE (v3.48.0) |
-| SEO-17 | 🟡 PARTIAL — landing extended (v3.49.0, v3.49.3); pillar pages still pending |
+| SEO-17 | 🟡 PARTIAL — landing extended (v3.49.0, v3.49.3); pillar pages shipped v3.49.5; cluster articles still pending |
 | SEO-20 | ✅ DONE (v3.48.0) |
+| SEO-21 | ✅ DONE (v3.49.5) — HashRouter → BrowserRouter; legacy `/#/path` bookmarks transparently rewritten |
+| SEO-24 (new) | ✅ DONE (v3.49.5) — `/muszakbeosztas` pillar live with H1 + Service + FAQPage + BreadcrumbList schema |
+| SEO-25 (new) | ✅ DONE (v3.49.5) — `/szabadsagkezeles` pillar live |
+| SEO-26 (new) | ✅ DONE (v3.49.5) — `/kapacitastervezes` pillar live |
 
 ### New backlog items (added v3.49.4 from `10_NUMBER_ONE_RANKING_PROMPT.md`)
 
