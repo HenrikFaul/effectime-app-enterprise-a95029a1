@@ -43,7 +43,7 @@ function PageLoader() {
 }
 
 const queryClient = new QueryClient();
-const HASH_ROUTE_QUERY_KEYS = new Set(['redirect', 'oauth', 'email_activation_token', 'select', 'tab', 'ws', 'invite']);
+
 
 /**
  * Legacy hash-route bridge.
