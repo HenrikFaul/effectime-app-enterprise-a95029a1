@@ -639,7 +639,7 @@ const Auth = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-950 dark:bg-[#050816] dark:text-white">
+    <div className="min-h-dvh bg-slate-50 text-slate-950 dark:bg-[#050816] dark:text-white">
       {/* ── Header ── */}
       <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/85 backdrop-blur-xl dark:border-white/10 dark:bg-[#050816]/85">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">

@@ -11,7 +11,7 @@ const BRAND_STRIPE = <div className="h-0.5 w-full bg-primary shrink-0" />;
 
 function EmbedShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="h-screen w-full overflow-hidden flex flex-col">
+    <div className="h-dvh w-full overflow-hidden flex flex-col">
       {BRAND_STRIPE}
       <div className="flex-1 overflow-hidden">{children}</div>
     </div>
@@ -33,7 +33,7 @@ export default function EmbedPage() {
 
   if (!token) {
     return (
-      <div className="flex items-center justify-center h-screen text-sm text-destructive">
+      <div className="flex items-center justify-center h-dvh text-sm text-destructive">
         <div className="text-center p-8">
           <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-60" />
           <p className="font-semibold">Hiányzó beágyazási token</p>
@@ -97,7 +97,7 @@ export default function EmbedPage() {
   if (view === 'member_schedule') {
     if (!member) {
       return (
-        <div className="flex items-center justify-center h-screen text-sm text-muted-foreground">
+        <div className="flex items-center justify-center h-dvh text-sm text-muted-foreground">
           <div className="text-center p-8">
             <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-60" />
             <p className="font-semibold">Hiányzó <code>member</code> paraméter</p>
@@ -114,7 +114,7 @@ export default function EmbedPage() {
   }
 
   return (
-    <div className="flex items-center justify-center h-screen text-sm text-muted-foreground">
+    <div className="flex items-center justify-center h-dvh text-sm text-muted-foreground">
       <div className="text-center p-8">
         <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-60" />
         <p className="font-semibold">Ismeretlen nézet: {view}</p>

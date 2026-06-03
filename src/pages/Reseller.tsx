@@ -10,7 +10,7 @@ import { useI18n } from '@/i18n/I18nProvider';
 export default function Reseller() {
   const { t } = useI18n();
   return (
-    <div className="min-h-screen bg-background p-4 space-y-4 max-w-5xl mx-auto">
+    <div className="min-h-dvh bg-background p-4 space-y-4 max-w-5xl mx-auto">
       <Card className="border-primary/40 bg-primary/5">
         <CardContent className="py-3">
           <h1 className="text-base font-semibold">{t('reseller.page_title')}</h1>

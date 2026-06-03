@@ -244,7 +244,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
           future scheduled job). */}
       <NPSSurvey workspaceId={workspace.id} userId={userId} />
       <div
-        className="min-h-screen flex w-full bg-background"
+        className="min-h-dvh flex w-full bg-background"
         style={{
           '--ws-header-h': '53px',
           '--ws-main-tabs-h': layout === 'sidebar' ? '0px' : '65px',

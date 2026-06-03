@@ -1,3 +1,25 @@
+## 2026-06-03 — v3.49.2 Accessibility B1: viewport unit sweep (`h-screen` → `h-dvh`)
+
+**Lens:** Senior Accessibility Specialist + Senior UI/UX Designer.
+
+### Scope
+Mechanical, low-risk batch from the v3.49.1 roadmap. Replaced every `h-screen` / `min-h-screen` / `max-h-screen` with the dynamic viewport equivalent (`h-dvh` / `min-h-dvh` / `max-h-dvh`) across all 16 affected files. Fixes WCAG 2.2 SC 1.4.10 Reflow on mobile Safari/Chrome where the URL bar overlay caused full-height layouts to clip.
+
+### Files touched (16)
+`src/App.tsx`, `src/components/shell/AppShell.tsx`, `src/components/ui/toast.tsx`, `src/components/enterprise/WorkspaceDashboard.tsx`, `src/pages/Admin.tsx`, `src/pages/Auth.tsx`, `src/pages/CandidateBook.tsx`, `src/pages/EmbedPage.tsx`, `src/pages/Enterprise.tsx`, `src/pages/Landing.tsx`, `src/pages/NotFound.tsx`, `src/pages/Profile.tsx`, `src/pages/Reseller.tsx`, `src/pages/ResetPassword.tsx`, `src/pages/Superadmin.tsx`, `src/pages/Unsubscribe.tsx`.
+
+### Anti-regression
+Tailwind supports `*-dvh` natively. Desktop behavior is identical (dvh == vh when no dynamic chrome). No layout/visual regression on tested viewports.
+
+### Follow-ups
+- B2: admin/settings icon-button `aria-label` batch (~30 buttons)
+- B3: calendar/scheduling icon-button labels (~25 buttons)
+- B4–B5: remaining icon-label batches
+- B6: hardcoded `id` sweep
+- B7: `<EmptyState>` primitive
+
+---
+
 ## 2026-06-02 — v3.49.1 Accessibility: WCAG 2.2 audit baseline (B-phase audit-only)
 
 **Lens:** Senior Accessibility Specialist + Senior UI/UX Designer.

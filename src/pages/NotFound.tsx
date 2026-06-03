@@ -33,7 +33,7 @@ const NotFound = () => {
   }, [location.pathname, location.search, location.hash, location.state]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-background via-muted/40 to-background px-6">
+    <div className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-background via-muted/40 to-background px-6">
       <div className="w-full max-w-md rounded-2xl border bg-card/80 p-8 text-center shadow-xl backdrop-blur">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10 text-destructive">
           <AlertTriangle className="h-7 w-7" />
