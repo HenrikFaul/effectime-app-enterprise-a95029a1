@@ -45,3 +45,15 @@ Website: https://effectime.app/
 - Embedding workforce data into Salesforce, HubSpot, or custom CRM systems
 - Capacity planning for hybrid office/remote teams
 - Compliance with Hungarian labor law (Mt. törvény) leave entitlement rules
+
+## Pages
+
+- [Kezdőlap (Home)](/): Effectime áttekintés, főbb funkciók és regisztráció.
+- [Műszakbeosztás](/muszakbeosztas): Heti és havi műszakbeosztó program magyar csapatoknak, Excel helyett.
+- [Szabadságkezelés](/szabadsagkezeles): Szabadság- és távollétkezelő rendszer Mt. törvény szerinti elszámolással.
+- [Kapacitástervezés](/kapacitastervezes): Csapat- és iroda-kapacitás tervező, valós idejű létszámkövetéssel.
+- [Bejelentkezés / Regisztráció](/auth): Ingyenes workspace létrehozása és bejelentkezés.
+
+## Optional
+
+- [Profil](/profile): Bejelentkezett felhasználói profilbeállítások (auth szükséges).

@@ -37,7 +37,7 @@ export function EffectimeLogo({ size = 40, variant = 'full', className = '' }: P
       {mark}
       <img
         src={brandingUrl}
-        alt="effectime"
+        alt="Effectime – Műszakbeosztó és szabadságkezelő szoftver"
         className="effectime-logo-wordmark shrink-0 object-contain"
         style={{ width: wordmarkWidth, height: size }}
         draggable={false}
