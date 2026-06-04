@@ -5,7 +5,8 @@
 2. `.governance/execution_authority_and_automation_rules.md`
 3. `.governance/codingLessonsLearnt.md`
 4. `.governance/ui_ux_rules.md` when UI is affected
-5. `CHANGELOG.md` and latest versioning artifacts
+5. `AI_PROMPTING_FOLDERSTRUCTURE/admin/00_INDEX.md` when ANY admin or superadmin surface is touched
+6. `CHANGELOG.md` and latest versioning artifacts
 
 ## Operating rule
 Treat clear user requests as execution instructions.
