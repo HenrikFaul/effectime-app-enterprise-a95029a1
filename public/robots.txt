@@ -12,5 +12,16 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /app
+Disallow: /w/
+Disallow: /profile
+Disallow: /enterprise
+Disallow: /reset-password
+Disallow: /unsubscribe
+Disallow: /admin
+Disallow: /superadmin
+Disallow: /reseller
+Disallow: /book/
+Disallow: /embed/
 
 Sitemap: https://effectime.app/sitemap.xml
