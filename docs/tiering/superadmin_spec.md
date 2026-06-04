@@ -1,5 +1,8 @@
 # Superadmin UI Spec — Phase 8
 
+> **⚠️ SUPERSEDED (v3.49.11):** The authoritative deep technical prompt for the Feature & Tier Management tab is now `AI_PROMPTING_FOLDERSTRUCTURE/admin/06_superadmin_feature_tiers_tab.md`. This file is kept for historical wireframes only. Do not extend it — extend the new prompt instead.
+
+
 ## Implementáció
 
 Új tab a meglévő Superadmin Control Plane-ben, **a meglévő funkciók
