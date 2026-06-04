@@ -4985,3 +4985,39 @@ All three views read from the cached `enterprise_agile_issues` so they remain av
 - `enterprise_memberships` bővítve `business_role_id` mezővel (FK a workspace role táblára), így a meglévő szöveges `business_role` mellett ID-alapú kötés is elérhető.
 - Experience/szenioritás bevezetve `enterprise_experience_level` enumon keresztül, szerep-skill elvárásokon használható (`min_experience_level`).
 - RLS policy-k, indexek és `updated_at` triggerek hozzáadva a karbantartható, multi-tenant működéshez.
+
+## 2026-06-04 — v3.49.9 Systems & data-integrity sweep (DB hygiene)
+
+**Lens:** Systems analyst + data-integrity + integration specialist. No functional regressions; no feature added or removed.
+
+### What changed (live DB)
+- `public.set_updated_at()` trigger function — pinned `SET search_path = public` (fixes Supabase linter `function_search_path_mutable`).
+- View `public.enterprise_org_pulse_membership` — switched to `security_invoker=on` (fixes linter ERROR `security_definer_view`).
+- View `public.enterprise_coverage_rules` — switched to `security_invoker=on` (fixes linter ERROR `security_definer_view`).
+
+Net effect: Supabase linter went from **200 → 197** issues, **both ERROR-level findings cleared**. All remaining items are `WARN` and were already triaged in v3.41.5 (`auth_rls_initplan`, multiple permissive policies, unindexed FKs, intentional public-read policies, public bucket listing for branding assets).
+
+### Audit verdict (not changed, but recorded)
+| Layer | Status | Note |
+|---|---|---|
+| RLS coverage (186 public tables) | ✅ 100% | Confirmed v3.41.5; re-verified |
+| Function GRANT EXECUTE | ✅ | All RPCs granted to `authenticated` |
+| TypeScript `tsc --noEmit` | ✅ 0 errors | (build pipeline) |
+| Migrations applied | ✅ | Latest = v3.49.9 |
+| Edge functions | ✅ | All CORS-wrapped; `verify_jwt` per `config.toml` intentional |
+| Frontend ↔ RPC integration | ✅ | No orphan callers found in repo search |
+| Console errors | ⚠️ informational | React Router v7 future-flag warnings (non-blocking), SW redirect warning (preview-only) |
+
+### Carried over to backlog (NOT done in this PR — explicit user constraint: no regression risk)
+- `auth_rls_initplan` rewrite on ~404 policies (perf optimisation, requires careful per-policy migration)
+- Unindexed FK sweep (119 columns / 89 tables)
+- Multiple permissive policy consolidation (54 tables)
+- 2 remaining `function_search_path_mutable` warnings (on extension-owned functions — not safely editable)
+- 365 orphaned shift assignments (data cleanup — needs product owner sign-off)
+- `og-image.png` missing (cosmetic SEO)
+
+### Files
+- migration: `20260604061700_v3_49_9_db_hygiene_sweep.sql` (auto-named by Supabase)
+- edit: `CHANGELOG.md`, `codingLessonsLearnt.md`
+- new: `versioning/04062602_v3.49.9_systems-data-integrity-sweep.md`
+

@@ -1330,3 +1330,21 @@ USING (user_id = (select auth.uid()))
 ```
 **Megelőzés:** Always write new RLS policies with the subselect form `(select auth.uid())`.
 Tracked for a mass-fix migration in a future RLS hardening sprint.
+
+---
+
+### [HIBA-DB-002] SECURITY DEFINER nézet alapértelmezetten — Supabase linter ERROR
+- **Dátum**: 2026-06-04 (v3.49.9)
+- **Fájl**: `public.enterprise_org_pulse_membership`, `public.enterprise_coverage_rules`
+- **Hibaüzenet**: Supabase linter `0010_security_definer_view` (ERROR)
+- **Gyökérok**: Postgres-ban a `CREATE VIEW` alapból a view tulajdonosával fut (SECURITY DEFINER szemantika), megkerülve a hívó RLS policyket. Csak az `WITH (security_invoker=on)` opcióval futnak a view-k a hívó jogával.
+- **Javítás**: `ALTER VIEW public.<view> SET (security_invoker = on);` — funkcionálisan azonos, de minden alap-tábla RLS-e érvényesül a hívó identitására.
+- **Megelőzés**: MINDEN új `CREATE VIEW`-hoz kötelező az `WITH (security_invoker=on)` opció. Code review checklist-be felvenni.
+
+### [HIBA-DB-003] Trigger function search_path mutable
+- **Dátum**: 2026-06-04 (v3.49.9)
+- **Fájl**: `public.set_updated_at()`
+- **Hibaüzenet**: Supabase linter `0011_function_search_path_mutable` (WARN)
+- **Gyökérok**: `search_path` nélkül a függvény támadható egy hívó által beállított rosszindulatú `search_path`-szal (pl. olyan séma, amely felülírja `now()`-t).
+- **Javítás**: `SET search_path = public` minden `SECURITY DEFINER` és minden trigger function-re kötelező a `CREATE OR REPLACE FUNCTION` definícióban.
+- **Megelőzés**: Új function template tartalmazza a `SET search_path = public` sort. Migration review során megkövetelni.
