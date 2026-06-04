@@ -1,4 +1,25 @@
-## 2026-06-03 — v3.49.5 BrowserRouter migration + 3 SEO pillar pages
+## 2026-06-04 — v3.49.11 Admin & Superadmin deep technical prompts
+
+**Lens:** Systems analyst + documentation engineer.
+
+### Scope
+Closes the documentation gap surfaced by the v3.49.10 audit: only 1 of 8 admin surfaces had a deep technical prompt. Adds `AI_PROMPTING_FOLDERSTRUCTURE/admin/` with one per-feature prompt for every admin and superadmin surface, plus an INDEX with surface map and edge-function action table.
+
+### Files
+- New folder `AI_PROMPTING_FOLDERSTRUCTURE/admin/` with 9 files (00_INDEX + 01..08 per-feature prompts).
+- `AGENTS.md` — read order extended (step 5) to require reading the INDEX whenever an admin surface is touched.
+- `docs/tiering/superadmin_spec.md` — marked SUPERSEDED, redirected to `06_superadmin_feature_tiers_tab.md`.
+- `versioning/04062603_v3.49.11_admin-deep-prompts.md` + `marketing/marketing_values/20260604_v3.49.11_admin-deep-prompts_marketing_value.md`.
+
+### Anti-regression
+No source code touched. No DB migration. Legacy spec content preserved verbatim under the banner.
+
+### Coverage delivered (per surface)
+01 AdminDashboard · 02 AdminUsers · 03 SuperadminControlPlane shell + ops panels · 04 Tenant management (list/archive/delete/tier-change) · 05 Recovery-mode impersonation (security-critical) · 06 Feature & Tier matrix · 07 Platform Audit Log (immutability invariants) · 08 Password policy + direct-create + reset (workspace + platform).
+
+---
+
+
 
 **Lens:** Senior SEO Strategist + Frontend Engineer.
 
