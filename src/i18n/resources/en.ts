@@ -4198,6 +4198,8 @@ const en = {
     builder_member_hint: 'Paste the user_id UUID of the member whose schedule to show.',
     view_multi: 'Combined view (all tabs)',
     view_multi_desc: 'All allowed views in a single embed — switch between them with tabs. One iframe, all features.',
+    copy_style_label: 'CopyStyle – Effectime look',
+    copy_style_desc: 'When on, the snippet wraps the iframe in a self-contained, inline-styled Effectime shell so the guest site feels like a native Effectime surface.',
   },
   m365: {
     title: 'Microsoft 365 calendar',

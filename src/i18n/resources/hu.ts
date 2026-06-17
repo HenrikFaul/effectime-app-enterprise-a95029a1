@@ -4186,6 +4186,8 @@ const hu = {
     builder_member_hint: 'Illeszd be annak a csapattagnak a user_id UUID-ját, akinek a menetrendjét megjeleníteni szeretnéd.',
     view_multi: 'Kombinált nézet (összes tab)',
     view_multi_desc: 'Minden engedélyezett nézet egyetlen beágyazásban — tab sávval váltani közöttük. Egy iframe, minden funkció.',
+    copy_style_label: 'CopyStyle – Effectime kinézet',
+    copy_style_desc: 'Bekapcsolva a snippet egy beépített, inline-stílusos Effectime keretbe ágyazza az iframe-et — a vendég oldalon úgy hat, mintha az Effectime felületén lenne.',
   },
   m365: {
     title: 'Microsoft 365 naptár',

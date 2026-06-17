@@ -23,7 +23,8 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Plus, Copy, XCircle, CheckCircle2, RefreshCw, Code2, ExternalLink, Settings2, Pencil } from 'lucide-react';
+import { Plus, Copy, XCircle, CheckCircle2, RefreshCw, Code2, ExternalLink, Settings2, Pencil, Palette } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
 interface Props {
   workspaceId: string;
@@ -65,6 +66,24 @@ function buildIframeSnippet(url: string, height = 500): string {
   return `<iframe\n  src="${url}"\n  width="100%"\n  height="${height}"\n  style="border:none;border-radius:8px;"\n  allowfullscreen\n></iframe>`;
 }
 
+/**
+ * CopyStyle: wrap the iframe in a self-contained Effectime-branded shell using
+ * inline styles only (no external CSS, no JS) so the snippet renders identically
+ * on any host page. Kept compact — under ~2x of the bare iframe snippet.
+ */
+function buildStyledSnippet(url: string, height = 500): string {
+  return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 6px 24px -8px rgba(15,23,42,.12),0 2px 6px -2px rgba(15,23,42,.06);padding:14px;max-width:100%;box-sizing:border-box;color:#0f172a;">
+  <div style="display:flex;align-items:center;gap:8px;margin:0 0 10px 2px;">
+    <span style="display:inline-block;width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#3b82f6,#6366f1);box-shadow:0 2px 6px rgba(59,130,246,.35);"></span>
+    <span style="font-weight:600;font-size:13px;letter-spacing:-.01em;">Effectime</span>
+    <span style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#64748b;font-weight:500;">
+      <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.18);"></span>Live
+    </span>
+  </div>
+  <iframe src="${url}" width="100%" height="${height}" style="border:none;border-radius:9px;display:block;background:#f8fafc;width:100%;" allowfullscreen></iframe>
+</div>`;
+}
+
 export function EmbedManager({ workspaceId, userId: _userId }: Props) {
   const { t } = useI18n();
 
@@ -89,6 +108,7 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
   const [builderMode, setBuilderMode]   = useState<string>('weekly');
   const [builderMember, setBuilderMember] = useState<string>('');
   const [builderHeight, setBuilderHeight] = useState<string>('500');
+  const [builderCopyStyle, setBuilderCopyStyle] = useState<boolean>(false);
 
   // Copy states
   const [copied, setCopied] = useState<string | null>(null);
@@ -171,7 +191,11 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
       member:  builderView === 'member_schedule' ? builderMember || undefined : undefined,
     });
   })();
-  const builderSnippet = builderUrl ? buildIframeSnippet(builderUrl, Number(builderHeight) || 500) : '';
+  const builderSnippet = builderUrl
+    ? (builderCopyStyle
+        ? buildStyledSnippet(builderUrl, Number(builderHeight) || 500)
+        : buildIframeSnippet(builderUrl, Number(builderHeight) || 500))
+    : '';
 
   const openBuilder = (tok: EmbedToken) => {
     setBuilderToken(tok);
@@ -180,6 +204,7 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
     setBuilderOffice('');
     setBuilderMode('weekly');
     setBuilderHeight('500');
+    setBuilderCopyStyle(false);
   };
 
   const viewLabel: Record<string, string> = {
@@ -484,6 +509,25 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
                     placeholder="500"
                   />
                   <span className="text-xs text-muted-foreground">px</span>
+                </div>
+              </div>
+
+              {/* CopyStyle toggle — wraps iframe in Effectime-branded shell with inline styles */}
+              <div className="flex items-start gap-3 rounded-md border bg-gradient-to-br from-primary/5 to-transparent p-2.5">
+                <Switch
+                  id="copy-style"
+                  checked={builderCopyStyle}
+                  onCheckedChange={setBuilderCopyStyle}
+                  className="mt-0.5"
+                />
+                <div className="flex-1 min-w-0">
+                  <Label htmlFor="copy-style" className="flex items-center gap-1.5 font-medium cursor-pointer text-xs">
+                    <Palette className="h-3 w-3 text-primary" />
+                    {t('embed.copy_style_label')}
+                  </Label>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
+                    {t('embed.copy_style_desc')}
+                  </p>
                 </div>
               </div>
 
