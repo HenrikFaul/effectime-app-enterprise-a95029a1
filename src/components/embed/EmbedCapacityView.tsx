@@ -300,81 +300,12 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
 
   const ruleLabel = (r: CoverageRule) => r.name ?? (ruleRoles(r).join(', ') || `≥${r.min_headcount}`);
 
-  if (viewMode === 'monthly') {
-    const weeks: Date[][] = [];
-    let week: Date[] = [];
-    for (const d of days) {
-      if (week.length === 7) { weeks.push(week); week = []; }
-      week.push(d);
-    }
-    if (week.length > 0) weeks.push(week);
+  // Shared per-office detailed grid (used by BOTH weekly and monthly view).
+  // Monthly view scrolls horizontally to expose all 28–31 days per office/rule row,
+  // so guest viewers see the same office breakdown + edit affordance as in weekly mode.
 
-    const dayTone = (iso: string, dow: number) => {
-      let hasGap = false, hasOk = false, hasAny = false;
-      for (const office of offices) {
-        for (const rule of (rulesByOffice.get(office.id) ?? [])) {
-          if (!ruleAppliesOn(rule, iso, dow)) continue;
-          hasAny = true;
-          const have = shiftsFor(rule, iso, shifts).length;
-          if (have < rule.min_headcount) hasGap = true;
-          else hasOk = true;
-        }
-      }
-      if (!hasAny) return 'none';
-      return hasGap ? 'gap' : hasOk ? 'ok' : 'over';
-    };
-
-    return (
-      <div className="flex flex-col h-full bg-background text-foreground text-xs">
-        <Header label={format(monthStart, 'yyyy. MMMM')}
-          onPrev={() => setMonthStart(m => subMonths(m, 1))}
-          onNext={() => setMonthStart(m => addMonths(m, 1))}
-          viewMode={viewMode} onViewMode={setViewMode} loading={loading} canWrite={canWrite} />
-        <div className="flex-1 overflow-auto">
-          {loading ? <LoadingSkeleton /> : (
-            <table className="w-full border-collapse text-xs">
-              <thead>
-                <tr className="bg-muted/30">
-                  {['H', 'K', 'Sze', 'Cs', 'P', 'Szo', 'V'].map(d =>
-                    <th key={d} className="text-center font-semibold px-1 py-2 border-b text-[10px] uppercase tracking-widest text-muted-foreground/60">{d}</th>
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {weeks.map((week, wi) => (
-                  <tr key={wi}>
-                    {Array.from({ length: 7 }).map((_, di) => {
-                      const d = week[di];
-                      if (!d) return <td key={di} className="border bg-muted/10" />;
-                      const iso = format(d, 'yyyy-MM-dd');
-                      const tone = dayTone(iso, d.getDay());
-                      const isHol = holidaySet.has(iso) || blockedSet.has(iso);
-                      const isToday = iso === TODAY;
-                      const cls = isHol ? 'bg-amber-50/80 dark:bg-amber-950/20'
-                        : tone === 'gap'  ? 'bg-rose-50 dark:bg-rose-950/30'
-                        : tone === 'ok'   ? 'bg-emerald-50 dark:bg-emerald-950/20'
-                        : tone === 'over' ? 'bg-amber-50 dark:bg-amber-950/20' : 'bg-background';
-                      return (
-                        <td key={iso} className={cn('border text-center align-top p-1.5 h-10 w-[calc(100%/7)] min-w-[28px]', cls,
-                          isToday && 'ring-2 ring-inset ring-primary/40')}>
-                          <span className={cn('font-bold text-sm leading-none',
-                            isToday ? 'text-primary' :
-                            tone === 'gap' && !isHol ? 'text-rose-700 dark:text-rose-400' : 'text-foreground')}>
-                            {format(d, 'd')}
-                          </span>
-                          {!isHol && tone === 'gap' && <AlertTriangle className="h-2.5 w-2.5 mx-auto text-rose-500 mt-0.5" />}
-                        </td>
-                      );
-                    })}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      </div>
-    );
-  }
+  const monthLabel = format(monthStart, 'yyyy. MMMM');
+  const weekLabelForHeader = `${format(days[0], 'yyyy. MMM d.')} — ${format(days[days.length - 1], 'MMM d.')}`;
 
   const weekLabel = `${format(days[0], 'yyyy. MMM d.')} — ${format(days[days.length - 1], 'MMM d.')}`;
 
