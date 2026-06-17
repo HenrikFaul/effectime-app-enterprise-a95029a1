@@ -512,6 +512,25 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
                 </div>
               </div>
 
+              {/* CopyStyle toggle — wraps iframe in Effectime-branded shell with inline styles */}
+              <div className="flex items-start gap-3 rounded-md border bg-gradient-to-br from-primary/5 to-transparent p-2.5">
+                <Switch
+                  id="copy-style"
+                  checked={builderCopyStyle}
+                  onCheckedChange={setBuilderCopyStyle}
+                  className="mt-0.5"
+                />
+                <div className="flex-1 min-w-0">
+                  <Label htmlFor="copy-style" className="flex items-center gap-1.5 font-medium cursor-pointer text-xs">
+                    <Palette className="h-3 w-3 text-primary" />
+                    {t('embed.copy_style_label')}
+                  </Label>
+                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
+                    {t('embed.copy_style_desc')}
+                  </p>
+                </div>
+              </div>
+
               <div className="flex gap-2 pt-1">
                 <Button size="sm" variant="outline" className="flex-1 gap-1 text-xs"
                   onClick={() => window.open(builderUrl, '_blank')}>
