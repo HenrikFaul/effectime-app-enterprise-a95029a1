@@ -23,7 +23,8 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
-import { Plus, Copy, XCircle, CheckCircle2, RefreshCw, Code2, ExternalLink, Settings2, Pencil } from 'lucide-react';
+import { Plus, Copy, XCircle, CheckCircle2, RefreshCw, Code2, ExternalLink, Settings2, Pencil, Palette } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 
 interface Props {
   workspaceId: string;
