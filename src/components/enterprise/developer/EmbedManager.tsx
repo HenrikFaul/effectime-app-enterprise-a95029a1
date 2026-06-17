@@ -191,7 +191,11 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
       member:  builderView === 'member_schedule' ? builderMember || undefined : undefined,
     });
   })();
-  const builderSnippet = builderUrl ? buildIframeSnippet(builderUrl, Number(builderHeight) || 500) : '';
+  const builderSnippet = builderUrl
+    ? (builderCopyStyle
+        ? buildStyledSnippet(builderUrl, Number(builderHeight) || 500)
+        : buildIframeSnippet(builderUrl, Number(builderHeight) || 500))
+    : '';
 
   const openBuilder = (tok: EmbedToken) => {
     setBuilderToken(tok);
@@ -200,6 +204,7 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
     setBuilderOffice('');
     setBuilderMode('weekly');
     setBuilderHeight('500');
+    setBuilderCopyStyle(false);
   };
 
   const viewLabel: Record<string, string> = {
