@@ -307,15 +307,24 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
   const monthLabel = format(monthStart, 'yyyy. MMMM');
   const weekLabelForHeader = `${format(days[0], 'yyyy. MMM d.')} — ${format(days[days.length - 1], 'MMM d.')}`;
 
-  const weekLabel = `${format(days[0], 'yyyy. MMM d.')} — ${format(days[days.length - 1], 'MMM d.')}`;
+  const isMonthly = viewMode === 'monthly';
+  const headerLabel = isMonthly ? monthLabel : weekLabelForHeader;
+  const onPrev = isMonthly ? () => setMonthStart(m => subMonths(m, 1)) : () => setWeekStart(w => subWeeks(w, 1));
+  const onNext = isMonthly ? () => setMonthStart(m => addMonths(m, 1)) : () => setWeekStart(w => addWeeks(w, 1));
 
   return (
     <div className="flex flex-col h-full bg-background text-foreground">
       <Header
-        label={weekLabel}
-        onPrev={() => setWeekStart(w => subWeeks(w, 1))}
-        onNext={() => setWeekStart(w => addWeeks(w, 1))}
+        label={headerLabel}
+        onPrev={onPrev}
+        onNext={onNext}
         viewMode={viewMode} onViewMode={setViewMode} loading={loading} canWrite={canWrite} />
+      {isMonthly && (
+        <div className="px-3 py-1.5 border-b bg-muted/20 text-[10px] text-muted-foreground flex items-center gap-1.5 shrink-0">
+          <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary/60" />
+          Havi nézet — vízszintesen görgethető telephelyi bontás
+        </div>
+      )}
       <div className="flex-1 overflow-auto min-h-0">
         {loading ? <LoadingSkeleton /> : offices.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full min-h-32 gap-2 text-muted-foreground">
