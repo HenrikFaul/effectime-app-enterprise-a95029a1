@@ -108,6 +108,7 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
   const [builderMode, setBuilderMode]   = useState<string>('weekly');
   const [builderMember, setBuilderMember] = useState<string>('');
   const [builderHeight, setBuilderHeight] = useState<string>('500');
+  const [builderCopyStyle, setBuilderCopyStyle] = useState<boolean>(false);
 
   // Copy states
   const [copied, setCopied] = useState<string | null>(null);
