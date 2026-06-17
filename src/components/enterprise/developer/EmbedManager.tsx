@@ -67,20 +67,59 @@ function buildIframeSnippet(url: string, height = 500): string {
 }
 
 /**
- * CopyStyle: wrap the iframe in a self-contained Effectime-branded shell using
- * inline styles only (no external CSS, no JS) so the snippet renders identically
- * on any host page. Kept compact — under ~2x of the bare iframe snippet.
+ * CopyStyle: a self-contained, fully responsive Effectime-branded shell.
+ * - Uses a single scoped <style> block (unique class) for media queries — no global leak.
+ * - Pure HTML/CSS, no JS, no external assets → renders identically on any host page.
+ * - Mobile: stretches to viewport, reduces chrome, switches header to compact layout.
+ * - The iframe content itself (capacity planner, side-sheet, smart assignment) is delivered
+ *   live by Effectime — the snippet only frames it so the surrounding page feels native.
  */
 function buildStyledSnippet(url: string, height = 500): string {
-  return `<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:#ffffff;border:1px solid #e2e8f0;border-radius:14px;box-shadow:0 6px 24px -8px rgba(15,23,42,.12),0 2px 6px -2px rgba(15,23,42,.06);padding:14px;max-width:100%;box-sizing:border-box;color:#0f172a;">
-  <div style="display:flex;align-items:center;gap:8px;margin:0 0 10px 2px;">
-    <span style="display:inline-block;width:22px;height:22px;border-radius:6px;background:linear-gradient(135deg,#3b82f6,#6366f1);box-shadow:0 2px 6px rgba(59,130,246,.35);"></span>
-    <span style="font-weight:600;font-size:13px;letter-spacing:-.01em;">Effectime</span>
-    <span style="margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:11px;color:#64748b;font-weight:500;">
-      <span style="display:inline-block;width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.18);"></span>Live
-    </span>
+  const uid = 'et' + Math.random().toString(36).slice(2, 9);
+  const h = Number(height) || 500;
+  return `<!-- Effectime embed (CopyStyle) -->
+<style>
+  .${uid}-wrap{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%);border:1px solid #e2e8f0;border-radius:16px;box-shadow:0 10px 30px -12px rgba(15,23,42,.14),0 2px 6px -2px rgba(15,23,42,.06);padding:16px;max-width:100%;box-sizing:border-box;color:#0f172a;container-type:inline-size;}
+  .${uid}-stripe{height:3px;width:100%;border-radius:3px;background:linear-gradient(90deg,#3b82f6 0%,#6366f1 50%,#22c55e 100%);margin-bottom:14px;}
+  .${uid}-head{display:flex;align-items:center;gap:10px;margin:0 2px 12px;}
+  .${uid}-logo{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#3b82f6,#6366f1);box-shadow:0 4px 10px rgba(59,130,246,.35);color:#fff;font-weight:700;font-size:13px;letter-spacing:-.02em;}
+  .${uid}-brand{font-weight:650;font-size:14px;letter-spacing:-.01em;color:#0f172a;}
+  .${uid}-sub{font-size:11px;color:#64748b;font-weight:500;margin-left:2px;}
+  .${uid}-live{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#15803d;font-weight:600;background:rgba(34,197,94,.10);padding:4px 9px;border-radius:999px;border:1px solid rgba(34,197,94,.22);}
+  .${uid}-dot{width:6px;height:6px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.2);animation:${uid}-p 2s ease-in-out infinite;}
+  @keyframes ${uid}-p{0%,100%{opacity:1}50%{opacity:.55}}
+  .${uid}-frame{position:relative;border-radius:12px;overflow:hidden;background:#f8fafc;border:1px solid #e2e8f0;}
+  .${uid}-iframe{display:block;width:100%;height:${h}px;border:0;background:#f8fafc;}
+  .${uid}-foot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding:0 2px;font-size:11px;color:#64748b;}
+  .${uid}-foot a{color:#3b82f6;text-decoration:none;font-weight:600;}
+  .${uid}-foot a:hover{text-decoration:underline;}
+  @container (max-width: 560px){
+    .${uid}-wrap{padding:10px;border-radius:12px;}
+    .${uid}-sub{display:none;}
+    .${uid}-iframe{height:${Math.max(420, Math.round(h * 0.85))}px;}
+    .${uid}-foot span:first-child{display:none;}
+  }
+  @media (max-width: 560px){
+    .${uid}-wrap{padding:10px;border-radius:12px;}
+    .${uid}-sub{display:none;}
+    .${uid}-iframe{height:70vh;min-height:420px;}
+  }
+</style>
+<div class="${uid}-wrap">
+  <div class="${uid}-stripe"></div>
+  <div class="${uid}-head">
+    <span class="${uid}-logo">E</span>
+    <span class="${uid}-brand">Effectime</span>
+    <span class="${uid}-sub">· kapacitás & beosztás</span>
+    <span class="${uid}-live"><span class="${uid}-dot"></span>Live</span>
   </div>
-  <iframe src="${url}" width="100%" height="${height}" style="border:none;border-radius:9px;display:block;background:#f8fafc;width:100%;" allowfullscreen></iframe>
+  <div class="${uid}-frame">
+    <iframe class="${uid}-iframe" src="${url}" loading="lazy" allowfullscreen referrerpolicy="strict-origin-when-cross-origin" title="Effectime"></iframe>
+  </div>
+  <div class="${uid}-foot">
+    <span>Real-time workforce data</span>
+    <span>Powered by <a href="https://effectime.app" target="_blank" rel="noopener">Effectime</a></span>
+  </div>
 </div>`;
 }
 
