@@ -332,7 +332,7 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
             <span className="text-xs">Nincs telephelyi beállítás</span>
           </div>
         ) : (
-          <table className="w-full border-collapse text-xs">
+          <table className={cn('border-collapse text-xs', isMonthly ? 'min-w-max' : 'w-full')}>
             <thead className="sticky top-0 z-10">
               <tr className="bg-background/95 backdrop-blur-sm">
                 <th className="sticky left-0 z-20 bg-background/95 text-left px-3 py-2.5 border-b border-r w-40">
