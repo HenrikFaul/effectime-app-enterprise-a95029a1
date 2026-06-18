@@ -564,30 +564,33 @@ function LegendChip({ className, label }: { className: string; label: string }) 
 }
 
 
-function Header({ label, onPrev, onNext, viewMode, onViewMode, loading, canWrite }: {
-  label: string; onPrev: () => void; onNext: () => void;
+function Header({ label, onPrev, onNext, onToday, viewMode, onViewMode, loading, canWrite }: {
+  label: string; onPrev: () => void; onNext: () => void; onToday: () => void;
   viewMode: 'weekly' | 'monthly'; onViewMode: (v: 'weekly' | 'monthly') => void;
   loading: boolean; canWrite: boolean;
 }) {
   return (
-    <div className="flex items-center gap-2 px-3 py-2 border-b bg-card shrink-0 flex-wrap shadow-subtle">
-      <div className="flex rounded-lg overflow-hidden border text-xs font-semibold shrink-0">
-        <button
-          className={cn('px-3 py-1 transition-colors',
-            viewMode === 'weekly' ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted')}
+    <div className="flex items-center gap-2 px-3 py-2 border-b bg-card shrink-0 flex-wrap">
+      <div className="flex rounded-md border overflow-hidden text-xs">
+        <button type="button"
+          className={cn('px-3 py-1.5 transition-colors',
+            viewMode === 'weekly' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent')}
           onClick={() => onViewMode('weekly')}>Heti</button>
-        <button
-          className={cn('px-3 py-1 transition-colors',
-            viewMode === 'monthly' ? 'bg-primary text-primary-foreground' : 'text-foreground hover:bg-muted')}
+        <button type="button"
+          className={cn('px-3 py-1.5 border-l transition-colors',
+            viewMode === 'monthly' ? 'bg-primary text-primary-foreground' : 'hover:bg-accent')}
           onClick={() => onViewMode('monthly')}>Havi</button>
       </div>
 
-      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onPrev}>
+      <Button variant="outline" size="icon" className="h-8 w-8" onClick={onPrev}>
         <ChevronLeft className="h-4 w-4" />
       </Button>
-      <span className="font-display font-semibold text-sm text-foreground">{label}</span>
-      <Button size="icon" variant="ghost" className="h-7 w-7" onClick={onNext}>
+      <div className="font-semibold text-sm min-w-[160px] text-center capitalize">{label}</div>
+      <Button variant="outline" size="icon" className="h-8 w-8" onClick={onNext}>
         <ChevronRight className="h-4 w-4" />
+      </Button>
+      <Button variant="ghost" size="sm" className="h-8" onClick={onToday}>
+        {viewMode === 'weekly' ? 'Ez a hét' : 'Ez a hónap'}
       </Button>
 
       {canWrite && (
