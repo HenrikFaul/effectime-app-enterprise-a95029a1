@@ -509,9 +509,15 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
                           : 'text-emerald-700 dark:text-emerald-400';
                         const isSelected = selected?.ruleId === rule.id && selected?.date === iso;
                         return (
-                          <td key={iso} className={cn('px-1 py-1.5 align-top', tone,
+                          <td key={iso} className={cn('px-1 py-1.5 align-top transition-all', tone,
                             isSelected && 'ring-2 ring-inset ring-primary',
-                            isToday && !isSelected && 'ring-1 ring-inset ring-primary/30')}>
+                            isToday && !isSelected && 'ring-1 ring-inset ring-primary/30',
+                            canWrite && 'cursor-pointer hover:brightness-95 dark:hover:brightness-110')}
+                            onClick={canWrite ? () => setSelected({ ruleId: rule.id, date: iso }) : undefined}
+                            role={canWrite ? 'button' : undefined}
+                            tabIndex={canWrite ? 0 : undefined}
+                            onKeyDown={canWrite ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelected({ ruleId: rule.id, date: iso }); } } : undefined}
+                          >
                             <div className={cn('flex items-center justify-center gap-0.5 font-bold text-xs mb-1', textTone)}>
                               {isGap
                                 ? <AlertTriangle className="h-3 w-3 shrink-0" />
@@ -530,18 +536,6 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
                                 </div>
                               );
                             })}
-                            {canWrite && (
-                              <button
-                                onClick={() => setSelected(isSelected ? null : { ruleId: rule.id, date: iso })}
-                                className={cn(
-                                  'mt-1 w-full text-[10px] rounded-md px-1 py-0.5 font-semibold leading-tight transition-colors',
-                                  isSelected
-                                    ? 'bg-primary text-primary-foreground'
-                                    : 'bg-black/8 hover:bg-black/16 dark:bg-white/10 dark:hover:bg-white/20',
-                                )}>
-                                {isSelected ? '✕ Bezár' : '✏ Szerkeszt'}
-                              </button>
-                            )}
                           </td>
                         );
                       })}
