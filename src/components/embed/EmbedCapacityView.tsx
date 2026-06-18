@@ -560,7 +560,7 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
           </table>
         )}
       </div>
-      <WritePanel />
+      <WriteSheet />
     </div>
   );
 }
