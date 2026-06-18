@@ -405,8 +405,8 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
   // Monthly view scrolls horizontally to expose all 28–31 days per office/rule row,
   // so guest viewers see the same office breakdown + edit affordance as in weekly mode.
 
-  const monthLabel = format(monthStart, 'yyyy. MMMM');
-  const weekLabelForHeader = `${format(days[0], 'yyyy. MMM d.')} — ${format(days[days.length - 1], 'MMM d.')}`;
+  const monthLabel = format(monthStart, 'yyyy. MMMM', { locale: hu });
+  const weekLabelForHeader = `${format(days[0], 'yyyy. MMM d.', { locale: hu })} — ${format(days[days.length - 1], 'MMM d.', { locale: hu })}`;
 
   const isMonthly = viewMode === 'monthly';
   const headerLabel = isMonthly ? monthLabel : weekLabelForHeader;
