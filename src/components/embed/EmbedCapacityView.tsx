@@ -413,19 +413,25 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
   const onPrev = isMonthly ? () => setMonthStart(m => subMonths(m, 1)) : () => setWeekStart(w => subWeeks(w, 1));
   const onNext = isMonthly ? () => setMonthStart(m => addMonths(m, 1)) : () => setWeekStart(w => addWeeks(w, 1));
 
+  const goToday = () => { setWeekStart(startOfWeek(new Date(), { weekStartsOn: 1 })); setMonthStart(startOfMonth(new Date())); };
+
   return (
     <div className="flex flex-col h-full bg-background text-foreground">
       <Header
         label={headerLabel}
         onPrev={onPrev}
         onNext={onNext}
+        onToday={goToday}
         viewMode={viewMode} onViewMode={setViewMode} loading={loading} canWrite={canWrite} />
-      {isMonthly && (
-        <div className="px-3 py-1.5 border-b bg-muted/20 text-[10px] text-muted-foreground flex items-center gap-1.5 shrink-0">
-          <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary/60" />
-          Havi nézet — vízszintesen görgethető telephelyi bontás
-        </div>
-      )}
+
+      {/* Legend — same chips as native CoveragePlannerView */}
+      <div className="flex flex-wrap gap-1.5 px-3 py-1.5 border-b bg-card/50 text-[10px] shrink-0">
+        <LegendChip className="bg-rose-100 text-rose-700 border-rose-300" label="Hiányos" />
+        <LegendChip className="bg-emerald-100 text-emerald-700 border-emerald-300" label="Megfelelő" />
+        <LegendChip className="bg-amber-100 text-amber-700 border-amber-300" label="Túl sok" />
+        <LegendChip className="bg-zinc-100 text-zinc-500 border-zinc-300" label="N/A" />
+      </div>
+
       <div className="flex-1 overflow-auto min-h-0">
         {loading ? <LoadingSkeleton /> : offices.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full min-h-32 gap-2 text-muted-foreground">
@@ -435,29 +441,30 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
         ) : (
           <table className={cn('border-collapse text-xs', isMonthly ? 'min-w-max' : 'w-full')}>
             <thead className="sticky top-0 z-10">
-              <tr className="bg-background/95 backdrop-blur-sm">
-                <th className="sticky left-0 z-20 bg-background/95 text-left px-3 py-2.5 border-b border-r w-40">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/70">
+              <tr className="bg-muted/30 backdrop-blur-sm">
+                <th className="sticky left-0 z-20 bg-muted/30 text-left px-3 py-2 border-b border-r w-[240px] min-w-[240px]">
+                  <span className="text-xs font-semibold text-muted-foreground">
                     Telephely / Igény
                   </span>
                 </th>
                 {days.map(d => {
-                  const iso     = format(d, 'yyyy-MM-dd');
-                  const isHol   = holidaySet.has(iso) || blockedSet.has(iso);
-                  const isToday = iso === TODAY;
+                  const iso   = format(d, 'yyyy-MM-dd');
+                  const isHol = holidaySet.has(iso) || blockedSet.has(iso);
+                  const wknd  = isWeekend(d);
                   return (
                     <th key={iso} className={cn(
-                      'text-center px-1 py-2 border-b min-w-[64px] transition-colors',
-                      isHol   ? 'bg-amber-50/80 dark:bg-amber-950/20' :
-                      isToday ? 'bg-primary/5' :
-                      isWeekend(d) ? 'bg-muted/30' : '',
+                      'text-center px-1 py-2 border-b border-r last:border-r-0',
+                      isMonthly ? 'min-w-[44px]' : 'min-w-[80px]',
+                      isHol  ? 'bg-blue-50 text-blue-700 dark:bg-blue-950/30 dark:text-blue-300' :
+                      wknd   ? 'bg-zinc-50 text-muted-foreground dark:bg-zinc-900/30' : '',
                     )}>
-                      <div className={cn(
-                        'text-sm font-bold leading-none',
-                        isToday ? 'text-primary' : 'text-foreground',
-                      )}>{format(d, 'd')}</div>
-                      <div className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/50 mt-0.5">
-                        {HU_DAYS[d.getDay()]}
+                      <div className="font-semibold capitalize text-xs leading-none">
+                        {isMonthly ? format(d, 'd') : format(d, 'EEE', { locale: hu })}
+                      </div>
+                      <div className="text-[9px] leading-none mt-1 opacity-80">
+                        {isMonthly
+                          ? format(d, 'EEEEE', { locale: hu })
+                          : format(d, 'MMM d.', { locale: hu })}
                       </div>
                     </th>
                   );
@@ -470,18 +477,21 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
                 return [
                   <tr key={`hdr-${office.id}`}>
                     <td colSpan={days.length + 1}
-                      className="sticky left-0 bg-muted/20 px-3 py-1.5 border-b">
+                      className="sticky left-0 bg-card px-3 py-2 border-b border-border/70">
                       <div className="flex items-center gap-2">
-                        <div className="h-3 w-0.5 rounded-full bg-primary/50 shrink-0" />
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                          {office.name}{office.city ? ` · ${office.city}` : ''}
+                        <Building2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                        <span className="text-sm font-semibold text-foreground truncate">
+                          {office.name}
                         </span>
+                        {office.city && (
+                          <span className="text-[10px] text-muted-foreground">({office.city})</span>
+                        )}
                       </div>
                     </td>
                   </tr>,
                   ...(officeRules.length > 0 ? officeRules.map(rule => (
-                    <tr key={rule.id} className="border-b hover:bg-muted/10 transition-colors">
-                      <td className="sticky left-0 bg-background px-3 py-2 border-r max-w-[10rem]"
+                    <tr key={rule.id} className="border-b border-border/70">
+                      <td className="sticky left-0 bg-background px-3 py-2 border-r border-border/70 w-[240px] min-w-[240px] max-w-[240px]"
                         title={ruleLabel(rule)}>
                         <div className="text-xs font-medium text-foreground truncate">{ruleLabel(rule)}</div>
                         <div className="text-[10px] text-muted-foreground/70 mt-0.5">min. {rule.min_headcount} fő</div>
@@ -489,9 +499,10 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
                       {days.map(d => {
                         const iso = format(d, 'yyyy-MM-dd');
                         const dow = d.getDay();
-                        const isToday = iso === TODAY;
+                        const wknd = isWeekend(d);
                         if (!ruleAppliesOn(rule, iso, dow)) return (
-                          <td key={iso} className={cn('bg-muted/10', isToday && 'bg-primary/5')} />
+                          <td key={iso} className={cn('border-r border-border/70 last:border-r-0',
+                            wknd ? 'bg-zinc-100/45 dark:bg-zinc-900/35' : 'bg-zinc-50/45 dark:bg-zinc-900/25')} />
                         );
                         const cellShifts = shiftsFor(rule, iso, shifts);
                         const have = cellShifts.length;
@@ -499,44 +510,28 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
                         const isGap  = have < need;
                         const isOver = have > need;
                         const tone = isGap
-                          ? 'bg-rose-50 dark:bg-rose-950/20'
+                          ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-950/30 dark:text-rose-300'
                           : isOver
-                          ? 'bg-amber-50 dark:bg-amber-950/20'
-                          : 'bg-emerald-50 dark:bg-emerald-950/20';
-                        const textTone = isGap
-                          ? 'text-rose-700 dark:text-rose-400'
-                          : isOver
-                          ? 'text-amber-700 dark:text-amber-400'
-                          : 'text-emerald-700 dark:text-emerald-400';
+                          ? 'bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:text-amber-300'
+                          : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-300';
                         const isSelected = selected?.ruleId === rule.id && selected?.date === iso;
                         return (
-                          <td key={iso} className={cn('px-1 py-1.5 align-top transition-all', tone,
+                          <td key={iso} className={cn(
+                            'border-r border-border/70 last:border-r-0 px-1 py-1.5 align-middle text-xs font-semibold transition-colors',
+                            tone,
                             isSelected && 'ring-2 ring-inset ring-primary',
-                            isToday && !isSelected && 'ring-1 ring-inset ring-primary/30',
-                            canWrite && 'cursor-pointer hover:brightness-95 dark:hover:brightness-110')}
+                            canWrite && 'cursor-pointer')}
                             onClick={canWrite ? () => setSelected({ ruleId: rule.id, date: iso }) : undefined}
                             role={canWrite ? 'button' : undefined}
                             tabIndex={canWrite ? 0 : undefined}
                             onKeyDown={canWrite ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelected({ ruleId: rule.id, date: iso }); } } : undefined}
                           >
-                            <div className={cn('flex items-center justify-center gap-0.5 font-bold text-xs mb-1', textTone)}>
+                            <div className="flex flex-col items-center justify-center gap-0.5">
+                              <span className="text-sm">{need} / {have}</span>
                               {isGap
-                                ? <AlertTriangle className="h-3 w-3 shrink-0" />
-                                : <CheckCircle2 className="h-3 w-3 shrink-0" />}
-                              <span>{have}</span>
-                              <span className="font-normal text-[10px] opacity-50">/</span>
-                              <span className="font-normal text-[10px] opacity-70">{need}</span>
+                                ? <AlertTriangle className="h-3 w-3" />
+                                : !isOver ? <CheckCircle2 className="h-3 w-3" /> : null}
                             </div>
-                            {canWrite && cellShifts.map(s => {
-                              const m = memberByUserId.get(s.user_id);
-                              return (
-                                <div key={s.id}
-                                  className="text-[10px] truncate leading-tight max-w-[60px] text-center opacity-80"
-                                  title={m?.display_name ?? s.user_id}>
-                                  {(m?.display_name ?? s.user_id).split(' ')[0]}
-                                </div>
-                              );
-                            })}
                           </td>
                         );
                       })}
@@ -544,21 +539,6 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
                   )) : [
                     <tr key={`empty-${office.id}`} className="border-b">
                       <td className="sticky left-0 bg-background px-3 py-2 border-r text-xs text-muted-foreground/60 italic"
-                        colSpan={days.length + 1}>
-                        Nincs kapacitásszabály
-                      </td>
-                    </tr>,
-                  ]),
-                ];
-              })}
-            </tbody>
-          </table>
-        )}
-      </div>
-      <WriteSheet />
-    </div>
-  );
-}
 
 function Header({ label, onPrev, onNext, viewMode, onViewMode, loading, canWrite }: {
   label: string; onPrev: () => void; onNext: () => void;
