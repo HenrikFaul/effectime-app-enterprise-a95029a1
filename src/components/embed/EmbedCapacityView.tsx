@@ -539,6 +539,30 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
                   )) : [
                     <tr key={`empty-${office.id}`} className="border-b">
                       <td className="sticky left-0 bg-background px-3 py-2 border-r text-xs text-muted-foreground/60 italic"
+                        colSpan={days.length + 1}>
+                        Nincs kapacitásszabály
+                      </td>
+                    </tr>,
+                  ]),
+                ];
+              })}
+            </tbody>
+          </table>
+        )}
+      </div>
+      <WriteSheet />
+    </div>
+  );
+}
+
+function LegendChip({ className, label }: { className: string; label: string }) {
+  return (
+    <div className={cn('flex items-center gap-1 px-2 py-0.5 rounded border text-[10px]', className)}>
+      <span>{label}</span>
+    </div>
+  );
+}
+
 
 function Header({ label, onPrev, onNext, viewMode, onViewMode, loading, canWrite }: {
   label: string; onPrev: () => void; onNext: () => void;
