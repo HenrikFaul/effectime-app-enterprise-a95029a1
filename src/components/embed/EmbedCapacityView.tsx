@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Loader2, Trash2, X } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
+import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { EffectimeLogo } from '@/components/EffectimeLogo';
 import {
   addMonths, addWeeks, eachDayOfInterval, endOfMonth, endOfWeek,
