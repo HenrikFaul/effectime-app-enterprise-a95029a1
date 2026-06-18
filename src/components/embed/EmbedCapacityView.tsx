@@ -3,12 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
-import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { AlertTriangle, Building2, CheckCircle2, ChevronLeft, ChevronRight, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { EffectimeLogo } from '@/components/EffectimeLogo';
 import {
   addMonths, addWeeks, eachDayOfInterval, endOfMonth, endOfWeek,
   format, isWeekend, startOfMonth, startOfWeek, subMonths, subWeeks,
 } from 'date-fns';
+import { hu } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
