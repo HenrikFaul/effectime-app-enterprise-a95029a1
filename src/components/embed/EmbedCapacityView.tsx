@@ -174,120 +174,219 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
     load();
   };
 
-  const WritePanel = () => {
-    if (!selected || !canWrite) return null;
-    const rule = (data?.coverage_rules ?? []).find(r => r.id === selected.ruleId);
-    if (!rule) return null;
-
-    const office     = offices.find(o => o.id === rule.office_id);
-    const assigned   = shiftsFor(rule, selected.date, shifts);
+  // Smart suggestion: assign role-matched candidates first, then any available, up to min_headcount.
+  const handleSmartSuggest = async (rule: CoverageRule, isoDate: string) => {
+    const assigned = shiftsFor(rule, isoDate, shifts);
+    const need = rule.min_headcount - assigned.length;
+    if (need <= 0) { toast.info('Már teljes a beosztás'); return; }
     const assignedIds = new Set(assigned.map(s => s.user_id));
-    const available  = (data?.members ?? []).filter(m => !assignedIds.has(m.user_id));
-    const roles      = ruleRoles(rule);
-    const ruleName   = rule.name ?? (roles.join(', ') || `≥${rule.min_headcount} fő`);
-    const dateLabel  = format(new Date(selected.date + 'T00:00:00'), 'yyyy. MMM d.');
-    const isFull     = assigned.length >= rule.min_headcount;
+    const roles = ruleRoles(rule);
+    const pool = (data?.members ?? []).filter(m => !assignedIds.has(m.user_id));
+    const ranked = [...pool].sort((a, b) => {
+      const am = roles.length === 0 || (a.business_role != null && roles.includes(a.business_role)) ? 0 : 1;
+      const bm = roles.length === 0 || (b.business_role != null && roles.includes(b.business_role)) ? 0 : 1;
+      if (am !== bm) return am - bm;
+      const ao = a.office_id === rule.office_id ? 0 : 1;
+      const bo = b.office_id === rule.office_id ? 0 : 1;
+      return ao - bo;
+    });
+    const pick = ranked.slice(0, need);
+    if (pick.length === 0) { toast.error('Nincs elérhető tag'); return; }
+    setSaving(true);
+    for (const m of pick) {
+      await (supabase as any).rpc('embed_assign_shift', {
+        _token: token,
+        _user_id: m.user_id,
+        _office_id: rule.office_id,
+        _business_role: roles[0] ?? m.business_role ?? null,
+        _shift_date: isoDate,
+        _skill_id: ruleSkillIds(rule)[0] ?? null,
+      });
+    }
+    setSaving(false);
+    toast.success(`${pick.length} tag intelligensen beosztva`);
+    load();
+  };
+
+  const WriteSheet = () => {
+    const open = !!selected && canWrite;
+    const rule = open ? (data?.coverage_rules ?? []).find(r => r.id === selected!.ruleId) : null;
+    const office = rule ? offices.find(o => o.id === rule.office_id) : null;
+    const assigned = rule && selected ? shiftsFor(rule, selected.date, shifts) : [];
+    const assignedIds = new Set(assigned.map(s => s.user_id));
+    const available = rule ? (data?.members ?? []).filter(m => !assignedIds.has(m.user_id)) : [];
+    const roles = rule ? ruleRoles(rule) : [];
+    const ruleName = rule ? (rule.name ?? (roles.join(', ') || `≥${rule.min_headcount} fő`)) : '';
+    const dateLabel = selected ? format(new Date(selected.date + 'T00:00:00'), 'yyyy. MMMM d. (EEEE)') : '';
+    const isFull = rule ? assigned.length >= rule.min_headcount : false;
+
+    // Slot rows mirror native CoveragePlannerView: one row per required headcount unit.
+    const slots: { idx: number; role: string | null }[] = [];
+    if (rule) {
+      if (roles.length > 0) {
+        roles.forEach((r, i) => slots.push({ idx: i, role: r }));
+        for (let i = roles.length; i < rule.min_headcount; i++) slots.push({ idx: i, role: null });
+      } else {
+        for (let i = 0; i < Math.max(1, rule.min_headcount); i++) slots.push({ idx: i, role: null });
+      }
+    }
+    const slotFill = new Map<number, Shift>();
+    const remaining = [...assigned];
+    slots.forEach(slot => {
+      if (slot.role) {
+        const idx = remaining.findIndex(s => {
+          const m = memberByUserId.get(s.user_id);
+          return m?.business_role === slot.role;
+        });
+        if (idx >= 0) { slotFill.set(slot.idx, remaining[idx]); remaining.splice(idx, 1); }
+      }
+    });
+    slots.forEach(slot => {
+      if (slotFill.has(slot.idx)) return;
+      if (remaining.length > 0) slotFill.set(slot.idx, remaining.shift()!);
+    });
+    const overflow = remaining;
 
     return (
-      <div className="border-t bg-card shrink-0 flex flex-col" style={{ maxHeight: '55%' }}>
-        <div className="flex items-start justify-between gap-2 px-4 py-2.5 border-b shrink-0">
-          <div className="min-w-0">
-            {office && (
-              <div className="font-display font-semibold text-sm text-foreground">{office.name}</div>
-            )}
-            <div className="text-xs text-muted-foreground truncate">{ruleName}</div>
-            <div className="flex items-center gap-2 mt-0.5">
-              <span className="text-xs text-muted-foreground">{dateLabel}</span>
-              <span className={cn(
-                'inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-full',
-                isFull
-                  ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
-                  : 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-300',
-              )}>
-                {assigned.length}/{rule.min_headcount} fő
-              </span>
-            </div>
-          </div>
-          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 shrink-0 -mt-0.5"
-            onClick={() => setSelected(null)}>
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+      <Sheet open={open} onOpenChange={(o) => { if (!o) setSelected(null); }}>
+        <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto p-5">
+          {rule && selected && (
+            <>
+              <SheetHeader className="text-left">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <SheetTitle className="text-xl font-bold truncate">{office?.name ?? ''}</SheetTitle>
+                    <SheetDescription className="text-sm font-medium">
+                      {ruleName}
+                      <span className="block text-xs mt-1 text-muted-foreground">
+                        {dateLabel} · min. {rule.min_headcount} fő
+                      </span>
+                    </SheetDescription>
+                  </div>
+                  <Badge variant="outline" className={cn(
+                    'shrink-0 text-[11px] font-semibold',
+                    isFull ? 'border-emerald-300 text-emerald-700 dark:text-emerald-300' : 'border-rose-300 text-rose-700 dark:text-rose-300',
+                  )}>
+                    {assigned.length}/{rule.min_headcount}
+                  </Badge>
+                </div>
+              </SheetHeader>
 
-        <div className="grid grid-cols-2 divide-x overflow-hidden min-h-0 flex-1">
-          <div className="p-3 overflow-y-auto">
-            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              Beosztva ({assigned.length}/{rule.min_headcount})
-            </div>
-            {assigned.length === 0 ? (
-              <div className="text-xs text-muted-foreground/60 italic">Senki sincs beosztva</div>
-            ) : (
-              <div className="space-y-1.5">
-                {assigned.map(s => {
-                  const m = memberByUserId.get(s.user_id);
-                  return (
-                    <div key={s.id}
-                      className="flex items-center justify-between gap-2 rounded-lg border-l-[3px] border-primary bg-primary/5 pl-2.5 pr-2 py-2">
-                      <div className="min-w-0">
-                        <div className="text-xs font-semibold text-primary truncate">
-                          {m?.display_name ?? s.user_id}
+              {/* Slot rows */}
+              <div className="mt-4 space-y-2">
+                <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">Beosztva</div>
+                <div className="space-y-1.5">
+                  {slots.map(slot => {
+                    const filled = slotFill.get(slot.idx);
+                    const slotLabel = slot.role ?? 'bárki';
+                    if (!filled) {
+                      return (
+                        <div key={slot.idx} className="flex items-center justify-between gap-2 p-2.5 rounded-lg border border-dashed bg-muted/30">
+                          <span className="text-xs text-muted-foreground">Üres slot</span>
+                          <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">{slotLabel}</span>
                         </div>
-                        {m?.business_role && (
-                          <div className="text-[10px] text-muted-foreground uppercase tracking-wide mt-0.5 truncate">
-                            {m.business_role}
+                      );
+                    }
+                    const m = memberByUserId.get(filled.user_id);
+                    const memberRole = m?.business_role ?? null;
+                    const isMatch = slot.role ? memberRole === slot.role : true;
+                    return (
+                      <div key={slot.idx} className={cn(
+                        'flex items-center gap-2 p-2.5 rounded-lg border text-sm',
+                        isMatch
+                          ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800'
+                          : 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800',
+                      )}>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold text-sm truncate">{m?.display_name ?? filled.user_id}</span>
+                            <span className="text-[10px] uppercase tracking-wider opacity-70 shrink-0">{slotLabel}</span>
                           </div>
-                        )}
+                          {!isMatch && memberRole && (
+                            <div className="text-[10px] opacity-80 mt-0.5">Tényleges: {memberRole}</div>
+                          )}
+                        </div>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" disabled={saving} onClick={() => handleRemove(filled.id)}>
+                          {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5 text-destructive" />}
+                        </Button>
                       </div>
-                      <Button size="sm" variant="ghost"
-                        className="h-6 w-6 p-0 shrink-0 text-destructive/60 hover:text-destructive hover:bg-destructive/10"
-                        disabled={saving} onClick={() => handleRemove(s.id)}>
-                        {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
-                      </Button>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+                    );
+                  })}
 
-          <div className="p-3 overflow-y-auto">
-            <div className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-              Elérhető ({available.length})
-            </div>
-            {available.length === 0 ? (
-              <div className="text-xs text-muted-foreground/60 italic">Mindenki beosztva</div>
-            ) : (
-              <div className="space-y-1.5">
-                {available.map(m => {
-                  const roleMatch = roles.length === 0 || (m.business_role != null && roles.includes(m.business_role));
-                  return (
-                    <div key={m.user_id}
-                      className="flex items-center justify-between gap-2 rounded-lg border bg-background px-2.5 py-2">
-                      <div className="min-w-0">
-                        <div className="text-xs font-medium text-foreground truncate">{m.display_name}</div>
-                        {m.business_role && (
-                          <div className="text-[10px] text-muted-foreground truncate">{m.business_role}</div>
-                        )}
-                        {!roleMatch && roles.length > 0 && (
-                          <div className="flex items-center gap-1 mt-0.5 text-[10px] text-amber-600 dark:text-amber-400">
-                            <AlertTriangle className="h-2.5 w-2.5 shrink-0" />
-                            <span>Pozíció nem egyezik</span>
+                  {overflow.length > 0 && (
+                    <div className="pt-2 mt-2 border-t border-dashed">
+                      <div className="text-[10px] uppercase text-muted-foreground mb-1">Túl sok beosztva</div>
+                      {overflow.map(s => {
+                        const m = memberByUserId.get(s.user_id);
+                        return (
+                          <div key={s.id} className="flex items-center gap-2 p-2 rounded-lg border text-sm bg-amber-50 dark:bg-amber-950/30 border-amber-200">
+                            <div className="flex-1 font-medium truncate">{m?.display_name ?? s.user_id}</div>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" disabled={saving} onClick={() => handleRemove(s.id)}>
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
                           </div>
-                        )}
-                      </div>
-                      <Button size="sm"
-                        className="h-7 shrink-0 text-xs px-3 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold"
-                        disabled={saving} onClick={() => handleAssign(rule, selected.date, m)}>
-                        {saving ? <Loader2 className="h-3 w-3 animate-spin" /> : '+ Beoszt'}
-                      </Button>
+                        );
+                      })}
                     </div>
-                  );
-                })}
+                  )}
+                </div>
+
+                <div className="pt-1">
+                  <Button size="sm" className="bg-emerald-600 hover:bg-emerald-700 text-white" disabled={saving || isFull}
+                    onClick={() => handleSmartSuggest(rule, selected.date)}>
+                    <Sparkles className="h-3.5 w-3.5 mr-1.5" />
+                    Intelligens javaslat
+                  </Button>
+                </div>
               </div>
-            )}
-          </div>
-        </div>
-      </div>
+
+              {/* Available candidates */}
+              <div className="mt-5 space-y-2">
+                <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                  Elérhető tagok ({available.length})
+                </div>
+                {available.length === 0 ? (
+                  <div className="text-xs text-muted-foreground italic">Nincs elérhető tag</div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {available.map(m => {
+                      const roleMatch = roles.length === 0 || (m.business_role != null && roles.includes(m.business_role));
+                      const sameOffice = m.office_id === rule.office_id;
+                      return (
+                        <div key={m.user_id} className={cn(
+                          'p-2.5 rounded-lg border text-sm',
+                          roleMatch ? 'bg-card' : 'bg-muted/30 opacity-90',
+                        )}>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium truncate">{m.display_name}</div>
+                              {m.business_role && (
+                                <div className="text-[10px] text-muted-foreground truncate">{m.business_role}{sameOffice ? '' : ' · más telephely'}</div>
+                              )}
+                            </div>
+                            {roleMatch && <Badge variant="outline" className="text-[9px] border-emerald-300 text-emerald-700">match</Badge>}
+                            <Button size="sm" variant={roleMatch ? 'default' : 'outline'}
+                              className="h-7 shrink-0 text-xs px-2.5"
+                              disabled={saving} onClick={() => handleAssign(rule, selected.date, m)}>
+                              {saving ? <Loader2 className="h-3 w-3" /> : <><Plus className="h-3 w-3 mr-1" />Beoszt</>}
+                            </Button>
+                          </div>
+                          {!roleMatch && roles.length > 0 && (
+                            <div className="flex items-center gap-1 mt-1 text-[10px] text-amber-600 dark:text-amber-400">
+                              <AlertTriangle className="h-2.5 w-2.5 shrink-0" />
+                              <span>Pozíció nem egyezik</span>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     );
   };
 
