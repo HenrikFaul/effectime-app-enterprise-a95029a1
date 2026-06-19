@@ -1,3 +1,18 @@
+## 2026-06-19 — v3.51.2 Native calendar: fix the leave-type filter (same enum-vs-UUID bug as the embed)
+
+**Lens:** Carry the embed v3.51.1 audit fix back to the native calendar it was ported from.
+
+### Scope
+The v3.51.1 audit found the embed calendar's "Szabadság típusa" filter was broken because it built options from `enterprise_leave_types` UUIDs while the data field `leave_requests.leave_type` is the `public.leave_type` ENUM — so selecting any type hid ALL leaves. That filter was a faithful port of the **native** `TimelineView`, which has the identical bug. This fixes the native side.
+
+### Fix
+- `src/components/enterprise/calendar/TimelineView.tsx` — the `leave_type` filter options are now the enum keys (`vacation`/`sick_leave`/`unpaid_leave`/`other`) with localized `timeline_view.legend_*` labels, and the match is a direct `filters.leave_type.includes(l.leave_type)` (dropped the UUID + name-fallback logic that never matched). Reuses the `legend_other` key added across all 8 locales in v3.51.1; no new strings.
+
+### Verification
+`tsc --noEmit` ✓ · `vite build` ✓. Frontend-only; colour tints (already enum-keyed) and all other filters unchanged.
+
+---
+
 ## 2026-06-19 — v3.51.1 Embed: correctness fixes from a multi-agent adversarial audit
 
 **Lens:** Adversarial correctness audit (multi-agent) of the whole embed module + verification.
