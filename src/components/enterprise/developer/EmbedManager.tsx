@@ -258,11 +258,29 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
       member:  builderView === 'member_schedule' ? builderMember || undefined : undefined,
     });
   })();
-  const builderSnippet = builderUrl
-    ? (builderCopyStyle
-        ? buildStyledSnippet(builderUrl, Number(builderHeight) || 500)
-        : buildIframeSnippet(builderUrl, Number(builderHeight) || 500))
-    : '';
+  const builderSnippet = (() => {
+    if (!builderToken?.token) return '';
+    if (builderFormat === 'web_component') {
+      // Web Component covers any combination of allowed views via the views="" attr.
+      const views = builderView === '__multi__'
+        ? (builderToken.allowed_views ?? [])
+        : [builderView];
+      return buildWebComponentSnippet({
+        token:  builderToken.token,
+        views,
+        height: Number(builderHeight) || 500,
+        office: builderOffice || undefined,
+        member: (views.includes('member_schedule') || views.length > 1) ? (builderMember || undefined) : undefined,
+        mode:   views.includes('capacity_planner') ? (builderMode !== 'weekly' ? builderMode : undefined) : undefined,
+        origin: window.location.origin,
+      });
+    }
+    return builderUrl
+      ? (builderCopyStyle
+          ? buildStyledSnippet(builderUrl, Number(builderHeight) || 500)
+          : buildIframeSnippet(builderUrl, Number(builderHeight) || 500))
+      : '';
+  })();
 
   const openBuilder = (tok: EmbedToken) => {
     setBuilderToken(tok);
@@ -272,6 +290,7 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
     setBuilderMode('weekly');
     setBuilderHeight('500');
     setBuilderCopyStyle(false);
+    setBuilderFormat('web_component');
   };
 
   const viewLabel: Record<string, string> = {
