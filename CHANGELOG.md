@@ -1,3 +1,36 @@
+## 2026-06-19 — v3.50.0 Embed: smart-schedule wizard as modal + full calendar timeline
+
+**Lens:** Full-stack engineer + embed/SDK parity + localization steward.
+
+### Scope
+Brings the guest-embed experience to parity with the native Effectime UI on two points the customer flagged:
+1. The "Intelligens beosztás varázsló" (purple Sparkles) now **pops up as a centered modal with the full settings set** (date range · optimization strategy · keep-existing / include-unmatched · per-rule checklist · generate → preview → finalize), exactly like effectime.app — replacing the previous slide-in side-sheet that only had a single "generate" button.
+2. The **calendar tab now renders the full month timeline** (one row per member, leave-type colour tints, approved/pending status dots, holidays, weekends) **with the same filter sidebar** (telephely · csapat · pozíció · szabadság típusa · státusz · képesség · helyszín) — replacing the previous simple weekly absence grid.
+
+### Frontend
+- **New `src/components/embed/EmbedSmartScheduleDialog.tsx`** — embed twin of the native `SmartBatchScheduleDialog`. Same `Dialog` UI + `smart_batch.*` i18n keys + pure `lib/coverageEligibility` ranking engine; self-fetches coverage data for the chosen range via `get_embed_view_data`; persists by looping the token RPC `embed_assign_shift` (idempotent upsert). Two-step generate→preview→finalize.
+- **New `src/components/embed/EmbedLeaveTimelineView.tsx`** — embed twin of the native `TimelineView`. Virtualized month grid (`@tanstack/react-virtual`) + reuses the native `CalendarFilterBar` with the canonical 7-filter default config (`tenant_calendar_settings` isn't readable by anon). Read-only; loads via `get_embed_view_data` (view `leave_calendar`). When the embed pins an `office`, the redundant office filter is dropped.
+- **`EmbedCapacityView.tsx`** — purple wizard button now opens the modal dialog; removed the old side-sheet wizard + inline `runOfficeWizard`.
+- **`EmbedMultiView.tsx` / `EmbedPage.tsx`** — `leave_calendar` now renders `EmbedLeaveTimelineView`; multi-view tab relabelled "Naptár".
+- **`EmbedMemberScheduleView.tsx`** — filters `leave_requests` to `status === 'approved'` (the RPC now also returns pending), preserving its confirmed-absence behaviour.
+- **Removed** `src/components/embed/EmbedLeaveCalendarView.tsx` (superseded weekly grid).
+
+### Backend (migration — deployed 2026-06-19 to project `oezlzzmzzvbvinuysxaz`)
+- `supabase/migrations/20260619120000_v3_50_0_embed_calendar_wizard_enrichment.sql` — `CREATE OR REPLACE get_embed_view_data` (additive): members gain `team`, `city`, `weekly_capacity_hours`, `base_working_hours`, `skills[]`, `site_priorities[]`; `leave_requests` gain `leave_type` + `status` (now approved **and** pending); new `leave_types[]` and `skills[]` lists for filter options. SECURITY DEFINER + token gating unchanged; `GRANT EXECUTE … TO anon` re-applied. Verified end-to-end against workspace `22ad500a-…` (25 members, 4 leave types, 12 skills, leaves with type+status incl. pending).
+
+### Localization (non-negotiable)
+- Added 6 `timeline_view` keys that were referenced by the native calendar but **missing from every locale** (rendered as the raw key `timeline_view.legend_sick` in the legend — visible bug): `legend_sick`, `status_cancelled`, `priority_reserve`, `util_under`, `assign_unassigned`, `assign_assigned` — added to all 8 locales (`en, hu, de, at, cs, sk, pl, ro`). This also fixes the native calendar.
+
+### Anti-regression
+- RPC change is additive; every prior key keeps name + shape. `EmbedMemberScheduleView` audited and pinned to approved-only.
+- Read-only embed tokens unaffected; write path still goes through the existing `embed_assign_shift` RPC (token + `can_write` + office-scope enforced server-side).
+- `npx tsc --noEmit` ✓ · `vite build` ✓ · vitest 183/184 (the 1 failure, `featureTiering.test.ts`, is pre-existing and reads only `docs/tiering/*` — untouched here).
+
+### Deploy note
+The calendar filters (leave-type / skill) and the wizard's priority/load strategies only fully populate once the migration is deployed; the frontend degrades gracefully (empty option lists, capacity defaults) until then.
+
+---
+
 ## 2026-06-04 — v3.49.11 Admin & Superadmin deep technical prompts
 
 **Lens:** Systems analyst + documentation engineer.

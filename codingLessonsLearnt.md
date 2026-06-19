@@ -1348,3 +1348,32 @@ Tracked for a mass-fix migration in a future RLS hardening sprint.
 - **Gyökérok**: `search_path` nélkül a függvény támadható egy hívó által beállított rosszindulatú `search_path`-szal (pl. olyan séma, amely felülírja `now()`-t).
 - **Javítás**: `SET search_path = public` minden `SECURITY DEFINER` és minden trigger function-re kötelező a `CREATE OR REPLACE FUNCTION` definícióban.
 - **Megelőzés**: Új function template tartalmazza a `SET search_path = public` sort. Migration review során megkövetelni.
+
+---
+
+## ➕ APPEND — 2026-06-19 Embed wizard modal + calendar timeline (v3.50.0)
+
+### [LESSON-EMBED-001]: The embed iframe runs the FULL app — reuse native i18n components, only the data boundary differs
+**Context**: Building/extending any `/#/embed/*` view (`EmbedPage` → `EmbedMultiView` → `Embed*View`).
+**Problem**: It is tempting to hand-roll embed UI from scratch with hardcoded Hungarian strings (as the original `EmbedLeaveCalendarView`/`EmbedCapacityView` did). This drifts from the native look & feel and breaks localization.
+**Fix**: The embed route is mounted INSIDE every provider (`ThemeProvider` → `AuthProvider` → `I18nProvider` → `TooltipProvider` + `QueryClientProvider` + Sonner — see `App.tsx`). So embed views can and should reuse native components (`CalendarFilterBar`, shadcn `Dialog`/`Select`/`Checkbox`, `useVirtualizer`) and the SAME `t('...')` keys (`smart_batch.*`, `timeline_view.*`, `calendar_filter.*`). Reusing native i18n keys gives localization parity for free across all 8 locales. The ONLY thing that must change is the **data boundary**: a guest is `anon` and may read ONLY via the token RPC `get_embed_view_data` — never a direct `supabase.from(table)` query (RLS returns 0 rows for anon).
+
+### [LESSON-EMBED-002]: Don't reuse an authenticated write-dialog in the embed — build a twin that persists via the token RPC
+**Context**: Mirroring `SmartBatchScheduleDialog` (the native "Intelligens beosztás varázsló") into the embed.
+**Problem**: The native dialog persists with `supabase.from('enterprise_shift_assignments').insert(...)` and needs `workspaceId`/`userId`/`ctx`/`sitePriorityMap` props. Anon cannot INSERT (RLS), and the embed has no `userId`. Reusing it directly silently fails to save.
+**Fix**: Create an embed twin (`EmbedSmartScheduleDialog`) that copies the UI 1:1 (same `Dialog` + `smart_batch.*` keys → pixel/locale parity) and reuses the PURE ranking engine `lib/coverageEligibility.evaluateEligibility`, but (a) reads its own data for the chosen range via `get_embed_view_data`, and (b) persists by looping the token RPC `embed_assign_shift` (which upserts on `workspace_id,user_id,shift_date` and resolves `created_by` server-side). Generate→preview→finalize stays two-step, matching native.
+
+### [LESSON-EMBED-003]: Broadening an embed-RPC payload silently breaks consumers that assumed the old shape
+**Context**: Enriching `get_embed_view_data` so the calendar can show pending leaves + leave type/status.
+**Problem**: Changing `leave_requests` from approved-only → approved+pending broke `EmbedMemberScheduleView`, which treated EVERY returned leave row as a confirmed absence (TÁV). A pending leave would have shown as on-leave.
+**Fix**: Keep RPC changes strictly additive (new fields, never renamed) AND audit every consumer of the changed field. Here: added `status` to `leave_requests` and made `EmbedMemberScheduleView` filter `status === 'approved'` to preserve its prior behaviour. New consumer (`EmbedLeaveTimelineView`) uses the full set.
+
+### [LESSON-I18N-010]: A `t('ns.key')` whose key is missing in NO locale renders the raw key string to users
+**Context**: `timeline_view` referenced `legend_sick`, `status_cancelled`, `priority_reserve`, `util_under`, `assign_unassigned`, `assign_assigned` — none of which existed in ANY of the 8 locale resources. The native calendar legend literally showed the text `timeline_view.legend_sick`.
+**Problem**: i18next falls back to the raw key when a key is absent everywhere, so the bug is invisible in code review and only shows at runtime. It had been shipped in the native calendar unnoticed.
+**Fix**: When wiring a component, grep its `t('ns.…')` calls against the locale files and add any missing key to ALL locales in the same commit (en, hu, de, at, cs, sk, pl, ro). Added all 6 keys to all 8 locales.
+**Pattern**:
+```bash
+# list keys a component asks for, then confirm each exists in every locale
+rg -o "t\('timeline_view\.([a-z_]+)'" -r '$1' src/components/.../TimelineView.tsx | sort -u
+```

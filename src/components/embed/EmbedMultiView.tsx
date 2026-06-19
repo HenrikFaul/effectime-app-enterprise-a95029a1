@@ -4,7 +4,7 @@ import { AlertTriangle, Loader2, User } from 'lucide-react';
 import { format } from 'date-fns';
 import { EmbedCapacityView } from './EmbedCapacityView';
 import { EmbedShiftRosterView } from './EmbedShiftRosterView';
-import { EmbedLeaveCalendarView } from './EmbedLeaveCalendarView';
+import { EmbedLeaveTimelineView } from './EmbedLeaveTimelineView';
 import { EmbedOfficeHeadcountView } from './EmbedOfficeHeadcountView';
 import { EmbedMemberScheduleView } from './EmbedMemberScheduleView';
 import { cn } from '@/lib/utils';
@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils';
 const TAB_LABELS: Record<string, string> = {
   capacity_planner: 'Kapacitás',
   shift_roster:     'Beosztás',
-  leave_calendar:   'Távollétek',
+  leave_calendar:   'Naptár',
   office_headcount: 'Létszám',
   member_schedule:  'Menetrend',
 };
@@ -94,7 +94,7 @@ export function EmbedMultiView({ token, views, officeFilter, initialFrom, member
           <EmbedShiftRosterView token={token} officeFilter={officeFilter} initialFrom={initialFrom} />
         )}
         {activeView === 'leave_calendar' && (
-          <EmbedLeaveCalendarView token={token} officeFilter={officeFilter} initialFrom={initialFrom} />
+          <EmbedLeaveTimelineView token={token} officeFilter={officeFilter} initialFrom={initialFrom} />
         )}
         {activeView === 'office_headcount' && (
           <EmbedOfficeHeadcountView token={token} officeFilter={officeFilter} initialFrom={initialFrom} />
