@@ -607,6 +607,44 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
         )}
       </div>
       <WriteSheet />
+
+      {/* Intelligens beosztás varázsló — fills all gaps for an office across the visible range */}
+      <Sheet open={!!wizardOffice} onOpenChange={(o) => { if (!o && !wizardRunning) setWizardOffice(null); }}>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto p-5">
+          {wizardOffice && (
+            <>
+              <SheetHeader className="text-left">
+                <SheetTitle className="text-lg font-bold flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-violet-600" />
+                  Intelligens beosztás varázsló
+                </SheetTitle>
+                <SheetDescription className="text-sm">
+                  <span className="font-semibold text-foreground">{wizardOffice.name}</span>
+                  {wizardOffice.city && <span className="text-muted-foreground"> ({wizardOffice.city})</span>}
+                </SheetDescription>
+              </SheetHeader>
+              <div className="mt-4 space-y-3 text-sm">
+                <p className="text-muted-foreground">
+                  Az algoritmus figyelembe veszi a szabadságokat, ünnepeket, blokkolt napokat, dupla beosztást, telephely-prioritást és pozíció-egyezést.
+                </p>
+                <div className="rounded-md border bg-muted/30 p-3 space-y-1 text-xs">
+                  <div className="flex justify-between"><span className="text-muted-foreground">Időszak:</span><span className="font-medium">{format(days[0], 'yyyy. MM. dd.')} — {format(days[days.length - 1], 'yyyy. MM. dd.')}</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Szabályok:</span><span className="font-medium">{(data?.coverage_rules ?? []).filter(r => r.office_id === wizardOffice.id).length} db</span></div>
+                  <div className="flex justify-between"><span className="text-muted-foreground">Optimalizáció:</span><span className="font-medium">Pozíció-egyezés elsőként</span></div>
+                </div>
+                <Button
+                  className="w-full bg-violet-600 hover:bg-violet-700 text-white"
+                  disabled={wizardRunning}
+                  onClick={() => runOfficeWizard(wizardOffice)}
+                >
+                  {wizardRunning ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generálás…</> : <><Sparkles className="h-4 w-4 mr-2" /> Javaslat generálása</>}
+                </Button>
+                <Button variant="ghost" className="w-full" disabled={wizardRunning} onClick={() => setWizardOffice(null)}>Mégse</Button>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
