@@ -15,8 +15,8 @@ Brings the guest-embed experience to parity with the native Effectime UI on two 
 - **`EmbedMemberScheduleView.tsx`** — filters `leave_requests` to `status === 'approved'` (the RPC now also returns pending), preserving its confirmed-absence behaviour.
 - **Removed** `src/components/embed/EmbedLeaveCalendarView.tsx` (superseded weekly grid).
 
-### Backend (migration — needs deploy)
-- `supabase/migrations/20260619120000_v3_50_0_embed_calendar_wizard_enrichment.sql` — `CREATE OR REPLACE get_embed_view_data` (additive): members gain `team`, `city`, `weekly_capacity_hours`, `base_working_hours`, `skills[]`, `site_priorities[]`; `leave_requests` gain `leave_type` + `status` (now approved **and** pending); new `leave_types[]` and `skills[]` lists for filter options. SECURITY DEFINER + token gating unchanged; `GRANT EXECUTE … TO anon` re-applied.
+### Backend (migration — deployed 2026-06-19 to project `oezlzzmzzvbvinuysxaz`)
+- `supabase/migrations/20260619120000_v3_50_0_embed_calendar_wizard_enrichment.sql` — `CREATE OR REPLACE get_embed_view_data` (additive): members gain `team`, `city`, `weekly_capacity_hours`, `base_working_hours`, `skills[]`, `site_priorities[]`; `leave_requests` gain `leave_type` + `status` (now approved **and** pending); new `leave_types[]` and `skills[]` lists for filter options. SECURITY DEFINER + token gating unchanged; `GRANT EXECUTE … TO anon` re-applied. Verified end-to-end against workspace `22ad500a-…` (25 members, 4 leave types, 12 skills, leaves with type+status incl. pending).
 
 ### Localization (non-negotiable)
 - Added 6 `timeline_view` keys that were referenced by the native calendar but **missing from every locale** (rendered as the raw key `timeline_view.legend_sick` in the legend — visible bug): `legend_sick`, `status_cancelled`, `priority_reserve`, `util_under`, `assign_unassigned`, `assign_assigned` — added to all 8 locales (`en, hu, de, at, cs, sk, pl, ro`). This also fixes the native calendar.
