@@ -140,17 +140,24 @@
 
   class EffectimeEmbed extends HTMLElement {
     static get observedAttributes() {
-      return ['token', 'views', 'height', 'lang', 'label'];
+      return ['token', 'views', 'height', 'lang', 'label', 'office', 'member', 'mode'];
     }
 
     connectedCallback() { this._render(); }
     attributeChangedCallback() { if (this.shadowRoot) this._render(); }
 
     _buildSrc() {
-      const token = this.getAttribute('token') || '';
-      const views = this.getAttribute('views') || '';
-      const lang  = this.getAttribute('lang')  || 'hu';
+      const token  = this.getAttribute('token') || '';
+      const views  = this.getAttribute('views') || '';
+      const lang   = this.getAttribute('lang')  || 'hu';
+      const office = this.getAttribute('office') || '';
+      const member = this.getAttribute('member') || '';
+      const mode   = this.getAttribute('mode')   || '';
+      // Always use /embed/multi — handles single and multi-view alike, with full UI parity.
       const params = new URLSearchParams({ token, views, lang });
+      if (office) params.set('office', office);
+      if (member) params.set('member', member);
+      if (mode && mode !== 'weekly') params.set('mode', mode);
       return `${BASE_URL}/#/embed/multi?${params}`;
     }
 
