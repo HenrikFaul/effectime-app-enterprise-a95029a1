@@ -119,7 +119,6 @@ export function EmbedLeaveTimelineView({ token, officeFilter, initialFrom }: Emb
 
   const members = useMemo(() => data?.members ?? [], [data]);
   const offices = useMemo(() => data?.offices ?? [], [data]);
-  const leaveTypes = useMemo(() => data?.leave_types ?? [], [data]);
   const skills = useMemo(() => data?.skills ?? [], [data]);
   const holidaySet = useMemo(() => new Set(data?.holidays ?? []), [data]);
   const blockedSet = useMemo(() => new Set(data?.blocked_dates ?? []), [data]);
@@ -138,7 +137,14 @@ export function EmbedLeaveTimelineView({ token, officeFilter, initialFrom }: Emb
       office: offices.map(o => ({ value: o.id, label: o.name })),
       team: teams.map(x => ({ value: x, label: x })),
       business_role: roles.map(r => ({ value: r, label: r })),
-      leave_type: leaveTypes.map(l => ({ value: l.id, label: l.name })),
+      // leave_requests.leave_type is the public.leave_type ENUM — the filter options MUST be
+      // those enum keys (not enterprise_leave_types UUIDs), or no leave ever matches the filter.
+      leave_type: [
+        { value: 'vacation', label: t('timeline_view.legend_vacation') },
+        { value: 'sick_leave', label: t('timeline_view.legend_sick') },
+        { value: 'unpaid_leave', label: t('timeline_view.legend_unpaid') },
+        { value: 'other', label: t('timeline_view.legend_other') },
+      ],
       status: [
         { value: 'approved', label: t('timeline_view.status_approved') },
         { value: 'pending', label: t('timeline_view.status_pending') },
@@ -152,7 +158,7 @@ export function EmbedLeaveTimelineView({ token, officeFilter, initialFrom }: Emb
       assignment_state: [],
       capacity_band: [],
     };
-  }, [members, offices, leaveTypes, skills, t]);
+  }, [members, offices, skills, t]);
 
   const visibleMembers = useMemo(() => {
     return members.filter(m => {
@@ -170,16 +176,13 @@ export function EmbedLeaveTimelineView({ token, officeFilter, initialFrom }: Emb
     const map = new Map<string, LeaveCell[]>();
     (data?.leave_requests ?? []).forEach(l => {
       if (filters.status.length > 0 && !filters.status.includes(l.status)) return;
-      if (filters.leave_type.length > 0) {
-        const matchedById = filters.leave_type.includes(l.leave_type);
-        const matchedByName = leaveTypes.some(lt => filters.leave_type.includes(lt.id) && lt.name === l.leave_type);
-        if (!matchedById && !matchedByName) return;
-      }
+      // Filter values are the leave_type enum keys, matching l.leave_type directly.
+      if (filters.leave_type.length > 0 && !filters.leave_type.includes(l.leave_type)) return;
       if (!map.has(l.user_id)) map.set(l.user_id, []);
       map.get(l.user_id)!.push(l);
     });
     return map;
-  }, [data, filters, leaveTypes]);
+  }, [data, filters]);
 
   const cellStatus = (userId: string, day: Date): { kind: 'leave' | 'holiday' | 'weekend' | 'work'; leave?: LeaveCell } => {
     const dStr = format(day, 'yyyy-MM-dd');

@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Check, ChevronLeft, ChevronRight, Plus, X } from 'lucide-react';
@@ -53,7 +54,12 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
   const [data, setData]       = useState<EmbedData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState<string | null>(null);
-  const [saving, setSaving]   = useState(false);
+  // Per-cell in-flight keys (`${user_id}::${date}` for assign, shift id for remove) so a
+  // single click only blocks its own cell, never the whole roster.
+  const [savingKeys, setSavingKeys] = useState<Set<string>>(new Set());
+  const loadId = useRef(0);
+  // Bumped per write so a stale silent reload can't clobber a newer optimistic change.
+  const writeSeq = useRef(0);
 
   const days = useMemo(() =>
     eachDayOfInterval({ start: weekStart, end: endOfWeek(weekStart, { weekStartsOn: 1 }) }),
@@ -63,15 +69,21 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
   const from = format(days[0], 'yyyy-MM-dd');
   const to   = format(days[days.length - 1], 'yyyy-MM-dd');
 
-  const load = () => {
-    setLoading(true);
+  // `silent: true` (post-write) skips the loading skeleton so the roster reconciles
+  // in place against server truth — no flicker between optimistic state and the refetch.
+  const load = (opts?: { silent?: boolean }) => {
+    const id = ++loadId.current;
+    const wseq = writeSeq.current;
+    if (!opts?.silent) setLoading(true);
     setError(null);
     (supabase as any)
       .rpc('get_embed_view_data', { _token: token, _view: 'shift_roster', _from_date: from, _to_date: to })
       .then(({ data: result, error: err }: { data: EmbedData | null; error: { message: string } | null }) => {
-        if (err) { setError(err.message); setLoading(false); return; }
+        if (id !== loadId.current) return;
+        if (opts?.silent && writeSeq.current !== wseq) return; // a newer write superseded this reload
+        if (err) { setError(err.message); if (!opts?.silent) setLoading(false); return; }
         setData(result);
-        setLoading(false);
+        if (!opts?.silent) setLoading(false);
       });
   };
 
@@ -119,7 +131,17 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
   }, [data]);
 
   const handleAssign = async (member: Member, officeId: string, isoDate: string) => {
-    setSaving(true);
+    const key = `${member.user_id}::${isoDate}`;
+    writeSeq.current++;
+    // Optimistic: embed_assign_shift upserts on (user, date) → replace any same-day shift.
+    setData(prev => prev ? {
+      ...prev,
+      shift_assignments: [
+        ...prev.shift_assignments.filter(s => !(s.user_id === member.user_id && s.shift_date === isoDate)),
+        { id: `tmp:${key}`, user_id: member.user_id, office_id: officeId, business_role: member.business_role ?? null, shift_date: isoDate },
+      ],
+    } : prev);
+    setSavingKeys(p => new Set(p).add(key));
     const { error: err } = await (supabase as any).rpc('embed_assign_shift', {
       _token: token,
       _user_id: member.user_id,
@@ -128,17 +150,20 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
       _shift_date: isoDate,
       _skill_id: null,
     });
-    setSaving(false);
-    if (err) { console.error('embed_assign_shift error:', err.message); return; }
-    load();
+    setSavingKeys(p => { const n = new Set(p); n.delete(key); return n; });
+    if (err) { toast.error('Hiba a beosztásnál: ' + err.message); load({ silent: true }); return; }
+    load({ silent: true });
   };
 
   const handleRemove = async (shiftId: string) => {
-    setSaving(true);
+    if (shiftId.startsWith('tmp:')) return; // optimistic placeholder — no server row to delete
+    writeSeq.current++;
+    setData(prev => prev ? { ...prev, shift_assignments: prev.shift_assignments.filter(s => s.id !== shiftId) } : prev);
+    setSavingKeys(p => new Set(p).add(shiftId));
     const { error: err } = await (supabase as any).rpc('embed_remove_shift', { _token: token, _assignment_id: shiftId });
-    setSaving(false);
-    if (err) { console.error('embed_remove_shift error:', err.message); return; }
-    load();
+    setSavingKeys(p => { const n = new Set(p); n.delete(shiftId); return n; });
+    if (err) { toast.error('Hiba a törlésnél: ' + err.message); load({ silent: true }); return; }
+    load({ silent: true });
   };
 
   if (error) return (
@@ -164,7 +189,7 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
           onClick={() => setWeekStart(w => addWeeks(w, 1))}>
           <ChevronRight className="h-4 w-4" />
         </Button>
-        {(loading || saving) && <span className="text-[10px] text-muted-foreground animate-pulse ml-1">…</span>}
+        {(loading || savingKeys.size > 0) && <span className="text-[10px] text-muted-foreground animate-pulse ml-1">…</span>}
         {canWrite && (
           <Badge variant="outline" className="text-[9px] py-0 border-primary/40 text-primary font-semibold">
             ✏ szerkesztés
@@ -272,7 +297,7 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
                                 </span>
                                 {canWrite && (
                                   <button
-                                    disabled={saving}
+                                    disabled={savingKeys.has(shift.id) || shift.id.startsWith('tmp:')}
                                     onClick={() => handleRemove(shift.id)}
                                     className="h-4 w-4 flex items-center justify-center rounded-full text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-30"
                                   >
@@ -282,7 +307,7 @@ export function EmbedShiftRosterView({ token, officeFilter, initialFrom }: Embed
                               </div>
                             ) : canWrite ? (
                               <button
-                                disabled={saving}
+                                disabled={savingKeys.has(`${member.user_id}::${iso}`)}
                                 onClick={() => handleAssign(member, office.id, iso)}
                                 className="h-6 w-6 mx-auto flex items-center justify-center rounded-full text-muted-foreground/30 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-colors disabled:opacity-30"
                               >

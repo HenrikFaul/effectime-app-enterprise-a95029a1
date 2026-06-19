@@ -64,7 +64,7 @@ interface EmbedMemberRow {
 interface EmbedData {
   coverage_rules: CoverageRule[];
   members: EmbedMemberRow[];
-  shift_assignments: { user_id: string; office_id: string; shift_date: string }[];
+  shift_assignments: { user_id: string; office_id: string; shift_date: string; business_role?: string | null; skill_id?: string | null }[];
   holidays: string[];
   blocked_dates: string[];
   leave_requests: { user_id: string; start_date: string; end_date: string; status?: string }[];
@@ -244,15 +244,35 @@ export function EmbedSmartScheduleDialog({ open, onOpenChange, token, office, de
         for (const rule of selRules) {
           if (!ruleAppliesOn(rule, day)) continue;
 
-          const existingForRuleOffice = ctx.shifts.filter(sh => sh.office_id === office.id && sh.shift_date === iso);
-          const alreadyFilled = respectExistingShifts ? existingForRuleOffice.length : 0;
-          const need = Math.max(0, rule.min_headcount - alreadyFilled);
-          if (need === 0) continue;
-
           const orderedRoles = ruleRoles(rule);
           const skillIds = ruleSkillIds(rule);
+          // Count only shifts that satisfy THIS rule (role/skill match) — the same matcher the
+          // capacity grid uses — so a different rule's assignees at the same office aren't
+          // mistakenly counted as already filling this rule.
+          const existingForRule = respectExistingShifts
+            ? (rawData?.shift_assignments ?? []).filter(sh => {
+                if (sh.office_id !== office.id || sh.shift_date !== iso) return false;
+                const roleMatch = orderedRoles.length === 0 || (sh.business_role != null && orderedRoles.includes(sh.business_role));
+                const skillMatch = skillIds.length === 0 || (sh.skill_id != null && skillIds.includes(sh.skill_id));
+                if (orderedRoles.length > 0 && skillIds.length > 0) return roleMatch || skillMatch;
+                if (orderedRoles.length > 0) return roleMatch;
+                if (skillIds.length > 0) return skillMatch;
+                return true;
+              })
+            : [];
+          const need = Math.max(0, rule.min_headcount - existingForRule.length);
+          if (need === 0) continue;
+
+          // Remaining role slots = ordered roles minus those already covered by existing
+          // rule-matched shifts (greedy), so we fill the roles that are actually still open
+          // instead of indexing orderedRoles by a raw office-wide count.
+          const remainingRoles = [...orderedRoles];
+          for (const sh of existingForRule) {
+            const idx = remainingRoles.indexOf(sh.business_role ?? '');
+            if (idx >= 0) remainingRoles.splice(idx, 1);
+          }
           const slotRoles: (string | null)[] = [];
-          for (let i = 0; i < need; i++) slotRoles.push(orderedRoles[alreadyFilled + i] ?? null);
+          for (let i = 0; i < need; i++) slotRoles.push(remainingRoles[i] ?? null);
 
           for (const slotRole of slotRoles) {
             const used = usedPerDay.get(iso) || new Set<string>();
@@ -356,7 +376,7 @@ export function EmbedSmartScheduleDialog({ open, onOpenChange, token, office, de
         setSaveProgress(done);
       }
       if (failed > 0) {
-        toast.error(t('smart_batch.save_error_chunk', { from: plan.length - failed, to: plan.length, msg: firstError ?? '' }));
+        toast.error(t('smart_batch.save_failed_count', { failed, total: plan.length }) + (firstError ? `: ${firstError}` : ''));
       }
       if (failed < plan.length) {
         toast.success(t('smart_batch.schedules_finalized', { count: plan.length - failed }));

@@ -1,3 +1,96 @@
+## 2026-06-19 — v3.51.2 Native calendar: fix the leave-type filter (same enum-vs-UUID bug as the embed)
+
+**Lens:** Carry the embed v3.51.1 audit fix back to the native calendar it was ported from.
+
+### Scope
+The v3.51.1 audit found the embed calendar's "Szabadság típusa" filter was broken because it built options from `enterprise_leave_types` UUIDs while the data field `leave_requests.leave_type` is the `public.leave_type` ENUM — so selecting any type hid ALL leaves. That filter was a faithful port of the **native** `TimelineView`, which has the identical bug. This fixes the native side.
+
+### Fix
+- `src/components/enterprise/calendar/TimelineView.tsx` — the `leave_type` filter options are now the enum keys (`vacation`/`sick_leave`/`unpaid_leave`/`other`) with localized `timeline_view.legend_*` labels, and the match is a direct `filters.leave_type.includes(l.leave_type)` (dropped the UUID + name-fallback logic that never matched). Reuses the `legend_other` key added across all 8 locales in v3.51.1; no new strings.
+
+### Verification
+`tsc --noEmit` ✓ · `vite build` ✓. Frontend-only; colour tints (already enum-keyed) and all other filters unchanged.
+
+---
+
+## 2026-06-19 — v3.51.1 Embed: correctness fixes from a multi-agent adversarial audit
+
+**Lens:** Adversarial correctness audit (multi-agent) of the whole embed module + verification.
+
+### Scope
+After the v3.50.1 / v3.51.0 embed work, a 5-dimension multi-agent audit (each finding refuted by 3 independent verifiers) surfaced 13 confirmed defects; a second pass verified every fix clean. All fixes are frontend-only (no RPC/schema change).
+
+### Fixes
+- **Optimistic `tmp:` shift removal (major)** — `EmbedCapacityView`, `EmbedShiftRosterView`, `EmbedMemberScheduleView`. Removing a just-assigned (still-optimistic) shift sent a `tmp:` placeholder to `embed_remove_shift` (a `uuid` param) → 22P02 error toast. Remove handlers now early-return on `tmp:` ids and the remove control is disabled/hidden for un-persisted shifts.
+- **Munkatárs workload summary (major)** — counted shift-days before checking holiday/leave, contradicting the calendar cell (holiday/blocked > approved-leave > shift). Summary now mirrors the cell precedence, so the header chips and grid always agree (and the week hours/overtime figure is correct).
+- **Calendar leave-type filter (major)** — `EmbedLeaveTimelineView`. Options were `enterprise_leave_types` UUIDs but the data is the `leave_type` enum, so selecting any "Szabadság típusa" option hid ALL leaves. Options are now the enum keys (`vacation`/`sick_leave`/`unpaid_leave`/`other`) with localized labels; added `timeline_view.legend_other` to all 8 locales.
+- **Smart-schedule wizard coverage math (major)** — `EmbedSmartScheduleDialog`. Counted ALL office shifts (not rule-matched) as "already filled" → under-scheduled multi-rule offices, and indexed role slots by a raw count. Now counts only rule-matched (role/skill) existing shifts (same matcher as the grid) and fills the actually-open role slots greedily.
+- **Wizard finalize flicker (major)** — `onCompleted={load}` ran a non-silent reload (skeleton strobe). Now `onCompleted={() => load({ silent: true })}`.
+- **Write-clobber race (minor)** — a stale silent reload could overwrite a newer optimistic change during rapid editing. Added a `writeSeq` generation guard to capacity/roster/member so an in-flight refetch issued before a newer write is dropped.
+- **activeOffice on member switch (minor)** — the Munkatárs "Beosztás ide" office didn't re-default when switching member, risking a silent wrong-office assignment. Now re-defaults to the new member's primary while preserving a manual choice for the same member.
+- **Partial-failure toast (minor)** — the wizard rendered success/total as a misleading range. New localized `smart_batch.save_failed_count` ("{{failed}}/{{total}} …") in all 8 locales.
+
+### Known limitation (documented, not changed)
+Unchecking the wizard's "keep existing assignments" plans a full headcount of new members without removing prior assignees (it can only upsert, not delete) — the same limitation as the native dialog. Left as-is to avoid divergent half-behaviour.
+
+### Verification
+13/15 audit findings confirmed (2 correctly dismissed); fix-verification pass 4/4 clusters clean, 0 problems. `tsc --noEmit` ✓ · `vite build` ✓.
+
+---
+
+## 2026-06-19 — v3.51.0 Embed: remove redundant "Létszám" view + redesign "Menetrend" → "Munkatárs"
+
+**Lens:** Product/UX simplification + frontend.
+
+### Scope
+Acting on the customer's review of the embed tabs:
+1. **Removed the "Létszám" (office_headcount) view** — it was a read-only office-level roll-up of `assigned/required`, which the **Kapacitás** view already covers in more detail (per-rule) and with editing. Redundant.
+2. **Redesigned "Menetrend" (member_schedule) into "Munkatárs"** — the old flow gated behind a separate full-screen member picker and only showed one flat week, and its purpose was unclear. The aim (see & manage ONE person's schedule + workload) is now reached far more directly.
+
+### "Munkatárs" redesign (`EmbedMemberScheduleView.tsx`, full rewrite)
+- **Inline member switcher** in the header (dropdown) — switch person in one click; no separate picker step.
+- **Month calendar** (proper weeks grid) with a **Heti/Havi** toggle, prev/next + "Ma" — the whole period is visible at a glance instead of 7 flat cards.
+- **Workload summary** — scheduled days, leave days, and (week mode) hours-vs-weekly-capacity using the v3.50.0 enriched member data; flags overtime. Instantly shows under/over-booking.
+- **Office-aware assignment** — a "Beosztás ide: <telephely>" selector so it's explicit *where* a day is scheduled (the old version silently dumped into the primary office). Uses the same optimistic / no-flicker writes as the capacity panel (v3.50.1).
+- Tab relabelled **"Munkatárs"** (was the unclear "Menetrend").
+
+### Removals / wiring
+- Deleted `src/components/embed/EmbedOfficeHeadcountView.tsx`.
+- `EmbedManager.tsx`, `EmbedMultiView.tsx`, `EmbedPage.tsx` — dropped `office_headcount` from view lists/labels/routes.
+- `EmbedMultiView.tsx` — removed the member-picker gate (the view self-selects now); `member` is optional everywhere.
+- `EmbedPage.tsx` — `member_schedule` no longer hard-requires a `?member=` param.
+
+### Anti-regression
+- Frontend-only; no RPC/schema change. Existing tokens that still list `office_headcount` simply don't render that tab (the RPC continues to accept the view) — no breakage, no token migration.
+- `member_schedule` write path unchanged (`embed_assign_shift` / `embed_remove_shift`, server-side token + can_write + office-scope).
+- `tsc --noEmit` ✓ · `vite build` ✓.
+
+---
+
+## 2026-06-19 — v3.50.1 Embed: kill the assign-panel flicker (optimistic writes)
+
+**Lens:** Frontend UX / React rendering correctness.
+
+### Scope
+Fixes the jarring strobe the customer reported when assigning in the embed capacity "daily scheduling" side-panel: each click flashed the loading skeleton ("1‑2‑3" bars), the cell counts jumped, and the whole panel locked until the refetch landed. Now writes are instant and smooth.
+
+### Root causes (4)
+1. `handleAssign`/`handleRemove`/`handleSmartSuggest` called `load()` which set `loading=true` → the grid swapped to `<LoadingSkeleton/>` (the staggered bars) on every write.
+2. No optimistic update → counts only changed after the refetch, so they "jumped".
+3. A single global `saving` boolean disabled the *entire* panel during each RPC.
+4. `WriteSheet` was a component defined inside render and used as `<WriteSheet/>` → a new component type every render → the Radix `Sheet` **remounted** on every data change (re-running open animation).
+
+### Fix (`EmbedCapacityView.tsx`)
+- **Optimistic state**: assign/remove/suggest update `shift_assignments` locally first (mirroring the `embed_assign_shift` upsert-on-(user,date) semantics), so counts + slots update immediately.
+- **Silent refresh**: `load({ silent: true })` after writes skips the skeleton; the grid/panel reconcile in place against server truth.
+- **Per-key in-flight state**: `saving` boolean → `savingKeys: Set<string>` (user_id / shift id / suggest key) so only the clicked row spins; the rest of the panel stays usable.
+- **No remount**: render the panel via `{WriteSheet()}` (inline call, no hooks inside) instead of `<WriteSheet/>`, so the Sheet reconciles instead of remounting.
+
+### Verification
+`tsc --noEmit` ✓ · `vite build` ✓. Pure frontend; no RPC/schema change. Other embed views untouched.
+
+---
+
 ## 2026-06-19 — v3.50.0 Embed: smart-schedule wizard as modal + full calendar timeline
 
 **Lens:** Full-stack engineer + embed/SDK parity + localization steward.

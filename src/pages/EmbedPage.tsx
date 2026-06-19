@@ -2,7 +2,6 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { EmbedCapacityView } from '@/components/embed/EmbedCapacityView';
 import { EmbedShiftRosterView } from '@/components/embed/EmbedShiftRosterView';
 import { EmbedLeaveTimelineView } from '@/components/embed/EmbedLeaveTimelineView';
-import { EmbedOfficeHeadcountView } from '@/components/embed/EmbedOfficeHeadcountView';
 import { EmbedMemberScheduleView } from '@/components/embed/EmbedMemberScheduleView';
 import { EmbedMultiView } from '@/components/embed/EmbedMultiView';
 import { AlertTriangle } from 'lucide-react';
@@ -18,7 +17,7 @@ function EmbedShell({ children }: { children: React.ReactNode }) {
   );
 }
 
-const SINGLE_VIEWS = ['capacity_planner', 'shift_roster', 'leave_calendar', 'office_headcount', 'member_schedule'];
+const SINGLE_VIEWS = ['capacity_planner', 'shift_roster', 'leave_calendar', 'member_schedule'];
 
 export default function EmbedPage() {
   const { view } = useParams<{ view: string }>();
@@ -86,26 +85,9 @@ export default function EmbedPage() {
     );
   }
 
-  if (view === 'office_headcount') {
-    return (
-      <EmbedShell>
-        <EmbedOfficeHeadcountView token={token} officeFilter={office} initialFrom={from} />
-      </EmbedShell>
-    );
-  }
-
   if (view === 'member_schedule') {
-    if (!member) {
-      return (
-        <div className="flex items-center justify-center h-dvh text-sm text-muted-foreground">
-          <div className="text-center p-8">
-            <AlertTriangle className="h-8 w-8 mx-auto mb-2 opacity-60" />
-            <p className="font-semibold">Hiányzó <code>member</code> paraméter</p>
-            <p className="text-xs mt-1">Add meg a csapattag user_id-jét: <code>?member=…</code></p>
-          </div>
-        </div>
-      );
-    }
+    // `member` is now optional — the view has an inline member switcher and
+    // defaults to the first teammate when none is provided.
     return (
       <EmbedShell>
         <EmbedMemberScheduleView token={token} memberId={member} initialFrom={from} />

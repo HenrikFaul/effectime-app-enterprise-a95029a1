@@ -1377,3 +1377,50 @@ Tracked for a mass-fix migration in a future RLS hardening sprint.
 # list keys a component asks for, then confirm each exists in every locale
 rg -o "t\('timeline_view\.([a-z_]+)'" -r '$1' src/components/.../TimelineView.tsx | sort -u
 ```
+
+---
+
+## ➕ APPEND — 2026-06-19 Embed assign-panel flicker (v3.50.1)
+
+### [LESSON-REACT-001]: Never declare a component inside render and use it as `<Foo/>` — it remounts every render
+**Context**: `EmbedCapacityView` defined `const WriteSheet = () => (...)` in its body and rendered `<WriteSheet/>`.
+**Problem**: A function defined in render gets a NEW identity each render, so React treats `<WriteSheet/>` as a new component TYPE and unmounts+remounts the whole subtree on every parent render. For a Radix `Sheet`/`Dialog` that's open, this re-runs the open animation and flickers on every data refresh.
+**Fix**: Either hoist the component to module scope (pass props), or — if it only reads closures and uses NO hooks — render it by **calling** it inline: `{WriteSheet()}`. The returned elements reconcile in place (stable element types) instead of remounting. Do NOT call a function with hooks this way (hook order would leak into the parent).
+
+### [LESSON-EMBED-004]: Embed write panels must update optimistically + refresh silently, never reload-with-skeleton
+**Context**: Per-cell assign/remove in `EmbedCapacityView` (and the same pattern in `EmbedShiftRosterView` / `EmbedMemberScheduleView`).
+**Problem**: After each token-RPC write, the handler called `load()` which set `loading=true` → the grid swapped to the loading skeleton and the counts jumped when the refetch landed. Rapid clicks produced a strobe; a single global `saving` boolean also locked the entire panel.
+**Fix** (3 parts):
+1. **Optimistic state** — mutate the local `shift_assignments` array immediately, mirroring the server's upsert semantics (`embed_assign_shift` upserts on `(workspace_id, user_id, shift_date)`, so on assign drop any existing same-day shift for that user before adding).
+2. **Silent reconcile** — `load({ silent: true })` after writes: refetch without toggling `loading` (no skeleton); server truth replaces the optimistic temp rows in place. Keep the skeleton only for the initial load + range navigation.
+3. **Per-key in-flight set** — replace `saving: boolean` with `savingKeys: Set<string>` (user_id / shift id / action key) so only the clicked control spins.
+**Pattern**:
+```ts
+const load = useCallback((opts?: { silent?: boolean }) => {
+  const id = ++loadId.current;
+  if (!opts?.silent) setLoading(true);
+  rpc(...).then(({ data }) => { if (id === loadId.current) setData(data); if (!opts?.silent) setLoading(false); });
+}, [deps]);
+// write: setData(optimistic) → await rpc → load({ silent: true })
+```
+
+### [LESSON-EMBED-005]: Removing an embed view is frontend-only — don't touch tokens
+**Context**: Retiring the redundant `office_headcount` ("Létszám") embed view.
+**Problem**: Worry that existing tokens listing the view in `allowed_views` would break.
+**Fix**: The view registry is purely client-side (`ALL_VIEWS`/`TAB_LABELS` in `EmbedMultiView`, `SINGLE_VIEWS`/routes in `EmbedPage`, `ALL_VIEWS` in `EmbedManager`). `get_embed_view_data` returns the same payload regardless of `_view` and only checks the view is allowed — so a token still listing a removed view just renders no tab (multi-view filters `validViews` against `ALL_VIEWS`). No migration, no token edit, no RPC change needed to add OR remove a view.
+
+### [LESSON-EMBED-006]: Prefer an inline switcher over a parent "picker gate" for single-entity embed views
+**Context**: Redesigning the per-member schedule (old `member_schedule` gated behind a full-screen `MemberPicker` in `EmbedMultiView`).
+**Problem**: The two-step "pick a person → see their week" flow was confusing (the customer literally didn't understand the tab's purpose) and the parent owned selection state, complicating the multi-view.
+**Fix**: Make the leaf view self-contained: it fetches the full member list (already in the `get_embed_view_data` payload), defaults to the first member (or the optional `member` prop), and exposes an inline `<Select>` switcher in its own header. The parent (`EmbedMultiView`/`EmbedPage`) just renders it and passes an optional initial id — no picker gate, no shared selection state. Switching is local (no refetch) since all members' rows are already loaded for the period.
+
+### [LESSON-EMBED-007]: Optimistic rows need a synthetic id — guard every action that round-trips that id to the server
+**Context**: Optimistic assign creates a shift with id `tmp:<user>:<date>` before the server returns the real UUID (capacity/roster/member views).
+**Problem**: The DELETE RPC param `embed_remove_shift(_assignment_id uuid)` is typed `uuid`. If the user clicks remove on a still-optimistic row (before the silent reconcile swaps in the real id), PostgREST rejects the call with `22P02 invalid input syntax for type uuid` and the user sees a spurious error toast. The per-row disable was keyed on a DIFFERENT string than the tmp id, so it didn't gate the window.
+**Fix**: Any control/handler that sends an optimistic record's id to the server must guard it: early-return when `id.startsWith('tmp:')` AND disable/hide the control for tmp rows. More generally — a `tmp:` (or negative/sentinel) optimistic id must never reach a typed server param; gate or no-op until the reconcile assigns the real id.
+
+### [LESSON-EMBED-008]: Optimistic UIs need a write-generation guard, not just a load-id guard
+**Context**: Optimistic write → `await rpc` → `load({silent:true})` reconcile in capacity/roster/member.
+**Problem**: A `loadId` ref only dedupes loads against each other. It does NOT stop an EARLIER silent reload (whose server snapshot predates a newer optimistic write) from resolving and `setData()`-ing away the newer optimistic change — a visible flicker-out/in under rapid clicks or slow network.
+**Fix**: Add a `writeSeq` ref bumped at the start of every optimistic write; capture it when a load is issued and, for silent reloads, drop the result if `writeSeq.current !== captured`. The newest write's own reload carries the truth. Keep non-silent (initial/navigation) loads always-apply.
+**Also**: keep DERIVED summaries and the cells they summarize on the SAME precedence (e.g. holiday > leave > shift) — computing them with different orderings makes the header contradict the grid for the same day.
