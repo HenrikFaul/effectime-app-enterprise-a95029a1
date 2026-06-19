@@ -9,6 +9,9 @@
  *   height  — iframe magasság px-ben, alapértelmezett: 500
  *   lang    — nyelv, alapértelmezett: hu
  *   label   — fejléc felirat, alapértelmezett: "kapacitás & beosztás"
+ *   office  — opcionális telephely UUID szűrő
+ *   member  — opcionális user UUID (member_schedule nézethez kötelező)
+ *   mode    — capacity_planner: "weekly" | "monthly" (default: weekly)
  */
 (function () {
   'use strict';
