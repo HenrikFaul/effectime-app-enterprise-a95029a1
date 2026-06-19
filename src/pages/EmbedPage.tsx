@@ -1,7 +1,7 @@
 import { useParams, useSearchParams } from 'react-router-dom';
 import { EmbedCapacityView } from '@/components/embed/EmbedCapacityView';
 import { EmbedShiftRosterView } from '@/components/embed/EmbedShiftRosterView';
-import { EmbedLeaveCalendarView } from '@/components/embed/EmbedLeaveCalendarView';
+import { EmbedLeaveTimelineView } from '@/components/embed/EmbedLeaveTimelineView';
 import { EmbedOfficeHeadcountView } from '@/components/embed/EmbedOfficeHeadcountView';
 import { EmbedMemberScheduleView } from '@/components/embed/EmbedMemberScheduleView';
 import { EmbedMultiView } from '@/components/embed/EmbedMultiView';
@@ -81,7 +81,7 @@ export default function EmbedPage() {
   if (view === 'leave_calendar') {
     return (
       <EmbedShell>
-        <EmbedLeaveCalendarView token={token} officeFilter={office} initialFrom={from} />
+        <EmbedLeaveTimelineView token={token} officeFilter={office} initialFrom={from} />
       </EmbedShell>
     );
   }

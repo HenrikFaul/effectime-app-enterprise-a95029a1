@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { AlertTriangle, Building2, CheckCircle2, ChevronLeft, ChevronRight, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { EffectimeLogo } from '@/components/EffectimeLogo';
+import { EmbedSmartScheduleDialog } from './EmbedSmartScheduleDialog';
 import {
   addMonths, addWeeks, eachDayOfInterval, endOfMonth, endOfWeek,
   format, isWeekend, startOfMonth, startOfWeek, subMonths, subWeeks,
@@ -95,7 +96,6 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
   const [saving, setSaving]     = useState(false);
   const [selected, setSelected] = useState<{ ruleId: string; date: string } | null>(null);
   const [wizardOffice, setWizardOffice] = useState<Office | null>(null);
-  const [wizardRunning, setWizardRunning] = useState(false);
   const loadId = useRef(0);
 
   const days = useMemo(() => {
@@ -210,49 +210,6 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
     toast.success(`${pick.length} tag intelligensen beosztva`);
     load();
   };
-
-  // "Intelligens beosztás varázsló" — fills every gap day for every rule of the office across visible range.
-  const runOfficeWizard = async (office: Office) => {
-    setWizardRunning(true);
-    let totalAssigned = 0;
-    const officeRules = (data?.coverage_rules ?? []).filter(r => r.office_id === office.id);
-    for (const rule of officeRules) {
-      for (const d of days) {
-        const iso = format(d, 'yyyy-MM-dd');
-        const dow = d.getDay();
-        if (!ruleAppliesOn(rule, iso, dow)) continue;
-        const assigned = shiftsFor(rule, iso, shifts);
-        const need = rule.min_headcount - assigned.length;
-        if (need <= 0) continue;
-        const assignedIds = new Set(assigned.map(s => s.user_id));
-        const roles = ruleRoles(rule);
-        const pool = (data?.members ?? []).filter(m => !assignedIds.has(m.user_id));
-        const ranked = [...pool].sort((a, b) => {
-          const am = roles.length === 0 || (a.business_role != null && roles.includes(a.business_role)) ? 0 : 1;
-          const bm = roles.length === 0 || (b.business_role != null && roles.includes(b.business_role)) ? 0 : 1;
-          if (am !== bm) return am - bm;
-          const ao = a.office_id === rule.office_id ? 0 : 1;
-          const bo = b.office_id === rule.office_id ? 0 : 1;
-          return ao - bo;
-        });
-        const pick = ranked.slice(0, need);
-        for (const m of pick) {
-          await (supabase as any).rpc('embed_assign_shift', {
-            _token: token, _user_id: m.user_id, _office_id: rule.office_id,
-            _business_role: roles[0] ?? m.business_role ?? null,
-            _shift_date: iso, _skill_id: ruleSkillIds(rule)[0] ?? null,
-          });
-          totalAssigned++;
-        }
-      }
-    }
-    setWizardRunning(false);
-    setWizardOffice(null);
-    toast.success(`Varázsló: ${totalAssigned} beosztás generálva (${office.name})`);
-    load();
-  };
-
-
 
   const WriteSheet = () => {
     const open = !!selected && canWrite;
@@ -608,43 +565,19 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
       </div>
       <WriteSheet />
 
-      {/* Intelligens beosztás varázsló — fills all gaps for an office across the visible range */}
-      <Sheet open={!!wizardOffice} onOpenChange={(o) => { if (!o && !wizardRunning) setWizardOffice(null); }}>
-        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto p-5">
-          {wizardOffice && (
-            <>
-              <SheetHeader className="text-left">
-                <SheetTitle className="text-lg font-bold flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-violet-600" />
-                  Intelligens beosztás varázsló
-                </SheetTitle>
-                <SheetDescription className="text-sm">
-                  <span className="font-semibold text-foreground">{wizardOffice.name}</span>
-                  {wizardOffice.city && <span className="text-muted-foreground"> ({wizardOffice.city})</span>}
-                </SheetDescription>
-              </SheetHeader>
-              <div className="mt-4 space-y-3 text-sm">
-                <p className="text-muted-foreground">
-                  Az algoritmus figyelembe veszi a szabadságokat, ünnepeket, blokkolt napokat, dupla beosztást, telephely-prioritást és pozíció-egyezést.
-                </p>
-                <div className="rounded-md border bg-muted/30 p-3 space-y-1 text-xs">
-                  <div className="flex justify-between"><span className="text-muted-foreground">Időszak:</span><span className="font-medium">{format(days[0], 'yyyy. MM. dd.')} — {format(days[days.length - 1], 'yyyy. MM. dd.')}</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Szabályok:</span><span className="font-medium">{(data?.coverage_rules ?? []).filter(r => r.office_id === wizardOffice.id).length} db</span></div>
-                  <div className="flex justify-between"><span className="text-muted-foreground">Optimalizáció:</span><span className="font-medium">Pozíció-egyezés elsőként</span></div>
-                </div>
-                <Button
-                  className="w-full bg-violet-600 hover:bg-violet-700 text-white"
-                  disabled={wizardRunning}
-                  onClick={() => runOfficeWizard(wizardOffice)}
-                >
-                  {wizardRunning ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Generálás…</> : <><Sparkles className="h-4 w-4 mr-2" /> Javaslat generálása</>}
-                </Button>
-                <Button variant="ghost" className="w-full" disabled={wizardRunning} onClick={() => setWizardOffice(null)}>Mégse</Button>
-              </div>
-            </>
-          )}
-        </SheetContent>
-      </Sheet>
+      {/* Intelligens beosztás varázsló — centered modal with the full settings set,
+          identical to the native SmartBatchScheduleDialog (pops up, not a side-sheet). */}
+      {wizardOffice && (
+        <EmbedSmartScheduleDialog
+          open={!!wizardOffice}
+          onOpenChange={(o) => { if (!o) setWizardOffice(null); }}
+          token={token}
+          office={wizardOffice}
+          defaultStart={days[0]}
+          defaultEnd={days[days.length - 1]}
+          onCompleted={load}
+        />
+      )}
     </div>
   );
 }

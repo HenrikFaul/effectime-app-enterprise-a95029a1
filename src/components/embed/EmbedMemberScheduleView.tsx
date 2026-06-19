@@ -19,7 +19,7 @@ interface Shift {
   business_role: string | null; shift_date: string;
 }
 interface LeaveRequest {
-  user_id: string; start_date: string; end_date: string;
+  user_id: string; start_date: string; end_date: string; status?: string;
 }
 interface EmbedData {
   can_write: boolean;
@@ -88,7 +88,8 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
   const leaveSet = useMemo(() => {
     const s = new Set<string>();
     (data?.leave_requests ?? [])
-      .filter(lr => lr.user_id === memberId)
+      // RPC now also returns pending leaves; the member schedule shows confirmed absences only.
+      .filter(lr => lr.user_id === memberId && (lr.status == null || lr.status === 'approved'))
       .forEach(lr => {
         let d = new Date(lr.start_date + 'T00:00:00');
         const end = new Date(lr.end_date + 'T00:00:00');
