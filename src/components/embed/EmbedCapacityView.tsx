@@ -531,6 +531,17 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
                         {office.city && (
                           <span className="text-[10px] text-muted-foreground">({office.city})</span>
                         )}
+                        {canWrite && (
+                          <button
+                            type="button"
+                            onClick={() => setWizardOffice(office)}
+                            title="Intelligens beosztás varázsló"
+                            aria-label="Intelligens beosztás varázsló"
+                            className="inline-flex items-center justify-center h-6 w-6 rounded-md bg-violet-100 hover:bg-violet-200 text-violet-700 dark:bg-violet-950/40 dark:hover:bg-violet-900/60 dark:text-violet-300 border border-violet-300 dark:border-violet-700 transition-colors shrink-0"
+                          >
+                            <Sparkles className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>,
