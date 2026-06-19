@@ -94,6 +94,8 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
   const [error, setError]       = useState<string | null>(null);
   const [saving, setSaving]     = useState(false);
   const [selected, setSelected] = useState<{ ruleId: string; date: string } | null>(null);
+  const [wizardOffice, setWizardOffice] = useState<Office | null>(null);
+  const [wizardRunning, setWizardRunning] = useState(false);
   const loadId = useRef(0);
 
   const days = useMemo(() => {
