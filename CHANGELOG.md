@@ -1,3 +1,27 @@
+## 2026-06-19 — v3.50.1 Embed: kill the assign-panel flicker (optimistic writes)
+
+**Lens:** Frontend UX / React rendering correctness.
+
+### Scope
+Fixes the jarring strobe the customer reported when assigning in the embed capacity "daily scheduling" side-panel: each click flashed the loading skeleton ("1‑2‑3" bars), the cell counts jumped, and the whole panel locked until the refetch landed. Now writes are instant and smooth.
+
+### Root causes (4)
+1. `handleAssign`/`handleRemove`/`handleSmartSuggest` called `load()` which set `loading=true` → the grid swapped to `<LoadingSkeleton/>` (the staggered bars) on every write.
+2. No optimistic update → counts only changed after the refetch, so they "jumped".
+3. A single global `saving` boolean disabled the *entire* panel during each RPC.
+4. `WriteSheet` was a component defined inside render and used as `<WriteSheet/>` → a new component type every render → the Radix `Sheet` **remounted** on every data change (re-running open animation).
+
+### Fix (`EmbedCapacityView.tsx`)
+- **Optimistic state**: assign/remove/suggest update `shift_assignments` locally first (mirroring the `embed_assign_shift` upsert-on-(user,date) semantics), so counts + slots update immediately.
+- **Silent refresh**: `load({ silent: true })` after writes skips the skeleton; the grid/panel reconcile in place against server truth.
+- **Per-key in-flight state**: `saving` boolean → `savingKeys: Set<string>` (user_id / shift id / suggest key) so only the clicked row spins; the rest of the panel stays usable.
+- **No remount**: render the panel via `{WriteSheet()}` (inline call, no hooks inside) instead of `<WriteSheet/>`, so the Sheet reconciles instead of remounting.
+
+### Verification
+`tsc --noEmit` ✓ · `vite build` ✓. Pure frontend; no RPC/schema change. Other embed views untouched.
+
+---
+
 ## 2026-06-19 — v3.50.0 Embed: smart-schedule wizard as modal + full calendar timeline
 
 **Lens:** Full-stack engineer + embed/SDK parity + localization steward.

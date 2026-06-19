@@ -1377,3 +1377,29 @@ Tracked for a mass-fix migration in a future RLS hardening sprint.
 # list keys a component asks for, then confirm each exists in every locale
 rg -o "t\('timeline_view\.([a-z_]+)'" -r '$1' src/components/.../TimelineView.tsx | sort -u
 ```
+
+---
+
+## ➕ APPEND — 2026-06-19 Embed assign-panel flicker (v3.50.1)
+
+### [LESSON-REACT-001]: Never declare a component inside render and use it as `<Foo/>` — it remounts every render
+**Context**: `EmbedCapacityView` defined `const WriteSheet = () => (...)` in its body and rendered `<WriteSheet/>`.
+**Problem**: A function defined in render gets a NEW identity each render, so React treats `<WriteSheet/>` as a new component TYPE and unmounts+remounts the whole subtree on every parent render. For a Radix `Sheet`/`Dialog` that's open, this re-runs the open animation and flickers on every data refresh.
+**Fix**: Either hoist the component to module scope (pass props), or — if it only reads closures and uses NO hooks — render it by **calling** it inline: `{WriteSheet()}`. The returned elements reconcile in place (stable element types) instead of remounting. Do NOT call a function with hooks this way (hook order would leak into the parent).
+
+### [LESSON-EMBED-004]: Embed write panels must update optimistically + refresh silently, never reload-with-skeleton
+**Context**: Per-cell assign/remove in `EmbedCapacityView` (and the same pattern in `EmbedShiftRosterView` / `EmbedMemberScheduleView`).
+**Problem**: After each token-RPC write, the handler called `load()` which set `loading=true` → the grid swapped to the loading skeleton and the counts jumped when the refetch landed. Rapid clicks produced a strobe; a single global `saving` boolean also locked the entire panel.
+**Fix** (3 parts):
+1. **Optimistic state** — mutate the local `shift_assignments` array immediately, mirroring the server's upsert semantics (`embed_assign_shift` upserts on `(workspace_id, user_id, shift_date)`, so on assign drop any existing same-day shift for that user before adding).
+2. **Silent reconcile** — `load({ silent: true })` after writes: refetch without toggling `loading` (no skeleton); server truth replaces the optimistic temp rows in place. Keep the skeleton only for the initial load + range navigation.
+3. **Per-key in-flight set** — replace `saving: boolean` with `savingKeys: Set<string>` (user_id / shift id / action key) so only the clicked control spins.
+**Pattern**:
+```ts
+const load = useCallback((opts?: { silent?: boolean }) => {
+  const id = ++loadId.current;
+  if (!opts?.silent) setLoading(true);
+  rpc(...).then(({ data }) => { if (id === loadId.current) setData(data); if (!opts?.silent) setLoading(false); });
+}, [deps]);
+// write: setData(optimistic) → await rpc → load({ silent: true })
+```
