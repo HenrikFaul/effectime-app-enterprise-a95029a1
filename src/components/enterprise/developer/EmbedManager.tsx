@@ -175,6 +175,7 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
   const [builderMember, setBuilderMember] = useState<string>('');
   const [builderHeight, setBuilderHeight] = useState<string>('500');
   const [builderCopyStyle, setBuilderCopyStyle] = useState<boolean>(false);
+  const [builderFormat, setBuilderFormat] = useState<'web_component' | 'iframe'>('web_component');
 
   // Copy states
   const [copied, setCopied] = useState<string | null>(null);
