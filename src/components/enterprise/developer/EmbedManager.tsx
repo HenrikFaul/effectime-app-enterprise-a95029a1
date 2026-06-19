@@ -67,12 +67,39 @@ function buildIframeSnippet(url: string, height = 500): string {
 }
 
 /**
+ * Web-Component snippet — the recommended, smallest, most powerful format.
+ * The single <effectime-embed> tag + <script> handles ALL capabilities (per-token):
+ *   - any combination of allowed views (tabs auto-built)
+ *   - read OR write permissions from the token (server-enforced)
+ *   - native Effectime UI inside (purple wizard, smart suggest, calendar filters, etc.)
+ *   - responsive container, live-data indicator, branded chrome
+ */
+function buildWebComponentSnippet(opts: {
+  token: string;
+  views: string[];
+  height: number;
+  office?: string;
+  member?: string;
+  mode?: string;
+  origin: string;
+}): string {
+  const attrs = [
+    `  token="${opts.token}"`,
+    `  views="${opts.views.join(',')}"`,
+    `  height="${opts.height}"`,
+  ];
+  if (opts.office) attrs.push(`  office="${opts.office}"`);
+  if (opts.member) attrs.push(`  member="${opts.member}"`);
+  if (opts.mode && opts.mode !== 'weekly') attrs.push(`  mode="${opts.mode}"`);
+  return `<!-- Effectime embed (Web Component) -->
+<effectime-embed
+${attrs.join('\n')}
+></effectime-embed>
+<script src="${opts.origin}/embed.js" defer></script>`;
+}
+
+/**
  * CopyStyle: a self-contained, fully responsive Effectime-branded shell.
- * - Uses a single scoped <style> block (unique class) for media queries — no global leak.
- * - Pure HTML/CSS, no JS, no external assets → renders identically on any host page.
- * - Mobile: stretches to viewport, reduces chrome, switches header to compact layout.
- * - The iframe content itself (capacity planner, side-sheet, smart assignment) is delivered
- *   live by Effectime — the snippet only frames it so the surrounding page feels native.
  */
 function buildStyledSnippet(url: string, height = 500): string {
   const uid = 'et' + Math.random().toString(36).slice(2, 9);
@@ -148,6 +175,7 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
   const [builderMember, setBuilderMember] = useState<string>('');
   const [builderHeight, setBuilderHeight] = useState<string>('500');
   const [builderCopyStyle, setBuilderCopyStyle] = useState<boolean>(false);
+  const [builderFormat, setBuilderFormat] = useState<'web_component' | 'iframe'>('web_component');
 
   // Copy states
   const [copied, setCopied] = useState<string | null>(null);
@@ -230,11 +258,29 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
       member:  builderView === 'member_schedule' ? builderMember || undefined : undefined,
     });
   })();
-  const builderSnippet = builderUrl
-    ? (builderCopyStyle
-        ? buildStyledSnippet(builderUrl, Number(builderHeight) || 500)
-        : buildIframeSnippet(builderUrl, Number(builderHeight) || 500))
-    : '';
+  const builderSnippet = (() => {
+    if (!builderToken?.token) return '';
+    if (builderFormat === 'web_component') {
+      // Web Component covers any combination of allowed views via the views="" attr.
+      const views = builderView === '__multi__'
+        ? (builderToken.allowed_views ?? [])
+        : [builderView];
+      return buildWebComponentSnippet({
+        token:  builderToken.token,
+        views,
+        height: Number(builderHeight) || 500,
+        office: builderOffice || undefined,
+        member: (views.includes('member_schedule') || views.length > 1) ? (builderMember || undefined) : undefined,
+        mode:   views.includes('capacity_planner') ? (builderMode !== 'weekly' ? builderMode : undefined) : undefined,
+        origin: window.location.origin,
+      });
+    }
+    return builderUrl
+      ? (builderCopyStyle
+          ? buildStyledSnippet(builderUrl, Number(builderHeight) || 500)
+          : buildIframeSnippet(builderUrl, Number(builderHeight) || 500))
+      : '';
+  })();
 
   const openBuilder = (tok: EmbedToken) => {
     setBuilderToken(tok);
@@ -244,6 +290,7 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
     setBuilderMode('weekly');
     setBuilderHeight('500');
     setBuilderCopyStyle(false);
+    setBuilderFormat('web_component');
   };
 
   const viewLabel: Record<string, string> = {
@@ -551,24 +598,43 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
                 </div>
               </div>
 
-              {/* CopyStyle toggle — wraps iframe in Effectime-branded shell with inline styles */}
-              <div className="flex items-start gap-3 rounded-md border bg-gradient-to-br from-primary/5 to-transparent p-2.5">
-                <Switch
-                  id="copy-style"
-                  checked={builderCopyStyle}
-                  onCheckedChange={setBuilderCopyStyle}
-                  className="mt-0.5"
-                />
-                <div className="flex-1 min-w-0">
-                  <Label htmlFor="copy-style" className="flex items-center gap-1.5 font-medium cursor-pointer text-xs">
-                    <Palette className="h-3 w-3 text-primary" />
-                    {t('embed.copy_style_label')}
-                  </Label>
-                  <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
-                    {t('embed.copy_style_desc')}
-                  </p>
-                </div>
+              {/* Snippet format selector */}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Snippet formátum</Label>
+                <Select value={builderFormat} onValueChange={(v: 'web_component' | 'iframe') => setBuilderFormat(v)}>
+                  <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="web_component" className="text-xs">◈ Web Component (ajánlott)</SelectItem>
+                    <SelectItem value="iframe" className="text-xs">iframe</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-[10px] text-muted-foreground leading-snug">
+                  {builderFormat === 'web_component'
+                    ? 'Egyetlen <effectime-embed> tag + script. Minden engedélyezett nézet, írás/olvasás jog és natív Effectime UI (varázsló, intelligens beosztó, szűrők) automatikusan benne van.'
+                    : 'Hagyományos iframe — minden host platformmal kompatibilis.'}
+                </p>
               </div>
+
+              {/* CopyStyle toggle — only for iframe format */}
+              {builderFormat === 'iframe' && (
+                <div className="flex items-start gap-3 rounded-md border bg-gradient-to-br from-primary/5 to-transparent p-2.5">
+                  <Switch
+                    id="copy-style"
+                    checked={builderCopyStyle}
+                    onCheckedChange={setBuilderCopyStyle}
+                    className="mt-0.5"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor="copy-style" className="flex items-center gap-1.5 font-medium cursor-pointer text-xs">
+                      <Palette className="h-3 w-3 text-primary" />
+                      {t('embed.copy_style_label')}
+                    </Label>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 leading-snug">
+                      {t('embed.copy_style_desc')}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-2 pt-1">
                 <Button size="sm" variant="outline" className="flex-1 gap-1 text-xs"
