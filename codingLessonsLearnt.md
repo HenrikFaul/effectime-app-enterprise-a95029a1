@@ -1403,3 +1403,13 @@ const load = useCallback((opts?: { silent?: boolean }) => {
 }, [deps]);
 // write: setData(optimistic) → await rpc → load({ silent: true })
 ```
+
+### [LESSON-EMBED-005]: Removing an embed view is frontend-only — don't touch tokens
+**Context**: Retiring the redundant `office_headcount` ("Létszám") embed view.
+**Problem**: Worry that existing tokens listing the view in `allowed_views` would break.
+**Fix**: The view registry is purely client-side (`ALL_VIEWS`/`TAB_LABELS` in `EmbedMultiView`, `SINGLE_VIEWS`/routes in `EmbedPage`, `ALL_VIEWS` in `EmbedManager`). `get_embed_view_data` returns the same payload regardless of `_view` and only checks the view is allowed — so a token still listing a removed view just renders no tab (multi-view filters `validViews` against `ALL_VIEWS`). No migration, no token edit, no RPC change needed to add OR remove a view.
+
+### [LESSON-EMBED-006]: Prefer an inline switcher over a parent "picker gate" for single-entity embed views
+**Context**: Redesigning the per-member schedule (old `member_schedule` gated behind a full-screen `MemberPicker` in `EmbedMultiView`).
+**Problem**: The two-step "pick a person → see their week" flow was confusing (the customer literally didn't understand the tab's purpose) and the parent owned selection state, complicating the multi-view.
+**Fix**: Make the leaf view self-contained: it fetches the full member list (already in the `get_embed_view_data` payload), defaults to the first member (or the optional `member` prop), and exposes an inline `<Select>` switcher in its own header. The parent (`EmbedMultiView`/`EmbedPage`) just renders it and passes an optional initial id — no picker gate, no shared selection state. Switching is local (no refetch) since all members' rows are already loaded for the period.

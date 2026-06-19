@@ -1,3 +1,32 @@
+## 2026-06-19 — v3.51.0 Embed: remove redundant "Létszám" view + redesign "Menetrend" → "Munkatárs"
+
+**Lens:** Product/UX simplification + frontend.
+
+### Scope
+Acting on the customer's review of the embed tabs:
+1. **Removed the "Létszám" (office_headcount) view** — it was a read-only office-level roll-up of `assigned/required`, which the **Kapacitás** view already covers in more detail (per-rule) and with editing. Redundant.
+2. **Redesigned "Menetrend" (member_schedule) into "Munkatárs"** — the old flow gated behind a separate full-screen member picker and only showed one flat week, and its purpose was unclear. The aim (see & manage ONE person's schedule + workload) is now reached far more directly.
+
+### "Munkatárs" redesign (`EmbedMemberScheduleView.tsx`, full rewrite)
+- **Inline member switcher** in the header (dropdown) — switch person in one click; no separate picker step.
+- **Month calendar** (proper weeks grid) with a **Heti/Havi** toggle, prev/next + "Ma" — the whole period is visible at a glance instead of 7 flat cards.
+- **Workload summary** — scheduled days, leave days, and (week mode) hours-vs-weekly-capacity using the v3.50.0 enriched member data; flags overtime. Instantly shows under/over-booking.
+- **Office-aware assignment** — a "Beosztás ide: <telephely>" selector so it's explicit *where* a day is scheduled (the old version silently dumped into the primary office). Uses the same optimistic / no-flicker writes as the capacity panel (v3.50.1).
+- Tab relabelled **"Munkatárs"** (was the unclear "Menetrend").
+
+### Removals / wiring
+- Deleted `src/components/embed/EmbedOfficeHeadcountView.tsx`.
+- `EmbedManager.tsx`, `EmbedMultiView.tsx`, `EmbedPage.tsx` — dropped `office_headcount` from view lists/labels/routes.
+- `EmbedMultiView.tsx` — removed the member-picker gate (the view self-selects now); `member` is optional everywhere.
+- `EmbedPage.tsx` — `member_schedule` no longer hard-requires a `?member=` param.
+
+### Anti-regression
+- Frontend-only; no RPC/schema change. Existing tokens that still list `office_headcount` simply don't render that tab (the RPC continues to accept the view) — no breakage, no token migration.
+- `member_schedule` write path unchanged (`embed_assign_shift` / `embed_remove_shift`, server-side token + can_write + office-scope).
+- `tsc --noEmit` ✓ · `vite build` ✓.
+
+---
+
 ## 2026-06-19 — v3.50.1 Embed: kill the assign-panel flicker (optimistic writes)
 
 **Lens:** Frontend UX / React rendering correctness.

@@ -45,7 +45,7 @@ interface EmbedToken {
 
 interface Office { id: string; name: string; city: string | null }
 
-const ALL_VIEWS = ['capacity_planner', 'shift_roster', 'leave_calendar', 'office_headcount', 'member_schedule'] as const;
+const ALL_VIEWS = ['capacity_planner', 'shift_roster', 'leave_calendar', 'member_schedule'] as const;
 type EmbedView = (typeof ALL_VIEWS)[number];
 
 function buildEmbedUrl(
@@ -298,7 +298,6 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
     capacity_planner: t('embed.view_capacity_planner'),
     shift_roster:     t('embed.view_shift_roster'),
     leave_calendar:   t('embed.view_leave_calendar'),
-    office_headcount: t('embed.view_office_headcount'),
     member_schedule:  t('embed.view_member_schedule'),
   };
 
