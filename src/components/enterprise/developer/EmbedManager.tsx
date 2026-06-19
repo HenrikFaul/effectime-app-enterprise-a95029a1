@@ -67,12 +67,39 @@ function buildIframeSnippet(url: string, height = 500): string {
 }
 
 /**
+ * Web-Component snippet — the recommended, smallest, most powerful format.
+ * The single <effectime-embed> tag + <script> handles ALL capabilities (per-token):
+ *   - any combination of allowed views (tabs auto-built)
+ *   - read OR write permissions from the token (server-enforced)
+ *   - native Effectime UI inside (purple wizard, smart suggest, calendar filters, etc.)
+ *   - responsive container, live-data indicator, branded chrome
+ */
+function buildWebComponentSnippet(opts: {
+  token: string;
+  views: string[];
+  height: number;
+  office?: string;
+  member?: string;
+  mode?: string;
+  origin: string;
+}): string {
+  const attrs = [
+    `  token="${opts.token}"`,
+    `  views="${opts.views.join(',')}"`,
+    `  height="${opts.height}"`,
+  ];
+  if (opts.office) attrs.push(`  office="${opts.office}"`);
+  if (opts.member) attrs.push(`  member="${opts.member}"`);
+  if (opts.mode && opts.mode !== 'weekly') attrs.push(`  mode="${opts.mode}"`);
+  return `<!-- Effectime embed (Web Component) -->
+<effectime-embed
+${attrs.join('\n')}
+></effectime-embed>
+<script src="${opts.origin}/embed.js" defer></script>`;
+}
+
+/**
  * CopyStyle: a self-contained, fully responsive Effectime-branded shell.
- * - Uses a single scoped <style> block (unique class) for media queries — no global leak.
- * - Pure HTML/CSS, no JS, no external assets → renders identically on any host page.
- * - Mobile: stretches to viewport, reduces chrome, switches header to compact layout.
- * - The iframe content itself (capacity planner, side-sheet, smart assignment) is delivered
- *   live by Effectime — the snippet only frames it so the surrounding page feels native.
  */
 function buildStyledSnippet(url: string, height = 500): string {
   const uid = 'et' + Math.random().toString(36).slice(2, 9);
