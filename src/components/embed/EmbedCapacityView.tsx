@@ -99,6 +99,9 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
   const [selected, setSelected] = useState<{ ruleId: string; date: string } | null>(null);
   const [wizardOffice, setWizardOffice] = useState<Office | null>(null);
   const loadId = useRef(0);
+  // Bumped at the start of every write; a silent reload whose captured value is stale is
+  // dropped, so an in-flight refetch can't clobber a newer optimistic change (rapid clicks).
+  const writeSeq = useRef(0);
 
   const days = useMemo(() => {
     if (viewMode === 'monthly') return eachDayOfInterval({ start: monthStart, end: endOfMonth(monthStart) });
@@ -112,12 +115,16 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
   // panel and grid reconcile in place — no strobe between optimistic state and server truth.
   const load = useCallback((opts?: { silent?: boolean }) => {
     const id = ++loadId.current;
+    const wseq = writeSeq.current;
     if (!opts?.silent) setLoading(true);
     setError(null);
     (supabase as any)
       .rpc('get_embed_view_data', { _token: token, _view: 'capacity_planner', _from_date: from, _to_date: to })
       .then(({ data: result, error: err }: { data: EmbedData | null; error: { message: string } | null }) => {
         if (id !== loadId.current) return;
+        // A write began after this silent reload was issued → drop the stale snapshot so it
+        // can't overwrite the newer optimistic state; that write's own reload reconciles.
+        if (opts?.silent && writeSeq.current !== wseq) return;
         if (err) { setError(err.message); if (!opts?.silent) setLoading(false); return; }
         setData(result); if (!opts?.silent) setLoading(false);
       });
@@ -157,6 +164,7 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
     const skillIds = ruleSkillIds(rule);
     const businessRole = roles[0] ?? member.business_role ?? null;
     const skillId = skillIds[0] ?? null;
+    writeSeq.current++;
     // Optimistic: embed_assign_shift upserts on (user, date), so replace any same-day shift
     // for this user. The cell count + panel update instantly; the silent reload reconciles.
     setData(prev => prev ? {
@@ -182,6 +190,10 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
   };
 
   const handleRemove = async (shiftId: string) => {
+    // An optimistic (not-yet-persisted) shift has no server row; its assign + silent reload
+    // settle it. Guard so we never send the `tmp:` placeholder id to the uuid RPC param.
+    if (shiftId.startsWith('tmp:')) return;
+    writeSeq.current++;
     // Optimistic remove; reconcile silently afterwards.
     setData(prev => prev ? { ...prev, shift_assignments: prev.shift_assignments.filter(s => s.id !== shiftId) } : prev);
     setSavingKeys(prev => new Set(prev).add(shiftId));
@@ -214,6 +226,7 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
     if (pick.length === 0) { toast.error('Nincs elérhető tag'); return; }
     const suggestKey = `suggest:${rule.id}:${isoDate}`;
     const skillId = ruleSkillIds(rule)[0] ?? null;
+    writeSeq.current++;
     // Optimistic: drop in all picks at once so the panel/grid update smoothly (no reload flash).
     setData(prev => prev ? {
       ...prev,
@@ -343,7 +356,7 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
                             <div className="text-[10px] opacity-80 mt-0.5">Tényleges: {memberRole}</div>
                           )}
                         </div>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" disabled={savingKeys.has(filled.id)} onClick={() => handleRemove(filled.id)}>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" disabled={savingKeys.has(filled.id) || filled.id.startsWith('tmp:')} onClick={() => handleRemove(filled.id)}>
                           {savingKeys.has(filled.id) ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5 text-destructive" />}
                         </Button>
                       </div>
@@ -358,7 +371,7 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
                         return (
                           <div key={s.id} className="flex items-center gap-2 p-2 rounded-lg border text-sm bg-amber-50 dark:bg-amber-950/30 border-amber-200">
                             <div className="flex-1 font-medium truncate">{m?.display_name ?? s.user_id}</div>
-                            <Button variant="ghost" size="icon" className="h-7 w-7" disabled={savingKeys.has(s.id)} onClick={() => handleRemove(s.id)}>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" disabled={savingKeys.has(s.id) || s.id.startsWith('tmp:')} onClick={() => handleRemove(s.id)}>
                               <Trash2 className="h-3.5 w-3.5 text-destructive" />
                             </Button>
                           </div>
@@ -611,7 +624,7 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
           office={wizardOffice}
           defaultStart={days[0]}
           defaultEnd={days[days.length - 1]}
-          onCompleted={load}
+          onCompleted={() => load({ silent: true })}
         />
       )}
     </div>

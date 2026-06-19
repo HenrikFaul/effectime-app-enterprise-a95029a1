@@ -1413,3 +1413,14 @@ const load = useCallback((opts?: { silent?: boolean }) => {
 **Context**: Redesigning the per-member schedule (old `member_schedule` gated behind a full-screen `MemberPicker` in `EmbedMultiView`).
 **Problem**: The two-step "pick a person → see their week" flow was confusing (the customer literally didn't understand the tab's purpose) and the parent owned selection state, complicating the multi-view.
 **Fix**: Make the leaf view self-contained: it fetches the full member list (already in the `get_embed_view_data` payload), defaults to the first member (or the optional `member` prop), and exposes an inline `<Select>` switcher in its own header. The parent (`EmbedMultiView`/`EmbedPage`) just renders it and passes an optional initial id — no picker gate, no shared selection state. Switching is local (no refetch) since all members' rows are already loaded for the period.
+
+### [LESSON-EMBED-007]: Optimistic rows need a synthetic id — guard every action that round-trips that id to the server
+**Context**: Optimistic assign creates a shift with id `tmp:<user>:<date>` before the server returns the real UUID (capacity/roster/member views).
+**Problem**: The DELETE RPC param `embed_remove_shift(_assignment_id uuid)` is typed `uuid`. If the user clicks remove on a still-optimistic row (before the silent reconcile swaps in the real id), PostgREST rejects the call with `22P02 invalid input syntax for type uuid` and the user sees a spurious error toast. The per-row disable was keyed on a DIFFERENT string than the tmp id, so it didn't gate the window.
+**Fix**: Any control/handler that sends an optimistic record's id to the server must guard it: early-return when `id.startsWith('tmp:')` AND disable/hide the control for tmp rows. More generally — a `tmp:` (or negative/sentinel) optimistic id must never reach a typed server param; gate or no-op until the reconcile assigns the real id.
+
+### [LESSON-EMBED-008]: Optimistic UIs need a write-generation guard, not just a load-id guard
+**Context**: Optimistic write → `await rpc` → `load({silent:true})` reconcile in capacity/roster/member.
+**Problem**: A `loadId` ref only dedupes loads against each other. It does NOT stop an EARLIER silent reload (whose server snapshot predates a newer optimistic write) from resolving and `setData()`-ing away the newer optimistic change — a visible flicker-out/in under rapid clicks or slow network.
+**Fix**: Add a `writeSeq` ref bumped at the start of every optimistic write; capture it when a load is issued and, for silent reloads, drop the result if `writeSeq.current !== captured`. The newest write's own reload carries the truth. Keep non-silent (initial/navigation) loads always-apply.
+**Also**: keep DERIVED summaries and the cells they summarize on the SAME precedence (e.g. holiday > leave > shift) — computing them with different orderings makes the header contradict the grid for the same day.

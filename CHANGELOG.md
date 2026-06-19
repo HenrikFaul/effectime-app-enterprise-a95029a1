@@ -1,3 +1,28 @@
+## 2026-06-19 — v3.51.1 Embed: correctness fixes from a multi-agent adversarial audit
+
+**Lens:** Adversarial correctness audit (multi-agent) of the whole embed module + verification.
+
+### Scope
+After the v3.50.1 / v3.51.0 embed work, a 5-dimension multi-agent audit (each finding refuted by 3 independent verifiers) surfaced 13 confirmed defects; a second pass verified every fix clean. All fixes are frontend-only (no RPC/schema change).
+
+### Fixes
+- **Optimistic `tmp:` shift removal (major)** — `EmbedCapacityView`, `EmbedShiftRosterView`, `EmbedMemberScheduleView`. Removing a just-assigned (still-optimistic) shift sent a `tmp:` placeholder to `embed_remove_shift` (a `uuid` param) → 22P02 error toast. Remove handlers now early-return on `tmp:` ids and the remove control is disabled/hidden for un-persisted shifts.
+- **Munkatárs workload summary (major)** — counted shift-days before checking holiday/leave, contradicting the calendar cell (holiday/blocked > approved-leave > shift). Summary now mirrors the cell precedence, so the header chips and grid always agree (and the week hours/overtime figure is correct).
+- **Calendar leave-type filter (major)** — `EmbedLeaveTimelineView`. Options were `enterprise_leave_types` UUIDs but the data is the `leave_type` enum, so selecting any "Szabadság típusa" option hid ALL leaves. Options are now the enum keys (`vacation`/`sick_leave`/`unpaid_leave`/`other`) with localized labels; added `timeline_view.legend_other` to all 8 locales.
+- **Smart-schedule wizard coverage math (major)** — `EmbedSmartScheduleDialog`. Counted ALL office shifts (not rule-matched) as "already filled" → under-scheduled multi-rule offices, and indexed role slots by a raw count. Now counts only rule-matched (role/skill) existing shifts (same matcher as the grid) and fills the actually-open role slots greedily.
+- **Wizard finalize flicker (major)** — `onCompleted={load}` ran a non-silent reload (skeleton strobe). Now `onCompleted={() => load({ silent: true })}`.
+- **Write-clobber race (minor)** — a stale silent reload could overwrite a newer optimistic change during rapid editing. Added a `writeSeq` generation guard to capacity/roster/member so an in-flight refetch issued before a newer write is dropped.
+- **activeOffice on member switch (minor)** — the Munkatárs "Beosztás ide" office didn't re-default when switching member, risking a silent wrong-office assignment. Now re-defaults to the new member's primary while preserving a manual choice for the same member.
+- **Partial-failure toast (minor)** — the wizard rendered success/total as a misleading range. New localized `smart_batch.save_failed_count` ("{{failed}}/{{total}} …") in all 8 locales.
+
+### Known limitation (documented, not changed)
+Unchecking the wizard's "keep existing assignments" plans a full headcount of new members without removing prior assignees (it can only upsert, not delete) — the same limitation as the native dialog. Left as-is to avoid divergent half-behaviour.
+
+### Verification
+13/15 audit findings confirmed (2 correctly dismissed); fix-verification pass 4/4 clusters clean, 0 problems. `tsc --noEmit` ✓ · `vite build` ✓.
+
+---
+
 ## 2026-06-19 — v3.51.0 Embed: remove redundant "Létszám" view + redesign "Menetrend" → "Munkatárs"
 
 **Lens:** Product/UX simplification + frontend.

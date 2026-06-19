@@ -72,6 +72,8 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
   const [error, setError] = useState<string | null>(null);
   const [savingKeys, setSavingKeys] = useState<Set<string>>(new Set());
   const loadId = useRef(0);
+  // Bumped per write so a stale silent reload can't clobber a newer optimistic change.
+  const writeSeq = useRef(0);
 
   // Visible day range. Week = the ISO week; Month = the full calendar weeks covering the month.
   const { days, from, to } = useMemo(() => {
@@ -87,12 +89,14 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
 
   const load = useCallback((opts?: { silent?: boolean }) => {
     const id = ++loadId.current;
+    const wseq = writeSeq.current;
     if (!opts?.silent) setLoading(true);
     setError(null);
     (supabase as any)
       .rpc('get_embed_view_data', { _token: token, _view: 'member_schedule', _from_date: from, _to_date: to })
       .then(({ data: result, error: err }: { data: EmbedData | null; error: { message: string } | null }) => {
         if (id !== loadId.current) return;
+        if (opts?.silent && writeSeq.current !== wseq) return; // a newer write superseded this reload
         if (err) { setError(err.message); if (!opts?.silent) setLoading(false); return; }
         setData(result); if (!opts?.silent) setLoading(false);
       });
@@ -113,13 +117,19 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
     [members, selectedId],
   );
 
-  // Default the assignment office to the member's primary, else the first office.
+  // Default the assignment office to the SELECTED member's primary; re-default when the
+  // member changes (so you never silently assign B into A's office), but keep a manual
+  // override while the same member stays selected.
+  const lastMemberId = useRef<string | null>(null);
   useEffect(() => {
-    if (!offices.length) return;
-    setActiveOffice(prev => {
-      if (prev && offices.some(o => o.id === prev)) return prev;
-      return member?.office_id && offices.some(o => o.id === member.office_id) ? member.office_id : offices[0].id;
-    });
+    if (!offices.length || !member) return;
+    const primary = member.office_id && offices.some(o => o.id === member.office_id) ? member.office_id : offices[0].id;
+    if (lastMemberId.current !== member.user_id) {
+      lastMemberId.current = member.user_id;
+      setActiveOffice(primary);
+    } else {
+      setActiveOffice(prev => (prev && offices.some(o => o.id === prev)) ? prev : primary);
+    }
   }, [offices, member]);
 
   const holidaySet = useMemo(() => {
@@ -156,11 +166,14 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
     for (const d of days) {
       if (viewMode === 'month' && !isSameMonth(d, anchor)) continue;
       const iso = format(d, 'yyyy-MM-dd');
+      // Mirror the calendar cell precedence so the header never disagrees with the grid:
+      // holiday/blocked > approved-leave > shift.
+      if (holidaySet.has(iso)) continue;
+      if (leaveSet.has(iso)) { leaveDays++; continue; }
       if (shiftByDate.has(iso)) workDays++;
-      else if (leaveSet.has(iso)) leaveDays++;
     }
     return { workDays, leaveDays };
-  }, [days, viewMode, anchor, shiftByDate, leaveSet]);
+  }, [days, viewMode, anchor, holidaySet, shiftByDate, leaveSet]);
 
   const periodLabel = viewMode === 'week'
     ? `${format(days[0], 'yyyy. MMM d.', { locale: hu })} — ${format(days[days.length - 1], 'MMM d.', { locale: hu })}`
@@ -169,6 +182,7 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
   const assignDay = async (iso: string) => {
     if (!member || !activeOffice) return;
     const role = member.business_role ?? null;
+    writeSeq.current++;
     setData(prev => prev ? {
       ...prev,
       shift_assignments: [
@@ -187,6 +201,8 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
   };
 
   const removeShift = async (shift: Shift) => {
+    if (shift.id.startsWith('tmp:')) return; // optimistic placeholder — no server row to delete
+    writeSeq.current++;
     setData(prev => prev ? { ...prev, shift_assignments: prev.shift_assignments.filter(s => s.id !== shift.id) } : prev);
     setSavingKeys(p => new Set(p).add(shift.id));
     const { error: err } = await (supabase as any).rpc('embed_remove_shift', { _token: token, _assignment_id: shift.id });
@@ -332,7 +348,7 @@ export function EmbedMemberScheduleView({ token, memberId, initialFrom }: EmbedM
                           </span>
                           {saving ? (
                             <Loader2 className="h-3 w-3 animate-spin text-muted-foreground/60" />
-                          ) : canWrite && shift ? (
+                          ) : canWrite && shift && !shift.id.startsWith('tmp:') ? (
                             <button onClick={() => removeShift(shift)}
                               className="h-4 w-4 flex items-center justify-center rounded-full text-muted-foreground/40 hover:text-destructive hover:bg-destructive/10 transition-colors">
                               <X className="h-2.5 w-2.5" />
