@@ -211,6 +211,49 @@ export function EmbedCapacityView({ token, mode = 'weekly', officeFilter, initia
     load();
   };
 
+  // "Intelligens beosztás varázsló" — fills every gap day for every rule of the office across visible range.
+  const runOfficeWizard = async (office: Office) => {
+    setWizardRunning(true);
+    let totalAssigned = 0;
+    const officeRules = (data?.coverage_rules ?? []).filter(r => r.office_id === office.id);
+    for (const rule of officeRules) {
+      for (const d of days) {
+        const iso = format(d, 'yyyy-MM-dd');
+        const dow = d.getDay();
+        if (!ruleAppliesOn(rule, iso, dow)) continue;
+        const assigned = shiftsFor(rule, iso, shifts);
+        const need = rule.min_headcount - assigned.length;
+        if (need <= 0) continue;
+        const assignedIds = new Set(assigned.map(s => s.user_id));
+        const roles = ruleRoles(rule);
+        const pool = (data?.members ?? []).filter(m => !assignedIds.has(m.user_id));
+        const ranked = [...pool].sort((a, b) => {
+          const am = roles.length === 0 || (a.business_role != null && roles.includes(a.business_role)) ? 0 : 1;
+          const bm = roles.length === 0 || (b.business_role != null && roles.includes(b.business_role)) ? 0 : 1;
+          if (am !== bm) return am - bm;
+          const ao = a.office_id === rule.office_id ? 0 : 1;
+          const bo = b.office_id === rule.office_id ? 0 : 1;
+          return ao - bo;
+        });
+        const pick = ranked.slice(0, need);
+        for (const m of pick) {
+          await (supabase as any).rpc('embed_assign_shift', {
+            _token: token, _user_id: m.user_id, _office_id: rule.office_id,
+            _business_role: roles[0] ?? m.business_role ?? null,
+            _shift_date: iso, _skill_id: ruleSkillIds(rule)[0] ?? null,
+          });
+          totalAssigned++;
+        }
+      }
+    }
+    setWizardRunning(false);
+    setWizardOffice(null);
+    toast.success(`Varázsló: ${totalAssigned} beosztás generálva (${office.name})`);
+    load();
+  };
+
+
+
   const WriteSheet = () => {
     const open = !!selected && canWrite;
     const rule = open ? (data?.coverage_rules ?? []).find(r => r.id === selected!.ruleId) : null;
