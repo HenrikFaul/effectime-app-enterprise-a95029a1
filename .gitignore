@@ -9,7 +9,13 @@ lerna-debug.log*
 
 node_modules
 dist
+dist-mobile
 dist-ssr
+coverage
+playwright-report
+test-results
+artifacts
+*.tsbuildinfo
 *.local
 
 # Editor directories and files
@@ -24,3 +30,25 @@ dist-ssr
 *.sw?
 supabase/.temp/
 .claude/worktrees/
+
+# Capacitor native build products and machine-local configuration. Native
+# project source under android/ and ios/ is intentionally version-controlled.
+android/.gradle/
+android/.idea/
+android/**/build/
+android/local.properties
+android/keystore.properties
+*.jks
+*.keystore
+AuthKey_*.p8
+ios/App/DerivedData/
+ios/App/build/
+ios/App/xcuserdata/
+ios/App/*.xcworkspace/xcuserdata/
+ios/App/Pods/
+*.mobileprovision
+*.p12
+*.cer
+*.ipa
+*.aab
+*.apk

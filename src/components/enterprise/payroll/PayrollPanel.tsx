@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useI18n } from '@/i18n/I18nProvider';
+import { useFeature } from '@/hooks/useFeature';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -15,7 +15,6 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Separator } from '@/components/ui/separator';
 import { Clock, Users, TrendingUp, AlertCircle, Download, Lock, Plus, Eye } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -43,52 +42,42 @@ interface PayrollPeriod {
   created_at: string;
 }
 
-interface Membership {
-  id: string;
-  user_id: string;
-  display_name: string;
-  base_working_hours: number;
-}
-
-interface MemberRate {
-  membership_id: string;
-  cost_rate: number;
-  currency: string;
-  effective_from: string;
-}
-
-interface AttendanceTotals {
-  regular_hours?: number;
-  overtime_hours?: number;
-  payroll_total_hours?: number;
-  leave_days?: number;
-  worked_hours?: number;
-}
-
-interface AttendancePeriodRow {
-  membership_id: string;
-  year: number;
-  month: number;
-  totals: AttendanceTotals;
-}
-
-interface LeaveRow {
-  user_id: string;
-  start_date: string;
-  end_date: string;
-  status: string;
-}
-
 interface MemberSummary {
   membershipId: string;
-  userId: string;
   name: string;
-  scheduledHours: number;
+  regularHours: number;
   overtimeHours: number;
+  totalHours: number;
   leaveDays: number;
   grossEstimate: number;
   currency: string;
 }
+
+interface PeriodTotals {
+  totalHours: number;
+  totalOvertime: number;
+  totalGross: number;
+  memberCount: number;
+}
+
+interface PayrollCalculation {
+  members: MemberSummary[];
+  totals: PeriodTotals;
+}
+
+interface PayrollExportPayload {
+  csv: string;
+  filename: string;
+}
+
+type PayrollFunctionBody =
+  | { action: 'calculate-period'; workspaceId: string; periodId: string }
+  | { action: 'lock-period'; workspaceId: string; periodId: string }
+  | { action: 'export-csv'; workspaceId: string; periodId: string; provider: Provider };
+
+export type PayrollFunctionInvoker = (
+  body: PayrollFunctionBody,
+) => Promise<{ data: unknown; error: unknown }>;
 
 // ──────────────────────────────────────────────────────────────────────────────
 // Helpers
@@ -110,79 +99,89 @@ const PROVIDERS = [
 
 type Provider = (typeof PROVIDERS)[number];
 
-function dateBetween(dateStr: string, startStr: string, endStr: string): boolean {
-  return dateStr >= startStr && dateStr <= endStr;
-}
-
-function leaveDaysBetween(leave: LeaveRow, startDate: string, endDate: string): number {
-  const s = leave.start_date > startDate ? leave.start_date : startDate;
-  const e = leave.end_date < endDate ? leave.end_date : endDate;
-  if (s > e) return 0;
-  let count = 0;
-  const cur = new Date(s);
-  const end = new Date(e);
-  while (cur <= end) {
-    const dow = cur.getUTCDay();
-    if (dow !== 0 && dow !== 6) count++;
-    cur.setUTCDate(cur.getUTCDate() + 1);
-  }
-  return count;
-}
-
-function periodOverlaps(leave: LeaveRow, startDate: string, endDate: string): boolean {
-  return leave.start_date <= endDate && leave.end_date >= startDate;
-}
-
 function formatDate(iso: string): string {
   return iso.slice(0, 10);
 }
 
-function generateCsv(
-  rows: MemberSummary[],
-  period: PayrollPeriod,
-  provider: Provider,
-): string {
-  const sep = provider === 'datev' ? ';' : ',';
-  const isDatev = provider === 'datev';
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
-  const headers = isDatev
-    ? [
-        'Mitarbeiter-ID',
-        'Name',
-        'Abrechnungszeitraum',
-        'Regelstunden',
-        'Überstunden',
-        'Urlaubstage',
-        'Bruttoschätzung',
-        'Währung',
-      ]
-    : [
-        'Employee ID',
-        'Name',
-        'Period',
-        'Regular Hours',
-        'Overtime Hours',
-        'Leave Days',
-        'Gross Estimate',
-        'Currency',
-      ];
+function isFiniteNonNegativeNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0;
+}
 
-  const periodLabel = `${period.start_date} - ${period.end_date}`;
+function parseMemberSummary(value: unknown): MemberSummary | null {
+  if (!isRecord(value)) return null;
+  if (
+    typeof value.membership_id !== 'string' ||
+    typeof value.display_name !== 'string' ||
+    !isFiniteNonNegativeNumber(value.regular_hours) ||
+    !isFiniteNonNegativeNumber(value.overtime_hours) ||
+    !isFiniteNonNegativeNumber(value.leave_days) ||
+    !isFiniteNonNegativeNumber(value.gross_estimate) ||
+    typeof value.currency !== 'string' ||
+    value.currency.trim() === ''
+  ) {
+    return null;
+  }
 
-  const dataRows = rows.map((r) =>
-    [
-      r.userId,
-      `"${r.name.replace(/"/g, '""')}"`,
-      `"${periodLabel}"`,
-      r.scheduledHours.toFixed(2),
-      r.overtimeHours.toFixed(2),
-      r.leaveDays.toString(),
-      r.grossEstimate.toFixed(2),
-      r.currency,
-    ].join(sep),
-  );
+  return {
+    membershipId: value.membership_id,
+    name: value.display_name,
+    regularHours: value.regular_hours,
+    overtimeHours: value.overtime_hours,
+    totalHours: value.regular_hours + value.overtime_hours,
+    leaveDays: value.leave_days,
+    grossEstimate: value.gross_estimate,
+    currency: value.currency,
+  };
+}
 
-  return [headers.join(sep), ...dataRows].join('\n');
+// Contract parsers stay co-located with their only production consumer.
+// eslint-disable-next-line react-refresh/only-export-components
+export function parsePayrollCalculation(value: unknown): PayrollCalculation | null {
+  if (!isRecord(value) || !Array.isArray(value.members) || !isRecord(value.totals)) return null;
+
+  const members = value.members.map(parseMemberSummary);
+  if (members.some((member) => member === null)) return null;
+
+  const totals = value.totals;
+  if (
+    !isFiniteNonNegativeNumber(totals.total_hours) ||
+    !isFiniteNonNegativeNumber(totals.total_overtime) ||
+    !isFiniteNonNegativeNumber(totals.total_gross) ||
+    !isFiniteNonNegativeNumber(totals.member_count) ||
+    !Number.isInteger(totals.member_count) ||
+    totals.member_count !== members.length
+  ) {
+    return null;
+  }
+
+  return {
+    members: members as MemberSummary[],
+    totals: {
+      totalHours: totals.total_hours,
+      totalOvertime: totals.total_overtime,
+      totalGross: totals.total_gross,
+      memberCount: totals.member_count,
+    },
+  };
+}
+
+function parsePayrollExport(value: unknown): PayrollExportPayload | null {
+  if (!isRecord(value) || typeof value.csv !== 'string' || value.csv.length === 0) return null;
+  if (
+    typeof value.filename !== 'string' ||
+    !/^[a-zA-Z0-9._-]+\.csv$/.test(value.filename)
+  ) {
+    return null;
+  }
+  return { csv: value.csv, filename: value.filename };
+}
+
+function asActionError(error: unknown, fallback: string): Error {
+  return error instanceof Error ? error : new Error(fallback);
 }
 
 function downloadCsv(csv: string, filename: string): void {
@@ -195,6 +194,52 @@ function downloadCsv(csv: string, filename: string): void {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export async function calculatePayrollPeriod(
+  invoke: PayrollFunctionInvoker,
+  workspaceId: string,
+  periodId: string,
+): Promise<PayrollCalculation> {
+  const { data, error } = await invoke({ action: 'calculate-period', workspaceId, periodId });
+  if (error) throw asActionError(error, 'Payroll calculation failed');
+  const calculation = parsePayrollCalculation(data);
+  if (!calculation) throw new Error('Payroll calculation returned an invalid response');
+  return calculation;
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export async function lockPayrollPeriod(
+  invoke: PayrollFunctionInvoker,
+  workspaceId: string,
+  periodId: string,
+): Promise<void> {
+  const { data, error } = await invoke({ action: 'lock-period', workspaceId, periodId });
+  if (error) throw asActionError(error, 'Payroll period lock failed');
+  if (!isRecord(data) || data.success !== true) {
+    throw new Error('Payroll period lock returned an invalid response');
+  }
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export async function exportPayrollCsv(
+  invoke: PayrollFunctionInvoker,
+  workspaceId: string,
+  periodId: string,
+  provider: Provider,
+  download: (csv: string, filename: string) => void,
+): Promise<void> {
+  const { data, error } = await invoke({
+    action: 'export-csv',
+    workspaceId,
+    periodId,
+    provider,
+  });
+  if (error) throw asActionError(error, 'Payroll export failed');
+  const payload = parsePayrollExport(data);
+  if (!payload) throw new Error('Payroll export returned an invalid response');
+  download(payload.csv, payload.filename);
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
@@ -245,16 +290,19 @@ function StatusBadge({ status, t }: { status: PayrollPeriod['status']; t: (k: st
 // Main component
 // ──────────────────────────────────────────────────────────────────────────────
 
-export function PayrollPanel({ workspaceId, userId, isAdmin }: Props) {
+export function PayrollPanel({ workspaceId, isAdmin }: Props) {
   const { t } = useI18n();
+  const { enabled: payrollExportEnabled, isLoading: payrollExportLoading } = useFeature(
+    workspaceId,
+    'payroll_export',
+  );
 
   // ── Data state ──────────────────────────────────────────────────────────────
   const [loading, setLoading] = useState(true);
   const [periods, setPeriods] = useState<PayrollPeriod[]>([]);
-  const [members, setMembers] = useState<Membership[]>([]);
-  const [memberRates, setMemberRates] = useState<MemberRate[]>([]);
-  const [attendanceRows, setAttendanceRows] = useState<AttendancePeriodRow[]>([]);
-  const [leaveRows, setLeaveRows] = useState<LeaveRow[]>([]);
+  const [calculation, setCalculation] = useState<PayrollCalculation | null>(null);
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState(false);
 
   // ── UI state ────────────────────────────────────────────────────────────────
   const [selectedPeriodId, setSelectedPeriodId] = useState<string | null>(null);
@@ -272,58 +320,33 @@ export function PayrollPanel({ workspaceId, userId, isAdmin }: Props) {
   const [saveAsDefault, setSaveAsDefault] = useState(false);
   const [exporting, setExporting] = useState(false);
 
+  const invokePayroll: PayrollFunctionInvoker = async (body) => {
+    const { data, error } = await supabase.functions.invoke('payroll-export', { body });
+    return { data, error };
+  };
+
   // ── Load ────────────────────────────────────────────────────────────────────
   const load = async () => {
     setLoading(true);
     try {
-      const [periodsRes, membersRes, ratesRes] = await Promise.all([
-        (supabase as any)
-          .from('payroll_periods')
-          .select('*')
-          .eq('workspace_id', workspaceId)
-          .order('start_date', { ascending: false }),
-        (supabase as any)
-          .from('enterprise_memberships')
-          .select('id, user_id, base_working_hours')
-          .eq('workspace_id', workspaceId)
-          .eq('status', 'active'),
-        (supabase as any)
-          .from('enterprise_member_rates')
-          .select('membership_id, cost_rate, currency, effective_from')
-          .eq('workspace_id', workspaceId)
-          .order('effective_from', { ascending: false }),
-      ]);
+      const { data, error } = await supabase
+        .from('payroll_periods')
+        .select(
+          'id, workspace_id, name, start_date, end_date, status, locked_by, locked_at, exported_at, exported_to, created_at',
+        )
+        .eq('workspace_id', workspaceId)
+        .order('start_date', { ascending: false });
 
-      if (periodsRes.error) throw periodsRes.error;
-      if (membersRes.error) throw membersRes.error;
-
-      const rawMembers: any[] = membersRes.data || [];
-      const userIds = rawMembers.map((m: any) => m.user_id);
-
-      const { data: profiles } = userIds.length
-        ? await supabase
-            .from('profiles')
-            .select('user_id, display_name')
-            .in('user_id', userIds)
-        : { data: [] };
-
-      const nameMap = new Map(
-        (profiles as any[] || []).map((p: any) => [
-          p.user_id,
-          p.display_name || p.user_id.slice(0, 8),
-        ]),
+      if (error) throw error;
+      const rows = data ?? [];
+      if (rows.some((period) => !['open', 'locked', 'exported'].includes(period.status))) {
+        throw new Error('Payroll period response contains an unsupported status');
+      }
+      const nextPeriods = rows as PayrollPeriod[];
+      setPeriods(nextPeriods);
+      setSelectedPeriodId((current) =>
+        current && nextPeriods.some((period) => period.id === current) ? current : null,
       );
-
-      setMembers(
-        rawMembers.map((m: any) => ({
-          id: m.id,
-          user_id: m.user_id,
-          display_name: nameMap.get(m.user_id) || m.user_id.slice(0, 8),
-          base_working_hours: Number(m.base_working_hours ?? 8),
-        })),
-      );
-      setMemberRates(ratesRes.data || []);
-      setPeriods(periodsRes.data || []);
     } catch {
       toast.error(t('payroll.load_error'));
     } finally {
@@ -332,109 +355,55 @@ export function PayrollPanel({ workspaceId, userId, isAdmin }: Props) {
   };
 
   useEffect(() => {
-    load();
+    setPeriods([]);
+    setSelectedPeriodId(null);
+    void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId]);
 
-  // ── Load attendance + leave when period is selected ─────────────────────────
+  // The Edge Function owns the payroll calculation contract. Keeping this
+  // server-side prevents schema drift and avoids duplicating payroll rules in UI.
   useEffect(() => {
-    if (!selectedPeriodId) return;
-    const period = periods.find((p) => p.id === selectedPeriodId);
-    if (!period) return;
+    let cancelled = false;
+    setCalculation(null);
+    setSummaryError(false);
 
-    const memberIds = members.map((m) => m.id);
-    const userIds = members.map((m) => m.user_id);
-    if (!memberIds.length) return;
-
-    Promise.all([
-      (supabase as any)
-        .from('enterprise_attendance_periods')
-        .select('membership_id, year, month, totals')
-        .eq('workspace_id', workspaceId)
-        .in('membership_id', memberIds)
-        .gte('period_start', period.start_date)
-        .lte('period_end', period.end_date),
-      supabase
-        .from('leave_requests')
-        .select('user_id, start_date, end_date, status')
-        .eq('workspace_id', workspaceId)
-        .in('user_id', userIds)
-        .eq('status', 'approved')
-        .lte('start_date', period.end_date)
-        .gte('end_date', period.start_date),
-    ]).then(([attRes, leaveRes]) => {
-      // Fallback: if the query filtered by period_start/period_end columns don't exist,
-      // we still get data from the basic membership_id filter.
-      // We use year/month to intersect with the date range manually.
-      setAttendanceRows((attRes.data as AttendancePeriodRow[]) || []);
-      setLeaveRows((leaveRes.data as LeaveRow[]) || []);
-    });
-  }, [selectedPeriodId, periods, members, workspaceId]);
-
-  // ── Derived: latest cost rate per membership ────────────────────────────────
-  const latestRate = useMemo(() => {
-    const map = new Map<string, MemberRate>();
-    for (const r of memberRates) {
-      const cur = map.get(r.membership_id);
-      if (!cur || r.effective_from > cur.effective_from) map.set(r.membership_id, r);
-    }
-    return map;
-  }, [memberRates]);
-
-  // ── Derived: member summaries for selected period ──────────────────────────
-  const selectedPeriod = periods.find((p) => p.id === selectedPeriodId) ?? null;
-
-  const memberSummaries = useMemo((): MemberSummary[] => {
-    if (!selectedPeriod) return [];
-
-    return members.map((m) => {
-      const rows = attendanceRows.filter((r) => r.membership_id === m.id);
-      let scheduledHours = 0;
-      let overtimeHours = 0;
-      let leaveDays = 0;
-
-      for (const row of rows) {
-        const totals: AttendanceTotals = (row.totals as AttendanceTotals) || {};
-        scheduledHours += Number(totals.payroll_total_hours ?? totals.worked_hours ?? totals.regular_hours ?? 0);
-        overtimeHours += Number(totals.overtime_hours ?? 0);
-        leaveDays += Number(totals.leave_days ?? 0);
-      }
-
-      // Count approved leave days for this member during the period
-      const memberLeave = leaveRows.filter((l) => l.user_id === m.user_id);
-      let leaveDaysFromRequests = 0;
-      for (const l of memberLeave) {
-        if (periodOverlaps(l, selectedPeriod.start_date, selectedPeriod.end_date)) {
-          leaveDaysFromRequests += leaveDaysBetween(l, selectedPeriod.start_date, selectedPeriod.end_date);
-        }
-      }
-
-      // Use max of attendance totals vs leave_requests count (avoid double counting)
-      const finalLeaveDays = leaveDays > 0 ? leaveDays : leaveDaysFromRequests;
-
-      const rate = latestRate.get(m.id);
-      const grossEstimate = (rate?.cost_rate ?? 0) * scheduledHours;
-      const currency = rate?.currency ?? 'EUR';
-
-      return {
-        membershipId: m.id,
-        userId: m.user_id,
-        name: m.display_name,
-        scheduledHours,
-        overtimeHours,
-        leaveDays: finalLeaveDays,
-        grossEstimate,
-        currency,
+    if (!selectedPeriodId) {
+      setSummaryLoading(false);
+      return () => {
+        cancelled = true;
       };
-    });
-  }, [selectedPeriod, members, attendanceRows, leaveRows, latestRate]);
+    }
 
-  const periodTotals = useMemo(() => {
-    const totalHours = memberSummaries.reduce((s, r) => s + r.scheduledHours, 0);
-    const totalOvertime = memberSummaries.reduce((s, r) => s + r.overtimeHours, 0);
-    const totalGross = memberSummaries.reduce((s, r) => s + r.grossEstimate, 0);
-    return { totalHours, totalOvertime, totalGross, memberCount: memberSummaries.length };
-  }, [memberSummaries]);
+    setSummaryLoading(true);
+    calculatePayrollPeriod(invokePayroll, workspaceId, selectedPeriodId)
+      .then((result) => {
+        if (!cancelled) setCalculation(result);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setSummaryError(true);
+        toast.error(t('payroll.load_error'));
+      })
+      .finally(() => {
+        if (!cancelled) setSummaryLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // invokePayroll is a thin wrapper around the stable Supabase singleton.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedPeriodId, workspaceId]);
+
+  const selectedPeriod = periods.find((period) => period.id === selectedPeriodId) ?? null;
+  const memberSummaries = calculation?.members ?? [];
+  const periodTotals = calculation?.totals ?? {
+    totalHours: 0,
+    totalOvertime: 0,
+    totalGross: 0,
+    memberCount: 0,
+  };
 
   // ── Actions ─────────────────────────────────────────────────────────────────
 
@@ -442,7 +411,7 @@ export function PayrollPanel({ workspaceId, userId, isAdmin }: Props) {
     if (!newName.trim() || !newStart || !newEnd) return;
     setCreating(true);
     try {
-      const { error } = await (supabase as any).from('payroll_periods').insert({
+      const { error } = await supabase.from('payroll_periods').insert({
         workspace_id: workspaceId,
         name: newName.trim(),
         start_date: newStart,
@@ -464,30 +433,14 @@ export function PayrollPanel({ workspaceId, userId, isAdmin }: Props) {
 
   const handleLock = async () => {
     if (!lockDialogPeriodId) return;
+    const period = periods.find((item) => item.id === lockDialogPeriodId);
+    if (!period || period.status !== 'open') {
+      toast.error(t('payroll.load_error'));
+      return;
+    }
     setLocking(true);
     try {
-      const period = periods.find((p) => p.id === lockDialogPeriodId);
-      const now = new Date().toISOString();
-
-      const { error: updateError } = await (supabase as any)
-        .from('payroll_periods')
-        .update({ status: 'locked', locked_by: userId, locked_at: now })
-        .eq('id', lockDialogPeriodId);
-      if (updateError) throw updateError;
-
-      await (supabase as any).from('enterprise_audit_events').insert({
-        workspace_id: workspaceId,
-        actor_id: userId,
-        action: 'payroll.period_locked',
-        target_type: 'payroll_period',
-        target_id: lockDialogPeriodId,
-        metadata: {
-          period_name: period?.name,
-          start_date: period?.start_date,
-          end_date: period?.end_date,
-        },
-      });
-
+      await lockPayrollPeriod(invokePayroll, workspaceId, lockDialogPeriodId);
       toast.success(t('payroll.lock_success'));
       setLockDialogPeriodId(null);
       await load();
@@ -501,49 +454,53 @@ export function PayrollPanel({ workspaceId, userId, isAdmin }: Props) {
   const handleExport = async () => {
     if (!exportDialogPeriodId) return;
     const period = periods.find((p) => p.id === exportDialogPeriodId);
-    if (!period) return;
+    if (
+      payrollExportLoading ||
+      !payrollExportEnabled ||
+      !period ||
+      (period.status !== 'locked' && period.status !== 'exported')
+    ) {
+      toast.error(t('payroll.load_error'));
+      return;
+    }
 
     setExporting(true);
     try {
       // Save default provider config if requested
       if (saveAsDefault) {
-        const existingConfig = await (supabase as any)
+        const existingConfig = await supabase
           .from('payroll_export_configs')
           .select('id')
           .eq('workspace_id', workspaceId)
           .eq('is_active', true)
           .maybeSingle();
+        if (existingConfig.error) throw existingConfig.error;
 
         if (existingConfig.data?.id) {
-          await (supabase as any)
+          const { error: saveError } = await supabase
             .from('payroll_export_configs')
             .update({ provider: selectedProvider, is_active: true })
             .eq('id', existingConfig.data.id);
+          if (saveError) throw saveError;
         } else {
-          await (supabase as any).from('payroll_export_configs').insert({
+          const { error: saveError } = await supabase.from('payroll_export_configs').insert({
             workspace_id: workspaceId,
             provider: selectedProvider,
             config: {},
             field_mappings: {},
             is_active: true,
           });
+          if (saveError) throw saveError;
         }
       }
 
-      const csv = generateCsv(memberSummaries, period, selectedProvider);
-      const filename = `payroll_${period.name.replace(/\s+/g, '_')}_${selectedProvider}.csv`;
-      downloadCsv(csv, filename);
-
-      // Update period status to exported
-      await (supabase as any)
-        .from('payroll_periods')
-        .update({
-          status: 'exported',
-          exported_at: new Date().toISOString(),
-          exported_to: selectedProvider,
-        })
-        .eq('id', exportDialogPeriodId);
-
+      await exportPayrollCsv(
+        invokePayroll,
+        workspaceId,
+        exportDialogPeriodId,
+        selectedProvider,
+        downloadCsv,
+      );
       toast.success(t('payroll.export_success'));
       setExportDialogPeriodId(null);
       await load();
@@ -556,19 +513,35 @@ export function PayrollPanel({ workspaceId, userId, isAdmin }: Props) {
 
   // ── Load default provider on mount ─────────────────────────────────────────
   useEffect(() => {
-    (supabase as any)
+    if (payrollExportLoading || !payrollExportEnabled) {
+      setSelectedProvider('generic');
+      return;
+    }
+
+    let cancelled = false;
+    supabase
       .from('payroll_export_configs')
       .select('provider')
       .eq('workspace_id', workspaceId)
       .eq('is_active', true)
       .maybeSingle()
-      .then(({ data }: { data: any }) => {
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          setSelectedProvider('generic');
+          toast.error(t('payroll.load_error'));
+          return;
+        }
         if (data?.provider && PROVIDERS.includes(data.provider as Provider)) {
           setSelectedProvider(data.provider as Provider);
+        } else {
+          setSelectedProvider('generic');
         }
       });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [workspaceId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceId, payrollExportEnabled, payrollExportLoading, t]);
 
   // ── Render ──────────────────────────────────────────────────────────────────
 
@@ -708,7 +681,9 @@ export function PayrollPanel({ workspaceId, userId, isAdmin }: Props) {
                               {t('payroll.lock_btn')}
                             </Button>
                           )}
-                          {isAdmin && p.status !== 'open' && (
+                          {isAdmin &&
+                            payrollExportEnabled &&
+                            (p.status === 'locked' || p.status === 'exported') && (
                             <Button
                               size="sm"
                               variant="ghost"
@@ -742,8 +717,20 @@ export function PayrollPanel({ workspaceId, userId, isAdmin }: Props) {
             </CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4 pt-0 space-y-4">
-            {/* KPI cards */}
-            <div className="flex gap-2 flex-wrap">
+            {summaryLoading ? (
+              <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent mr-2" />
+                {t('payroll.loading')}
+              </div>
+            ) : summaryError || !calculation ? (
+              <div className="flex items-center justify-center py-8 text-sm text-muted-foreground">
+                <AlertCircle className="h-4 w-4 mr-2" />
+                {t('payroll.load_error')}
+              </div>
+            ) : (
+              <>
+                {/* KPI cards */}
+                <div className="flex gap-2 flex-wrap">
               <KpiCard
                 icon={<Clock className="h-4 w-4" />}
                 label={t('payroll.kpi_total_hours')}
@@ -766,10 +753,10 @@ export function PayrollPanel({ workspaceId, userId, isAdmin }: Props) {
                 label={t('payroll.kpi_members')}
                 value={String(periodTotals.memberCount)}
               />
-            </div>
+                </div>
 
-            {/* Member table */}
-            <div className="overflow-x-auto">
+                {/* Member table */}
+                <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead className="bg-muted/30">
                   <tr>
@@ -785,7 +772,7 @@ export function PayrollPanel({ workspaceId, userId, isAdmin }: Props) {
                   {memberSummaries.map((row) => (
                     <tr key={row.membershipId} className="border-t hover:bg-muted/10">
                       <td className="px-2 py-1.5 font-medium">{row.name}</td>
-                      <td className="px-2 py-1.5 text-right">{row.scheduledHours.toFixed(1)}</td>
+                      <td className="px-2 py-1.5 text-right">{row.totalHours.toFixed(1)}</td>
                       <td className="px-2 py-1.5 text-right">
                         {row.overtimeHours > 0 ? (
                           <span className="text-orange-600 font-medium">
@@ -824,19 +811,23 @@ export function PayrollPanel({ workspaceId, userId, isAdmin }: Props) {
                   )}
                 </tbody>
               </table>
-            </div>
+                </div>
 
-            {isAdmin && selectedPeriod.status !== 'open' && (
-              <div className="flex justify-end pt-1">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setExportDialogPeriodId(selectedPeriod.id)}
-                >
-                  <Download className="h-3.5 w-3.5 mr-1.5" />
-                  {t('payroll.export_btn')}
-                </Button>
-              </div>
+                {isAdmin &&
+                  payrollExportEnabled &&
+                  (selectedPeriod.status === 'locked' || selectedPeriod.status === 'exported') && (
+                    <div className="flex justify-end pt-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setExportDialogPeriodId(selectedPeriod.id)}
+                      >
+                        <Download className="h-3.5 w-3.5 mr-1.5" />
+                        {t('payroll.export_btn')}
+                      </Button>
+                    </div>
+                  )}
+              </>
             )}
           </CardContent>
         </Card>
@@ -879,7 +870,7 @@ export function PayrollPanel({ workspaceId, userId, isAdmin }: Props) {
 
       {/* ── Export dialog ───────────────────────────────────────────────────── */}
       <Dialog
-        open={!!exportDialogPeriodId}
+        open={!!exportDialogPeriodId && payrollExportEnabled && !payrollExportLoading}
         onOpenChange={(o) => !o && setExportDialogPeriodId(null)}
       >
         <DialogContent className="max-w-md">
@@ -942,7 +933,11 @@ export function PayrollPanel({ workspaceId, userId, isAdmin }: Props) {
             <Button variant="ghost" size="sm" onClick={() => setExportDialogPeriodId(null)}>
               {t('payroll.cancel_btn')}
             </Button>
-            <Button size="sm" onClick={handleExport} disabled={exporting}>
+            <Button
+              size="sm"
+              onClick={handleExport}
+              disabled={exporting || payrollExportLoading || !payrollExportEnabled}
+            >
               {exporting ? (
                 <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-background border-t-transparent mr-1.5" />
               ) : (

@@ -7,30 +7,17 @@ const NotFound = () => {
   const location = useLocation();
 
   useEffect(() => {
-    // Rich diagnostic logging — helps trace random "Not Found" reports
+    // Keep diagnostics useful without persisting query strings, fragments,
+    // referrers or user-agent data. Auth callbacks can carry one-time grants.
     const diagnostics = {
       reason: "ROUTE_NOT_MATCHED",
-      router: "HashRouter",
-      // Path the router tried to match (inside the hash fragment)
+      router: "BrowserRouter",
       routerPath: location.pathname,
-      routerSearch: location.search,
-      routerHash: location.hash,
-      routerState: location.state ?? null,
-      // Raw browser-level context
-      windowHref: window.location.href,
       windowPathname: window.location.pathname,
-      windowHash: window.location.hash,
-      windowSearch: window.location.search,
-      referrer: document.referrer || "(none)",
-      userAgent: navigator.userAgent,
       timestamp: new Date().toISOString(),
     };
-    // eslint-disable-next-line no-console
     console.error("[404] Route not found", diagnostics);
-
-    // Surface to window for quick copy/paste during bug reports
-    (window as unknown as { __lastNotFound?: unknown }).__lastNotFound = diagnostics;
-  }, [location.pathname, location.search, location.hash, location.state]);
+  }, [location.pathname]);
 
   return (
     <div className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-background via-muted/40 to-background px-6">
@@ -45,7 +32,6 @@ const NotFound = () => {
         </p>
         <div className="mb-6 rounded-lg bg-muted/60 p-3 text-left font-mono text-xs text-muted-foreground break-all">
           {location.pathname}
-          {location.search}
         </div>
         <div className="flex flex-col gap-2 sm:flex-row sm:justify-center">
           <Button variant="outline" onClick={() => window.history.back()}>

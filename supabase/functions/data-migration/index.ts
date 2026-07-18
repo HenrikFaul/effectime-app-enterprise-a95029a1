@@ -1,7 +1,8 @@
 // Data migration: Lovable Cloud (source) -> External Supabase (target)
 // Preserves auth.user IDs. Disables FK/triggers (session_replication_role=replica) on target.
-// POST { mode?: "dry_run" | "execute", truncate?: boolean }
+// POST { mode?: "dry_run" | "execute", confirm?: "MIGRATE" }
 import { Client } from "https://deno.land/x/postgres@v0.19.3/mod.ts";
+import { hasServiceRoleCredential } from "../_shared/request-security.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -111,9 +112,38 @@ async function copyTable(
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
+  const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  if (!serviceRoleKey) {
+    console.error("data-migration: missing SUPABASE_SERVICE_ROLE_KEY");
+    return new Response(JSON.stringify({ error: "Server configuration error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  if (!hasServiceRoleCredential(req, serviceRoleKey)) {
+    return new Response(JSON.stringify({ error: "Forbidden" }), {
+      status: 403,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+
   const startedAt = Date.now();
   const body = await req.json().catch(() => ({}));
-  const dryRun = body.mode === "dry_run";
+  if (body.mode === "execute" && body.confirm !== "MIGRATE") {
+    return new Response(JSON.stringify({ error: "Execution requires confirm=MIGRATE" }), {
+      status: 400,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+  // Unknown or omitted mode is deliberately non-destructive.
+  const dryRun = body.mode !== "execute";
 
   const srcUrl = Deno.env.get("SUPABASE_DB_URL")!;
   const tgtUrl = Deno.env.get("EXTERNAL_SUPABASE_DB_URL")!;

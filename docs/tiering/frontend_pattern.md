@@ -41,11 +41,15 @@ Minimal-invazív lépések:
 3. **Replace**: cseréljük a check-et `useFeature(workspaceId, key).enabled`-re
 4. **Test**: a `regression_matrix.md` szerint smoke-tesztelni
 
-## SSR megfontolások
+## Szerveroldali megfontolások
 
-A `useFeature` browser-side React Query-t használ. Loader-ben nem hívható
-közvetlenül; ha SSR-ben is kell, server function-be csomagoljuk és a
-`requireSupabaseAuth` middleware-rel hívjuk meg.
+A jelenlegi alkalmazás Vite SPA, nem TanStack Start/SSR runtime. A `useFeature`
+browser-side React Query-t használ, ezért csak UX- és navigációs gate lehet;
+jogosultsági vagy csomaghatárt önmagában nem védhet. Privilegizált műveletnél a
+tenant-, szerepkör- és feature-entitlement ellenőrzést a hitelesített Supabase
+Edge Functionben vagy PostgreSQL RPC/RLS rétegben kell megismételni. Új SSR vagy
+server-function réteg csak külön architektúradöntéssel és szerződéstesztekkel
+vezethető be.
 
 ## Telemetry
 

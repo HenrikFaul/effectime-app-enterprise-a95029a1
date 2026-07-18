@@ -4,7 +4,8 @@
 // produce structured EN+HU help articles, upserts them (archiving previous
 // versions by setting archived_at) and tracks each run in help_releases.
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.98.0";
+import { getBearerToken, verifyHmacSha256 } from "../_shared/request-security.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,6 +16,7 @@ const corsHeaders = {
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY")!;
 const GH_SECRET = Deno.env.get("GITHUB_RELEASE_WEBHOOK_SECRET") || "";
 
@@ -22,34 +24,6 @@ const GH_SECRET = Deno.env.get("GITHUB_RELEASE_WEBHOOK_SECRET") || "";
 const DEFAULT_REPO = "henrikfaul/effectime-app-enterprise-a95029a1";
 
 const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
-
-// ── HMAC verify (sha256=...) ────────────────────────────────────────────────
-async function verifyGitHubSig(rawBody: string, sigHeader: string | null) {
-  if (!GH_SECRET) return true;
-  if (!sigHeader?.startsWith("sha256=")) return false;
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(GH_SECRET),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
-  const mac = await crypto.subtle.sign(
-    "HMAC",
-    key,
-    new TextEncoder().encode(rawBody),
-  );
-  const hex = Array.from(new Uint8Array(mac))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  const expected = `sha256=${hex}`;
-  if (expected.length !== sigHeader.length) return false;
-  let diff = 0;
-  for (let i = 0; i < expected.length; i++) {
-    diff |= expected.charCodeAt(i) ^ sigHeader.charCodeAt(i);
-  }
-  return diff === 0;
-}
 
 // ── GitHub fetchers ────────────────────────────────────────────────────────
 async function ghFetchRaw(repo: string, ref: string, path: string) {
@@ -179,6 +153,7 @@ type Payload = {
   version_tag?: string;
   commit_sha?: string;
   triggered_by?: string;
+  workspace_id?: string;
 };
 
 async function regenerate(payload: Payload) {
@@ -334,27 +309,74 @@ Deno.serve(async (req) => {
     const sig = req.headers.get("x-hub-signature-256");
     const ghEvent = req.headers.get("x-github-event");
 
-    if (sig && !(await verifyGitHubSig(raw, sig))) {
-      return new Response("invalid signature", {
-        status: 401,
-        headers: corsHeaders,
-      });
-    }
-
     let payload: Payload = {};
     try {
       payload = raw ? JSON.parse(raw) : {};
-    } catch { /* ignore */ }
+    } catch {
+      return new Response(JSON.stringify({ error: "Invalid JSON" }), {
+        status: 400,
+        headers: { ...corsHeaders, "content-type": "application/json" },
+      });
+    }
 
-    // GitHub release webhook shape
-    if (ghEvent === "release") {
+    if (ghEvent) {
+      if (ghEvent !== "release") {
+        return new Response("unsupported event", { status: 400, headers: corsHeaders });
+      }
+      if (!GH_SECRET) {
+        console.error("help-regenerator: GitHub webhook secret is not configured");
+        return new Response("webhook not configured", { status: 503, headers: corsHeaders });
+      }
+      if (!(await verifyHmacSha256(raw, sig, GH_SECRET))) {
+        return new Response("invalid signature", { status: 401, headers: corsHeaders });
+      }
+
+      // GitHub release webhook shape. Only the canonical repository is allowed
+      // to provide model input; arbitrary repositories are a prompt-injection
+      // and content-poisoning boundary.
       const gh = payload as any;
+      const repo = String(gh?.repository?.full_name || "").toLowerCase();
+      if (repo !== DEFAULT_REPO) {
+        return new Response("repository not allowed", { status: 403, headers: corsHeaders });
+      }
       payload = {
-        repo: gh?.repository?.full_name,
+        repo: DEFAULT_REPO,
         ref: gh?.release?.tag_name || gh?.release?.target_commitish || "main",
         version_tag: gh?.release?.tag_name,
         commit_sha: gh?.release?.target_commitish,
         triggered_by: `github:${gh?.sender?.login || "release"}`,
+      };
+    } else {
+      const token = getBearerToken(req);
+      if (!token || !ANON_KEY) {
+        return new Response("unauthorized", { status: 401, headers: corsHeaders });
+      }
+      const userClient = createClient(SUPABASE_URL, ANON_KEY, {
+        global: { headers: { Authorization: `Bearer ${token}` } },
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+      const { data: userData, error: userError } = await userClient.auth.getUser();
+      if (userError || !userData.user) {
+        return new Response("unauthorized", { status: 401, headers: corsHeaders });
+      }
+
+      // Help articles are global platform content, so a workspace-level role is
+      // not a sufficient authorization boundary for a manual regeneration.
+      const { data: platformAdmin, error: roleError } = await supabase
+        .from("user_roles")
+        .select("id")
+        .eq("user_id", userData.user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      if (roleError || !platformAdmin) {
+        return new Response("forbidden", { status: 403, headers: corsHeaders });
+      }
+
+      payload = {
+        repo: DEFAULT_REPO,
+        ref: "main",
+        version_tag: `manual-${new Date().toISOString().slice(0, 10)}`,
+        triggered_by: `user:${userData.user.id}`,
       };
     }
 

@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { validateLeaveRequest, ConflictResult } from '@/lib/conflictEngine';
 import { formatConflict } from '@/lib/conflictEngineI18n';
-import { logAuditEvent } from '@/lib/auditLog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -21,11 +20,10 @@ interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workspaceId: string;
-  adminUserId: string;
   onCreated: () => void;
 }
 
-export function AdminLeaveOverride({ open, onOpenChange, workspaceId, adminUserId, onCreated }: Props) {
+export function AdminLeaveOverride({ open, onOpenChange, workspaceId, onCreated }: Props) {
   const { t } = useI18n();
   const dateFnsLocale = useDateLocale();
   const [members, setMembers] = useState<{ user_id: string; display_name: string }[]>([]);
@@ -78,41 +76,23 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, adminUserI
     if (!validated) { await handleValidate(); return; }
 
     setSubmitting(true);
-    const status = autoApprove ? 'approved' : 'pending';
-
-    const { error } = await supabase.from('leave_requests').insert({
-      workspace_id: workspaceId,
-      user_id: selectedUserId,
-      leave_type: leaveType as any,
-      start_date: format(startDate, 'yyyy-MM-dd'),
-      end_date: isHalfDay ? format(startDate, 'yyyy-MM-dd') : format(endDate, 'yyyy-MM-dd'),
-      status: status as any,
-      comment: comment.trim() || null,
-      is_half_day: isHalfDay,
-      half_day_period: isHalfDay ? halfDayPeriod : null,
-      reviewer_id: autoApprove ? adminUserId : null,
-      reviewed_at: autoApprove ? new Date().toISOString() : null,
-      review_comment: autoApprove ? `Admin override: ${justification.trim()}` : null,
+    const { data, error } = await (supabase as any).rpc('create_admin_leave_override', {
+      _workspace_id: workspaceId,
+      _user_id: selectedUserId,
+      _leave_type: leaveType,
+      _start_date: format(startDate, 'yyyy-MM-dd'),
+      _end_date: isHalfDay ? format(startDate, 'yyyy-MM-dd') : format(endDate, 'yyyy-MM-dd'),
+      _justification: justification.trim(),
+      _auto_approve: autoApprove,
+      _is_half_day: isHalfDay,
+      _half_day_period: isHalfDay ? halfDayPeriod : null,
+      _comment: comment.trim() || null,
     });
 
-    if (error) {
+    if (error || data?.ok !== true) {
       toast.error(t('admin_leave_override.create_failed'));
-      console.error(error);
+      console.error(error ?? data);
     } else {
-      await logAuditEvent({
-        workspace_id: workspaceId,
-        actor_id: adminUserId,
-        action: 'leave_request.admin_override',
-        affected_user_id: selectedUserId,
-        metadata: {
-          leave_type: leaveType,
-          start_date: format(startDate, 'yyyy-MM-dd'),
-          end_date: format(endDate, 'yyyy-MM-dd'),
-          auto_approved: autoApprove,
-          justification: justification.trim(),
-          is_half_day: isHalfDay,
-        },
-      });
       toast.success(autoApprove ? t('admin_leave_override.created_approved') : t('admin_leave_override.created'));
       resetForm();
       onOpenChange(false);

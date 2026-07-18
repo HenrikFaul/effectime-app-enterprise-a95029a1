@@ -6,6 +6,15 @@
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
+import {
+  parseEnterpriseRole,
+  parseMembershipStatus,
+  validateExistingMemberAccess,
+  validateInvitationAccess,
+  type EnterpriseRole,
+  type ImportActorRole,
+  type MembershipStatus,
+} from './security.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -35,6 +44,19 @@ interface Summary {
   updated: number;
   skipped: number;
   failed: number;
+}
+
+class ImportDependencyError extends Error {}
+
+async function resolveAuthUsersByEmail(client: any, emails: unknown[]) {
+  const { data, error } = await client.rpc('get_user_ids_by_emails', { p_emails: emails });
+  if (error) {
+    throw new ImportDependencyError(`Auth directory lookup failed: ${error.message}`);
+  }
+  if (!Array.isArray(data)) {
+    throw new ImportDependencyError('Auth directory lookup returned an invalid response');
+  }
+  return data;
 }
 
 const SUPPORTED_ENTITIES = ['members', 'leave', 'offices', 'work_categories', 'job_roles', 'skills'];
@@ -68,17 +90,33 @@ serve(async (req: Request) => {
     if (!workspace_id || !entity || !Array.isArray(rows)) {
       return jsonResponse({ error: 'Missing required fields' }, 400);
     }
+    if (!['create', 'upsert'].includes(mode)) {
+      return jsonResponse({ error: 'Invalid import mode' }, 400);
+    }
+    if (rows.length > 2000) {
+      return jsonResponse({ error: 'Import row limit exceeded' }, 413);
+    }
     if (!SUPPORTED_ENTITIES.includes(entity)) {
       return jsonResponse({ error: `Unsupported entity: ${entity}` }, 400);
     }
 
-    // Authorization check: owner or resourceAssistant
-    const { data: hasRole } = await serviceClient.rpc('has_enterprise_role', {
-      p_workspace_id: workspace_id,
-      p_user_id: user.id,
-      p_roles: ['owner', 'resourceAssistant'],
-    });
-    if (!hasRole) return jsonResponse({ error: 'Forbidden: admin role required' }, 403);
+    // Resolve the exact active actor role. Importing member access fields needs
+    // stricter rules than the other resource-assistant import operations.
+    const { data: actorMembership, error: actorMembershipError } = await serviceClient
+      .from('enterprise_memberships')
+      .select('role')
+      .eq('workspace_id', workspace_id)
+      .eq('user_id', user.id)
+      .eq('status', 'active')
+      .maybeSingle();
+    if (actorMembershipError) {
+      console.error('Failed to resolve import actor membership', actorMembershipError);
+      return jsonResponse({ error: 'Workspace authorization is temporarily unavailable' }, 503);
+    }
+    if (!actorMembership || !['owner', 'resourceAssistant'].includes(actorMembership.role)) {
+      return jsonResponse({ error: 'Forbidden: admin role required' }, 403);
+    }
+    const actorRole = actorMembership.role as ImportActorRole;
 
     // Audit: import.started
     if (!dry_run) {
@@ -95,7 +133,15 @@ serve(async (req: Request) => {
 
     switch (entity) {
       case 'members':
-        ({ summary, errors } = await importMembers(serviceClient, workspace_id, mode, rows, dry_run, user.id));
+        ({ summary, errors } = await importMembers(
+          serviceClient,
+          workspace_id,
+          mode,
+          rows,
+          dry_run,
+          user.id,
+          actorRole,
+        ));
         break;
       case 'leave':
         ({ summary, errors } = await importLeave(serviceClient, workspace_id, mode, rows, dry_run));
@@ -126,6 +172,9 @@ serve(async (req: Request) => {
     return jsonResponse({ success: true, summary, errors });
   } catch (e: any) {
     console.error('import-entity-data fatal:', e);
+    if (e instanceof ImportDependencyError) {
+      return jsonResponse({ error: 'Import dependency is temporarily unavailable' }, 503);
+    }
     return jsonResponse({ error: e?.message || 'Internal error' }, 500);
   }
 });
@@ -139,7 +188,15 @@ function jsonResponse(body: any, status = 200) {
 
 // ===== Members =====
 
-async function importMembers(client: any, workspaceId: string, mode: string, rows: any[], dryRun: boolean | undefined, actorId: string) {
+async function importMembers(
+  client: any,
+  workspaceId: string,
+  mode: string,
+  rows: any[],
+  dryRun: boolean | undefined,
+  actorId: string,
+  actorRole: ImportActorRole,
+) {
   const summary: Summary = { total: rows.length, created: 0, updated: 0, skipped: 0, failed: 0 };
   const errors: RowError[] = [];
 
@@ -147,13 +204,19 @@ async function importMembers(client: any, workspaceId: string, mode: string, row
   const { data: offices } = await client.from('enterprise_offices').select('id, name').eq('workspace_id', workspaceId);
   const officeByName = new Map((offices || []).map((o: any) => [o.name.toLowerCase(), o.id]));
 
-  const { data: existingMemberships } = await client.from('enterprise_memberships').select('id, user_id').eq('workspace_id', workspaceId);
+  const { data: existingMemberships, error: membershipsError } = await client
+    .from('enterprise_memberships')
+    .select('id, user_id, role, status')
+    .eq('workspace_id', workspaceId);
+  if (membershipsError) {
+    throw new ImportDependencyError(`Membership lookup failed: ${membershipsError.message}`);
+  }
   const existingUserIds = new Set((existingMemberships || []).map((m: any) => m.user_id));
-  const membershipByUser = new Map((existingMemberships || []).map((m: any) => [m.user_id, m.id]));
+  const membershipByUser = new Map((existingMemberships || []).map((m: any) => [m.user_id, m]));
 
   // Map emails → user_ids via auth.users (profiles has no email column)
   const emails = rows.map(r => r.email).filter(Boolean);
-  const { data: authUsers } = await client.rpc('get_user_ids_by_emails', { p_emails: emails });
+  const authUsers = await resolveAuthUsersByEmail(client, emails);
   const userIdByEmail = new Map((authUsers || []).map((u: any) => [u.email.toLowerCase(), u.user_id]));
 
   for (let i = 0; i < rows.length; i++) {
@@ -168,29 +231,88 @@ async function importMembers(client: any, workspaceId: string, mode: string, row
     const userId = userIdByEmail.get(email);
     const officeId = r.office_name ? officeByName.get(String(r.office_name).toLowerCase()) : undefined;
 
-    if (!userId) {
-      // Unknown user — create invitation
-      if (dryRun) { summary.created++; continue; }
-      const { error } = await client.from('enterprise_invitations').insert({
-        workspace_id: workspaceId,
-        email,
-        role: r.role || 'member',
-        invited_by: actorId,
+    const requestedRole = r.role == null || String(r.role).trim() === ''
+      ? undefined
+      : parseEnterpriseRole(r.role);
+    if (r.role != null && String(r.role).trim() !== '' && !requestedRole) {
+      errors.push({
+        row_index: i,
+        field: 'role',
+        value: String(r.role),
+        code: 'INVALID_ROLE',
+        message: 'Érvénytelen workspace szerepkör',
+      });
+      summary.failed++;
+      continue;
+    }
+
+    const requestedStatus = r.status == null || String(r.status).trim() === ''
+      ? undefined
+      : parseMembershipStatus(r.status);
+    if (r.status != null && String(r.status).trim() !== '' && !requestedStatus) {
+      errors.push({
+        row_index: i,
+        field: 'status',
+        value: String(r.status),
+        code: 'INVALID_STATUS',
+        message: 'Érvénytelen tagsági státusz',
+      });
+      summary.failed++;
+      continue;
+    }
+
+    const invitationRole = requestedRole || 'member';
+
+    const createInvitation = async () => {
+      const accessError = validateInvitationAccess({
+        actorRole,
+        requestedRole: invitationRole,
+        requestedStatus,
+      });
+      if (accessError) {
+        errors.push({
+          row_index: i,
+          field: requestedRole && requestedRole !== 'member' ? 'role' : 'status',
+          value: String(r.role || r.status || ''),
+          code: 'FORBIDDEN_ACCESS_CHANGE',
+          message: accessError,
+        });
+        summary.failed++;
+        return;
+      }
+      if (dryRun) {
+        summary.created++;
+        return;
+      }
+      const { data, error } = await client.rpc('issue_enterprise_invitation', {
+        _workspace_id: workspaceId,
+        _email: email,
+        _role: invitationRole,
+        _expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+        _prefill: {},
+        _actor_id: actorId,
       });
       if (error) {
-        if (error.code === '23505') { summary.skipped++; }
-        else {
-          errors.push({ row_index: i, field: 'email', value: email, code: 'DB_ERROR', message: error.message });
-          summary.failed++;
-        }
-      } else summary.created++;
+        errors.push({ row_index: i, field: 'email', value: email, code: 'DB_ERROR', message: error.message });
+        summary.failed++;
+      } else if (data?.ok === true) summary.created++;
+      else if (data?.code === 'ALREADY_MEMBER') summary.skipped++;
+      else {
+        errors.push({ row_index: i, field: 'email', value: email, code: 'DB_ERROR', message: 'Invitation could not be issued' });
+        summary.failed++;
+      }
+    };
+
+    if (!userId) {
+      // Unknown users must accept an invitation before a membership exists.
+      await createInvitation();
       continue;
     }
 
     // Build membership fields shared by insert and update
-    const membershipFields = (base: any) => {
-      if (r.role) base.role = r.role;
-      if (r.status) base.status = r.status;
+    const membershipFields = (base: any, includeAccessFields: boolean) => {
+      if (includeAccessFields && requestedRole) base.role = requestedRole;
+      if (includeAccessFields && requestedStatus) base.status = requestedStatus;
       if (r.team !== undefined) base.team = r.team || null;
       if (r.business_role !== undefined) base.business_role = r.business_role || null;
       if (r.location !== undefined) base.location = r.location || null;
@@ -208,24 +330,40 @@ async function importMembers(client: any, workspaceId: string, mode: string, row
     // User exists. Check if they have a membership in this workspace.
     if (existingUserIds.has(userId)) {
       if (mode === 'create') { summary.skipped++; continue; }
+      const existingMembership = membershipByUser.get(userId);
+      const accessError = validateExistingMemberAccess({
+        actorRole,
+        actorId,
+        targetUserId: userId,
+        currentRole: existingMembership.role as EnterpriseRole,
+        currentStatus: existingMembership.status as MembershipStatus,
+        requestedRole,
+        requestedStatus,
+      });
+      if (accessError) {
+        errors.push({
+          row_index: i,
+          field: requestedRole && requestedRole !== existingMembership.role ? 'role' : 'status',
+          value: String(r.role || r.status || ''),
+          code: 'FORBIDDEN_ACCESS_CHANGE',
+          message: accessError,
+        });
+        summary.failed++;
+        continue;
+      }
       if (dryRun) { summary.updated++; continue; }
       const { error } = await client
         .from('enterprise_memberships')
-        .update(membershipFields({}))
-        .eq('id', membershipByUser.get(userId));
+        .update(membershipFields({}, actorRole === 'owner'))
+        .eq('id', existingMembership.id);
       if (error) {
         errors.push({ row_index: i, field: 'general', value: email, code: 'DB_ERROR', message: error.message });
         summary.failed++;
       } else summary.updated++;
     } else {
-      // Known user but no membership — create membership directly
-      if (dryRun) { summary.created++; continue; }
-      const insertBase: any = { workspace_id: workspaceId, user_id: userId };
-      const { error } = await client.from('enterprise_memberships').insert(membershipFields(insertBase));
-      if (error) {
-        errors.push({ row_index: i, field: 'general', value: email, code: 'DB_ERROR', message: error.message });
-        summary.failed++;
-      } else summary.created++;
+      // A global account is not tenant consent. Use the same invitation flow as
+      // an unknown email and let acceptance create the membership.
+      await createInvitation();
     }
   }
 
@@ -238,9 +376,25 @@ async function importLeave(client: any, workspaceId: string, mode: string, rows:
   const summary: Summary = { total: rows.length, created: 0, updated: 0, skipped: 0, failed: 0 };
   const errors: RowError[] = [];
 
+  const { data: workspaceMemberships, error: workspaceMembershipsError } = await client
+    .from('enterprise_memberships')
+    .select('user_id')
+    .eq('workspace_id', workspaceId)
+    .eq('status', 'active');
+  if (workspaceMembershipsError) {
+    throw new ImportDependencyError(`Leave membership lookup failed: ${workspaceMembershipsError.message}`);
+  }
+  const activeWorkspaceUserIds = new Set(
+    (workspaceMemberships || []).map((membership: any) => membership.user_id),
+  );
+
   const emails = rows.map(r => r.email).filter(Boolean);
-  const { data: authUsers } = await client.rpc('get_user_ids_by_emails', { p_emails: emails });
-  const userIdByEmail = new Map((authUsers || []).map((u: any) => [u.email.toLowerCase(), u.user_id]));
+  const authUsers = await resolveAuthUsersByEmail(client, emails);
+  const userIdByEmail = new Map(
+    (authUsers || [])
+      .filter((authUser: any) => activeWorkspaceUserIds.has(authUser.user_id))
+      .map((authUser: any) => [authUser.email.toLowerCase(), authUser.user_id]),
+  );
 
   // Pre-fetch existing for duplicate detection
   const { data: existing } = await client.from('leave_requests').select('user_id, start_date, end_date, leave_type').eq('workspace_id', workspaceId);

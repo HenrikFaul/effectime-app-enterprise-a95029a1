@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { User, LogOut, Moon, Sun, Pencil, Copy, Check, Save, ShieldCheck, Building2, Palette } from 'lucide-react';
 import { toast } from 'sonner';
 import { useI18n } from '@/i18n/I18nProvider';
+import { buildPublicAppUrl } from '@/lib/platform/mobile';
 
 export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {}) {
   const { t } = useI18n();
@@ -116,7 +117,7 @@ export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {})
 
   const handleCopyReturnLink = async () => {
     if (!tempAccessToken) return;
-    const link = `${window.location.origin}/temp/${tempAccessToken}`;
+    const link = buildPublicAppUrl(`/temp/${encodeURIComponent(tempAccessToken)}`);
     await navigator.clipboard.writeText(link);
     setCopied(true);
     toast.success(t('profile_menu.return_link_copied'));

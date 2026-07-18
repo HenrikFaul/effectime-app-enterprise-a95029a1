@@ -23,12 +23,15 @@ interface Category {
   id: string;
   name: string;
   is_active: boolean;
+  source: 'workspace' | 'catalog';
 }
 interface Role {
   id: string;
   category_id: string;
   name: string;
   is_active: boolean;
+  catalog_role_id?: string | null;
+  source: 'workspace' | 'catalog';
 }
 interface RoleSkill {
   id: string;
@@ -40,6 +43,7 @@ interface RoleSkill {
 
 export interface PositionPickerResult {
   positionRoleId: string;
+  source: 'workspace' | 'catalog';
   positionLabel: string;
   /**
    * Mirror of `positionLabel` for consumers that persist the picked position
@@ -72,13 +76,12 @@ export function PositionPickerDialog({ open, onOpenChange, workspaceId, onPick }
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // True when we're displaying the global catalog because the workspace catalog is empty.
-  const [usingGlobalCatalog, setUsingGlobalCatalog] = useState(false);
-
   const loadCatalog = useCallback(async () => {
     setLoading(true);
-    // 1. Try workspace-level customization layer first (preferred — admin may have edited it)
-    const [catRes, rolesRes] = await Promise.all([
+    // Workspace customizations and the remaining global inventory are shown
+    // together. A first materialized role must not make every other global role
+    // disappear from subsequent picker sessions.
+    const [catRes, rolesRes, globalCatRes, globalRolesRes] = await Promise.all([
       (supabase as any)
         .from('enterprise_workspace_role_categories')
         .select('*')
@@ -91,33 +94,34 @@ export function PositionPickerDialog({ open, onOpenChange, workspaceId, onPick }
         .eq('workspace_id', workspaceId)
         .eq('is_active', true)
         .order('name'),
+      (supabase as any)
+        .from('enterprise_catalog_categories')
+        .select('id, name, is_active')
+        .eq('is_active', true)
+        .order('name'),
+      (supabase as any)
+        .from('enterprise_catalog_roles')
+        .select('id, category_id, name, is_active')
+        .eq('is_active', true)
+        .order('name'),
     ]);
-    let cats = (catRes.data as Category[]) || [];
-    let rs = (rolesRes.data as Role[]) || [];
+    const workspaceCategories = ((catRes.data as Omit<Category, 'source'>[]) || [])
+      .map((category) => ({ ...category, source: 'workspace' as const }));
+    const workspaceRoles = ((rolesRes.data as Omit<Role, 'source'>[]) || [])
+      .map((role) => ({ ...role, source: 'workspace' as const }));
+    const materializedCatalogRoleIds = new Set(
+      workspaceRoles.map((role) => role.catalog_role_id).filter(Boolean),
+    );
+    const catalogRoles = ((globalRolesRes.data as Omit<Role, 'source'>[]) || [])
+      .filter((role) => !materializedCatalogRoleIds.has(role.id))
+      .map((role) => ({ ...role, source: 'catalog' as const }));
+    const visibleCatalogCategoryIds = new Set(catalogRoles.map((role) => role.category_id));
+    const catalogCategories = ((globalCatRes.data as Omit<Category, 'source'>[]) || [])
+      .filter((category) => visibleCatalogCategoryIds.has(category.id))
+      .map((category) => ({ ...category, source: 'catalog' as const }));
 
-    // 2. If empty, fall back to the global catalog (already seeded with 100s of roles/skills)
-    if (cats.length === 0 && rs.length === 0) {
-      const [globalCatRes, globalRolesRes] = await Promise.all([
-        (supabase as any)
-          .from('enterprise_catalog_categories')
-          .select('id, name, is_active')
-          .eq('is_active', true)
-          .order('name'),
-        (supabase as any)
-          .from('enterprise_catalog_roles')
-          .select('id, category_id, name, is_active')
-          .eq('is_active', true)
-          .order('name'),
-      ]);
-      cats = (globalCatRes.data as Category[]) || [];
-      rs = (globalRolesRes.data as Role[]) || [];
-      setUsingGlobalCatalog(cats.length > 0 || rs.length > 0);
-    } else {
-      setUsingGlobalCatalog(false);
-    }
-
-    setCategories(cats);
-    setRoles(rs);
+    setCategories([...workspaceCategories, ...catalogCategories]);
+    setRoles([...workspaceRoles, ...catalogRoles]);
     setLoading(false);
   }, [workspaceId]);
 
@@ -179,7 +183,7 @@ export function PositionPickerDialog({ open, onOpenChange, workspaceId, onPick }
 
   const handleSelectRole = async (r: Role) => {
     setSelectedRole(r);
-    await loadRoleSkills(r.id, usingGlobalCatalog);
+    await loadRoleSkills(r.id, r.source === 'catalog');
     setStep(3);
   };
 
@@ -187,6 +191,7 @@ export function PositionPickerDialog({ open, onOpenChange, workspaceId, onPick }
     if (!selectedRole) return;
     onPick({
       positionRoleId: selectedRole.id,
+      source: selectedRole.source,
       positionLabel: selectedRole.name,
       business_role: selectedRole.name,
       seniority,
@@ -238,7 +243,7 @@ export function PositionPickerDialog({ open, onOpenChange, workspaceId, onPick }
           </div>
         )}
 
-        {usingGlobalCatalog && !loading ? (
+        {roles.some((role) => role.source === 'catalog') && !loading ? (
           <div className="rounded-md border border-primary/20 bg-primary/5 px-2 py-1.5 text-[11px] text-muted-foreground">
             {t('positions.global_catalog_note')}
           </div>

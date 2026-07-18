@@ -21,13 +21,13 @@ const repoRoot = path.resolve(__dirname, '../..');
 
 function readCsv(file: string): { header: string[]; rows: Record<string, string>[] } {
   const raw = fs.readFileSync(path.join(repoRoot, 'docs/tiering', file), 'utf8');
-  const lines = raw.trim().split('\n');
-  const header = lines[0].split(',');
+  const lines = raw.trim().split(/\r?\n/);
+  const header = lines[0].split(',').map((cell) => cell.trim());
   const rows = lines.slice(1).map((line) => {
     // Minimal CSV splitter; the build script never emits embedded commas in
     // the columns we read here (keys, modules, booleans, semicolon-joined
     // lists). If that changes, this parser must too.
-    const cells = line.split(',');
+    const cells = line.split(',').map((cell) => cell.trim());
     const row: Record<string, string> = {};
     header.forEach((h, i) => { row[h] = cells[i] ?? ''; });
     return row;

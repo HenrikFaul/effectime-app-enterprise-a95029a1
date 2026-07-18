@@ -1,3 +1,5 @@
+import { isNativeRuntime } from '@/lib/platform/mobile';
+
 /**
  * Service Worker registration helper (v3.32.0 — Top-20 Rank 7).
  *
@@ -11,12 +13,12 @@
 
 export async function registerEffectimeServiceWorker(): Promise<void> {
   if (typeof window === 'undefined') return;
+  if (isNativeRuntime()) return;
   if (!('serviceWorker' in navigator)) return;
 
-  // Skip SW in dev mode to avoid caching headaches during local development.
-  if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return;
-  }
+  // Skip only Vite's development build. Production previews must exercise the
+  // same service-worker registration path as the deployed artifact.
+  if (import.meta.env.DEV) return;
 
   try {
     const reg = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
@@ -56,6 +58,7 @@ declare global {
 
 export function captureInstallPrompt(): void {
   if (typeof window === 'undefined') return;
+  if (isNativeRuntime()) return;
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     window.__effectimePwaInstallEvent = e;

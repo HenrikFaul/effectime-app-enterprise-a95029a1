@@ -3101,11 +3101,11 @@ const sk = {
   },
   sql_mode: {
     title: 'SQL pokročilý režim',
-    desc_p1: 'Povolené sú iba dotazy SELECT. Filtrovanie na pracovný priestor (workspace_id) sa aplikuje automaticky.',
+    desc_p1: 'Podporovaný je iba jednoduchý zoznam polí SELECT z jednej povolenej tabuľky, voliteľne s ORDER BY a LIMIT. Filter workspace_id sa použije automaticky. Komentáre, JOIN, WHERE, GROUP BY ani SQL funkcie nie sú podporované.',
     allowed_tables_label: 'Povolené tabuľky:',
     example_comment_1: '-- Iba SELECT dotazy. workspace_id je filtrované automaticky.',
     card_title: 'SQL dotaz',
-    card_description: 'Napíšte vlastný SELECT dotaz — pri spustení bude overený a doplnený.',
+    card_description: 'Používajte iba názvy stĺpcov; backend overí obmedzenú syntax reportu.',
     label_sql: 'SQL',
   },
   conflict: {
@@ -3797,6 +3797,7 @@ const sk = {
     not_connected_hint: 'Pripojte svoj účet Microsoft 365, aby sa schválené dovolenky zobrazili v Outlooku a OOF udalosti ako plánovacie obmedzenia.',
     connect_btn: 'Pripojiť Microsoft 365',
     connect_error: 'Chyba pripojenia',
+    native_oauth_unavailable: 'Pripojenie Microsoft 365 zatiaľ nie je v mobilnej aplikácii dostupné.',
     disconnect: 'Odpojiť',
     disconnect_confirm: 'Odpojiť tento účet Microsoft 365? Synchronizované udalosti zostanú v Outlooku.',
     disconnect_error: 'Odpojenie zlyhalo',

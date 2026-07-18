@@ -1,8 +1,16 @@
 // Edge function: send-scheduled-reports
 // Triggered hourly by pg_cron. Finds active schedules due in this hour,
-// runs the underlying report, builds a CSV + HTML summary, and dispatches
-// transactional emails to each recipient.
+// runs the underlying report and dispatches a bounded HTML preview through the
+// transactional-email queue. Full exports remain available in the app because
+// the configured provider does not support attachments.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import { checkWorkspaceFeature } from '../_shared/feature-entitlement.ts';
+import { hasServiceRoleCredential } from '../_shared/request-security.ts';
+import {
+  classifyTransactionalEmailResult,
+  type DeliveryOutcome,
+  summarizeDeliveryOutcomes,
+} from './delivery-result.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,10 +19,13 @@ const corsHeaders = {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method !== 'POST') return json({ error: 'Method not allowed' }, 405);
 
   try {
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    if (!supabaseUrl || !serviceKey) return json({ error: 'Server configuration error' }, 500);
+    if (!hasServiceRoleCredential(req, serviceKey)) return json({ error: 'Forbidden' }, 403);
     const admin = createClient(supabaseUrl, serviceKey);
 
     const now = new Date();
@@ -47,6 +58,28 @@ Deno.serve(async (req) => {
           if (lastRun.toDateString() === now.toDateString()) continue;
         }
 
+        // Evaluate the target workspace independently for every due schedule.
+        // The scheduler's service credential must never bypass tenant tiering.
+        const entitlement = await checkWorkspaceFeature(admin, sch.workspace_id, 'scheduled_reports');
+        if (!entitlement.enabled) {
+          if (entitlement.reason === 'lookup_error') {
+            const context = `Feature entitlement lookup unavailable (${entitlement.step})`;
+            console.error(
+              `[send-scheduled-reports] schedule=${sch.id} workspace=${sch.workspace_id} feature=scheduled_reports step=${entitlement.step}: ${entitlement.error}`,
+            );
+            await markRun(admin, sch.id, 'error', context);
+            results.push({ id: sch.id, status: 'error', reason: 'entitlement_lookup_unavailable' });
+          } else {
+            const context = `Feature scheduled_reports is not enabled (${entitlement.reason})`;
+            console.warn(
+              `[send-scheduled-reports] schedule=${sch.id} workspace=${sch.workspace_id} feature=scheduled_reports skipped reason=${entitlement.reason}`,
+            );
+            await markRun(admin, sch.id, 'skipped', context);
+            results.push({ id: sch.id, status: 'skipped', reason: entitlement.reason });
+          }
+          continue;
+        }
+
         const report = sch.enterprise_reports;
         if (!report) {
           await markRun(admin, sch.id, 'error', 'Report not found');
@@ -77,14 +110,14 @@ Deno.serve(async (req) => {
         const rows = runData.rows || [];
         const columns = runData.columns || [];
 
-        const csv = buildCsv(columns, rows);
-        const html = buildHtml(report.name, report.description, columns, rows);
-
-        // Send to each recipient. Track per-recipient failures so we never
-        // mark the schedule 'success' when some emails actually failed
-        // (B-22 / HIBA-074 silent-partial-success pattern).
-        const failedRecipients: string[] = [];
-        for (const recipient of sch.recipients) {
+        // HTTP 2xx only means the transactional endpoint handled the request.
+        // A recipient is delivered exclusively when its business payload says
+        // success=true; suppression is a separate, non-delivery outcome.
+        const recipients = Array.isArray(sch.recipients)
+          ? sch.recipients.filter((recipient: unknown): recipient is string => typeof recipient === 'string')
+          : [];
+        const outcomes: DeliveryOutcome[] = [];
+        for (const [recipientIndex, recipient] of recipients.entries()) {
           try {
             const sendRes = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
               method: 'POST',
@@ -93,38 +126,54 @@ Deno.serve(async (req) => {
                 'Content-Type': 'application/json',
               },
               body: JSON.stringify({
-                to: recipient,
-                subject: `📊 ${report.name} — ${formatDate(now)}`,
-                html,
-                attachments: [{
-                  filename: `${slugify(report.name)}-${formatDate(now)}.csv`,
-                  content: btoa(unescape(encodeURIComponent(csv))),
-                  contentType: 'text/csv',
-                }],
-                template_name: 'scheduled_report',
+                templateName: 'scheduled-report',
+                recipientEmail: recipient,
+                workspaceId: sch.workspace_id,
+                idempotencyKey: `scheduled-report-${sch.id}-${formatDate(now)}-${recipient.toLowerCase()}`,
+                templateData: {
+                  reportName: report.name,
+                  reportDescription: report.description,
+                  columns,
+                  previewRows: rows.slice(0, 10),
+                  rowCount: rows.length,
+                  generatedAt: formatDate(now),
+                },
               }),
             });
-            if (!sendRes.ok) {
-              failedRecipients.push(recipient);
-              console.error(`[send-scheduled-reports] recipient=${recipient} status=${sendRes.status}`);
+            let sendPayload: unknown = null;
+            try {
+              sendPayload = await sendRes.json();
+            } catch {
+              // The classifier treats a missing/malformed success payload as a
+              // failed delivery even when the endpoint returned HTTP 2xx.
+            }
+            const outcome = classifyTransactionalEmailResult(sendRes.ok, sendRes.status, sendPayload);
+            outcomes.push(outcome);
+            if (outcome.type !== 'delivered') {
+              console.warn(
+                `[send-scheduled-reports] schedule=${sch.id} recipient_index=${recipientIndex} outcome=${outcome.type} reason=${outcome.reason}`,
+              );
             }
           } catch (err) {
-            failedRecipients.push(recipient);
-            console.error(`[send-scheduled-reports] recipient=${recipient} threw:`, err);
+            outcomes.push({ type: 'failed', reason: 'dispatch_exception' });
+            console.error(
+              `[send-scheduled-reports] schedule=${sch.id} recipient_index=${recipientIndex} dispatch threw:`,
+              err,
+            );
           }
         }
 
-        const recipientsCount = sch.recipients.length;
-        const failedCount = failedRecipients.length;
-        if (failedCount === 0) {
-          await markRun(admin, sch.id, 'success', null);
-        } else if (failedCount === recipientsCount) {
-          await markRun(admin, sch.id, 'error', `All recipients failed: ${failedRecipients.join(', ').slice(0, 250)}`);
-        } else {
-          await markRun(admin, sch.id, 'partial_failure',
-            `${failedCount}/${recipientsCount} recipients failed: ${failedRecipients.join(', ').slice(0, 250)}`);
-        }
-        results.push({ id: sch.id, recipients: recipientsCount, failed: failedCount, rows: rows.length });
+        const summary = summarizeDeliveryOutcomes(outcomes, recipients.length);
+        await markRun(admin, sch.id, summary.status, summary.context);
+        results.push({
+          id: sch.id,
+          recipients: recipients.length,
+          delivered: summary.delivered,
+          suppressed: summary.suppressed,
+          failed: summary.failed,
+          status: summary.status,
+          rows: rows.length,
+        });
       } catch (e) {
         console.error(`Schedule ${sch.id} failed:`, e);
         await markRun(admin, sch.id, 'error', (e as Error).message);
@@ -154,47 +203,6 @@ async function markRun(admin: any, id: string, status: string, error: string | n
   if (updateErr) {
     console.error(`[send-scheduled-reports] markRun failed for schedule ${id}:`, updateErr.message);
   }
-}
-
-function buildCsv(columns: string[], rows: any[]): string {
-  const escape = (v: any) => {
-    const s = v === null || v === undefined ? '' : String(v);
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-  const header = columns.join(',');
-  const body = rows.map(r => columns.map(c => escape(r[c])).join(',')).join('\n');
-  return `${header}\n${body}`;
-}
-
-function buildHtml(name: string, desc: string | null, columns: string[], rows: any[]): string {
-  const preview = rows.slice(0, 10);
-  const headerCells = columns.map(c => `<th style="text-align:left;padding:8px;border-bottom:2px solid #e5e7eb;font-size:12px;color:#6b7280;">${escapeHtml(c)}</th>`).join('');
-  const bodyRows = preview.map(r =>
-    `<tr>${columns.map(c => `<td style="padding:8px;border-bottom:1px solid #f3f4f6;font-size:13px;">${escapeHtml(r[c])}</td>`).join('')}</tr>`
-  ).join('');
-  return `
-    <div style="font-family:-apple-system,system-ui,sans-serif;max-width:720px;margin:0 auto;padding:24px;color:#111827;">
-      <h1 style="font-size:22px;margin:0 0 8px;">📊 ${escapeHtml(name)}</h1>
-      ${desc ? `<p style="color:#6b7280;margin:0 0 16px;">${escapeHtml(desc)}</p>` : ''}
-      <p style="color:#6b7280;font-size:13px;">Automatikus riport · ${rows.length} sor · A teljes adatkészlet a CSV mellékletben található.</p>
-      <table style="width:100%;border-collapse:collapse;margin-top:16px;background:#fff;border:1px solid #e5e7eb;border-radius:8px;overflow:hidden;">
-        <thead><tr>${headerCells}</tr></thead>
-        <tbody>${bodyRows}</tbody>
-      </table>
-      ${rows.length > 10 ? `<p style="color:#9ca3af;font-size:12px;margin-top:8px;">+${rows.length - 10} további sor a CSV-ben…</p>` : ''}
-      <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0;" />
-      <p style="color:#9ca3af;font-size:11px;">Syncfolk · Riport ütemezés</p>
-    </div>
-  `;
-}
-
-function escapeHtml(v: any): string {
-  if (v === null || v === undefined) return '';
-  return String(v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
-}
-
-function slugify(s: string): string {
-  return s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
 }
 
 function formatDate(d: Date): string {

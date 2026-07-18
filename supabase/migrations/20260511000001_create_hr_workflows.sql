@@ -82,7 +82,7 @@ ALTER TABLE enterprise_hr_workflow_tasks     ENABLE ROW LEVEL SECURITY;
 -- Templates: admins read/write; members read active
 CREATE POLICY hr_wf_templates_admin_all ON enterprise_hr_workflow_templates
   FOR ALL
-  USING (has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']));
+  USING (has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner'::enterprise_role,'resourceAssistant'::enterprise_role]));
 
 CREATE POLICY hr_wf_templates_member_read ON enterprise_hr_workflow_templates
   FOR SELECT
@@ -99,7 +99,7 @@ CREATE POLICY hr_wf_templates_member_read ON enterprise_hr_workflow_templates
 -- Instances: admins all; members see their own
 CREATE POLICY hr_wf_instances_admin_all ON enterprise_hr_workflow_instances
   FOR ALL
-  USING (has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']));
+  USING (has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner'::enterprise_role,'resourceAssistant'::enterprise_role]));
 
 CREATE POLICY hr_wf_instances_member_read ON enterprise_hr_workflow_instances
   FOR SELECT
@@ -115,7 +115,7 @@ CREATE POLICY hr_wf_instances_member_read ON enterprise_hr_workflow_instances
 -- Tasks: admins all; assignees read + update own
 CREATE POLICY hr_wf_tasks_admin_all ON enterprise_hr_workflow_tasks
   FOR ALL
-  USING (has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']));
+  USING (has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner'::enterprise_role,'resourceAssistant'::enterprise_role]));
 
 CREATE POLICY hr_wf_tasks_assignee_read ON enterprise_hr_workflow_tasks
   FOR SELECT
@@ -177,7 +177,7 @@ DECLARE
   v_due_date    date;
 BEGIN
   -- Authorization
-  IF NOT has_enterprise_role(p_workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']) THEN
+  IF NOT has_enterprise_role(p_workspace_id, auth.uid(), ARRAY['owner'::enterprise_role,'resourceAssistant'::enterprise_role]) THEN
     RAISE EXCEPTION 'Forbidden';
   END IF;
 
@@ -260,7 +260,7 @@ BEGIN
   END IF;
 
   -- Allow admin OR the task's assignee
-  IF NOT has_enterprise_role(v_workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']) THEN
+  IF NOT has_enterprise_role(v_workspace_id, auth.uid(), ARRAY['owner'::enterprise_role,'resourceAssistant'::enterprise_role]) THEN
     IF NOT EXISTS (
       SELECT 1 FROM enterprise_hr_workflow_tasks t
       JOIN enterprise_memberships em ON em.id = t.assignee_membership_id
@@ -304,7 +304,7 @@ BEGIN
     RAISE EXCEPTION 'Instance not found';
   END IF;
 
-  IF NOT has_enterprise_role(v_workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']) THEN
+  IF NOT has_enterprise_role(v_workspace_id, auth.uid(), ARRAY['owner'::enterprise_role,'resourceAssistant'::enterprise_role]) THEN
     RAISE EXCEPTION 'Forbidden';
   END IF;
 
@@ -366,7 +366,7 @@ AS $$
   LEFT JOIN profiles pr               ON pr.user_id = em.user_id
   LEFT JOIN enterprise_hr_workflow_tasks t ON t.instance_id = i.id
   WHERE i.workspace_id = p_workspace_id
-    AND has_enterprise_role(p_workspace_id, auth.uid(), ARRAY['owner','resourceAssistant'])
+    AND has_enterprise_role(p_workspace_id, auth.uid(), ARRAY['owner'::enterprise_role,'resourceAssistant'::enterprise_role])
     AND (p_status   IS NULL OR i.status   = p_status)
     AND (p_category IS NULL OR i.category = p_category)
   GROUP BY i.id, pr.display_name, u.email

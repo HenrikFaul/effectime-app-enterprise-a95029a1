@@ -113,6 +113,22 @@ Deno.serve(async (req) => {
     const adminPre = createClient(SUPABASE_URL, SERVICE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
     });
+    const { data: existingDemo, error: existingDemoError } = await adminPre
+      .from('enterprise_workspaces')
+      .select('id')
+      .eq('created_by', ownerId)
+      .eq('is_archived', false)
+      .contains('settings', { is_demo: true })
+      .limit(1)
+      .maybeSingle();
+    if (existingDemoError) {
+      console.error('[seed] active demo quota check failed:', existingDemoError.message);
+      return jsonRes({ error: 'Demo workspace quota check unavailable' }, 503);
+    }
+    if (existingDemo) {
+      return jsonRes({ error: 'Only one active demo workspace is allowed per user' }, 409);
+    }
+
     const { data: seedConfigRow } = await adminPre
       .from('enterprise_seed_config')
       .select('config')
@@ -972,37 +988,63 @@ Deno.serve(async (req) => {
     // G. REPORTING
     // ════════════════════════════════════════════════════════════════════════
 
+    const scheduledReportName = 'Szabadságkérelmek – ' + year;
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString();
     const { data: reports } = await admin.from('enterprise_reports').insert([
       {
-        workspace_id: workspaceId, created_by: ownerId, name: 'Szabadság egyenlegek – ' + year,
-        description: 'Minden kolléga fennmaradó szabadság egyenlege az aktuális évben.',
-        data_source: 'leave_balance', chart_type: 'table', is_template: false, is_shared: true, is_pinned: true,
-        config: { year, group_by: 'team', show_remaining: true },
+        workspace_id: workspaceId, created_by: ownerId, name: scheduledReportName,
+        description: 'Az aktuális év szabadságkérelmei státusszal és időszakkal.',
+        data_source: 'leave_requests', chart_type: 'table', is_template: false, is_shared: true, is_pinned: true,
+        config: {
+          fields: ['user_id', 'leave_type', 'status', 'start_date', 'end_date'],
+          filters: [
+            { field: 'start_date', operator: 'gte', value: `${year}-01-01` },
+            { field: 'start_date', operator: 'lte', value: `${year}-12-31` },
+          ],
+          group_by: [], aggregations: [], sort: [{ field: 'start_date', dir: 'desc' }], limit: 500,
+        },
       },
       {
-        workspace_id: workspaceId, created_by: ownerId, name: 'Kapacitás terhelés – projekt szinten',
-        description: 'Projekt-alapú kapacitás kihasználtság az összes aktív projekten.',
-        data_source: 'capacity_utilization', chart_type: 'bar', is_template: false, is_shared: true, is_pinned: true,
-        config: { period: '3m', group_by: 'project', include_tentative: false },
+        workspace_id: workspaceId, created_by: ownerId, name: 'Kapacitásallokáció – szerepkör szinten',
+        description: 'Szerepkörönkénti létszám és összesített kapacitásallokáció.',
+        data_source: 'role_allocations', chart_type: 'bar', is_template: false, is_shared: true, is_pinned: true,
+        config: {
+          fields: ['business_role', 'membership_id', 'percentage'], filters: [],
+          group_by: ['business_role'],
+          aggregations: [
+            { field: 'membership_id', fn: 'count', alias: 'people' },
+            { field: 'percentage', fn: 'sum', alias: 'total_capacity' },
+          ],
+          sort: [{ field: 'total_capacity', dir: 'desc' }], limit: 50,
+        },
       },
       {
         workspace_id: workspaceId, created_by: ownerId, name: 'Jóváhagyási napló',
         description: 'Az utóbbi 90 nap összes jóváhagyási döntése.',
-        data_source: 'approval_log', chart_type: 'table', is_template: false, is_shared: true, is_pinned: false,
-        config: { days: 90, include_comments: true },
+        data_source: 'approval_decisions', chart_type: 'table', is_template: false, is_shared: true, is_pinned: false,
+        config: {
+          fields: ['decided_by', 'decision', 'created_at'],
+          filters: [{ field: 'created_at', operator: 'gte', value: ninetyDaysAgo }],
+          group_by: [], aggregations: [], sort: [{ field: 'created_at', dir: 'desc' }], limit: 500,
+        },
       },
       {
-        workspace_id: workspaceId, created_by: ownerId, name: 'Csapat havi jelenléti összesítő',
-        description: 'Csapatonkénti havi jelenlét és hiányzás statisztika.',
-        data_source: 'attendance_summary', chart_type: 'heatmap', is_template: true, is_shared: true, is_pinned: false,
-        config: { group_by: 'team', period: '1m' },
+        workspace_id: workspaceId, created_by: ownerId, name: 'Aktív csapatlétszám-összesítő',
+        description: 'Aktív tagok száma csapatonként.',
+        data_source: 'memberships', chart_type: 'bar', is_template: true, is_shared: true, is_pinned: false,
+        config: {
+          fields: ['team', 'business_role', 'status'],
+          filters: [{ field: 'status', operator: 'eq', value: 'active' }],
+          group_by: ['team'], aggregations: [{ field: 'id', fn: 'count', alias: 'people' }],
+          sort: [{ field: 'people', dir: 'desc' }], limit: 100,
+        },
       },
     ]).select('id,name');
     const reportByName = new Map<string, string>();
     (reports ?? []).forEach((r: any) => reportByName.set(r.name, r.id));
 
     // ── G2. Report schedules ──────────────────────────────────────────────────
-    const scheduleReportId = reportByName.get('Szabadság egyenlegek – ' + year);
+    const scheduleReportId = reportByName.get(scheduledReportName);
     if (scheduleReportId) {
       await admin.from('enterprise_report_schedules').insert({
         workspace_id: workspaceId, report_id: scheduleReportId, created_by: ownerId,

@@ -1,0 +1,373 @@
+name: Quality gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  database-contract:
+    name: PostgreSQL payroll snapshot contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Prove Docker runner isolation and cleanup contract
+        run: node --test scripts/ci/payroll-snapshot-db-contract.test.mjs
+
+      - name: Run PostgreSQL 18.4 payroll snapshot contract
+        run: npm run db:payroll:test
+
+  verify:
+    name: Frontend, tests and provenance
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CI: "true"
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Deno for Edge release evidence
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v2.9.3
+
+      - name: Pin npm
+        run: npm install --global npm@11.13.0
+
+      - name: Install dependencies from lockfile
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify install did not rewrite dependency manifests
+        run: git diff --exit-code -- package.json package-lock.json
+
+      - name: Validate mobile foundation contract
+        run: npm run mobile:check:source
+
+      - name: Audit all dependencies
+        run: npm audit --audit-level=moderate
+
+      - name: Scan repository source for high-confidence secrets
+        run: npm run security:secrets
+
+      - name: Enforce generated schema provenance baseline
+        run: npm run schema:provenance:test && npm run schema:provenance
+
+      - name: Enforce no-new-debt lint ratchet
+        run: node scripts/ci/eslint-ratchet.mjs
+
+      - name: Type-check
+        run: npm run typecheck
+
+      - name: Test with coverage debt floor
+        run: npm run test:coverage
+
+      - name: Build
+        run: npm run build
+
+      - name: Enforce bundle debt ceiling
+        run: npm run bundle:check
+
+      - name: Install the public smoke browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run public browser smoke
+        run: npm run test:e2e:built
+
+      - name: Build CSP-hardened native shell
+        run: npm run mobile:sync
+
+      - name: Validate and smoke-test native shell
+        run: npm run mobile:check && npm run test:e2e:mobile:built
+
+      - name: Upload test diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: quality-diagnostics-${{ github.sha }}
+          path: |
+            coverage
+            playwright-report
+            test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Create web/package-lock CycloneDX SBOM
+        run: npm run release:sbom:web -- --output=artifacts/web-sbom.cdx.json
+
+      - name: Set up Deno for Edge provenance
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v2.9.3
+
+      - name: Test Edge CycloneDX transformation
+        run: npm run release:sbom:edge:test
+
+      - name: Create Edge/Deno CycloneDX SBOM
+        run: npm run release:sbom:edge -- --output=artifacts/edge-sbom.cdx.json
+
+      - name: Create immutable release manifest
+        run: node scripts/release/create-release-manifest.mjs --output=artifacts/release-manifest.json --require-clean
+
+      - name: Upload release evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-evidence-${{ github.sha }}
+          path: |
+            artifacts/release-manifest.json
+            artifacts/web-sbom.cdx.json
+            artifacts/edge-sbom.cdx.json
+            dist
+          if-no-files-found: error
+          retention-days: 30
+
+  android-compile:
+    name: Android foundation compile
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CI: "true"
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Java 21
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: gradle
+
+      - name: Pin npm
+        run: npm install --global npm@11.13.0
+
+      - name: Install dependencies from lockfile
+        run: npm ci --no-audit --no-fund
+
+      - name: Build and synchronize shared Android/iOS artifact
+        run: npm run mobile:sync
+
+      - name: Validate mobile contract and generated source drift
+        run: npm run mobile:check && git diff --exit-code -- android
+
+      - name: Compile, test and lint Android debug artifact
+        working-directory: android
+        run: chmod +x gradlew && ./gradlew testDebugUnitTest lintDebug assembleDebug --no-daemon --stacktrace
+
+      - name: Upload unsigned Android debug artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: effectime-android-debug-${{ github.sha }}
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
+
+  ios-compile:
+    name: iOS foundation simulator compile
+    runs-on: macos-26
+    timeout-minutes: 30
+    env:
+      CI: "true"
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Pin npm
+        run: npm install --global npm@11.13.0
+
+      - name: Install dependencies from lockfile
+        run: npm ci --no-audit --no-fund
+
+      - name: Build and synchronize shared Android/iOS artifact
+        run: npm run mobile:sync
+
+      - name: Record macOS and Xcode provenance
+        run: |
+          sw_vers
+          xcodebuild -version
+          xcode-select -p
+          echo "Runner image: ${ImageOS:-unknown} ${ImageVersion:-unknown}"
+
+      - name: Detect committed Swift package lock
+        id: swift_lock
+        shell: bash
+        run: |
+          lock='ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved'
+          if git ls-files --error-unmatch -- "$lock" >/dev/null 2>&1; then
+            echo 'committed=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'committed=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Bootstrap missing Swift package lock for review
+        if: steps.swift_lock.outputs.committed != 'true'
+        run: >-
+          xcodebuild
+          -resolvePackageDependencies
+          -project ios/App/App.xcodeproj
+          -scheme App
+
+      - name: Upload bootstrapped Swift package lock
+        if: steps.swift_lock.outputs.committed != 'true'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: effectime-ios-package-lock-${{ github.sha }}
+          path: |
+            ios/App/App.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+            ios/App/CapApp-SPM/Package.resolved
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Stop until the reviewed Swift package lock is committed
+        if: steps.swift_lock.outputs.committed != 'true'
+        run: |
+          echo '::error::The generated Package.resolved artifact must be reviewed and committed before iOS compilation can attest a release candidate.'
+          exit 1
+
+      - name: Validate committed native release contract
+        if: steps.swift_lock.outputs.committed == 'true'
+        run: npm run mobile:check:release
+
+      - name: Resolve only the committed Swift package graph
+        if: steps.swift_lock.outputs.committed == 'true'
+        run: >-
+          xcodebuild
+          -resolvePackageDependencies
+          -project ios/App/App.xcodeproj
+          -scheme App
+          -onlyUsePackageVersionsFromResolvedFile
+
+      - name: Reject generated iOS source or lock drift
+        if: steps.swift_lock.outputs.committed == 'true'
+        shell: bash
+        run: |
+          git diff --exit-code -- ios
+          test -z "$(git status --porcelain=v1 --untracked-files=all -- ios)" || {
+            git status --short --untracked-files=all -- ios
+            exit 1
+          }
+
+      - name: Compile unsigned iOS simulator application
+        if: steps.swift_lock.outputs.committed == 'true'
+        run: >-
+          xcodebuild
+          -project ios/App/App.xcodeproj
+          -scheme App
+          -configuration Debug
+          -sdk iphonesimulator
+          -destination 'generic/platform=iOS Simulator'
+          -derivedDataPath artifacts/ios-derived-data
+          -onlyUsePackageVersionsFromResolvedFile
+          CODE_SIGNING_ALLOWED=NO
+          build
+
+  edge-safety:
+    name: Edge PII safety contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v2.9.3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Prevent raw logging in PII-sensitive functions
+        run: npm run edge:log-safety
+
+      - name: Check PII-hardened email functions
+        run: >-
+          deno check --node-modules-dir=none --no-lock
+          supabase/functions/auth-email-hook/index.ts
+          supabase/functions/send-transactional-email/index.ts
+
+  edge-check:
+    name: Edge Functions diagnostic ratchet
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5
+        with:
+          deno-version: v2.9.3
+
+      - name: Prove Deno runtime and diagnostic ratchet behavior
+        run: npm run edge:ratchet:test
+
+      - name: Run all discovered Edge Deno tests
+        run: npm run edge:test
+
+      - name: Run raw Edge Function type check
+        run: npm run edge:check
+
+      - name: Enforce Edge Function diagnostic ratchet
+        run: node scripts/ci/check-edge-functions.mjs --ratchet --timeout-ms=600000

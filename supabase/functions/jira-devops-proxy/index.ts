@@ -1,6 +1,14 @@
 // Jira / Azure DevOps unified proxy.
 // Actions: test_connection | discover_fields | search_issues | create_issue | update_issue
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.0';
+import {
+  canManageIntegration,
+  CONFIG_ACTIONS,
+  isKnownIntegrationAction,
+  isSafeIntegrationBaseUrl,
+  requiredIntegrationFeature,
+  WRITE_ACTIONS,
+} from './security.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -20,11 +28,32 @@ interface IntegrationRow {
   default_issue_type: string | null;
 }
 
+interface DiscoveredProjectField {
+  field_id: string;
+  field_name: string;
+  field_type: string;
+  is_custom: boolean;
+  schema: Record<string, unknown>;
+}
+
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+async function hasWorkspaceFeature(
+  admin: any,
+  workspaceId: string,
+  featureKey: string,
+): Promise<boolean> {
+  const { data: tenantId, error: tenantError } = await admin.rpc('tenant_id_for_workspace', {
+    _workspace_id: workspaceId,
+  });
+  if (tenantError || !tenantId) return false;
+  const { data, error } = await admin.rpc('tenant_enabled_features', { _tenant_id: tenantId });
+  return !error && Array.isArray(data) && data.some((feature: any) => feature.feature_key === featureKey);
 }
 
 
@@ -377,7 +406,7 @@ async function jiraSyncProjectConfig(integ: IntegrationRow) {
     throw new Error(`Jira project metadata lookup failed: ${e instanceof Error ? e.message : String(e)}`);
   }
 
-  const fields = issueTypes.map((it: any) => ({
+  const fields: DiscoveredProjectField[] = issueTypes.map((it) => ({
     field_id: `jira.issuetype.${it.id}`,
     field_name: it.name,
     field_type: 'issuetype',
@@ -673,6 +702,7 @@ async function adoSearchIdentities(integ: IntegrationRow, query: string) {
 // ───── Main ─────
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: corsHeaders });
+  if (req.method !== 'POST') return jsonResponse({ error: 'Method not allowed' }, 405);
 
   try {
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
@@ -693,6 +723,9 @@ Deno.serve(async (req) => {
       action: string; integration_id: string; params?: any;
     };
     if (!action || !integration_id) return jsonResponse({ error: 'action és integration_id kötelező' }, 400);
+    if (!isKnownIntegrationAction(action)) {
+      return jsonResponse({ error: 'Ismeretlen action' }, 400);
+    }
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
@@ -705,14 +738,30 @@ Deno.serve(async (req) => {
     if (integErr || !integ) return jsonResponse({ error: 'Integráció nem található' }, 404);
 
     // membership check
-    const { data: member } = await admin
+    const { data: member, error: membershipError } = await admin
       .from('enterprise_memberships')
       .select('id,role,status')
       .eq('workspace_id', integ.workspace_id)
       .eq('user_id', user.id)
       .eq('status', 'active')
       .maybeSingle();
-    if (!member) return jsonResponse({ error: 'Nincs jogosultság ehhez a munkaterülethez' }, 403);
+    if (membershipError || !member) return jsonResponse({ error: 'Nincs jogosultság ehhez a munkaterülethez' }, 403);
+
+    if (!isSafeIntegrationBaseUrl(integ.base_url)) {
+      return jsonResponse({ error: 'Integration base URL must be a public HTTPS endpoint' }, 400);
+    }
+
+    // Configuration actions and third-party writes are limited to the
+    // owner/resourceAssistant roles defined by AGL-006/009/010. Entitlements
+    // are an additional boundary, not a replacement for workspace RBAC.
+    if ((CONFIG_ACTIONS.has(action) || WRITE_ACTIONS.has(action)) && !canManageIntegration(member.role)) {
+      return jsonResponse({ error: 'Tulajdonosi vagy erőforrás-adminisztrátori jogosultság szükséges' }, 403);
+    }
+    const requiredFeature = requiredIntegrationFeature(integ.provider, action);
+    if (!requiredFeature) return jsonResponse({ error: 'Ismeretlen action' }, 400);
+    if (!(await hasWorkspaceFeature(admin, integ.workspace_id, requiredFeature))) {
+      return jsonResponse({ error: 'A funkció nem része a munkaterület előfizetésének' }, 403);
+    }
 
     const provider = integ.provider as 'jira' | 'azure_devops';
     const isJira = provider === 'jira';

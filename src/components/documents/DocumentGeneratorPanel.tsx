@@ -14,6 +14,7 @@ import {
   generateDocument,
   polishDocumentWithAi,
 } from '@/hooks/useDocumentGenerator';
+import { DocumentPreviewFrame } from '@/components/documents/DocumentPreviewFrame';
 
 interface Props {
   workspaceId: string;
@@ -81,6 +82,9 @@ export function DocumentGeneratorPanel({ workspaceId }: Props) {
     setPolishing(true);
     try {
       const res = await polishDocumentWithAi(lastDocId);
+      if (!res.ok) {
+        throw new Error(res.error || t('documents.polish_error'));
+      }
       setPreviewHtml(res.polished_html);
       if (res.ai_available) {
         toast.success(t('documents.polish_success'));
@@ -172,11 +176,9 @@ export function DocumentGeneratorPanel({ workspaceId }: Props) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div
-              className="prose prose-sm dark:prose-invert max-w-none rounded border bg-background p-4"
-              // eslint-disable-next-line react/no-danger -- HTML comes from a SECURITY DEFINER RPC that
-              // substitutes pre-declared variables; no user-supplied raw HTML beyond curated templates.
-              dangerouslySetInnerHTML={{ __html: previewHtml }}
+            <DocumentPreviewFrame
+              untrustedHtml={previewHtml}
+              title={t('documents.preview_title')}
             />
           </CardContent>
         </Card>

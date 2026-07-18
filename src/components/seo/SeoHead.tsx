@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet-async";
+import { isNativeRuntime } from "@/lib/platform/mobile";
 
 const SITE_URL = "https://effectime.app";
 
@@ -52,6 +53,7 @@ export function SeoHead({
     : null;
 
   const extraJsonLd = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
+  const structuredDataEnabled = !isNativeRuntime();
 
   return (
     <Helmet>
@@ -81,10 +83,10 @@ export function SeoHead({
       <meta name="twitter:description" content={description} />
       <meta name="twitter:image" content={ogImage} />
 
-      {breadcrumbSchema && (
+      {structuredDataEnabled && breadcrumbSchema && (
         <script type="application/ld+json">{JSON.stringify(breadcrumbSchema)}</script>
       )}
-      {extraJsonLd.map((schema, i) => (
+      {structuredDataEnabled && extraJsonLd.map((schema, i) => (
         <script key={i} type="application/ld+json">{JSON.stringify(schema)}</script>
       ))}
     </Helmet>

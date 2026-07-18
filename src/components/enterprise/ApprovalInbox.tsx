@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { logAuditEvent } from '@/lib/auditLog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -14,10 +13,13 @@ import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
+import { useFeature } from '@/hooks/useFeature';
+import { DecisionMemoryEditor } from './DecisionMemoryEditor';
 
 interface Props {
   workspaceId: string;
   userId: string;
+  canApprove?: boolean;
 }
 
 const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
@@ -29,9 +31,10 @@ const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'outline' | 'des
   expired: 'outline',
 };
 
-export function ApprovalInbox({ workspaceId, userId }: Props) {
+export function ApprovalInbox({ workspaceId, userId, canApprove = false }: Props) {
   const { t } = useI18n();
   const dateFnsLocale = useDateLocale();
+  const { enabled: decisionMemoryEnabled } = useFeature(workspaceId, 'decision_memory');
   const [requests, setRequests] = useState<any[]>([]);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [memberInfo, setMemberInfo] = useState<Record<string, { team: string | null; role: string | null }>>({});
@@ -113,24 +116,14 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
     setProcessing(true);
     const reviewComment = commentMap[requestId] || null;
 
-    const { error: updateError } = await supabase
-      .from('leave_requests')
-      .update({ status: decision as any, reviewer_id: userId, reviewed_at: new Date().toISOString(), review_comment: reviewComment })
-      .eq('id', requestId);
-
-    if (updateError) { toast.error(t('approval_inbox.decision_failed')); setProcessing(false); return; }
-
-    await supabase.from('approval_decisions').insert({
-      leave_request_id: requestId, workspace_id: workspaceId, decided_by: userId, decision: decision as any, comment: reviewComment,
+    const { error: decisionError } = await (supabase as any).rpc('decide_leave_request', {
+      _workspace_id: workspaceId,
+      _request_id: requestId,
+      _decision: decision,
+      _comment: reviewComment,
     });
 
-    await logAuditEvent({
-      workspace_id: workspaceId, actor_id: userId,
-      action: decision === 'approved' ? 'leave_request.approved' : 'leave_request.rejected',
-      target_id: requestId, target_type: 'leave_request',
-      affected_user_id: requests.find(r => r.id === requestId)?.user_id,
-      metadata: { comment: reviewComment },
-    });
+    if (decisionError) { toast.error(t('approval_inbox.decision_failed')); setProcessing(false); return; }
 
     const req = requests.find(r => r.id === requestId);
     if (req) {
@@ -141,6 +134,8 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
           templateName: 'leave-decision',
           recipientUserId: req.user_id,
           idempotencyKey: `leave-decision-${requestId}-${decision}`,
+          workspaceId,
+          leaveRequestId: requestId,
           templateData: {
             employeeName: reqUserAuth?.display_name || t('common.colleague'), decision,
             startDate: format(new Date(req.start_date), 'yyyy.MM.dd', { locale: dateFnsLocale }),
@@ -160,13 +155,28 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
   const handleBulkDecision = async (decision: 'approved' | 'rejected') => {
     if (selectedIds.size === 0) return;
     setProcessing(true);
-    for (const id of selectedIds) {
-      const { error: bulkUpdateErr } = await supabase.from('leave_requests').update({ status: decision as any, reviewer_id: userId, reviewed_at: new Date().toISOString() }).eq('id', id);
-      if (bulkUpdateErr) { console.error('[ApprovalInbox] Bulk update failed for', id, bulkUpdateErr.message); continue; }
-      const { error: bulkInsertErr } = await supabase.from('approval_decisions').insert({ leave_request_id: id, workspace_id: workspaceId, decided_by: userId, decision: decision as any });
-      if (bulkInsertErr) console.error('[ApprovalInbox] Bulk approval_decisions insert failed for', id, bulkInsertErr.message);
+    let succeeded = 0;
+    let failed = 0;
+    for (const id of [...selectedIds]) {
+      const { error } = await (supabase as any).rpc('decide_leave_request', {
+        _workspace_id: workspaceId,
+        _request_id: id,
+        _decision: decision,
+        _comment: null,
+      });
+      if (error) {
+        failed++;
+        console.error('[ApprovalInbox] Bulk decision failed for', id, error.message);
+      } else {
+        succeeded++;
+      }
     }
-    toast.success(decision === 'approved' ? t('approval_inbox.bulk_approved', { count: selectedIds.size }) : t('approval_inbox.bulk_rejected', { count: selectedIds.size }));
+    if (succeeded > 0) {
+      toast.success(decision === 'approved' ? t('approval_inbox.bulk_approved', { count: succeeded }) : t('approval_inbox.bulk_rejected', { count: succeeded }));
+    }
+    if (failed > 0) {
+      toast.error(`${t('approval_inbox.decision_failed')} (${failed})`);
+    }
     fetchRequests();
     setProcessing(false);
   };
@@ -285,7 +295,7 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
       )}
 
       {/* Bulk actions */}
-      {statusFilter === 'pending' && pendingRequests.length > 0 && (
+      {canApprove && statusFilter === 'pending' && pendingRequests.length > 0 && (
         <div className="flex flex-wrap items-center gap-2">
           <Button variant="outline" size="sm" className="text-xs h-8" onClick={toggleSelectAll}>
             {selectedIds.size === pendingRequests.length ? t('approval_inbox.deselect_all') : t('approval_inbox.select_all')}
@@ -320,7 +330,7 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
             <Card key={req.id} className={selectedIds.has(req.id) ? 'border-primary' : ''}>
               <CardContent className="py-3 px-4 space-y-2">
                 <div className="flex items-start gap-3">
-                  {isPending && statusFilter === 'pending' && (
+                  {canApprove && isPending && statusFilter === 'pending' && (
                     <Checkbox checked={selectedIds.has(req.id)} onCheckedChange={() => toggleSelect(req.id)} className="mt-1" />
                   )}
                   <div className="flex-1 min-w-0 space-y-1">
@@ -340,7 +350,7 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
                   </div>
                 </div>
 
-                {isPending && (
+                {canApprove && isPending && (
                   <div className="space-y-2 pt-1 border-t">
                     <Textarea placeholder={t('approval_inbox.comment_placeholder')} className="text-xs h-16" value={commentMap[req.id] || ''} onChange={(e) => setCommentMap(prev => ({ ...prev, [req.id]: e.target.value }))} />
                     <div className="flex gap-2 justify-end">
@@ -352,6 +362,14 @@ export function ApprovalInbox({ workspaceId, userId }: Props) {
                       </Button>
                     </div>
                   </div>
+                )}
+                {decisionMemoryEnabled && (
+                  <DecisionMemoryEditor
+                    workspaceId={workspaceId}
+                    subjectType="leave_request"
+                    subjectId={req.id}
+                    authoredBy={userId}
+                  />
                 )}
               </CardContent>
             </Card>

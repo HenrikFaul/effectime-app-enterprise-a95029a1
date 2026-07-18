@@ -94,6 +94,8 @@ import { FeatureGate } from '@/components/feature-gate/FeatureGate';
 import { LockedFeatureNotice } from '@/components/feature-gate/LockedFeatureNotice';
 import { WellbeingScoreCard } from './wellbeing/WellbeingScoreCard';
 import { SecurityCenter } from './security/SecurityCenter';
+import { useEnabledFeatures } from '@/hooks/useFeature';
+import { isWorkspaceTabEntitled, type WorkspaceTab } from '@/lib/workspaceTabs';
 
 interface Workspace {
   id: string;
@@ -103,6 +105,7 @@ interface Workspace {
   locale: string;
   created_at: string;
   is_archived: boolean;
+  settings?: Record<string, unknown> | null;
 }
 
 interface Props {
@@ -160,6 +163,14 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   const isAdmin = userRole === 'owner' || userRole === 'resourceAssistant';
   const { canView, canEdit } = useEnterprisePermissions(workspace.id, userRole);
   const { layout } = useWorkspaceNavLayout(workspace.id);
+  const {
+    isEnabled: isFeatureEnabled,
+    isLoading: featuresLoading,
+    isError: featuresError,
+  } = useEnabledFeatures(workspace.id);
+  const hasTabEntitlement = (tab: WorkspaceTab) => (
+    !featuresLoading && !featuresError && isWorkspaceTabEntitled(tab, isFeatureEnabled)
+  );
 
   // Map active tab → help anchor
   const helpAnchorId =
@@ -233,6 +244,24 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   const hasCalendarAccess = canView('calendar');
   // Check if any requests permission is available
   const hasRequestsAccess = canView('requests_own') || canView('requests_team') || canEdit('leave_requests_submit');
+  const visibleTopNavItems = WORKSPACE_TOP_NAV_ITEMS.filter((item) => {
+    const visible =
+      item.value === 'my-portal' ? true :
+      item.value === 'members' ? canView('members') :
+      item.value === 'organization' ? canView('members') :
+      item.value === 'calendar' ? hasCalendarAccess :
+      item.value === 'time-attendance' ? true :
+      item.value === 'requests' ? hasRequestsAccess :
+      item.value === 'workflows' ? canView('members') :
+      item.value === 'resources' ? true :
+      item.value === 'reports-audit' ? (canView('reports') || canView('audit') || canView('export')) :
+      item.value === 'analytics' ? isAdmin :
+      item.value === 'developer' ? isAdmin :
+      item.value === 'security' ? isAdmin :
+      item.value === 'settings' ? canView('settings') :
+      false;
+    return visible && hasTabEntitlement(item.value);
+  });
 
   return (
     <SidebarProvider>
@@ -252,16 +281,15 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
       >
         {layout === 'sidebar' && (
           <WorkspaceSidebar
-            workspaceId={workspace.id}
             workspaceName={workspace.name}
             activeTab={activeTab}
+            items={visibleTopNavItems.map((item) => ({
+              value: item.value,
+              label: t(item.i18nKey as any),
+              icon: item.icon,
+            }))}
             onTabChange={setActiveTab}
             onBack={onBack}
-            canViewMembers={canView('members')}
-            hasCalendarAccess={hasCalendarAccess}
-            hasRequestsAccess={hasRequestsAccess}
-            canViewReports={canView('reports') || canView('audit') || canView('export')}
-            canViewSettings={canView('settings')}
           />
         )}
         <SidebarInset className="min-w-0 flex-1">
@@ -316,26 +344,8 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className={layout === 'sidebar' ? 'sr-only' : 'sticky top-[var(--ws-header-h)] z-20 flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-border/60 !bg-background/96 backdrop-blur-sm shadow-subtle px-[var(--shell-pad-x,1rem)] py-2'}>
-              {WORKSPACE_TOP_NAV_ITEMS.map((item) => {
+              {visibleTopNavItems.map((item) => {
                 const Icon = item.icon;
-                const visible =
-                  item.value === 'my-portal' ? true :
-                  item.value === 'members' ? canView('members') :
-                  item.value === 'organization' ? canView('members') :
-                  item.value === 'calendar' ? hasCalendarAccess :
-                  item.value === 'time-attendance' ? true :
-                  item.value === 'requests' ? hasRequestsAccess :
-                  item.value === 'workflows' ? canView('members') :
-                  item.value === 'resources' ? true :
-                  item.value === 'reports-audit' ? (canView('reports') || canView('audit') || canView('export')) :
-                  item.value === 'analytics' ? isAdmin :
-                  item.value === 'developer' ? isAdmin :
-                  item.value === 'security' ? isAdmin :
-                  item.value === 'settings' ? canView('settings') :
-                  true;
-
-                if (!visible) return null;
-
                 return (
                   <TabsTrigger
                     key={item.value}
@@ -352,7 +362,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
             <div id="main-content" className="w-full px-[var(--shell-pad-x,1rem)] py-[var(--shell-pad-y,1rem)]">
               <div className="space-y-4 w-full">
             {null}
-            <TabsContent value="my-portal" className="space-y-3">
+            {hasTabEntitlement('my-portal') && <TabsContent value="my-portal" className="space-y-3">
               <EmployeeDashboard
                 workspaceId={workspace.id}
                 userId={userId}
@@ -360,9 +370,9 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                 onNavigateTab={setActiveTab}
               />
               <WellbeingScoreCard workspaceId={workspace.id} userId={userId} />
-            </TabsContent>
+            </TabsContent>}
 
-            {canView('members') && (
+            {canView('members') && hasTabEntitlement('members') && (
               <TabsContent value="members" className="space-y-3">
                 {canView('invitations') && (
                   <InvitationsPanel workspaceId={workspace.id} isAdmin={canEdit('invitations')} />
@@ -371,7 +381,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               </TabsContent>
             )}
 
-            {canView('members') && (
+            {canView('members') && hasTabEntitlement('organization') && (
               <TabsContent value="organization" className="space-y-3">
                 <OrganizationModule
                   workspaceId={workspace.id}
@@ -382,13 +392,13 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               </TabsContent>
             )}
 
-            {canView('members') && (
+            {canView('members') && hasTabEntitlement('workflows') && (
               <TabsContent value="workflows" className="space-y-3">
                 <WorkflowsModule workspaceId={workspace.id} isAdmin={isAdmin} userId={userId} />
               </TabsContent>
             )}
 
-            {hasCalendarAccess && (
+            {hasCalendarAccess && hasTabEntitlement('calendar') && (
               <TabsContent value="calendar">
                 <div className="space-y-3">
                 <Tabs defaultValue="calendar-main" className="space-y-3">
@@ -460,17 +470,18 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               </TabsContent>
             )}
 
-            <TabsContent value="time-attendance" className="space-y-3" data-help-region="workspace.time_attendance">
+            {hasTabEntitlement('time-attendance') && <TabsContent value="time-attendance" className="space-y-3" data-help-region="workspace.time_attendance">
               <TimeAttendancePage workspaceId={workspace.id} isAdmin={isAdmin} />
-            </TabsContent>
+            </TabsContent>}
 
-            {hasRequestsAccess && (
+            {hasRequestsAccess && hasTabEntitlement('requests') && (
               <TabsContent value="requests" data-help-region="workspace.approvals">
                 <RequestsAndApprovalsTab
                   workspaceId={workspace.id}
                   userId={userId}
                   userRole={userRole}
                   isAdmin={isAdmin}
+                  canViewApprovals={canView('approvals')}
                   canApprove={canEdit('approvals')}
                   canOverride={canEdit('admin_override')}
                   canSubmit={canEdit('leave_requests_submit')}
@@ -481,12 +492,14 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               </TabsContent>
             )}
 
-            <TabsContent value="resources" className="space-y-4" data-help-region="workspace.resources">
+            {hasTabEntitlement('resources') && <TabsContent value="resources" className="space-y-4" data-help-region="workspace.resources">
               <ResourcesTab workspaceId={workspace.id} userId={userId} isAdmin={isAdmin} />
-              <CapacityDnaPanel workspaceId={workspace.id} isAdmin={isAdmin} />
-            </TabsContent>
+              <FeatureGate workspaceId={workspace.id} feature="capacity_dna">
+                <CapacityDnaPanel workspaceId={workspace.id} isAdmin={isAdmin} />
+              </FeatureGate>
+            </TabsContent>}
 
-            {(canView('reports') || canView('audit') || canView('export')) && (
+            {(canView('reports') || canView('audit') || canView('export')) && hasTabEntitlement('reports-audit') && (
               <TabsContent value="reports-audit" data-help-region="workspace.reports">
                 <ReportsAndAuditTab workspaceId={workspace.id} userId={userId} />
                 {/* Compliance dashboard (Top-20 Rank 13, v3.20.0) — Pro+ feature,
@@ -523,7 +536,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               </TabsContent>
             )}
 
-            {isAdmin && (
+            {isAdmin && hasTabEntitlement('analytics') && (
               <TabsContent value="analytics" className="space-y-4">
                 <FeatureGate
                   workspaceId={workspace.id}
@@ -535,7 +548,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               </TabsContent>
             )}
 
-            {isAdmin && (
+            {isAdmin && hasTabEntitlement('developer') && (
               <TabsContent value="developer" className="space-y-4">
                 <FeatureGate
                   workspaceId={workspace.id}
@@ -547,7 +560,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               </TabsContent>
             )}
 
-            {isAdmin && (
+            {isAdmin && hasTabEntitlement('security') && (
               <TabsContent value="security" className="space-y-4">
                 <FeatureGate
                   workspaceId={workspace.id}
@@ -559,7 +572,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               </TabsContent>
             )}
 
-            {canView('settings') && (
+            {canView('settings') && hasTabEntitlement('settings') && (
               <TabsContent value="settings" data-help-region="workspace.settings">
                 <WorkspaceSettings workspace={workspace} userRole={userRole} userId={userId} onRefresh={onRefresh} canViewPermissionConfig={userRole === 'owner' || canView('permission_config')} canViewLayoutSetting={userRole === 'owner' || canView('layout_setting')} />
                 {/* Plugin marketplace (Top-20 Rank 19, v3.30.0). Workspace
@@ -585,6 +598,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
         onOpenChange={setShowInvite}
         workspaceId={workspace.id}
         invitedBy={userId}
+        actorRole={userRole}
         onInvited={() => {}}
       />
 
@@ -611,7 +625,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
 }
 
 // ===== Combined Requests + Approvals Tab =====
-function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canApprove, canOverride, canSubmit, canViewOwn, canViewTeam, canViewRules }: { workspaceId: string; userId: string; userRole: string; isAdmin: boolean; canApprove?: boolean; canOverride?: boolean; canSubmit?: boolean; canViewOwn?: boolean; canViewTeam?: boolean; canViewRules?: boolean }) {
+function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canViewApprovals, canApprove, canOverride, canSubmit, canViewOwn, canViewTeam, canViewRules }: { workspaceId: string; userId: string; userRole: string; isAdmin: boolean; canViewApprovals?: boolean; canApprove?: boolean; canOverride?: boolean; canSubmit?: boolean; canViewOwn?: boolean; canViewTeam?: boolean; canViewRules?: boolean }) {
   const { t } = useI18n();
   const [showOverride, setShowOverride] = useState(false);
   // Per user request: all top-level sections start collapsed.
@@ -637,7 +651,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
       {/* Helyettesítési felkérések (felém) */}
       <SubstituteInbox workspaceId={workspaceId} userId={userId} />
 
-      {isAdmin && (
+      {isAdmin && (canViewApprovals || canApprove || canOverride) && (
         <Collapsible open={approvalsOpen} onOpenChange={setApprovalsOpen}>
           <CollapsibleTrigger asChild>
             <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
@@ -651,13 +665,19 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canAp
             </Card>
           </CollapsibleTrigger>
           <CollapsibleContent className="mt-2">
-            <div className="flex justify-end mb-2">
+            {canOverride ? <div className="flex justify-end mb-2">
               <Button size="sm" variant="outline" onClick={() => setShowOverride(true)} className="text-xs">
                 <ShieldAlert className="h-3.5 w-3.5 mr-1" /> {t('ws_nav.override_btn')}
               </Button>
-            </div>
-            <ApprovalInbox workspaceId={workspaceId} userId={userId} />
-            <AdminLeaveOverride open={showOverride} onOpenChange={setShowOverride} workspaceId={workspaceId} adminUserId={userId} onCreated={() => {}} />
+            </div> : null}
+            <ApprovalInbox
+              workspaceId={workspaceId}
+              userId={userId}
+              canApprove={canApprove}
+            />
+            {canOverride ? (
+              <AdminLeaveOverride open={showOverride} onOpenChange={setShowOverride} workspaceId={workspaceId} onCreated={() => {}} />
+            ) : null}
             <DecisionMemoryStaleInbox workspaceId={workspaceId} isAdmin={isAdmin} authoredBy={userId} />
           </CollapsibleContent>
         </Collapsible>
@@ -919,33 +939,42 @@ function InvitationList({ workspaceId, isAdmin }: { workspaceId: string; isAdmin
 // ===== Workspace Settings =====
 function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPermissionConfig = true, canViewLayoutSetting = false }: { workspace: Workspace; userRole?: string; userId: string; onRefresh: () => void; canViewPermissionConfig?: boolean; canViewLayoutSetting?: boolean }) {
   const { t } = useI18n();
+  const persistedSettings = workspace.settings && typeof workspace.settings === 'object'
+    ? workspace.settings
+    : {};
   const [name, setName] = useState(workspace.name);
   const [description, setDescription] = useState(workspace.description || '');
   const [saving, setSaving] = useState(false);
-  const [customReports, setCustomReports] = useState<{ id: string; name: string; type: string }[]>([
-    { id: '1', name: t('workspace_settings.tmpl_team_monthly'), type: 'team_monthly' },
-    { id: '2', name: t('workspace_settings.tmpl_role_coverage'), type: 'role_coverage' },
-  ]);
-  const [calendarWidgets, setCalendarWidgets] = useState<{ id: string; name: string; enabled: boolean }[]>([
-    { id: 'team_avail', name: t('workspace_settings.widget_team_avail'), enabled: true },
-    { id: 'upcoming_holidays', name: t('workspace_settings.widget_upcoming_holidays'), enabled: true },
-    { id: 'coverage_heatmap', name: t('workspace_settings.widget_coverage_heatmap'), enabled: false },
-    { id: 'role_summary', name: t('workspace_settings.widget_role_summary'), enabled: false },
-  ]);
+  const [customReports, setCustomReports] = useState<{ id: string; name: string; type: string }[]>(() => (
+    Array.isArray(persistedSettings.customReports)
+      ? persistedSettings.customReports as { id: string; name: string; type: string }[]
+      : [
+        { id: '1', name: t('workspace_settings.tmpl_team_monthly'), type: 'team_monthly' },
+        { id: '2', name: t('workspace_settings.tmpl_role_coverage'), type: 'role_coverage' },
+      ]
+  ));
+  const [calendarWidgets, setCalendarWidgets] = useState<{ id: string; name: string; enabled: boolean }[]>(() => (
+    Array.isArray(persistedSettings.calendarWidgets)
+      ? persistedSettings.calendarWidgets as { id: string; name: string; enabled: boolean }[]
+      : [
+        { id: 'team_avail', name: t('workspace_settings.widget_team_avail'), enabled: true },
+        { id: 'upcoming_holidays', name: t('workspace_settings.widget_upcoming_holidays'), enabled: true },
+        { id: 'coverage_heatmap', name: t('workspace_settings.widget_coverage_heatmap'), enabled: false },
+        { id: 'role_summary', name: t('workspace_settings.widget_role_summary'), enabled: false },
+      ]
+  ));
   const [newReportName, setNewReportName] = useState('');
   const [newReportType, setNewReportType] = useState('custom');
   const [newWidgetName, setNewWidgetName] = useState('');
 
   const handleSave = async () => {
     setSaving(true);
-    const settings = {
-      customReports,
-      calendarWidgets,
-    };
-    const { error } = await supabase
-      .from('enterprise_workspaces')
-      .update({ name: name.trim(), description: description.trim() || null, settings: settings as any })
-      .eq('id', workspace.id);
+    const { error } = await (supabase as any).rpc('patch_workspace_settings', {
+      _workspace_id: workspace.id,
+      _name: name.trim(),
+      _description: description.trim() || null,
+      _settings_patch: { customReports, calendarWidgets },
+    });
     if (error) {
       toast.error(t('workspace_settings.toast_save_failed'));
     } else {
@@ -1047,9 +1076,11 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
         </SettingsSection>
       )}
 
-      <SettingsSection workspaceId={workspace.id} sectionKey="settings.m365_calendar" icon={<Plug className="h-4 w-4" />} title={t('m365.title')}>
-        <M365IntegrationPanel workspaceId={workspace.id} />
-      </SettingsSection>
+      <FeatureGate workspaceId={workspace.id} feature="ms365_calendar_sync">
+        <SettingsSection workspaceId={workspace.id} sectionKey="settings.m365_calendar" icon={<Plug className="h-4 w-4" />} title={t('m365.title')}>
+          <M365IntegrationPanel workspaceId={workspace.id} />
+        </SettingsSection>
+      </FeatureGate>
 
       {isAdmin && (
         <SettingsSection workspaceId={workspace.id} sectionKey="settings.help_system" icon={<CircleHelp className="h-4 w-4" />} title={t('settings_sections.help_system')}>

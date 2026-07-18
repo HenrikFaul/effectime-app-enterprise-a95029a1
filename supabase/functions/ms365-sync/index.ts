@@ -15,6 +15,12 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "../_shared/cors.ts";
+import { checkWorkspaceFeature } from "../_shared/feature-entitlement.ts";
+import {
+  hasServiceRoleCredential,
+  normalizeAppPath,
+  safeAppOrigin,
+} from "../_shared/request-security.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -22,6 +28,8 @@ const ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
 const MS_CLIENT_ID = Deno.env.get("MS_GRAPH_CLIENT_ID") ?? "";
 const MS_CLIENT_SECRET = Deno.env.get("MS_GRAPH_CLIENT_SECRET") ?? "";
 const MS_REDIRECT_URI = `${SUPABASE_URL}/functions/v1/ms365-sync/callback`;
+const APP_ORIGIN = safeAppOrigin(Deno.env.get("APP_ORIGIN") || Deno.env.get("SITE_URL"));
+const M365_FEATURE_KEY = "ms365_calendar_sync";
 const MS_SCOPES = [
   "openid",
   "profile",
@@ -34,6 +42,38 @@ const MS_SCOPES = [
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
+
+interface FeatureFailure {
+  error: "feature_not_enabled" | "feature_entitlement_unavailable";
+  status: 403 | 503;
+}
+
+async function checkM365Entitlement(workspaceId: string): Promise<FeatureFailure | null> {
+  const entitlement = await checkWorkspaceFeature(admin, workspaceId, M365_FEATURE_KEY);
+  if (entitlement.enabled) return null;
+  if (entitlement.reason === "lookup_error") {
+    console.error(
+      `[ms365-sync] entitlement lookup failed workspace=${workspaceId} feature=${M365_FEATURE_KEY} step=${entitlement.step}: ${entitlement.error}`,
+    );
+    return { error: "feature_entitlement_unavailable", status: 503 };
+  }
+  return { error: "feature_not_enabled", status: 403 };
+}
+
+async function checkActiveMembership(workspaceId: string, userId: string): Promise<FeatureFailure | null> {
+  const { data, error } = await admin
+    .from("enterprise_memberships")
+    .select("id")
+    .eq("workspace_id", workspaceId)
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (error) {
+    console.error(`[ms365-sync] membership lookup failed workspace=${workspaceId} user=${userId}: ${error.message}`);
+    return { error: "feature_entitlement_unavailable", status: 503 };
+  }
+  return data ? null : { error: "feature_not_enabled", status: 403 };
+}
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -123,7 +163,7 @@ async function ensureFreshToken(integration: any) {
   if (exp - 60_000 > Date.now()) return integration.access_token as string;
   const refreshed = await refreshAccessToken(integration.refresh_token);
   const newExpiry = new Date(Date.now() + refreshed.expires_in * 1000).toISOString();
-  await admin
+  const { error: tokenPersistError } = await admin
     .from("enterprise_user_calendar_integrations")
     .update({
       access_token: refreshed.access_token,
@@ -131,6 +171,9 @@ async function ensureFreshToken(integration: any) {
       token_expires_at: newExpiry,
     })
     .eq("id", integration.id);
+  if (tokenPersistError) {
+    throw new Error(`Refreshed Microsoft token could not be persisted: ${tokenPersistError.message}`);
+  }
   return refreshed.access_token;
 }
 
@@ -157,15 +200,17 @@ interface LeaveRequest {
 
 async function syncOutboundLeaves(integration: any, accessToken: string) {
   // Push approved leave requests of this user as Outlook calendar events.
-  const { data: leaves } = await admin
+  const { data: leaves, error: leavesError } = await admin
     .from("leave_requests")
     .select("id, workspace_id, user_id, start_date, end_date, leave_type, status, external_event_id")
     .eq("workspace_id", integration.workspace_id)
     .eq("user_id", integration.user_id)
     .eq("status", "approved")
     .gte("end_date", new Date(Date.now() - 30 * 86400_000).toISOString().slice(0, 10));
+  if (leavesError) throw new Error(`Outbound leave lookup failed: ${leavesError.message}`);
 
   let pushed = 0;
+  let graphFailures = 0;
   for (const lv of (leaves as LeaveRequest[]) ?? []) {
     if (lv.external_event_id) continue; // already synced
     const event = {
@@ -187,16 +232,37 @@ async function syncOutboundLeaves(integration: any, accessToken: string) {
     });
     if (r.ok) {
       const created = await r.json();
-      await admin
+      const { data: persistedLeave, error: eventPersistError } = await admin
         .from("leave_requests")
         .update({ external_event_id: created.id })
-        .eq("id", lv.id);
+        .eq("id", lv.id)
+        .eq("workspace_id", integration.workspace_id)
+        .eq("user_id", integration.user_id)
+        .is("external_event_id", null)
+        .select("id")
+        .maybeSingle();
+      if (eventPersistError || !persistedLeave) {
+        const compensation = await fetch(
+          `https://graph.microsoft.com/v1.0/me/events/${encodeURIComponent(created.id)}`,
+          { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } },
+        ).catch(() => null);
+        if (!compensation?.ok && compensation?.status !== 404) {
+          console.error("Failed to compensate unpersisted Outlook event", created.id, compensation?.status);
+        }
+        throw new Error(
+          eventPersistError
+            ? `Outlook event link persistence failed: ${eventPersistError.message}`
+            : "Outlook event link was concurrently claimed",
+        );
+      }
       pushed++;
     } else {
       const errBody = await r.text();
       console.error("Outbound push failed", r.status, errBody);
+      graphFailures++;
     }
   }
+  if (graphFailures > 0) throw new Error(`Outbound Microsoft sync failed for ${graphFailures} event(s)`);
   return pushed;
 }
 
@@ -245,6 +311,31 @@ async function logSync(
 }
 
 async function syncIntegration(integration: any) {
+  const membershipFailure = await checkActiveMembership(integration.workspace_id, integration.user_id);
+  if (membershipFailure) {
+    if (membershipFailure.status === 403) {
+      const { error: deactivateError } = await admin
+        .from("enterprise_user_calendar_integrations")
+        .update({ is_active: false, last_sync_status: "access_revoked" })
+        .eq("id", integration.id);
+      if (deactivateError) {
+        console.error(`[ms365-sync] failed to deactivate revoked integration=${integration.id}: ${deactivateError.message}`);
+      }
+    }
+    return {
+      ok: false,
+      error: membershipFailure.status === 403 ? "workspace_access_revoked" : membershipFailure.error,
+      entitlementStatus: membershipFailure.status,
+    };
+  }
+  const featureFailure = await checkM365Entitlement(integration.workspace_id);
+  if (featureFailure) {
+    return {
+      ok: false,
+      error: featureFailure.error,
+      entitlementStatus: featureFailure.status,
+    };
+  }
   try {
     const token = await ensureFreshToken(integration);
     const pushed = await syncOutboundLeaves(integration, token);
@@ -267,17 +358,30 @@ async function handleGetAuthUrl(req: Request) {
   const { workspace_id, return_to } = await req.json().catch(() => ({}));
   if (!workspace_id) return jsonResponse({ error: "workspace_id required" }, 400);
 
+  const { data: membership, error: membershipError } = await admin
+    .from("enterprise_memberships")
+    .select("id")
+    .eq("workspace_id", workspace_id)
+    .eq("user_id", user.id)
+    .eq("status", "active")
+    .maybeSingle();
+  if (membershipError) return jsonResponse({ error: "workspace_authorization_unavailable" }, 503);
+  if (!membership) return jsonResponse({ error: "forbidden" }, 403);
+
+  const featureFailure = await checkM365Entitlement(workspace_id);
+  if (featureFailure) return jsonResponse({ error: featureFailure.error }, featureFailure.status);
+
   const state = crypto.randomUUID();
-  // Store state for 10 min in a tiny table-less way: encode state→user/workspace in DB.
-  await admin.from("enterprise_calendar_sync_log").insert({
+  const { error: stateError } = await admin.from("enterprise_calendar_sync_log").insert({
     workspace_id,
     user_id: user.id,
     provider: "ms365",
     direction: "outbound",
     action: `oauth_state:${state}`,
     status: "success",
-    details: { return_to: return_to ?? null },
+    details: { return_to: normalizeAppPath(return_to, `/w/${workspace_id}`) },
   });
+  if (stateError) throw new Error(`OAuth state storage failed: ${stateError.message}`);
   return jsonResponse({ auth_url: buildAuthUrl(state) });
 }
 
@@ -287,19 +391,59 @@ async function handleCallback(req: Request) {
   const state = url.searchParams.get("state");
   const errParam = url.searchParams.get("error");
   if (errParam) {
-    return htmlResponse(`<h1>Microsoft 365 connection cancelled</h1><p>${errParam}</p>`, 400);
+    return htmlResponse(`<h1>Microsoft 365 connection cancelled</h1><p>${escapeHtml(errParam)}</p>`, 400);
   }
   if (!code || !state) return htmlResponse("<h1>Invalid callback</h1>", 400);
 
   // Look up state
   const { data: stateRow } = await admin
     .from("enterprise_calendar_sync_log")
-    .select("workspace_id, user_id, details")
+    .select("id, workspace_id, user_id, details, created_at")
     .eq("action", `oauth_state:${state}`)
+    .gte("created_at", new Date(Date.now() - 10 * 60_000).toISOString())
     .order("created_at", { ascending: false })
     .limit(1)
     .single();
   if (!stateRow) return htmlResponse("<h1>Expired or unknown state</h1>", 400);
+
+  // OAuth authorization codes and state values are one-time credentials. Fail
+  // closed if the state cannot be consumed; otherwise a storage/RLS regression
+  // would silently turn it into a replayable credential.
+  const { data: consumedState, error: stateConsumeError } = await admin
+    .from("enterprise_calendar_sync_log")
+    .delete()
+    .eq("id", stateRow.id)
+    .select("id")
+    .maybeSingle();
+  if (stateConsumeError || !consumedState) {
+    console.error(
+      "OAuth state consumption failed",
+      stateConsumeError?.message ?? "state was already consumed",
+    );
+    return htmlResponse("<h1>Connection state could not be consumed</h1>", 500);
+  }
+
+  const { data: membership, error: membershipError } = await admin
+    .from("enterprise_memberships")
+    .select("id")
+    .eq("workspace_id", stateRow.workspace_id)
+    .eq("user_id", stateRow.user_id)
+    .eq("status", "active")
+    .maybeSingle();
+  if (membershipError) {
+    return htmlResponse("<h1>Workspace authorization is temporarily unavailable</h1>", 503);
+  }
+  if (!membership) return htmlResponse("<h1>Workspace access expired</h1>", 403);
+
+  const featureFailure = await checkM365Entitlement(stateRow.workspace_id);
+  if (featureFailure) {
+    return htmlResponse(
+      featureFailure.status === 503
+        ? "<h1>Feature entitlement is temporarily unavailable</h1>"
+        : "<h1>Microsoft 365 calendar sync is not enabled</h1>",
+      featureFailure.status,
+    );
+  }
 
   try {
     const tokens = await exchangeCode(code);
@@ -324,20 +468,15 @@ async function handleCallback(req: Request) {
 
     if (upsertErr) throw new Error(`Integration upsert failed: ${upsertErr.message}`);
 
-    const returnTo = (stateRow.details as any)?.return_to ?? "/";
-    return htmlResponse(
-      `<!doctype html><html><head><meta charset="utf-8"><title>Connected</title></head>
-       <body style="font-family:system-ui;text-align:center;padding:48px">
-         <h1>✓ Microsoft 365 connected</h1>
-         <p>${me.userPrincipalName ?? me.mail ?? ""}</p>
-         <p>Redirecting in 2 seconds…</p>
-         <script>setTimeout(function(){window.location.href=${JSON.stringify(returnTo)};},2000);</script>
-       </body></html>`,
-    );
+    const returnPath = normalizeAppPath((stateRow.details as any)?.return_to, "/app");
+    return new Response(null, {
+      status: 303,
+      headers: { ...corsHeaders, Location: `${APP_ORIGIN}${returnPath}` },
+    });
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
     console.error("Callback error", msg);
-    return htmlResponse(`<h1>Connection error</h1><pre>${msg}</pre>`, 500);
+    return htmlResponse(`<h1>Connection error</h1><p>Please try again.</p>`, 500);
   }
 }
 
@@ -345,26 +484,45 @@ async function handleSyncNow(req: Request) {
   const user = await getCallerUser(req);
   if (!user) return jsonResponse({ error: "unauthorized" }, 401);
   const { integration_id } = await req.json();
-  const { data: integration } = await admin
+  const { data: integration, error: integrationError } = await admin
     .from("enterprise_user_calendar_integrations")
     .select("*")
     .eq("id", integration_id)
     .eq("user_id", user.id)
-    .single();
+    .maybeSingle();
+  if (integrationError) return jsonResponse({ error: "integration_lookup_unavailable" }, 503);
   if (!integration) return jsonResponse({ error: "not_found" }, 404);
   const result = await syncIntegration(integration);
-  return jsonResponse(result);
+  return jsonResponse(result, result.entitlementStatus ?? 200);
 }
 
 async function handleDisconnect(req: Request) {
   const user = await getCallerUser(req);
   if (!user) return jsonResponse({ error: "unauthorized" }, 401);
   const { integration_id } = await req.json();
-  await admin
+  const { data: integration, error: integrationError } = await admin
+    .from("enterprise_user_calendar_integrations")
+    .select("id, workspace_id")
+    .eq("id", integration_id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (integrationError) return jsonResponse({ error: "integration_lookup_unavailable" }, 503);
+  if (!integration) return jsonResponse({ error: "not_found" }, 404);
+
+  // Revocation remains available when a paid feature is disabled; it removes
+  // stored external credentials and cannot exercise calendar-sync capability.
+  // Lookup failures still fail closed because tenant state is unknown.
+  const featureFailure = await checkM365Entitlement(integration.workspace_id);
+  if (featureFailure?.status === 503) {
+    return jsonResponse({ error: featureFailure.error }, featureFailure.status);
+  }
+
+  const { error: deleteError } = await admin
     .from("enterprise_user_calendar_integrations")
     .delete()
     .eq("id", integration_id)
     .eq("user_id", user.id);
+  if (deleteError) throw new Error(`Integration disconnect failed: ${deleteError.message}`);
   return jsonResponse({ ok: true });
 }
 
@@ -372,25 +530,42 @@ async function handleStatus(req: Request) {
   const user = await getCallerUser(req);
   if (!user) return jsonResponse({ error: "unauthorized" }, 401);
   const { workspace_id } = await req.json();
-  const { data } = await admin
+  if (!workspace_id) return jsonResponse({ error: "workspace_id required" }, 400);
+  const membershipFailure = await checkActiveMembership(workspace_id, user.id);
+  if (membershipFailure) {
+    return jsonResponse(
+      { error: membershipFailure.status === 403 ? "workspace_access_revoked" : membershipFailure.error },
+      membershipFailure.status,
+    );
+  }
+  const featureFailure = await checkM365Entitlement(workspace_id);
+  if (featureFailure) return jsonResponse({ error: featureFailure.error }, featureFailure.status);
+  const { data, error } = await admin
     .from("enterprise_user_calendar_integrations")
     .select("id, provider, provider_user_email, is_active, last_sync_at, last_sync_status, last_sync_error, created_at, sync_events_in, sync_events_out")
     .eq("user_id", user.id)
     .eq("workspace_id", workspace_id);
+  if (error) return jsonResponse({ error: "integration_lookup_unavailable" }, 503);
   return jsonResponse({ integrations: data ?? [] });
 }
 
-async function handleCronSyncAll() {
-  const { data: integrations } = await admin
+async function handleCronSyncAll(req: Request) {
+  if (!hasServiceRoleCredential(req, SERVICE_ROLE)) {
+    return jsonResponse({ error: "forbidden" }, 403);
+  }
+  const { data: integrations, error: integrationsError } = await admin
     .from("enterprise_user_calendar_integrations")
     .select("*")
     .eq("is_active", true);
-  let success = 0, failed = 0;
+  if (integrationsError) return jsonResponse({ error: "integration_lookup_unavailable" }, 503);
+  let success = 0, failed = 0, skipped = 0;
   for (const i of integrations ?? []) {
     const r = await syncIntegration(i);
-    if (r.ok) success++; else failed++;
+    if (r.ok) success++;
+    else if (r.entitlementStatus === 403) skipped++;
+    else failed++;
   }
-  return jsonResponse({ processed: (integrations ?? []).length, success, failed });
+  return jsonResponse({ processed: (integrations ?? []).length, success, failed, skipped });
 }
 
 // ---------- Router ----------
@@ -413,7 +588,7 @@ Deno.serve(async (req) => {
       case "sync_now":     return await handleSyncNow(req);
       case "disconnect":   return await handleDisconnect(req);
       case "status":       return await handleStatus(req);
-      case "cron_sync_all":return await handleCronSyncAll();
+      case "cron_sync_all":return await handleCronSyncAll(req);
       default:             return jsonResponse({ error: "unknown_action" }, 400);
     }
   } catch (e) {
@@ -422,3 +597,13 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: msg }, 500);
   }
 });
+
+function escapeHtml(value: unknown): string {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#39;",
+  })[char]!);
+}

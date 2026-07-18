@@ -1,25 +1,52 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { KeyRound } from 'lucide-react';
+import { KeyRound, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useT } from '@/i18n/I18nProvider';
 import { LanguageSelector } from '@/components/i18n/LanguageSelector';
+import { isNativeRuntime } from '@/lib/platform/mobile';
+
+type ResetPasswordLocationState = {
+  nativeRecovery?: boolean;
+};
 
 const ResetPassword = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const t = useT();
+  const locationState = location.state as ResetPasswordLocationState | null;
+  const nativeRecoveryRequested =
+    isNativeRuntime() && locationState?.nativeRecovery === true;
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [isRecovery, setIsRecovery] = useState(false);
-  const navigate = useNavigate();
-  const t = useT();
+  const [checkingRecovery, setCheckingRecovery] = useState(nativeRecoveryRequested);
 
   useEffect(() => {
+    let disposed = false;
+    setCheckingRecovery(nativeRecoveryRequested);
+
+    if (nativeRecoveryRequested) {
+      void supabase.auth.getSession().then(({ data }) => {
+        if (disposed) return;
+        setIsRecovery(Boolean(data.session));
+        setCheckingRecovery(false);
+      }).catch(() => {
+        if (disposed) return;
+        setIsRecovery(false);
+        setCheckingRecovery(false);
+      });
+    } else {
+      setCheckingRecovery(false);
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'PASSWORD_RECOVERY') {
         setIsRecovery(true);
@@ -28,8 +55,11 @@ const ResetPassword = () => {
     if (window.location.hash.includes('type=recovery')) {
       setIsRecovery(true);
     }
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => {
+      disposed = true;
+      subscription.unsubscribe();
+    };
+  }, [location.state, nativeRecoveryRequested]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +81,14 @@ const ResetPassword = () => {
     }
     setLoading(false);
   };
+
+  if (checkingRecovery) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-background">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" aria-label={t('common.loading')} />
+      </div>
+    );
+  }
 
   if (!isRecovery) {
     return (

@@ -1,4 +1,4 @@
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { createClient } from 'npm:@supabase/supabase-js@2.98.0'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,6 +11,11 @@ function jsonResponse(data: Record<string, unknown>, status = 200): Response {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
+}
+
+function redactEmail(email: string): string {
+  const [local, domain] = email.split('@')
+  return domain ? `${local.slice(0, 1)}***@${domain}` : '***'
 }
 
 Deno.serve(async (req) => {
@@ -63,7 +68,7 @@ Deno.serve(async (req) => {
     }
   }
 
-  if (!token) {
+  if (!token || token.length > 512) {
     return jsonResponse({ error: 'Token is required' }, 400)
   }
 
@@ -72,7 +77,7 @@ Deno.serve(async (req) => {
   // Look up the token
   const { data: tokenRecord, error: lookupError } = await supabase
     .from('email_unsubscribe_tokens')
-    .select('*')
+    .select('email, used_at')
     .eq('token', token)
     .maybeSingle()
 
@@ -80,27 +85,46 @@ Deno.serve(async (req) => {
     return jsonResponse({ error: 'Invalid or expired token' }, 404)
   }
 
-  if (tokenRecord.used_at) {
-    return jsonResponse({ valid: false, reason: 'already_unsubscribed' })
-  }
-
   // GET: Validate token (the app's unsubscribe page calls this on load)
   if (req.method === 'GET') {
-    return jsonResponse({ valid: true })
+    return tokenRecord.used_at
+      ? jsonResponse({ valid: false, reason: 'already_unsubscribed' })
+      : jsonResponse({ valid: true })
   }
 
-  // POST: Process the unsubscribe
-  // Atomic check-and-update to avoid TOCTOU race
+  // Add the recipient to the suppression list first. The upsert is idempotent,
+  // while consuming the token first could leave a permanently "used" token
+  // without an effective suppression if the second write failed.
+  const normalizedEmail = tokenRecord.email.toLowerCase()
+  const { error: suppressError } = await supabase
+    .from('suppressed_emails')
+    .upsert(
+      { email: normalizedEmail, reason: 'unsubscribe' },
+      { onConflict: 'email' },
+    )
+
+  if (suppressError) {
+    console.error('Failed to suppress email', {
+      error: suppressError,
+      email_redacted: redactEmail(normalizedEmail),
+    })
+    return jsonResponse({ error: 'Failed to process unsubscribe' }, 500)
+  }
+
+  // Atomic token consumption prevents duplicate side effects under retries.
   const { data: updated, error: updateError } = await supabase
     .from('email_unsubscribe_tokens')
     .update({ used_at: new Date().toISOString() })
     .eq('token', token)
     .is('used_at', null)
-    .select()
+    .select('used_at')
     .maybeSingle()
 
   if (updateError) {
-    console.error('Failed to mark token as used', { error: updateError, token })
+    console.error('Failed to mark unsubscribe token as used', {
+      error: updateError,
+      email_redacted: redactEmail(normalizedEmail),
+    })
     return jsonResponse({ error: 'Failed to process unsubscribe' }, 500)
   }
 
@@ -108,23 +132,7 @@ Deno.serve(async (req) => {
     return jsonResponse({ success: false, reason: 'already_unsubscribed' })
   }
 
-  // Add email to suppressed list (upsert to handle duplicates)
-  const { error: suppressError } = await supabase
-    .from('suppressed_emails')
-    .upsert(
-      { email: tokenRecord.email.toLowerCase(), reason: 'unsubscribe' },
-      { onConflict: 'email' },
-    )
-
-  if (suppressError) {
-    console.error('Failed to suppress email', {
-      error: suppressError,
-      email: tokenRecord.email,
-    })
-    return jsonResponse({ error: 'Failed to process unsubscribe' }, 500)
-  }
-
-  console.log('Email unsubscribed', { email: tokenRecord.email })
+  console.log('Email unsubscribed', { email_redacted: redactEmail(normalizedEmail) })
 
   return jsonResponse({ success: true })
 })

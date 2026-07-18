@@ -10,10 +10,12 @@ import { DensityProvider } from "@/hooks/useDensity";
 import { I18nProvider } from "@/i18n/I18nProvider";
 import { HelpRegistryProvider } from "@/lib/help/registry";
 import { HelpDrawer } from "@/components/help/HelpDrawer";
+import { resolveInternalPath } from "@/lib/internalPath";
 
 // Landing is loaded eagerly — it is the only public, SEO-critical page
 import Landing from "./pages/Landing";
 import { InstallPwaPrompt } from "@/components/pwa/InstallPwaPrompt";
+import { MobileRuntimeBridge } from '@/components/mobile/MobileRuntimeBridge';
 
 // All other pages are lazy-loaded to keep the initial JS bundle small
 const Auth         = lazy(() => import("./pages/Auth"));
@@ -70,7 +72,11 @@ function HashRouteBridge() {
     if (hashSearchPart) new URLSearchParams(hashSearchPart).forEach((v, k) => merged.set(k, v));
     const mergedSearch = merged.toString();
 
-    const nextUrl = `${origin}${pathPart}${mergedSearch ? `?${mergedSearch}` : ''}`;
+    const targetPath = resolveInternalPath(
+      `${pathPart}${mergedSearch ? `?${mergedSearch}` : ''}`,
+      '/',
+    );
+    const nextUrl = `${origin}${targetPath}`;
     window.location.replace(nextUrl);
   }, []);
 
@@ -104,7 +110,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 
   if (user) {
     const params = new URLSearchParams(location.search);
-    const redirect = params.get('redirect');
+    const redirect = resolveInternalPath(params.get('redirect'), '/app');
     const oauthProvider = params.get('oauth');
     const emailActivationToken = params.get('email_activation_token');
 
@@ -112,7 +118,7 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
       return <>{children}</>;
     }
 
-    return <Navigate to={redirect || "/app"} replace />;
+    return <Navigate to={redirect} replace />;
   }
   return <>{children}</>;
 }
@@ -149,16 +155,23 @@ function OAuthCallbackGuard({ children }: { children: React.ReactNode }) {
 const SpaRedirectHandler = () => {
   const navigate = useNavigate();
   useEffect(() => {
+    const restore = (path: unknown) => {
+      if (typeof path !== 'string' || !path) return false;
+      const candidate = path.startsWith('/') ? path : `/${path}`;
+      navigate(resolveInternalPath(candidate, '/'), { replace: true });
+      return true;
+    };
+
     const stored = sessionStorage.getItem('spa_redirect');
     if (stored) {
       sessionStorage.removeItem('spa_redirect');
       try {
-        const { path } = JSON.parse(stored) as { path: string };
-        if (path) { navigate('/' + path, { replace: true }); return; }
+        const { path } = JSON.parse(stored) as { path?: unknown };
+        if (restore(path)) return;
       } catch { /* ignore */ }
     }
     const r = new URLSearchParams(window.location.search).get('r');
-    if (r) navigate('/' + r, { replace: true });
+    restore(r);
   }, [navigate]);
   return null;
 };
@@ -179,6 +192,7 @@ const App = () => (
                 <OAuthCallbackGuard>
                   <BrowserRouter>
                     <SpaRedirectHandler />
+                    <MobileRuntimeBridge />
                     <Suspense fallback={<PageLoader />}>
                       <Routes>
                         <Route path="/" element={<Landing />} />

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Effectime</string>
+    <string name="title_activity_main">Effectime</string>
+    <string name="package_name">app.effectime</string>
+    <string name="custom_url_scheme">app.effectime</string>
+</resources>

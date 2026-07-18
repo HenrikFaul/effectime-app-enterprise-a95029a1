@@ -18,6 +18,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { EffectimeLogo } from "@/components/EffectimeLogo";
 import { useT } from '@/i18n/I18nProvider';
 import { LanguageSelector } from '@/components/i18n/LanguageSelector';
+import { resolveInternalPath } from '@/lib/internalPath';
+import {
+  buildAuthCallbackUrl,
+  isAllowedSupabaseOAuthUrl,
+  isNativeRuntime,
+  readWebImplicitSessionTokens,
+} from '@/lib/platform/mobile';
+import { getNativeBrowserPlugin } from '@/lib/platform/nativeBridge';
+import { SUPABASE_URL } from '@/config/publicRuntime';
 
 type AuthView = "login" | "register" | "verify" | "forgot";
 
@@ -25,11 +34,6 @@ const OTP_LENGTH = 8;
 const GOOGLE_OAUTH_QUERY_PARAM = "oauth";
 const GOOGLE_OAUTH_PROVIDER = "google";
 const EMAIL_ACTIVATION_QUERY_PARAM = "email_activation_token";
-
-const buildAuthRedirectUrl = (redirectPath: string) => {
-  const normalized = redirectPath.startsWith("/") ? redirectPath : `/${redirectPath}`;
-  return `${window.location.origin}/#/auth?redirect=${encodeURIComponent(normalized)}`;
-};
 
 const GoogleIcon = () => (
   <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
@@ -195,7 +199,7 @@ const Auth = () => {
   const { user, signIn, signUp, signOut, setSessionFromTokens } = useAuth();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const redirectTo = searchParams.get("redirect") || "/app";
+  const redirectTo = resolveInternalPath(searchParams.get("redirect"), "/app");
   const oauthProvider = searchParams.get(GOOGLE_OAUTH_QUERY_PARAM);
   const emailActivationToken = searchParams.get(EMAIL_ACTIVATION_QUERY_PARAM);
   const isVerifyMode = searchParams.get("verify") === "1";
@@ -217,16 +221,13 @@ const Auth = () => {
     if (oauthProvider !== GOOGLE_OAUTH_PROVIDER) return;
     if (user) return;
 
-    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
-    const accessToken = hashParams.get("access_token");
-    const refreshToken = hashParams.get("refresh_token");
-
-    if (!accessToken || !refreshToken) return;
+    const implicitSession = readWebImplicitSessionTokens(window.location.hash);
+    if (!implicitSession) return;
 
     const restoreSessionFromHash = async () => {
       try {
         setLoading(true);
-        await setSessionFromTokens(accessToken, refreshToken);
+        await setSessionFromTokens(implicitSession.accessToken, implicitSession.refreshToken);
         window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
       } catch {
         toast.error(t('auth_page.toast_google_session_failed'));
@@ -236,7 +237,7 @@ const Auth = () => {
     };
 
     restoreSessionFromHash();
-  }, [oauthProvider, user, setSessionFromTokens]);
+  }, [oauthProvider, user, setSessionFromTokens, t]);
 
   useEffect(() => {
     if (!user) return;
@@ -271,7 +272,7 @@ const Auth = () => {
     };
 
     handleOAuthCallback();
-  }, [user, oauthProvider, emailActivationToken, redirectTo, navigate, signOut]);
+  }, [user, oauthProvider, emailActivationToken, redirectTo, navigate, signOut, t]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -355,7 +356,7 @@ const Auth = () => {
     const { error } = await supabase.auth.resend({
       type: "signup",
       email,
-      options: { emailRedirectTo: buildAuthRedirectUrl(redirectTo) },
+      options: { emailRedirectTo: buildAuthCallbackUrl('signup', redirectTo) },
     });
 
     if (error) {
@@ -376,7 +377,7 @@ const Auth = () => {
     }
     setLoading(true);
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/#/reset-password`,
+      redirectTo: buildAuthCallbackUrl('recovery', '/reset-password'),
     });
 
     if (error) {
@@ -390,17 +391,14 @@ const Auth = () => {
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
+    const nativeRuntime = isNativeRuntime();
+    const callbackUri = buildAuthCallbackUrl('oauth-google', redirectTo, nativeRuntime);
 
-    const callbackUri = new URL("/", window.location.origin);
-    callbackUri.hash = `/auth?${new URLSearchParams({
-      [GOOGLE_OAUTH_QUERY_PARAM]: GOOGLE_OAUTH_PROVIDER,
-      redirect: redirectTo,
-    }).toString()}`;
-
-    const { error } = await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: callbackUri.toString(),
+        redirectTo: callbackUri,
+        skipBrowserRedirect: nativeRuntime,
         queryParams: { prompt: "select_account" },
       },
     });
@@ -408,6 +406,28 @@ const Auth = () => {
     if (error) {
       toast.error(error.message);
       setLoading(false);
+      return;
+    }
+
+    if (nativeRuntime) {
+      if (
+        !data.url ||
+        !isAllowedSupabaseOAuthUrl(data.url, SUPABASE_URL)
+      ) {
+        toast.error(t('auth_page.toast_google_session_failed'));
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const browser = getNativeBrowserPlugin();
+        if (!browser) throw new Error('Native Browser plugin is unavailable.');
+        await browser.open({ url: data.url });
+      } catch {
+        toast.error(t('auth_page.toast_google_session_failed'));
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -619,7 +639,11 @@ const Auth = () => {
                 className="h-13 w-full rounded-2xl gradient-primary font-semibold text-primary-foreground shadow-glow transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-8px_rgba(16,185,129,0.5)]"
                 disabled={loading}
               >
-                {loading ? t('auth_page.btn_loading') : view === "login" ? t('auth_page.btn_login') : t('auth_page.btn_register')}
+                {loading
+                  ? t('auth_page.btn_loading')
+                  : view === "login"
+                    ? t('auth_page.btn_login')
+                    : t('auth_page.btn_register')}
               </Button>
             </form>
 

@@ -9,6 +9,7 @@ import { AccessTemplates } from './AccessTemplates';
 import { AccessInbox } from './AccessInbox';
 import { HRWorkflowTemplates } from './HRWorkflowTemplates';
 import { HRWorkflowInbox } from './HRWorkflowInbox';
+import { useEnabledFeatures } from '@/hooks/useFeature';
 
 interface Props {
   workspaceId: string;
@@ -18,6 +19,12 @@ interface Props {
 
 export function WorkflowsModule({ workspaceId, isAdmin, userId }: Props) {
   const t = useT();
+  const { isEnabled } = useEnabledFeatures(workspaceId);
+  const canUseOnboardingTemplates = isEnabled('onboarding_template');
+  const canUseOnboardingInbox = isEnabled('onboarding_inbox');
+  const canUseAccessSystems = isEnabled('access_systems');
+  const canUseAccessTemplates = isEnabled('access_templates');
+  const canUseAccessInbox = isEnabled('access_inbox');
   return (
     <div className="space-y-3">
       <Card>
@@ -43,26 +50,36 @@ export function WorkflowsModule({ workspaceId, isAdmin, userId }: Props) {
                   {t('hr_workflow.tab_templates')}
                 </TabsTrigger>
               )}
-              <TabsTrigger value="onboarding-templates" className="gap-1">
-                <ListChecks className="h-4 w-4" />
-                {t('workflows.tabs.onboarding_templates')}
-              </TabsTrigger>
-              <TabsTrigger value="onboarding-inbox" className="gap-1">
-                <ClipboardList className="h-4 w-4" />
-                {t('workflows.tabs.onboarding_inbox')}
-              </TabsTrigger>
-              <TabsTrigger value="access-systems" className="gap-1">
-                <Server className="h-4 w-4" />
-                {t('workflows.tabs.access_systems')}
-              </TabsTrigger>
-              <TabsTrigger value="access-templates" className="gap-1">
-                <Plug className="h-4 w-4" />
-                {t('workflows.tabs.access_templates')}
-              </TabsTrigger>
-              <TabsTrigger value="access-inbox" className="gap-1">
-                <Inbox className="h-4 w-4" />
-                {t('workflows.tabs.access_inbox')}
-              </TabsTrigger>
+              {canUseOnboardingTemplates && (
+                <TabsTrigger value="onboarding-templates" className="gap-1">
+                  <ListChecks className="h-4 w-4" />
+                  {t('workflows.tabs.onboarding_templates')}
+                </TabsTrigger>
+              )}
+              {canUseOnboardingInbox && (
+                <TabsTrigger value="onboarding-inbox" className="gap-1">
+                  <ClipboardList className="h-4 w-4" />
+                  {t('workflows.tabs.onboarding_inbox')}
+                </TabsTrigger>
+              )}
+              {canUseAccessSystems && (
+                <TabsTrigger value="access-systems" className="gap-1">
+                  <Server className="h-4 w-4" />
+                  {t('workflows.tabs.access_systems')}
+                </TabsTrigger>
+              )}
+              {canUseAccessTemplates && (
+                <TabsTrigger value="access-templates" className="gap-1">
+                  <Plug className="h-4 w-4" />
+                  {t('workflows.tabs.access_templates')}
+                </TabsTrigger>
+              )}
+              {canUseAccessInbox && (
+                <TabsTrigger value="access-inbox" className="gap-1">
+                  <Inbox className="h-4 w-4" />
+                  {t('workflows.tabs.access_inbox')}
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="hr-inbox" className="mt-4">
@@ -73,21 +90,31 @@ export function WorkflowsModule({ workspaceId, isAdmin, userId }: Props) {
                 <HRWorkflowTemplates workspaceId={workspaceId} />
               </TabsContent>
             )}
-            <TabsContent value="onboarding-templates" className="mt-4">
-              <OnboardingTemplates workspaceId={workspaceId} isAdmin={isAdmin} />
-            </TabsContent>
-            <TabsContent value="onboarding-inbox" className="mt-4">
-              <OnboardingInbox workspaceId={workspaceId} isAdmin={isAdmin} />
-            </TabsContent>
-            <TabsContent value="access-systems" className="mt-4">
-              <AccessSystems workspaceId={workspaceId} isAdmin={isAdmin} />
-            </TabsContent>
-            <TabsContent value="access-templates" className="mt-4">
-              <AccessTemplates workspaceId={workspaceId} isAdmin={isAdmin} />
-            </TabsContent>
-            <TabsContent value="access-inbox" className="mt-4">
-              <AccessInbox workspaceId={workspaceId} isAdmin={isAdmin} userId={userId} />
-            </TabsContent>
+            {canUseOnboardingTemplates && (
+              <TabsContent value="onboarding-templates" className="mt-4">
+                <OnboardingTemplates workspaceId={workspaceId} isAdmin={isAdmin} />
+              </TabsContent>
+            )}
+            {canUseOnboardingInbox && (
+              <TabsContent value="onboarding-inbox" className="mt-4">
+                <OnboardingInbox workspaceId={workspaceId} isAdmin={isAdmin} />
+              </TabsContent>
+            )}
+            {canUseAccessSystems && (
+              <TabsContent value="access-systems" className="mt-4">
+                <AccessSystems workspaceId={workspaceId} isAdmin={isAdmin} />
+              </TabsContent>
+            )}
+            {canUseAccessTemplates && (
+              <TabsContent value="access-templates" className="mt-4">
+                <AccessTemplates workspaceId={workspaceId} isAdmin={isAdmin} />
+              </TabsContent>
+            )}
+            {canUseAccessInbox && (
+              <TabsContent value="access-inbox" className="mt-4">
+                <AccessInbox workspaceId={workspaceId} isAdmin={isAdmin} userId={userId} />
+              </TabsContent>
+            )}
           </Tabs>
         </CardContent>
       </Card>

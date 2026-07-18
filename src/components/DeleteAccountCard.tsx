@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -14,10 +14,31 @@ import { Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useI18n } from '@/i18n/I18nProvider';
 
+const MAX_CUSTOM_DELETION_REASON_LENGTH = 800;
+
+async function getDeleteAccountErrorCode(error: unknown): Promise<string | null> {
+  if (!(error instanceof FunctionsHttpError) || !(error.context instanceof Response)) return null;
+
+  try {
+    const payload: unknown = await error.context.clone().json();
+    if (
+      typeof payload === 'object'
+      && payload !== null
+      && 'code' in payload
+      && typeof payload.code === 'string'
+    ) {
+      return payload.code;
+    }
+  } catch {
+    // The generic localized error below remains the safe fallback.
+  }
+
+  return null;
+}
+
 export function DeleteAccountCard() {
   const { t } = useI18n();
-  const { user, signOut } = useAuth();
-  const navigate = useNavigate();
+  const { user } = useAuth();
 
   const DELETION_REASONS = [
     { value: 'not_useful', label: t('delete_account.reason_not_useful') },
@@ -34,10 +55,13 @@ export function DeleteAccountCard() {
   const [deleting, setDeleting] = useState(false);
 
   const reasonLabel = DELETION_REASONS.find(r => r.value === selectedReason)?.label;
+  const trimmedCustomReason = customReason.trim();
   const finalReason = selectedReason === 'other'
-    ? `${t('delete_account.reason_other')}: ${customReason}`
+    ? `${t('delete_account.reason_other')}: ${trimmedCustomReason}`
     : reasonLabel || '';
-  const canProceed = selectedReason && (selectedReason !== 'other' || customReason.trim().length > 0);
+  const canProceed = Boolean(
+    selectedReason && (selectedReason !== 'other' || trimmedCustomReason.length > 0),
+  );
 
   const handleClose = () => {
     setStep('closed');
@@ -53,7 +77,8 @@ export function DeleteAccountCard() {
         body: { reason: finalReason },
       });
       if (error) throw error;
-      if (data?.error) throw new Error(data.error);
+      if (data?.error) throw new Error(String(data.error));
+      if (data?.success !== true) throw new Error('Account deletion returned an invalid response');
 
       // Force clear all auth state before redirect
       localStorage.clear();
@@ -64,7 +89,15 @@ export function DeleteAccountCard() {
       return;
     } catch (err) {
       console.error('Delete account error:', err);
-      toast.error(t('delete_account.error_deleting'));
+      const errorCode = await getDeleteAccountErrorCode(err);
+      const errorKey = errorCode === 'SOLE_WORKSPACE_OWNER'
+        ? 'delete_account.owner_transfer_required'
+        : errorCode === 'REAUTHENTICATION_REQUIRED'
+          ? 'delete_account.reauthentication_required'
+          : errorCode === 'ACCOUNT_DATA_REQUIRES_REVIEW'
+            ? 'delete_account.data_review_required'
+            : 'delete_account.error_deleting';
+      toast.error(t(errorKey));
       setDeleting(false);
       handleClose();
     }
@@ -140,6 +173,7 @@ export function DeleteAccountCard() {
                   placeholder={t('delete_account.custom_reason_placeholder')}
                   className="rounded-xl resize-none"
                   rows={3}
+                  maxLength={MAX_CUSTOM_DELETION_REASON_LENGTH}
                 />
               </div>
             )}

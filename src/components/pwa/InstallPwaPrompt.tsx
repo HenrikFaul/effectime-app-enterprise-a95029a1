@@ -3,6 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download, X, Smartphone } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nProvider';
+import { isNativeRuntime } from '@/lib/platform/mobile';
 
 const STORAGE_KEY = 'effectime.pwa.install_dismissed_at';
 const REMIND_AFTER_DAYS = 30;
@@ -24,6 +25,7 @@ export function InstallPwaPrompt() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    if (isNativeRuntime()) return;
 
     // Already running standalone (added to home screen) → never prompt
     const standalone = window.matchMedia?.('(display-mode: standalone)').matches

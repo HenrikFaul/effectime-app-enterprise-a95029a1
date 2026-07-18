@@ -3101,11 +3101,11 @@ const pl = {
   },
   sql_mode: {
     title: 'Tryb SQL zaawansowany',
-    desc_p1: 'Dozwolone są tylko zapytania SELECT. Filtrowanie obszaru roboczego (workspace_id) jest stosowane automatycznie.',
+    desc_p1: 'Obsługiwana jest tylko prosta lista pól SELECT z jednej dozwolonej tabeli, opcjonalnie z ORDER BY i LIMIT. Filtr workspace_id jest stosowany automatycznie. Komentarze, JOIN, WHERE, GROUP BY i funkcje SQL nie są obsługiwane.',
     allowed_tables_label: 'Dozwolone tabele:',
     example_comment_1: '-- Tylko zapytania SELECT. workspace_id jest filtrowane automatycznie.',
     card_title: 'Zapytanie SQL',
-    card_description: 'Napisz własne zapytanie SELECT — zostanie zweryfikowane i uzupełnione w czasie wykonania.',
+    card_description: 'Używaj wyłącznie nazw kolumn; backend sprawdza ograniczoną składnię raportu.',
     label_sql: 'SQL',
   },
   conflict: {
@@ -3797,6 +3797,7 @@ const pl = {
     not_connected_hint: 'Połącz konto Microsoft 365, aby zatwierdzone urlopy pojawiły się w Outlooku, a wydarzenia OOF jako ograniczenia harmonogramu.',
     connect_btn: 'Połącz Microsoft 365',
     connect_error: 'Błąd połączenia',
+    native_oauth_unavailable: 'Łączenie z Microsoft 365 nie jest jeszcze dostępne w aplikacji mobilnej.',
     disconnect: 'Rozłącz',
     disconnect_confirm: 'Rozłączyć to konto Microsoft 365? Zsynchronizowane wydarzenia pozostaną w Outlooku.',
     disconnect_error: 'Rozłączenie nie powiodło się',

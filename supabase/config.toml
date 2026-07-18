@@ -1,5 +1,21 @@
 project_id = "oezlzzmzzvbvinuysxaz"
 
+# Keep every Edge Function's gateway policy explicit. Supabase defaults can
+# otherwise change the effective authentication boundary when a function is
+# restored or deployed from a different checkout.
+[functions.admin]
+verify_jwt = true
+
+[functions.ai-copilot]
+verify_jwt = true
+
+# GoTrue/Lovable calls this hook with its own signed webhook contract.
+[functions.auth-email-hook]
+verify_jwt = false
+
+[functions.cleanup-demo-workspace]
+verify_jwt = true
+
 [functions.help-regenerator]
 verify_jwt = false
 
@@ -19,5 +35,72 @@ verify_jwt = true
 verify_jwt = true
 
 [functions.ms365-sync]
+verify_jwt = false
+
+# OAuth/webhook callbacks above require verify_jwt=false and therefore enforce
+# their own request authentication. All privileged worker/admin functions are
+# explicitly gateway-protected as an additional layer against deploy drift.
+[functions.cleanup-temp-users]
+verify_jwt = true
+
+[functions.create-instant-enterprise-member]
+verify_jwt = true
+
+[functions.create-workspace-user]
+verify_jwt = true
+
+[functions.data-migration]
+verify_jwt = true
+
+[functions.delete-account]
+verify_jwt = true
+
+[functions.document-ai-polish]
+verify_jwt = true
+
+# Lovable delivery events use their own HMAC signature.
+[functions.handle-email-suppression]
+verify_jwt = false
+
+# Public unsubscribe links use a one-time opaque token.
+[functions.handle-email-unsubscribe]
+verify_jwt = false
+
+[functions.process-email-queue]
+verify_jwt = true
+
+[functions.preview-transactional-email]
+verify_jwt = true
+
+[functions.jira-devops-proxy]
+verify_jwt = true
+
+# Invitation/event links authenticate with their scoped opaque token.
+[functions.join-event]
+verify_jwt = false
+
+# Calendar feeds authenticate with a scoped feed token in the URL.
+[functions.leave-ical]
+verify_jwt = false
+
+[functions.run-report]
+verify_jwt = true
+
+[functions.send-scheduled-reports]
+verify_jwt = true
+
+[functions.send-transactional-email]
+verify_jwt = true
+
+# This gateway authenticates Effectime API keys itself; they are intentionally
+# not Supabase JWTs. The function keeps its own hash/revocation/expiry checks.
+[functions.public-api]
+verify_jwt = false
+
+[functions.webhook-dispatcher]
+verify_jwt = true
+
+# Supports a dedicated CRON_SECRET in addition to end-user JWTs.
+[functions.sync-holidays]
 verify_jwt = false
 

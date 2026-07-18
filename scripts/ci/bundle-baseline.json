@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Current production bundle debt ceiling. Raw bytes are exact; gzip ceilings include 1% cross-platform compression tolerance. Increases require an explicit reviewed baseline update.",
+  "ceilings": {
+    "javascript": {
+      "totalRawBytes": 4437140,
+      "totalGzipBytes": 1267058,
+      "largestRawBytes": 1735016,
+      "largestGzipBytes": 558421
+    },
+    "css": {
+      "totalRawBytes": 180509,
+      "totalGzipBytes": 29849
+    }
+  }
+}

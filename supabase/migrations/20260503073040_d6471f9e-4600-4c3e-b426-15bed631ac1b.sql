@@ -35,7 +35,17 @@ TO authenticated
 USING (public.has_role(auth.uid(), 'admin'));
 
 -- 5. Lock down search_path on remaining functions
-ALTER FUNCTION public.export_all_tables_sample(integer) SET search_path = public, pg_temp;
+DO $$
+BEGIN
+  -- This diagnostic helper existed in some deployed databases before its DDL
+  -- was versioned. Harden it where present without making a fresh replay
+  -- depend on an undocumented, non-runtime function.
+  IF to_regprocedure('public.export_all_tables_sample(integer)') IS NOT NULL THEN
+    ALTER FUNCTION public.export_all_tables_sample(integer)
+      SET search_path = public, pg_temp;
+  END IF;
+END;
+$$;
 ALTER FUNCTION public.move_to_dlq(text, text, bigint, jsonb) SET search_path = public, pg_temp;
 ALTER FUNCTION public.delete_email(text, bigint) SET search_path = public, pg_temp;
 ALTER FUNCTION public.read_email_batch(text, integer, integer) SET search_path = public, pg_temp;

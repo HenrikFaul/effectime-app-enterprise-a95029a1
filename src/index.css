@@ -368,6 +368,14 @@
     50% { transform: perspective(1800px) rotateY(-9deg) rotateX(5deg) translateY(-12px); }
   }
 
+  /* Perspective rotation can extend the hero mock beyond narrow viewports. */
+  @media (max-width: 1023px) {
+    .float-tilt {
+      animation: none;
+      transform: none;
+    }
+  }
+
   .marquee {
     display: flex; overflow: hidden;
     -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);

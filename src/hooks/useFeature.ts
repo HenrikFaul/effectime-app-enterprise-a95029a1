@@ -3,10 +3,8 @@
  *
  * Phase 7 + 9 of the feature-tiering rollout. Resolves the enabled feature_keys
  * for a given workspace by:
- *   1. mapping workspace -> tenant via `tenant_id_for_workspace(uuid)`
- *   2. fetching enabled features via `tenant_enabled_features(uuid)` which
- *      unions tier features + addon features + positive overrides, minus
- *      negative overrides.
+ *   1. authorizing workspace membership in `workspace_enabled_features(uuid)`
+ *   2. resolving the tenant's tier + add-on + override union server-side.
  *
  * Cached for 5 minutes per workspace. Use the FeatureService helpers
  * (`isEnabled`, `requireEnabled`) for imperative checks; use the React hook
@@ -26,14 +24,8 @@ export interface EnabledFeature {
 const CACHE_TTL_MS = 5 * 60 * 1000;
 
 async function fetchEnabledFeatures(workspaceId: string): Promise<EnabledFeature[]> {
-  // Resolve tenant for the workspace
-  const { data: tenantId, error: tenantErr } = await supabase
-    .rpc("tenant_id_for_workspace", { _workspace_id: workspaceId });
-  if (tenantErr) throw tenantErr;
-  if (!tenantId) return [];
-
   const { data, error } = await supabase
-    .rpc("tenant_enabled_features", { _tenant_id: tenantId as string });
+    .rpc("workspace_enabled_features" as never, { _workspace_id: workspaceId } as never);
   if (error) throw error;
   return (data ?? []) as EnabledFeature[];
 }
