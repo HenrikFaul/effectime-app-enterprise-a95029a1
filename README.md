@@ -149,6 +149,32 @@ dependency provenance plus iOS lock availability. CI uploads that evidence
 against an immutable commit SHA. Release evidence is admissible only when
 `source.dirty=false` and the recorded SHA equals the frozen candidate SHA.
 
+Every web build also emits `dist/.well-known/effectime-release.json`; the SHA is
+compiled into the client and must be a full 40-character Git commit. CI rejects
+missing, malformed or conflicting identities. Edge releases use the same
+`EFFECTIME_RELEASE_SHA` value and expose it through the public API health and
+superadmin platform-version contracts. After rollout, verify the live artifact
+and optionally the authenticated Edge runtime with:
+
+```powershell
+$releaseSha='<full-git-sha>'
+$webArtifactSha256='<approved-web-artifact-sha256>'
+$webDeploymentId='<published-provider-deployment-id>'
+npm run release:verify:deployment -- --web-url=https://effectime.app --expected-sha=$releaseSha --expected-web-sha256=$webArtifactSha256 --expected-provider-deployment-id=$webDeploymentId
+$env:EFFECTIME_PUBLIC_API_KEY='<read-only-effectime-api-key>'
+$env:EFFECTIME_EDGE_ORIGIN='https://<project-ref>.supabase.co'
+$edgeSourceSha256='<approved-edge-source-tree-sha256>'
+npm run release:verify:deployment -- --web-url=https://effectime.app --edge-url="$env:EFFECTIME_EDGE_ORIGIN/functions/v1/public-api/v1/health" --expected-sha=$releaseSha --expected-web-sha256=$webArtifactSha256 --expected-provider-deployment-id=$webDeploymentId --expected-edge-source-sha256=$edgeSourceSha256
+```
+
+Never pass the API key on the command line or commit it. A missing manifest,
+unknown Edge identity, body/header/source-tree mismatch, changed file byte/hash,
+or provider deployment-ID mismatch is a failed release. The selected web provider
+must first prove a stable deployment-ID header on the manifest and every public
+asset. A provider API mapping can become an alternative only after a reviewed
+verifier adapter is implemented; the current verifier does not contain one.
+Without the header contract, the production rollout remains NO-GO.
+
 ## Supabase and releases
 
 Do not apply migrations to the linked production project from an unreviewed
@@ -173,9 +199,21 @@ transitively complete recovery migration, 124/124 clean replay, regenerated-type
 comparison, schema fingerprint and RLS/adversarial tests are required before a
 backend release.
 
-The v3.51.3 audit hardening in this worktree is **unreleased**: it has not been
-applied to the linked database and no Edge Function or frontend build has been
-deployed from this branch.
+The v3.51.3 audit hardening source was merged to `main` as
+`a132f179c024428f9cfd8ff6779d1c02c9d4c6d4`, and all six hosted Quality Gate
+jobs passed on that merge SHA. It remains **unreleased**: it has not been applied
+to the linked database and no matching Edge Function or frontend artifact has
+been deployed to production.
+
+The linked production history currently has 59 migration IDs in common with the
+repository, 65 local-only IDs and 84 remote-only IDs. Three local-only HR/office/
+analytics migrations are proven duplicate-content variants of remote migrations
+under different IDs; bulk `migration repair --status reverted` would therefore
+be unsafe. The existing HR workflow policies/RPCs also fail to correlate every
+membership, assignee and joined row to the workflow workspace and do not always
+require an active assignee. Treat this as a P0-candidate tenant-isolation issue:
+use a new forward-only migration and adversarial authenticated-role tests; do
+not edit or replay the already-applied historical migration as a production fix.
 
 ### Tenant user creation compatibility note
 

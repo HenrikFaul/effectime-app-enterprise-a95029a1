@@ -60,6 +60,7 @@ import {
 } from 'lucide-react';
 import { FeatureTiersTab } from './FeatureTiersTab';
 import { PlatformAuditLogTab } from './PlatformAuditLogTab';
+import { ReleaseIdentityStatus } from './ReleaseIdentityStatus';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -1259,7 +1260,12 @@ export function SuperadminControlPlane({ userId: _userId }: { userId: string }) 
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
-          {loadedTabs.overview && <OverviewTab />}
+          {loadedTabs.overview && (
+            <div className="space-y-6">
+              <ReleaseIdentityStatus />
+              <OverviewTab />
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="workspaces" className="mt-6">

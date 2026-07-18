@@ -1,7 +1,37 @@
 ## 2026-07-17 — v3.51.3 Project audit and release-boundary hardening (unreleased)
 
-**Status:** candidate branch and draft PR. No frontend/Edge deploy and no linked
-database migration apply has been performed.
+**Status:** PR #166 was merged to `main` as `a132f179c024428f9cfd8ff6779d1c02c9d4c6d4`;
+all six hosted Quality Gate jobs passed on that merge SHA. No frontend/Edge
+production deploy and no linked database migration apply has been performed.
+
+### Release identity and deployment evidence
+
+- Adds a deterministic `/.well-known/effectime-release.json` web artifact with
+  bounded per-file SHA-256 inventory, explicit clean/dirty attribution and a
+  no-store provider policy. CI and release builds reject missing, malformed or
+  conflicting full Git SHAs instead of emitting an unattributed artifact.
+- Adds the same fail-visible `EFFECTIME_RELEASE_SHA` plus immutable Edge
+  source-tree SHA-256 contract to the public API
+  health and superadmin platform-version Edge responses. A valid identity is
+  returned in JSON plus `X-Effectime-Release-SHA` and
+  `X-Effectime-Edge-Source-SHA256`; invalid/missing runtime configuration remains
+  explicitly `unknown` without a misleading release-SHA header.
+- Adds a Superadmin release card that compares the web and Edge identities and
+  renders match, mismatch, unknown and retryable error states. Mismatch is a
+  release failure, never a silent warning.
+- Adds a fail-closed deployment verifier for the public web manifest, every
+  HTTP-verifiable file byte/hash, provider deployment ID and the
+  authenticated Edge health contract, plus Node, Vitest, Deno and browser-smoke
+  regression coverage. The immutable schema-2 evidence manifest now verifies
+  and hashes both the web and mobile embedded release identities.
+- Records that `effectime.app` is currently served through Lovable/Cloudflare,
+  not the stale Vercel project. The repository's Lovable webhook returns HTTP
+  405 and cannot be treated as a deploy signal; publishing requires the
+  authenticated Lovable project and post-publish live verification.
+- Records a new P0-candidate tenant-boundary finding in the existing HR workflow
+  policies/RPCs. Cross-workspace membership/assignee references and inactive
+  assignees require a forward-only repair migration and adversarial RLS/RPC
+  tests before any backend release.
 
 ### Android/iOS common-data foundation
 
@@ -172,25 +202,28 @@ database migration apply has been performed.
 ### Verification
 
 - `npm ci` PASS; `npm run typecheck` PASS.
-- `npm run test:coverage` PASS: 45 files, 534 tests; 46.28% statements/lines
-  (39,085/84,441), 61.41% branches (651/1,060) and 28.04% functions (122/435)
+- `npm run test:coverage` PASS: 47 files, 543 tests; 46.44% statements/lines
+  (39,319/84,655), 63.10% branches (703/1,114) and 29.95% functions (133/444)
   against floors of 28% / 47% / 13%.
 - Production `dist` Playwright smoke PASS: 7/7 public Chromium
   smoke tests covering production asset MIME/runtime health, manifest, favicon,
   PWA registration, auth, anonymous redirect, 404, accessible names and
   320/390/768 px clipping, all against the same generated `dist` artifact.
-- `npm run build` PASS: 4,077 transformed modules. The current distribution is
-  4,437,140 raw / 1,267,019 gzip JavaScript bytes, with a 1,735,016 raw /
-  550,550 gzip largest chunk, plus 180,509 raw / 29,561 gzip CSS bytes. The gzip
-  ceilings are 1,267,058 total JS, 558,421 largest JS and 29,849 CSS bytes.
+- `npm run build` PASS: 4,079 transformed modules. The clean, attestable
+  distribution is 4,442,665 raw JavaScript bytes within the reviewed 1,268,512
+  gzip ceiling; its largest chunk is 1,736,128 raw bytes within the 558,421 gzip
+  ceiling. CSS is 180,798 raw / 29,589 gzip bytes within the reviewed 180,798 raw
+  / 29,849 gzip ceilings. Gzip observations vary slightly with the embedded
+  release SHA, while the exact raw-byte ratchets remain deterministic.
 - `npm audit` PASS: 0 known vulnerabilities.
 - Structured logger Deno test PASS: 2/2; the two hardened email functions check.
 - Edge raw check and diagnostic ratchet PASS: 30/30 entrypoints, zero
   diagnostics, 64/64 remote imports exactly pinned and zero unpinned. The Deno
   discovery/ratchet tests are 14/14; automatic recursive Edge test discovery is
-  17/17 and the targeted PII safety job is mandatory and green.
+  25/25, including four endpoint body/header/CORS release contracts, and the targeted PII
+  safety job is mandatory and green.
 - Payroll Deno contract 15/15, targeted Vitest 20/20, AuditLog allowlist 2/2 and
-  full unit 534/534 PASS.
+  current full unit 543/543 PASS.
 - Payroll snapshot DB contract PASS: runner unit 12/12 and actual migration on
   digest-pinned PostgreSQL 18.4, covering DB digest, ACL/search path, immutable
   trigger, invalid payload/member drift, atomic audit rollback, audited
@@ -210,7 +243,7 @@ database migration apply has been performed.
 - Generated-schema provenance parser 7/7 and current 124-migration gate PASS:
   generated/backed/unproven counts are tables 165/135/30, views 4/3/1,
   functions 99/53/46 and enums 11/9/2.
-- Current-tree secret scan PASS: 1,403 tracked and non-ignored untracked text
+- Current-tree secret scan PASS: 1,424 tracked and non-ignored untracked text
   files; git-history scanning remains open.
 - ESLint fingerprint ratchet PASS; the reduced baseline is 1,222 errors and 109
   warnings across 179 files. New or moved findings fail, and fixed debt must

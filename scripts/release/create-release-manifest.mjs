@@ -12,6 +12,12 @@ import {
 } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  computeDistributionArtifactFingerprint,
+  resolveReleaseSourceIdentity,
+  validatePublicReleaseManifest,
+} from "./release-identity.mjs";
+import { verifyGeneratedEdgeSourceIdentity } from "./edge-source-identity.mjs";
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDir, "../..");
@@ -95,8 +101,9 @@ function treeRecord(directory, predicate = () => true) {
 
 const packageJson = JSON.parse(readFileSync(resolve(repositoryRoot, "package.json"), "utf8"));
 const packageLock = JSON.parse(readFileSync(resolve(repositoryRoot, "package-lock.json"), "utf8"));
-const gitStatus = git(["status", "--porcelain=v1", "--untracked-files=all"], "");
-const dirty = gitStatus.length > 0;
+const sourceIdentity = resolveReleaseSourceIdentity({ repositoryRoot });
+const sourceSha = sourceIdentity.sha;
+const dirty = sourceIdentity.dirty;
 if (requireClean && dirty) {
   console.error("[release-manifest] Refusing to attest a dirty working tree.");
   process.exit(1);
@@ -114,6 +121,7 @@ const edgeFunctionNames = readdirSync(edgeFunctionsDirectory, { withFileTypes: t
   )
   .map((entry) => entry.name)
   .sort();
+const edgeSourceIdentity = verifyGeneratedEdgeSourceIdentity({ repositoryRoot });
 const webSbom = requiredCycloneDxRecord(
   resolve(repositoryRoot, "artifacts/web-sbom.cdx.json"),
   "web-mobile-node-package-lock-dependencies",
@@ -130,6 +138,50 @@ const mobileDist = treeRecord(resolve(repositoryRoot, "dist-mobile"));
 if (!mobileDist.exists || mobileDist.files === 0 || !mobileDist.sha256) {
   throw new Error("Required tested mobile distribution is missing or empty: dist-mobile");
 }
+const webArtifactFingerprint = computeDistributionArtifactFingerprint(
+  resolve(repositoryRoot, "dist"),
+);
+const mobileArtifactFingerprint = computeDistributionArtifactFingerprint(
+  resolve(repositoryRoot, "dist-mobile"),
+);
+
+function requiredBuiltReleaseIdentity(distributionDirectory, expectedArtifact) {
+  const path = resolve(
+    repositoryRoot,
+    distributionDirectory,
+    ".well-known/effectime-release.json",
+  );
+  const record = fileRecord(path);
+  if (!record.exists) {
+    throw new Error(`Required release identity is missing: ${relative(repositoryRoot, path)}`);
+  }
+  let body;
+  try {
+    body = JSON.parse(readFileSync(path, "utf8"));
+  } catch {
+    throw new Error(`Required release identity is malformed: ${relative(repositoryRoot, path)}`);
+  }
+  const identity = validatePublicReleaseManifest(body, {
+    application: packageJson.name,
+    version: packageJson.version,
+    sha: sourceSha,
+    artifactSha256: expectedArtifact.sha256,
+    artifactFiles: expectedArtifact.files,
+    artifactBytes: expectedArtifact.bytes,
+    requireAttestable: requireClean,
+    label: `${distributionDirectory} release identity`,
+  });
+  return {
+    ...record,
+    sourceSha: identity.sha,
+    sourceDirty: identity.dirty,
+    attestable: identity.attestable,
+    artifact: identity.artifact,
+  };
+}
+
+const webReleaseIdentity = requiredBuiltReleaseIdentity("dist", webArtifactFingerprint);
+const mobileReleaseIdentity = requiredBuiltReleaseIdentity("dist-mobile", mobileArtifactFingerprint);
 
 const mobilePackageNames = [
   "@aparajita/capacitor-secure-storage",
@@ -163,7 +215,7 @@ const manifest = {
   },
   source: {
     repository: process.env.GITHUB_REPOSITORY || null,
-    sha: process.env.GITHUB_SHA || git(["rev-parse", "HEAD"]),
+    sha: sourceSha,
     ref: process.env.GITHUB_REF || git(["symbolic-ref", "--short", "HEAD"]),
     tag: git(["tag", "--points-at", "HEAD"], "").split(/\r?\n/).filter(Boolean)[0] || null,
     dirty,
@@ -186,6 +238,10 @@ const manifest = {
     edgeSbom,
     webDist,
     mobileDist,
+    webArtifactFingerprint,
+    mobileArtifactFingerprint,
+    webReleaseIdentity,
+    mobileReleaseIdentity,
   },
   mobile: {
     appId: "app.effectime",
@@ -211,6 +267,7 @@ const manifest = {
   edgeFunctions: {
     count: edgeFunctionNames.length,
     names: edgeFunctionNames,
+    sourceIdentity: edgeSourceIdentity,
     tree: treeRecord(edgeFunctionsDirectory, (path) => /\.(?:ts|tsx|json|lock)$/.test(path)),
   },
 };

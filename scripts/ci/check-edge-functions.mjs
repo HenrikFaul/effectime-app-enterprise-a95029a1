@@ -21,6 +21,7 @@ const scriptDir = dirname(fileURLToPath(import.meta.url));
 const repositoryRoot = resolve(scriptDir, "../..");
 const functionsRoot = resolve(repositoryRoot, "supabase/functions");
 const configPath = resolve(repositoryRoot, "supabase/config.toml");
+const superadminHubPath = resolve(functionsRoot, "superadmin-hub/index.ts");
 const diagnosticBaselinePath = resolve(scriptDir, "edge-diagnostics-baseline.json");
 const inventoryOnly = process.argv.includes("--inventory-only");
 const ratchet = process.argv.includes("--ratchet");
@@ -118,6 +119,25 @@ const staleRegistrations = registered.filter(
   (name) => !existsSync(resolve(functionsRoot, name, "index.ts")),
 );
 
+const superadminHubSource = readFileSync(superadminHubPath, "utf8");
+const superadminInventoryBlock = superadminHubSource.match(
+  /const knownFunctions = \[([\s\S]*?)\n\s*\]/u,
+)?.[1];
+if (!superadminInventoryBlock) {
+  fail("Could not locate the superadmin platform-version function inventory.");
+}
+const superadminFunctionNames = [
+  ...superadminInventoryBlock.matchAll(/^\s*['"]([^'"]+)['"],?\s*$/gmu),
+].map((match) => match[1]);
+const unparsedSuperadminInventory = superadminInventoryBlock
+  .replace(/^\s*['"][^'"]+['"],?\s*$/gmu, "")
+  .trim();
+if (unparsedSuperadminInventory) {
+  fail("The superadmin platform-version function inventory contains unparseable entries.");
+}
+const superadminInventoryDrift =
+  JSON.stringify(superadminFunctionNames) !== JSON.stringify(functionNames);
+
 const sourceFiles = walkSourceFiles(functionsRoot);
 const remoteImports = [];
 for (const file of sourceFiles) {
@@ -138,6 +158,11 @@ if (missingRegistrations.length > 0) {
 if (staleRegistrations.length > 0) {
   console.error(
     `[edge-check] Config registrations without index.ts: ${staleRegistrations.join(", ")}`,
+  );
+}
+if (superadminInventoryDrift) {
+  console.error(
+    `[edge-check] Superadmin platform-version inventory drift: expected ${functionNames.join(", ")}; found ${superadminFunctionNames.join(", ")}`,
   );
 }
 if (unpinnedImports.length > 0) {
@@ -161,6 +186,7 @@ if (summaryFile) {
       `- Registered in config: **${registered.length}**`,
       `- Missing registrations: **${missingRegistrations.length}**`,
       `- Stale registrations: **${staleRegistrations.length}**`,
+      `- Superadmin inventory drift: **${superadminInventoryDrift ? "yes" : "no"}**`,
       `- Non-exact remote imports: **${unpinnedImports.length}**`,
       `- Deno type-check: **${inventoryOnly ? "not requested" : "see job result"}**`,
       "",
@@ -169,7 +195,13 @@ if (summaryFile) {
   );
 }
 
-if (missingRegistrations.length > 0 || staleRegistrations.length > 0) process.exit(1);
+if (
+  missingRegistrations.length > 0 ||
+  staleRegistrations.length > 0 ||
+  superadminInventoryDrift
+) {
+  process.exit(1);
+}
 if (inventoryOnly) {
   console.log("[edge-check] PASS: Edge inventory and Supabase registrations agree.");
   process.exit(0);

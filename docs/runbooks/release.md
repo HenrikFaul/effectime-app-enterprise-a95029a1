@@ -55,10 +55,35 @@ frontend build alone is not release approval.
   release manifest containing the exact git SHA and hashes for both SBOMs, the
   package lock, tested `dist`, migration tree and Edge source tree. The manifest
   must have `source.dirty=false` and its SHA must equal the frozen candidate SHA.
+- `npm run release:identity:test` and a deterministic
+  `dist/.well-known/effectime-release.json` whose full SHA equals both the frozen
+  candidate and the embedded client identity. Its artifact SHA-256 is computed
+  from the sorted `relative path + NUL + file SHA-256 + NUL` inventory, excluding
+  only the identity file itself. The schema-2 evidence manifest must recompute
+  and exactly match that fingerprint for both tested web and mobile outputs.
+- A captured live verification result from `npm run release:verify:deployment`.
+  Pass the approved `artifact.sha256` as the mandatory
+  `--expected-web-sha256=<64-hex>` value; matching Git SHA alone is insufficient
+  because build-time configuration can produce a different artifact from the
+  same commit. The verifier downloads every HTTP-verifiable inventory file with
+  cache bypass and checks its byte length and SHA-256. Provider-consumed
+  `_headers` and `_redirects` cannot be verified as public bytes; they remain in
+  the approved fingerprint and are covered by the mandatory deployment-ID map.
+  When Edge is in scope, set `EFFECTIME_PUBLIC_API_KEY` and the allowlisted
+  `EFFECTIME_EDGE_ORIGIN` only in the invoking environment. Require the Edge JSON
+  identity, `X-Effectime-Release-SHA` and `X-Effectime-Edge-Source-SHA256`
+  headers to equal the frozen candidate and the canonical Edge digest stored in
+  the schema-2 evidence manifest.
+- Provider deployment/version IDs for the web and Edge artifacts, tied to the
+  approved SHA and web fingerprint in retained audit evidence. Provider preview
+  must first prove that a readable Git checkout and exact `HEAD` metadata are
+  available to the build; a source upload without `.git` is not attestable by
+  this release pipeline and must fail before production publish.
 
 ## Procedure
 
-1. Freeze the candidate SHA. Do not rebuild it after approval.
+1. Freeze the full 40-hex candidate SHA. Build with
+   `EFFECTIME_RELEASE_SHA=<candidate>`; do not rebuild it after approval.
 2. Record current web and Edge artifact identifiers and the database migration head.
 3. Confirm the latest verified backup and restore evidence.
 4. Inventory legacy payroll periods and define remediation for every locked or
@@ -68,9 +93,25 @@ frontend build alone is not release approval.
    contracts, trusted pgcrypto/schema ACLs, runtime TRUNCATE denial and the
    audited break-glass smoke before accepting payroll writes.
 6. Deploy Edge Functions from the same SHA immediately after the database change;
-   verify auth, timeout, retry and redaction paths. Do not leave the new payroll
-   schema serving the old payroll Edge implementation.
-7. Deploy the web artifact from the same SHA and run critical-path browser smoke tests.
+   set the Edge `EFFECTIME_RELEASE_SHA` runtime value under the same release
+   authority and verify auth, timeout, retry and redaction paths. Do not leave
+   the new payroll schema serving the old payroll Edge implementation. Record
+   the provider deployment/version ID because the runtime value alone is not a
+   cryptographic binding between source and the provider artifact.
+7. Deploy the exact tested web artifact from the same SHA, then run critical-path
+   browser smoke and `npm run release:verify:deployment -- --web-url=<live-url>
+   --expected-sha=<candidate> --expected-web-sha256=<approved-artifact-sha256>
+   --expected-provider-deployment-id=<published-provider-id>
+   --edge-url=<allowed-edge-origin>/functions/v1/public-api/v1/health
+   --expected-edge-source-sha256=<approved-edge-source-sha256>`
+   against live web and Edge endpoints. Do not infer deployment success from a
+   Git push or webhook. Record the provider deployment ID returned by the publish.
+   Before invoking the Edge check, set `EFFECTIME_EDGE_ORIGIN` to the exact HTTPS
+   origin and `EFFECTIME_PUBLIC_API_KEY` to the scoped read-only key. If the web
+   provider cannot expose the retained immutable deployment ID consistently on
+   the manifest and every public asset, rollout is NO-GO. A provider API mapping
+   is not implemented by the current verifier; it becomes an alternative only
+   after a separately reviewed adapter and contract test are merged.
 8. Review monitoring, error rate, latency and queue/dead-letter health.
 9. Obtain the named release authority's GO decision before production rollout.
 10. Roll out production in the same DB → new Edge immediately → web order with a
@@ -85,10 +126,19 @@ frontend build alone is not release approval.
   DDL with regenerated-types and schema-fingerprint comparison.
 - Backup/restore evidence is absent or stale.
 - Tenant/RBAC negative tests fail.
+- The HR workflow forward repair is absent or cross-workspace membership,
+  assignee, instance/task join, inactive-assignee and race tests are not green.
 - A new critical/high dependency vulnerability or unreviewed Edge compile failure exists.
 - The Edge diagnostic ratchet reports a new entrypoint, diagnostic or unpinned import.
 - The release manifest is dirty, names a different SHA, or its distribution,
   migration, Edge-source or SBOM hash differs from the approved artifact.
+- The public release-identity file is missing/malformed, web and Edge identities
+  are unknown/different, its application/version/clean state or web artifact
+  fingerprint differs, the Edge body/header differ, or the live verifier fails.
+- The provider preview cannot read and cross-check Git `HEAD`, the immutable web
+  deployment ID is not observable on every verified response, or any provider
+  deployment/version ID is absent from retained release evidence. The current
+  verifier has no provider-API adapter.
 - The extensions schema/pgcrypto trust contract fails, or PUBLIC/anon/
   authenticated/service_role has TRUNCATE on payroll periods or transition audit.
 - Payroll financial semantics are unapproved while partial periods or mixed

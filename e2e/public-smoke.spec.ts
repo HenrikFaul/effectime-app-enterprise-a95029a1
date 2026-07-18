@@ -149,6 +149,17 @@ async function assertSuccessfulNavigation(page: Page, path: string) {
 }
 
 test.describe("public application smoke", () => {
+  test.beforeEach(async ({ page }) => {
+    if (process.env.PLAYWRIGHT_BASE_URL) return;
+
+    // External font availability is intentionally outside this application
+    // smoke contract. Fulfil only the third-party stylesheet locally so it
+    // cannot block DOMContentLoaded or turn a deterministic app check flaky.
+    await page.route("https://fonts.googleapis.com/**", (route) =>
+      route.fulfill({ status: 200, contentType: "text/css", body: "" }),
+    );
+  });
+
   test("landing loads its runtime assets without browser errors", async ({ page }) => {
     const runtime = observeRuntime(page);
 
@@ -205,6 +216,55 @@ test.describe("public application smoke", () => {
         icons: expect.any(Array),
       }),
     );
+
+    const releaseIdentityResponse = await page.request.get(
+      new URL("/.well-known/effectime-release.json", APP_BASE_URL).href,
+      { headers: { "Cache-Control": "no-cache" } },
+    );
+    expect(
+      releaseIdentityResponse.ok(),
+      `release identity returned HTTP ${releaseIdentityResponse.status()}`,
+    ).toBe(true);
+    expect(releaseIdentityResponse.headers()["content-type"]).toMatch(/application\/json/i);
+    const releaseIdentity = await releaseIdentityResponse.json();
+    expect(releaseIdentity).toEqual(
+      expect.objectContaining({
+        schemaVersion: 1,
+        application: expect.any(String),
+        version: expect.stringMatching(/^\d+\.\d+\.\d+(?:[-+].+)?$/),
+        source: expect.objectContaining({
+          sha: expect.stringMatching(/^[0-9a-f]{40}$/),
+          shortSha: expect.stringMatching(/^[0-9a-f]{12}$/),
+          dirty: expect.any(Boolean),
+          attestable: expect.any(Boolean),
+        }),
+        artifact: expect.objectContaining({
+          algorithm: "sha256",
+          inventoryFormat: "relative-path-nul-file-sha256-nul-v1",
+          excluded: [".well-known/effectime-release.json"],
+          inventory: expect.any(Array),
+          files: expect.any(Number),
+          bytes: expect.any(Number),
+          sha256: expect.stringMatching(/^[0-9a-f]{64}$/),
+        }),
+      }),
+    );
+    const expectedReleaseSha = process.env.EFFECTIME_RELEASE_SHA?.toLowerCase();
+    if (expectedReleaseSha) {
+      expect(releaseIdentity.source.sha).toBe(expectedReleaseSha);
+      expect(releaseIdentity.source.dirty).toBe(false);
+      expect(releaseIdentity.source.attestable).toBe(true);
+    }
+    const expectedWebArtifactSha256 = process.env.EFFECTIME_WEB_ARTIFACT_SHA256?.toLowerCase();
+    if (expectedWebArtifactSha256) {
+      expect(releaseIdentity.artifact.sha256).toBe(expectedWebArtifactSha256);
+    }
+    expect(releaseIdentity.application.length).toBeGreaterThan(0);
+    expect(releaseIdentity.artifact.files).toBeGreaterThan(0);
+    expect(releaseIdentity.artifact.bytes).toBeGreaterThanOrEqual(0);
+    expect(releaseIdentity.artifact.inventory).toHaveLength(releaseIdentity.artifact.files);
+    expect(releaseIdentity.source.shortSha).toBe(releaseIdentity.source.sha.slice(0, 12));
+    expect(releaseIdentity.source.attestable).toBe(!releaseIdentity.source.dirty);
 
     const faviconResponse = await page.request.get(
       new URL("/effectime-favicon.svg", APP_BASE_URL).href,

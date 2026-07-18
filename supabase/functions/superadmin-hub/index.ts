@@ -19,15 +19,21 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.98.0'
 import { corsHeaders } from '../_shared/cors.ts'
+import { readEffectimeReleaseIdentity } from '../_shared/release-identity.ts'
+import { buildPlatformVersionContract } from './platform-version-contract.ts'
 
 // ---------------------------------------------------------------------------
 // Utility
 // ---------------------------------------------------------------------------
 
-function jsonRes(data: unknown, status = 200): Response {
+function jsonRes(
+  data: unknown,
+  status = 200,
+  extraHeaders: Record<string, string> = {},
+): Response {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    headers: { ...corsHeaders, 'Content-Type': 'application/json', ...extraHeaders },
   })
 }
 
@@ -639,16 +645,20 @@ Deno.serve(async (req: Request) => {
     // =========================================================================
     if (action === 'platform-version') {
       const supabaseProjectUrl = Deno.env.get('SUPABASE_URL') ?? null
+      const release = readEffectimeReleaseIdentity()
 
       // Best-effort: count known edge functions from the static list we ship
       const knownFunctions = [
         'admin',
+        'ai-copilot',
         'auth-email-hook',
         'cleanup-demo-workspace',
         'cleanup-temp-users',
         'create-instant-enterprise-member',
+        'create-workspace-user',
         'data-migration',
         'delete-account',
+        'document-ai-polish',
         'handle-email-suppression',
         'handle-email-unsubscribe',
         'help-regenerator',
@@ -660,6 +670,7 @@ Deno.serve(async (req: Request) => {
         'payroll-export',
         'preview-transactional-email',
         'process-email-queue',
+        'public-api',
         'run-report',
         'security-admin',
         'seed-demo-workspace',
@@ -667,16 +678,16 @@ Deno.serve(async (req: Request) => {
         'send-transactional-email',
         'superadmin-hub',
         'sync-holidays',
+        'webhook-dispatcher',
       ]
 
-      return jsonRes({
-        timestamp:      new Date().toISOString(),
-        supabase_url:   supabaseProjectUrl,
-        function_count: knownFunctions.length,
-        functions:      knownFunctions,
-        runtime:        'Deno (Supabase Edge Runtime)',
-        note:           'CHANGELOG not available from edge function — read from versioning files',
+      const platformVersionContract = buildPlatformVersionContract({
+        knownFunctions,
+        release,
+        supabaseProjectUrl,
+        timestamp: new Date().toISOString(),
       })
+      return jsonRes(platformVersionContract.body, 200, platformVersionContract.headers)
     }
 
     // ── Unknown action ────────────────────────────────────────────────────────

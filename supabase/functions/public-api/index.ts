@@ -15,12 +15,14 @@ import {
   resolvePublicApiRoute,
 } from "./security.ts";
 import { checkWorkspaceFeature } from "../_shared/feature-entitlement.ts";
+import { readEffectimeReleaseIdentity } from "../_shared/release-identity.ts";
+import { buildPublicApiHealthContract, PUBLIC_API_EXPOSE_HEADERS } from "./health-contract.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-api-key, content-type",
   "Access-Control-Allow-Methods": "GET, OPTIONS",
-  "Access-Control-Expose-Headers": "X-Request-Id, X-RateLimit-Remaining",
+  "Access-Control-Expose-Headers": PUBLIC_API_EXPOSE_HEADERS,
 };
 
 type DatabaseClient = SupabaseClient<Database>;
@@ -183,16 +185,22 @@ Deno.serve(async (req: Request) => {
   const hasReadScope = scopes.length === 0 || scopes.includes("read") || scopes.includes("*");
   let status = 200;
   let body: unknown;
+  let releaseHeaders: Record<string, string> = {};
 
   try {
     if (req.method !== "GET") {
       status = 405;
       body = { error: "Method not allowed", request_id: requestId };
     } else if (route === "/v1/health") {
-      body = {
-        data: { ok: true, workspace_id: workspaceId, key_name: keyRow.name },
-        meta: { request_id: requestId },
-      };
+      const release = readEffectimeReleaseIdentity();
+      const healthContract = buildPublicApiHealthContract({
+        keyName: keyRow.name,
+        release,
+        requestId,
+        workspaceId,
+      });
+      releaseHeaders = healthContract.headers;
+      body = healthContract.body;
     } else if (!hasReadScope) {
       status = 403;
       body = { error: "Forbidden", request_id: requestId };
@@ -253,5 +261,6 @@ Deno.serve(async (req: Request) => {
   return jsonRes(body, status, {
     ...baseHeaders,
     "X-RateLimit-Remaining": String(rateLimit.remaining),
+    ...releaseHeaders,
   });
 });
