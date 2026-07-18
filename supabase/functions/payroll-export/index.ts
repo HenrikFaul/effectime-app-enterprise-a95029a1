@@ -1,19 +1,82 @@
 // Edge Function: payroll-export
-// Handles payroll period calculation, multi-provider CSV export, period locking,
-// and a placeholder for direct API push to external payroll systems.
-//
-// Actions:
-//   calculate-period  – compute per-member hours/overtime/leave/gross for a payroll period
-//   export-csv        – generate provider-formatted CSV and mark the period as exported
-//   lock-period       – lock an open payroll period with a full audit trail
-//   export-api        – placeholder for future provider API push
+// Calculates open payroll periods, atomically locks immutable calculation
+// snapshots, and exports only hash-verified stored snapshots.
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.98.0'
+import {
+  createClient,
+  type SupabaseClient,
+} from 'https://esm.sh/@supabase/supabase-js@2.98.0'
+import type { Database, Json } from '../../../src/integrations/supabase/types.ts'
 import { corsHeaders } from '../_shared/cors.ts'
+import { checkWorkspaceFeature } from '../_shared/feature-entitlement.ts'
+import {
+  attendanceHours,
+  attendanceMonthOrFilter,
+  buildPayrollCsv,
+  isUuid,
+  isPayrollExportRpcResult,
+  isPayrollLockRpcResult,
+  latestMemberRateMap,
+  parseBaseWorkingHours,
+  PAYROLL_MEMBERSHIP_BATCH_SIZE,
+  payrollCsvProvider,
+  type MemberRateRow,
+} from './payroll-contract.ts'
+import {
+  createPayrollSnapshot,
+  parseStoredPayrollSnapshot,
+  payrollSnapshotCanonicalPayload,
+  PAYROLL_SNAPSHOT_VERSION,
+  PayrollSnapshotError,
+  type PayrollMemberCalculation,
+  type PayrollTotals,
+} from './payroll-snapshot.ts'
+import {
+  fetchAllPayrollRows,
+  MAX_PAYROLL_ATTENDANCE_ROWS,
+  MAX_PAYROLL_LEAVE_ROWS,
+  MAX_PAYROLL_MEMBERS,
+  MAX_PAYROLL_RATE_ROWS,
+} from './pagination.ts'
+import { loadProfileNamesByUserId, type ProfileLookupClient } from './profile-lookup.ts'
+import { requiredPayrollFeature } from './security.ts'
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+type DatabaseClient = SupabaseClient<Database>
+type PayrollPeriod = Pick<
+  Database['public']['Tables']['payroll_periods']['Row'],
+  | 'id'
+  | 'workspace_id'
+  | 'name'
+  | 'start_date'
+  | 'end_date'
+  | 'status'
+  | 'calculation_snapshot'
+  | 'calculation_hash'
+  | 'calculation_version'
+>
+type Membership = Pick<
+  Database['public']['Tables']['enterprise_memberships']['Row'],
+  'id' | 'user_id' | 'base_working_hours'
+>
+type AttendancePeriod = Pick<
+  Database['public']['Tables']['enterprise_attendance_periods']['Row'],
+  'id' | 'membership_id' | 'year' | 'month' | 'totals'
+>
+type LeaveRequest = Pick<
+  Database['public']['Tables']['leave_requests']['Row'],
+  'id' | 'user_id' | 'start_date' | 'end_date'
+>
+
+class PayrollResponseError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly code: string,
+  ) {
+    super(message)
+    this.name = 'PayrollResponseError'
+  }
+}
 
 function jsonRes(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -22,324 +85,344 @@ function jsonRes(data: unknown, status = 200) {
   })
 }
 
-/** Count working days (Mon–Fri) between two ISO date strings, inclusive. */
 function countWorkdays(startIso: string, endIso: string): number {
   const start = new Date(startIso)
   const end = new Date(endIso)
   let count = 0
-  const cur = new Date(start)
-  while (cur <= end) {
-    const day = cur.getUTCDay()
+  const current = new Date(start)
+  while (current <= end) {
+    const day = current.getUTCDay()
     if (day !== 0 && day !== 6) count++
-    cur.setUTCDate(cur.getUTCDate() + 1)
+    current.setUTCDate(current.getUTCDate() + 1)
   }
   return count
 }
 
-/** Return true when two date ranges overlap (inclusive, ISO string dates). */
 function rangesOverlap(
-  aStart: string, aEnd: string,
-  bStart: string, bEnd: string,
+  firstStart: string,
+  firstEnd: string,
+  secondStart: string,
+  secondEnd: string,
 ): boolean {
-  return aStart <= bEnd && bStart <= aEnd
+  return firstStart <= secondEnd && secondStart <= firstEnd
 }
 
-// ---------------------------------------------------------------------------
-// Core: calculate-period logic (shared by calculate-period and export-csv)
-// ---------------------------------------------------------------------------
-
-async function calculatePeriod(admin: ReturnType<typeof createClient>, workspaceId: string, periodId: string) {
-  // 1. Load the payroll period
-  const { data: period, error: periodErr } = await admin
+async function loadPayrollPeriod(
+  admin: DatabaseClient,
+  workspaceId: string,
+  periodId: string,
+): Promise<PayrollPeriod> {
+  const { data, error } = await admin
     .from('payroll_periods')
-    .select('id, name, start_date, end_date, currency')
+    .select(
+      'id, workspace_id, name, start_date, end_date, status, calculation_snapshot, calculation_hash, calculation_version',
+    )
     .eq('id', periodId)
     .eq('workspace_id', workspaceId)
     .maybeSingle()
 
-  if (periodErr) throw new Error(`Failed to load payroll period: ${periodErr.message}`)
-  if (!period) throw new Error('Payroll period not found')
+  if (error) throw new Error(`Failed to load payroll period: ${error.message}`)
+  if (!data) {
+    throw new PayrollResponseError('Payroll period not found', 404, 'PAYROLL_PERIOD_NOT_FOUND')
+  }
+  return data
+}
 
-  const { start_date: periodStart, end_date: periodEnd, name: periodName, currency: periodCurrency } = period
+function snapshotResponseError(error: PayrollSnapshotError): PayrollResponseError {
+  const message = error.code === 'PAYROLL_SNAPSHOT_MISSING'
+    ? 'Locked payroll period has no calculation snapshot and cannot be recalculated'
+    : 'Stored payroll calculation snapshot failed integrity validation'
+  return new PayrollResponseError(message, 409, error.code)
+}
 
-  // 2. Load active members with their profiles and latest cost rate
-  const { data: memberships, error: membErr } = await admin
-    .from('enterprise_memberships')
-    .select(`
-      id,
-      user_id,
-      base_working_hours,
-      profiles:user_id ( display_name )
-    `)
-    .eq('workspace_id', workspaceId)
-    .eq('status', 'active')
+async function storedCalculation(period: PayrollPeriod): Promise<{
+  members: PayrollMemberCalculation[]
+  totals: PayrollTotals
+}> {
+  try {
+    const snapshot = await parseStoredPayrollSnapshot(period)
+    return { members: snapshot.members, totals: snapshot.totals }
+  } catch (error) {
+    if (error instanceof PayrollSnapshotError) throw snapshotResponseError(error)
+    throw error
+  }
+}
 
-  if (membErr) throw new Error(`Failed to load memberships: ${membErr.message}`)
-  const members = memberships || []
-
-  // 3. Load attendance periods that overlap the payroll period
-  const { data: attendancePeriods, error: attErr } = await admin
-    .from('enterprise_attendance_periods')
-    .select('membership_id, start_date, end_date, totals')
-    .eq('workspace_id', workspaceId)
-    .lte('start_date', periodEnd)
-    .gte('end_date', periodStart)
-
-  if (attErr) throw new Error(`Failed to load attendance periods: ${attErr.message}`)
-  const attendance = attendancePeriods || []
-
-  // 4. Load approved leave requests that overlap the payroll period
-  const { data: leaveRequests, error: leaveErr } = await admin
-    .from('leave_requests')
-    .select('user_id, start_date, end_date, status')
-    .eq('workspace_id', workspaceId)
-    .eq('status', 'approved')
-    .lte('start_date', periodEnd)
-    .gte('end_date', periodStart)
-
-  if (leaveErr) throw new Error(`Failed to load leave requests: ${leaveErr.message}`)
-  const leaves = leaveRequests || []
-
-  // 5. Load latest cost rate per membership
-  const membershipIds = members.map((m: any) => m.id)
-  let rateMap = new Map<string, number>()
-  if (membershipIds.length > 0) {
-    const { data: rates, error: rateErr } = await admin
-      .from('enterprise_member_rates')
-      .select('membership_id, cost_rate, effective_from')
-      .in('membership_id', membershipIds)
-      .order('effective_from', { ascending: false })
-
-    if (rateErr) throw new Error(`Failed to load member rates: ${rateErr.message}`)
-    // Keep only the most-recent rate per membership
-    for (const r of rates || []) {
-      if (!rateMap.has(r.membership_id)) {
-        rateMap.set(r.membership_id, Number(r.cost_rate) || 0)
-      }
-    }
+async function calculateOpenPeriod(
+  admin: DatabaseClient,
+  period: PayrollPeriod,
+) {
+  if (period.status !== 'open') {
+    throw new PayrollResponseError(
+      'Only an open payroll period can be calculated from live data',
+      409,
+      'PAYROLL_PERIOD_NOT_OPEN',
+    )
   }
 
-  // 6. Compute per-member figures
-  const payrollMembers: Array<{
-    membership_id: string
-    display_name: string
-    regular_hours: number
-    overtime_hours: number
-    leave_days: number
-    gross_estimate: number
-    currency: string
-  }> = []
+  const members = await fetchAllPayrollRows<Membership>(
+    'payroll memberships',
+    (from, to) => admin
+      .from('enterprise_memberships')
+      .select('id, user_id, base_working_hours')
+      .eq('workspace_id', period.workspace_id)
+      .eq('status', 'active')
+      .order('id', { ascending: true })
+      .range(from, to),
+    { maxRows: MAX_PAYROLL_MEMBERS },
+  )
+  const membershipIds = members.map((member) => member.id)
+  const memberUserIds = members.map((member) => member.user_id)
+  const profileNameByUserId = await loadProfileNamesByUserId(
+    admin as unknown as ProfileLookupClient,
+    memberUserIds,
+  )
 
-  const workdays = countWorkdays(periodStart, periodEnd)
+  const attendance: AttendancePeriod[] = []
+  const monthFilter = attendanceMonthOrFilter(period.start_date, period.end_date)
+  for (let offset = 0; offset < membershipIds.length; offset += PAYROLL_MEMBERSHIP_BATCH_SIZE) {
+    const membershipBatch = membershipIds.slice(offset, offset + PAYROLL_MEMBERSHIP_BATCH_SIZE)
+    const batch = await fetchAllPayrollRows<AttendancePeriod>(
+      'payroll attendance rows',
+      (from, to) => admin
+        .from('enterprise_attendance_periods')
+        .select('id, membership_id, year, month, totals')
+        .eq('workspace_id', period.workspace_id)
+        .in('membership_id', membershipBatch)
+        .or(monthFilter)
+        .order('membership_id', { ascending: true })
+        .order('year', { ascending: true })
+        .order('month', { ascending: true })
+        .order('id', { ascending: true })
+        .range(from, to),
+      { maxRows: MAX_PAYROLL_ATTENDANCE_ROWS - attendance.length },
+    )
+    attendance.push(...batch)
+  }
 
-  for (const m of members) {
-    const memberAttendance = attendance.filter((a: any) => a.membership_id === m.id)
-    const baseHoursPerDay: number = Number(m.base_working_hours) || 8
-    const costRate: number = rateMap.get(m.id) || 0
+  const leaves = await fetchAllPayrollRows<LeaveRequest>(
+    'approved payroll leave rows',
+    (from, to) => admin
+      .from('leave_requests')
+      .select('id, user_id, start_date, end_date')
+      .eq('workspace_id', period.workspace_id)
+      .eq('status', 'approved')
+      .lte('start_date', period.end_date)
+      .gte('end_date', period.start_date)
+      .order('user_id', { ascending: true })
+      .order('start_date', { ascending: true })
+      .order('end_date', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, to),
+    { maxRows: MAX_PAYROLL_LEAVE_ROWS },
+  )
 
-    // Sum hours from attendance totals JSONB where period overlaps payroll period
-    let totalHours = 0
-    for (const a of memberAttendance) {
-      if (rangesOverlap(a.start_date, a.end_date, periodStart, periodEnd)) {
-        const totalsHours = Number(a.totals?.hours) || 0
-        totalHours += totalsHours
-      }
+  let rateMap = new Map<string, { costRate: number; currency: string }>()
+  if (membershipIds.length > 0) {
+    const rateRows: MemberRateRow[] = []
+    for (let offset = 0; offset < membershipIds.length; offset += PAYROLL_MEMBERSHIP_BATCH_SIZE) {
+      const membershipBatch = membershipIds.slice(offset, offset + PAYROLL_MEMBERSHIP_BATCH_SIZE)
+      const batch = await fetchAllPayrollRows<MemberRateRow>(
+        'payroll rate rows',
+        (from, to) => admin
+          .from('enterprise_member_rates')
+          .select('id, membership_id, cost_rate, currency, effective_from')
+          .eq('workspace_id', period.workspace_id)
+          .in('membership_id', membershipBatch)
+          .order('membership_id', { ascending: true })
+          .order('effective_from', { ascending: false })
+          .order('id', { ascending: true })
+          .range(from, to),
+        { maxRows: MAX_PAYROLL_RATE_ROWS - rateRows.length },
+      )
+      rateRows.push(...batch)
     }
+    rateMap = latestMemberRateMap(rateRows)
+  }
 
-    // Overtime = max(0, total_hours - base_working_hours * workdays)
+  const attendanceHoursByMembership = new Map<string, number>()
+  for (const row of attendance) {
+    const accumulated = (attendanceHoursByMembership.get(row.membership_id) ?? 0) +
+      attendanceHours(row.totals)
+    if (!Number.isFinite(accumulated) || accumulated < 0) {
+      throw new Error('Attendance hours exceeded the safe numeric range')
+    }
+    attendanceHoursByMembership.set(row.membership_id, accumulated)
+  }
+  const leavesByUser = new Map<string, LeaveRequest[]>()
+  for (const leave of leaves) {
+    const memberLeaves = leavesByUser.get(leave.user_id) ?? []
+    memberLeaves.push(leave)
+    leavesByUser.set(leave.user_id, memberLeaves)
+  }
+
+  const payrollMembers: PayrollMemberCalculation[] = []
+  const missingProfiles: Array<{ membershipId: string; userId: string }> = []
+  const workdays = countWorkdays(period.start_date, period.end_date)
+
+  for (const member of members) {
+    const baseHoursPerDay = parseBaseWorkingHours(member.base_working_hours)
+    const memberRate = rateMap.get(member.id)
+    const costRate = memberRate?.costRate ?? 0
+    const totalHours = attendanceHoursByMembership.get(member.id) ?? 0
     const expectedHours = baseHoursPerDay * workdays
+    if (!Number.isFinite(expectedHours) || expectedHours < 0) {
+      throw new Error('Expected payroll hours exceeded the safe numeric range')
+    }
     const regularHours = Math.min(totalHours, expectedHours)
     const overtimeHours = Math.max(0, totalHours - expectedHours)
 
-    // Count approved leave days overlapping the period
-    const memberLeaves = leaves.filter((l: any) => l.user_id === m.user_id)
     let leaveDays = 0
-    for (const l of memberLeaves) {
-      if (rangesOverlap(l.start_date, l.end_date, periodStart, periodEnd)) {
-        // Count calendar days of the leave that fall within the payroll period
-        const overlapStart = l.start_date > periodStart ? l.start_date : periodStart
-        const overlapEnd = l.end_date < periodEnd ? l.end_date : periodEnd
-        leaveDays += countWorkdays(overlapStart, overlapEnd)
-      }
+    for (const leave of leavesByUser.get(member.user_id) ?? []) {
+      if (!rangesOverlap(
+        leave.start_date,
+        leave.end_date,
+        period.start_date,
+        period.end_date,
+      )) continue
+      const overlapStart = leave.start_date > period.start_date
+        ? leave.start_date
+        : period.start_date
+      const overlapEnd = leave.end_date < period.end_date
+        ? leave.end_date
+        : period.end_date
+      leaveDays += countWorkdays(overlapStart, overlapEnd)
     }
 
     const grossEstimate = totalHours * costRate
-
-    const profileData = Array.isArray(m.profiles) ? m.profiles[0] : m.profiles
-    const displayName: string = profileData?.display_name || 'Unknown'
-
-    // If the profile is missing or its display_name is empty, payroll data
-    // would land in downstream systems as "Unknown". Surface this loudly
-    // via an audit-event so ops can investigate (B-32 / LESSON-DOD-001).
-    // Fire-and-forget — never block payroll export on audit-write failure.
-    if (!profileData?.display_name) {
-      try {
-        admin.from('enterprise_audit_events').insert({
-          workspace_id: workspaceId,
-          actor_id: null,
-          action: 'payroll.export.member_profile_missing',
-          metadata: { membership_id: m.id, user_id: m.user_id, period_id: periodId },
-        }).then(({ error: auditErr }: { error: unknown }) => {
-          if (auditErr) console.warn('[payroll-export] audit insert failed', auditErr)
-        })
-      } catch (e) {
-        console.warn('[payroll-export] audit insert threw', e)
-      }
+    if (!Number.isFinite(grossEstimate) || grossEstimate < 0) {
+      throw new Error('Payroll gross estimate exceeded the safe numeric range')
     }
-
+    const profileDisplayName = profileNameByUserId.get(member.user_id)
+    const displayName = profileDisplayName?.trim() || 'Unknown'
+    if (!profileDisplayName?.trim()) {
+      missingProfiles.push({ membershipId: member.id, userId: member.user_id })
+    }
     payrollMembers.push({
-      membership_id: m.id,
+      membership_id: member.id,
       display_name: displayName,
       regular_hours: Math.round(regularHours * 100) / 100,
       overtime_hours: Math.round(overtimeHours * 100) / 100,
       leave_days: leaveDays,
       gross_estimate: Math.round(grossEstimate * 100) / 100,
-      currency: periodCurrency || 'EUR',
+      currency: memberRate?.currency ?? 'EUR',
     })
   }
 
-  const totals = {
-    total_hours: Math.round(payrollMembers.reduce((s, m) => s + m.regular_hours + m.overtime_hours, 0) * 100) / 100,
-    total_overtime: Math.round(payrollMembers.reduce((s, m) => s + m.overtime_hours, 0) * 100) / 100,
-    total_gross: Math.round(payrollMembers.reduce((s, m) => s + m.gross_estimate, 0) * 100) / 100,
+  payrollMembers.sort((left, right) =>
+    left.membership_id < right.membership_id
+      ? -1
+      : left.membership_id > right.membership_id
+      ? 1
+      : 0
+  )
+  const totals: PayrollTotals = {
+    total_hours: Math.round(payrollMembers.reduce(
+      (sum, member) => sum + member.regular_hours + member.overtime_hours,
+      0,
+    ) * 100) / 100,
+    total_overtime: Math.round(payrollMembers.reduce(
+      (sum, member) => sum + member.overtime_hours,
+      0,
+    ) * 100) / 100,
+    total_gross: Math.round(payrollMembers.reduce(
+      (sum, member) => sum + member.gross_estimate,
+      0,
+    ) * 100) / 100,
     member_count: payrollMembers.length,
   }
-
-  return { members: payrollMembers, totals, period }
+  return { members: payrollMembers, totals, period, missingProfiles }
 }
 
-// ---------------------------------------------------------------------------
-// CSV generators per provider
-// ---------------------------------------------------------------------------
-
-function buildCsv(
-  members: Array<{
-    membership_id: string
-    display_name: string
-    regular_hours: number
-    overtime_hours: number
-    leave_days: number
-    gross_estimate: number
-    currency: string
-  }>,
-  period: { name: string; start_date: string; end_date: string },
-  provider: string,
-): string {
-  const { name: periodName, start_date: periodStart, end_date: periodEnd } = period
-  const lines: string[] = []
-
-  switch (provider) {
-    case 'datev': {
-      // Semicolon-delimited, German headers
-      lines.push('Personalnummer;Name;Zeitraum;Normalstunden;Überstunden;Urlaubstage;Bruttolohn;Währung')
-      for (const m of members) {
-        const cols = [
-          m.membership_id,
-          `"${m.display_name.replace(/"/g, '""')}"`,
-          `"${periodName}"`,
-          String(m.regular_hours).replace('.', ','),
-          String(m.overtime_hours).replace('.', ','),
-          String(m.leave_days),
-          String(m.gross_estimate).replace('.', ','),
-          m.currency,
-        ]
-        lines.push(cols.join(';'))
-      }
-      break
-    }
-
-    case 'bamboohr': {
-      // Comma-delimited, BambooHR field names
-      lines.push('Employee ID,Employee Name,Period,Regular Hours,Overtime Hours,Leave Days')
-      for (const m of members) {
-        const cols = [
-          m.membership_id,
-          `"${m.display_name.replace(/"/g, '""')}"`,
-          `"${periodName}"`,
-          String(m.regular_hours),
-          String(m.overtime_hours),
-          String(m.leave_days),
-        ]
-        lines.push(cols.join(','))
-      }
-      break
-    }
-
-    case 'personio': {
-      // Comma-delimited, Personio field names
-      lines.push('employee_id,name,period_start,period_end,hours,overtime,absences,gross')
-      for (const m of members) {
-        const cols = [
-          m.membership_id,
-          `"${m.display_name.replace(/"/g, '""')}"`,
-          periodStart,
-          periodEnd,
-          String(m.regular_hours),
-          String(m.overtime_hours),
-          String(m.leave_days),
-          String(m.gross_estimate),
-        ]
-        lines.push(cols.join(','))
-      }
-      break
-    }
-
-    default: {
-      // Generic / fallback: comma-delimited with full columns
-      lines.push('ID,Name,Period Start,Period End,Regular Hours,Overtime Hours,Leave Days,Gross Estimate,Currency')
-      for (const m of members) {
-        const cols = [
-          m.membership_id,
-          `"${m.display_name.replace(/"/g, '""')}"`,
-          periodStart,
-          periodEnd,
-          String(m.regular_hours),
-          String(m.overtime_hours),
-          String(m.leave_days),
-          String(m.gross_estimate),
-          m.currency,
-        ]
-        lines.push(cols.join(','))
-      }
-      break
-    }
+async function calculatePeriod(
+  admin: DatabaseClient,
+  workspaceId: string,
+  periodId: string,
+) {
+  const period = await loadPayrollPeriod(admin, workspaceId, periodId)
+  if (period.status === 'locked' || period.status === 'exported') {
+    const stored = await storedCalculation(period)
+    return { ...stored, period, missingProfiles: [] }
   }
-
-  return lines.join('\n')
+  return calculateOpenPeriod(admin, period)
 }
 
-// ---------------------------------------------------------------------------
-// Main handler
-// ---------------------------------------------------------------------------
+async function auditMissingProfiles(
+  admin: DatabaseClient,
+  workspaceId: string,
+  periodId: string,
+  actorId: string,
+  missingProfiles: Array<{ membershipId: string; userId: string }>,
+): Promise<void> {
+  if (missingProfiles.length === 0) return
+  const rows: Database['public']['Tables']['enterprise_audit_events']['Insert'][] = missingProfiles.map(
+    ({ membershipId, userId }) => ({
+      workspace_id: workspaceId,
+      actor_id: actorId,
+      action: 'payroll.export.member_profile_missing',
+      target_type: 'enterprise_membership',
+      target_id: membershipId,
+      affected_user_id: userId,
+      metadata: { membership_id: membershipId, user_id: userId, period_id: periodId },
+    }),
+  )
+  try {
+    const { error } = await admin.from('enterprise_audit_events').insert(rows)
+    if (error) console.warn('[payroll-export] missing-profile audit insert failed:', error.message)
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : 'Unknown database error'
+    console.warn('[payroll-export] missing-profile audit insert threw:', message)
+  }
+}
+
+function rpcFailure(
+  operation: string,
+  error: { code?: string; message?: string },
+): PayrollResponseError {
+  switch (error.code) {
+    case '42501':
+      return new PayrollResponseError('Forbidden payroll operation', 403, 'PAYROLL_FORBIDDEN')
+    case 'P0002':
+      return new PayrollResponseError('Payroll period not found', 404, 'PAYROLL_PERIOD_NOT_FOUND')
+    case '55000':
+      return new PayrollResponseError(
+        `Payroll period cannot be ${operation} in its current state`,
+        409,
+        'PAYROLL_PERIOD_STATE_CONFLICT',
+      )
+    case '22023':
+      return new PayrollResponseError('Invalid payroll operation payload', 400, 'PAYROLL_INVALID_PAYLOAD')
+    default:
+      return new PayrollResponseError(`Failed to ${operation} payroll period`, 500, 'INTERNAL_ERROR')
+  }
+}
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
-  }
+  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders })
 
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!
-
-    // --- Auth: validate JWT ---
     const authHeader = req.headers.get('Authorization')
     if (!authHeader) return jsonRes({ error: 'Unauthorized' }, 401)
 
-    const userClient = createClient(supabaseUrl, anonKey, {
+    const userClient = createClient<Database>(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     })
     const { data: { user }, error: userError } = await userClient.auth.getUser()
     if (userError || !user) return jsonRes({ error: 'Unauthorized' }, 401)
 
-    const admin = createClient(supabaseUrl, serviceKey)
-    const body = await req.json().catch(() => ({}))
+    const admin = createClient<Database>(supabaseUrl, serviceKey)
+    const parsedBody: unknown = await req.json().catch(() => null)
+    if (typeof parsedBody !== 'object' || parsedBody === null || Array.isArray(parsedBody)) {
+      return jsonRes({ error: 'A JSON object body is required' }, 400)
+    }
+    const body = parsedBody as Record<string, unknown>
     const { action, workspaceId } = body
+    if (!isUuid(workspaceId)) return jsonRes({ error: 'A valid workspaceId is required' }, 400)
 
-    if (!workspaceId) return jsonRes({ error: 'workspaceId is required' }, 400)
-
-    // --- Auth: workspace admin check (owner or resourceAssistant) ---
-    const { data: adminMembership } = await admin
+    const { data: adminMembership, error: membershipError } = await admin
       .from('enterprise_memberships')
       .select('id, role')
       .eq('workspace_id', workspaceId)
@@ -347,135 +430,161 @@ Deno.serve(async (req) => {
       .eq('status', 'active')
       .in('role', ['owner', 'resourceAssistant'])
       .maybeSingle()
-
+    if (membershipError) {
+      console.error(
+        `[payroll-export] membership lookup failed workspace=${workspaceId} user=${user.id}: ${membershipError.message}`,
+      )
+      return jsonRes({ error: 'Workspace authorization is temporarily unavailable' }, 503)
+    }
     if (!adminMembership) return jsonRes({ error: 'Forbidden: workspace admin role required' }, 403)
 
-    // =========================================================
-    // Action: calculate-period
-    // =========================================================
+    const requiredFeature = requiredPayrollFeature(action)
+    if (!requiredFeature) return jsonRes({ error: 'Unknown payroll action' }, 400)
+    const entitlement = await checkWorkspaceFeature(admin, workspaceId, requiredFeature)
+    if (!entitlement.enabled) {
+      if (entitlement.reason === 'lookup_error') {
+        console.error(
+          `[payroll-export] entitlement lookup failed workspace=${workspaceId} feature=${requiredFeature} step=${entitlement.step}: ${entitlement.error}`,
+        )
+        return jsonRes({ error: 'Feature entitlement is temporarily unavailable' }, 503)
+      }
+      return jsonRes({ error: `Feature '${requiredFeature}' is not enabled for this workspace` }, 403)
+    }
+
     if (action === 'calculate-period') {
       const { periodId } = body
-      if (!periodId) return jsonRes({ error: 'periodId is required' }, 400)
-
-      const { members, totals } = await calculatePeriod(admin, workspaceId, periodId)
-      return jsonRes({ members, totals })
+      if (!isUuid(periodId)) return jsonRes({ error: 'A valid periodId is required' }, 400)
+      const calculation = await calculatePeriod(admin, workspaceId, periodId)
+      await auditMissingProfiles(
+        admin,
+        workspaceId,
+        periodId,
+        user.id,
+        calculation.missingProfiles,
+      )
+      return jsonRes({ members: calculation.members, totals: calculation.totals })
     }
 
-    // =========================================================
-    // Action: export-csv
-    // =========================================================
-    if (action === 'export-csv') {
-      const { periodId, provider = 'generic' } = body
-      if (!periodId) return jsonRes({ error: 'periodId is required' }, 400)
-
-      const { members, period } = await calculatePeriod(admin, workspaceId, periodId)
-
-      const csv = buildCsv(members, period, provider)
-
-      // Safe filename: replace non-alphanumeric chars with underscores
-      const safeProvider = String(provider).replace(/[^a-z0-9]/gi, '_').toLowerCase()
-      const safePeriodName = String(period.name).replace(/[^a-z0-9]/gi, '_').toLowerCase()
-      const filename = `payroll_${safePeriodName}_${safeProvider}.csv`
-
-      // Mark period as exported
-      const { error: updateErr } = await admin
-        .from('payroll_periods')
-        .update({
-          exported_at: new Date().toISOString(),
-          exported_to: provider,
-        })
-        .eq('id', periodId)
-        .eq('workspace_id', workspaceId)
-
-      if (updateErr) {
-        console.error('payroll-export: failed to update exported_at:', updateErr.message)
-      }
-
-      return jsonRes({ csv, filename })
-    }
-
-    // =========================================================
-    // Action: lock-period
-    // =========================================================
     if (action === 'lock-period') {
       const { periodId } = body
-      if (!periodId) return jsonRes({ error: 'periodId is required' }, 400)
-
-      // Fetch period metadata (name, dates) for the audit event.
-      const { data: existing, error: fetchErr } = await admin
-        .from('payroll_periods')
-        .select('id, status, name, start_date, end_date')
-        .eq('id', periodId)
-        .eq('workspace_id', workspaceId)
-        .maybeSingle()
-
-      if (fetchErr) return jsonRes({ error: `Failed to fetch period: ${fetchErr.message}` }, 500)
-      if (!existing) return jsonRes({ error: 'Payroll period not found' }, 404)
-      if (existing.status !== 'open') {
-        return jsonRes({ error: `Period is already '${existing.status}' and cannot be locked` }, 409)
+      if (!isUuid(periodId)) return jsonRes({ error: 'A valid periodId is required' }, 400)
+      const period = await loadPayrollPeriod(admin, workspaceId, periodId)
+      if (period.status !== 'open') {
+        return jsonRes({
+          error: 'Payroll period is no longer open and cannot be locked',
+          code: 'PAYROLL_PERIOD_STATE_CONFLICT',
+        }, 409)
       }
+      const calculation = await calculateOpenPeriod(admin, period)
+      const snapshot = await createPayrollSnapshot({
+        id: period.id,
+        workspace_id: period.workspace_id,
+        name: period.name,
+        start_date: period.start_date,
+        end_date: period.end_date,
+      }, calculation.members, calculation.totals)
 
-      const now = new Date().toISOString()
-
-      // Atomic lock: the WHERE clause includes status = 'open' so a concurrent
-      // lock request between our SELECT and this UPDATE yields 0 rows (TOCTOU guard).
-      const { data: lockedRows, error: lockErr } = await admin
-        .from('payroll_periods')
-        .update({
-          status: 'locked',
-          locked_by: user.id,
-          locked_at: now,
-        })
-        .eq('id', periodId)
-        .eq('workspace_id', workspaceId)
-        .eq('status', 'open')
-        .select('id')
-
-      if (lockErr) return jsonRes({ error: `Failed to lock period: ${lockErr.message}` }, 500)
-      if (!lockedRows || lockedRows.length === 0) {
-        return jsonRes({ error: `Period is no longer open and cannot be locked` }, 409)
+      const { data, error } = await admin.rpc('lock_payroll_period_snapshot', {
+        _actor_id: user.id,
+        _canonical_payload: payrollSnapshotCanonicalPayload(snapshot),
+        _period_id: periodId,
+        _snapshot: snapshot as unknown as Json,
+        _snapshot_hash: snapshot.hash,
+        _snapshot_version: PAYROLL_SNAPSHOT_VERSION,
+        _workspace_id: workspaceId,
+      })
+      if (error) {
+        console.error('[payroll-export] atomic lock RPC failed:', error.message)
+        throw rpcFailure('locked', error)
       }
-
-      // Insert audit event
-      const { error: auditErr } = await admin
-        .from('enterprise_audit_events')
-        .insert({
-          workspace_id: workspaceId,
-          actor_id: user.id,
-          action: 'payroll.period_locked',
-          target_type: 'payroll_period',
-          target_id: periodId,
-          metadata: {
-            period_name: existing.name,
-            start_date: existing.start_date,
-            end_date: existing.end_date,
-          },
-        })
-
-      if (auditErr) {
-        // Non-fatal: log but do not fail the lock
-        console.error('payroll-export lock-period: failed to write audit event:', auditErr.message)
+      if (!isPayrollLockRpcResult(data, {
+        periodId,
+        hash: snapshot.hash,
+        version: PAYROLL_SNAPSHOT_VERSION,
+      })) {
+        console.error('[payroll-export] atomic lock RPC returned an invalid contract')
+        throw new PayrollResponseError(
+          'Payroll lock confirmation failed validation',
+          500,
+          'PAYROLL_RPC_INVALID_RESPONSE',
+        )
       }
-
-      return jsonRes({ success: true })
-    }
-
-    // =========================================================
-    // Action: export-api (placeholder)
-    // =========================================================
-    if (action === 'export-api') {
-      // Future: integrate with provider REST APIs using credentials
-      // stored in payroll_export_configs. For now return a clear message.
+      await auditMissingProfiles(
+        admin,
+        workspaceId,
+        periodId,
+        user.id,
+        calculation.missingProfiles,
+      )
       return jsonRes({
-        success: false,
-        message: 'Direct API push requires provider credentials configured in payroll_export_configs',
+        success: true,
+        snapshot_hash: snapshot.hash,
+        snapshot_version: PAYROLL_SNAPSHOT_VERSION,
       })
     }
 
-    return jsonRes({ error: `Unknown action: ${action}` }, 400)
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err)
+    if (action === 'export-csv') {
+      const { periodId } = body
+      if (!isUuid(periodId)) return jsonRes({ error: 'A valid periodId is required' }, 400)
+      const provider = payrollCsvProvider(body.provider ?? 'generic')
+      if (!provider) {
+        return jsonRes({
+          error: 'Unsupported payroll CSV provider',
+          code: 'UNSUPPORTED_PAYROLL_PROVIDER',
+        }, 400)
+      }
+      const period = await loadPayrollPeriod(admin, workspaceId, periodId)
+      if (period.status !== 'locked' && period.status !== 'exported') {
+        return jsonRes({
+          error: 'Payroll period must be locked before export',
+          code: 'PAYROLL_PERIOD_NOT_LOCKED',
+        }, 409)
+      }
+      const calculation = await storedCalculation(period)
+      const csv = buildPayrollCsv(calculation.members, period, provider)
+      const safeProvider = provider.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+      const safePeriodName = period.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()
+      const filename = `payroll_${safePeriodName}_${safeProvider}.csv`
+
+      const { data, error } = await admin.rpc('mark_payroll_period_exported', {
+        _actor_id: user.id,
+        _period_id: periodId,
+        _provider: provider,
+        _workspace_id: workspaceId,
+      })
+      if (error) {
+        console.error('[payroll-export] atomic export RPC failed:', error.message)
+        throw rpcFailure('exported', error)
+      }
+      if (!isPayrollExportRpcResult(data, {
+        periodId,
+        provider,
+        hash: period.calculation_hash!,
+        version: period.calculation_version!,
+      })) {
+        console.error('[payroll-export] atomic export RPC returned an invalid contract')
+        throw new PayrollResponseError(
+          'Payroll export confirmation failed validation',
+          500,
+          'PAYROLL_RPC_INVALID_RESPONSE',
+        )
+      }
+      return jsonRes({ csv, filename })
+    }
+
+    if (action === 'export-api') {
+      return jsonRes({
+        error: 'Direct payroll provider API export is not implemented',
+        code: 'PAYROLL_PROVIDER_API_NOT_IMPLEMENTED',
+      }, 501)
+    }
+    return jsonRes({ error: 'Unknown payroll action' }, 400)
+  } catch (error: unknown) {
+    if (error instanceof PayrollResponseError) {
+      return jsonRes({ error: error.message, code: error.code }, error.status)
+    }
+    const message = error instanceof Error ? error.message : String(error)
     console.error('payroll-export error:', message)
-    return jsonRes({ error: message || 'Internal server error' }, 500)
+    return jsonRes({ error: 'Internal server error', code: 'INTERNAL_ERROR' }, 500)
   }
 })
