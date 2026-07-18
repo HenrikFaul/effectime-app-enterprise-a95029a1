@@ -7,6 +7,7 @@ import test from "node:test";
 import {
   buildCleanupArgs,
   buildDockerRunArgs,
+  buildPostgresReadinessArgs,
   buildPsqlArgs,
   cleanupOwnedContainer,
   CONCURRENCY_SCENARIOS,
@@ -133,6 +134,17 @@ test("runs the real SQL contract with ON_ERROR_STOP and every concurrency mode",
       assert.equal(concurrent[variableIndex + 1], variable);
     }
   }
+});
+
+test("readiness requires a successful query against the target contract database", () => {
+  const args = buildPostgresReadinessArgs(containerName);
+  assert.deepEqual(args.slice(0, 3), ["exec", containerName, "psql"]);
+  assert.equal(args[args.indexOf("--dbname") + 1], CONTRACT_DATABASE);
+  assert.ok(args.includes("ON_ERROR_STOP=1"));
+  assert.ok(args.includes("--tuples-only"));
+  assert.ok(args.includes("--no-align"));
+  assert.deepEqual(args.slice(-2), ["--command", "SELECT 1;"]);
+  assert.equal(args.includes("pg_isready"), false);
 });
 
 test("cleanup accepts only a full container ID, never a name", () => {

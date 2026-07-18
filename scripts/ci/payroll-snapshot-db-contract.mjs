@@ -211,6 +211,10 @@ export function buildPsqlCommandArgs(containerName, command, { tuplesOnly = fals
   ];
 }
 
+export function buildPostgresReadinessArgs(containerName) {
+  return buildPsqlCommandArgs(containerName, "SELECT 1;", { tuplesOnly: true });
+}
+
 export function buildOwnershipInspectArgs(containerId) {
   assertContainerId(containerId);
   return [
@@ -342,22 +346,15 @@ function delay(milliseconds) {
 
 async function waitForPostgres(containerName) {
   for (let attempt = 1; attempt <= 60; attempt += 1) {
-    const result = dockerSync(
-      [
-        "exec",
-        containerName,
-        "pg_isready",
-        "--username",
-        "postgres",
-        "--dbname",
-        CONTRACT_DATABASE,
-      ],
-      { allowFailure: true },
-    );
-    if (result.status === 0) return;
+    const result = dockerSync(buildPostgresReadinessArgs(containerName), {
+      allowFailure: true,
+    });
+    if (result.status === 0 && result.stdout.trim() === "1") return;
     await delay(250);
   }
-  throw new Error("PostgreSQL payroll contract container did not become ready");
+  throw new Error(
+    `PostgreSQL payroll contract database ${CONTRACT_DATABASE} did not become queryable`,
+  );
 }
 
 async function waitForConcurrencyBarrier(containerName, session, scenario) {

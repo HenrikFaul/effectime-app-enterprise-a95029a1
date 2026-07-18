@@ -187,7 +187,7 @@ migration apply has been performed.
   17/17 and the targeted PII safety job is mandatory and green.
 - Payroll Deno contract 15/15, targeted Vitest 20/20, AuditLog allowlist 2/2 and
   full unit 534/534 PASS.
-- Payroll snapshot DB contract PASS: runner unit 11/11 and actual migration on
+- Payroll snapshot DB contract PASS: runner unit 12/12 and actual migration on
   digest-pinned PostgreSQL 18.4, covering DB digest, ACL/search path, immutable
   trigger, invalid payload/member drift, atomic audit rollback, audited
   locked/exported/legacy reopen, whitespace/NULL and 7/8/1000/1001 reason
@@ -197,6 +197,8 @@ migration apply has been performed.
   fail closed with a bit-identical locked row and zero reopen audit. The runner
   exposes no network/host port, mounts only fixture+migration read-only, cleans by
   owned ID+label and preserves a foreign colliding container in a real smoke.
+  Container readiness now requires a successful `SELECT 1` against the named
+  contract database, preventing process readiness from racing database creation.
 - Known financial blocker: snapshot v1 validates each ISO currency code but can
   still aggregate different currencies into one `total_gross`; the existing
   contract test demonstrates EUR+USD acceptance. Release requires either
