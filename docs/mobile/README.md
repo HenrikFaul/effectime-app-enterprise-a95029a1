@@ -390,7 +390,7 @@ npm run test:e2e:mobile:built
   [`publicRuntime.test.ts`](../../src/test/publicRuntime.test.ts) és
   [`internalPath.test.ts`](../../src/test/internalPath.test.ts)).
 - **BIZONYÍTOTT:** a jelenlegi célzott eredmény 93/93 sikeres teszt; a
-  `mobile:check:source` 182/182, a build/sync utáni `mobile:check` 342/342
+  `mobile:check:source` 183/183, a build/sync utáni `mobile:check` 343/343
   fail-closed assertionnel zöld. A 4 077 modulos mobile
   build, a 2/2 natív E2E és mindkét `cap sync` szintén sikeres volt ezen a
   munkafán.
@@ -420,7 +420,7 @@ npm run test:e2e:mobile:built
 ### Kötelező natív release evidence
 
 - **BIZONYÍTOTT / NO-GO:** `npm run mobile:check:release` clean, commitolt
-  candidate forráson 1/351 hibával áll meg: hiányzik az Xcode által generált
+  candidate forráson 1/352 hibával áll meg: hiányzik az Xcode által generált
   `Package.resolved`. A kapu csak review-zott és commitolt iOS lock mellett válhat
   zölddé.
 

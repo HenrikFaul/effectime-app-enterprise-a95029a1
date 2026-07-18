@@ -175,7 +175,19 @@ function majorVersion(version) {
 function checkPackageContract() {
   const packageJson = parseJson("package.json");
   const packageLock = parseJson("package-lock.json");
+  const eslintConfig = readRequired("eslint.config.js");
   if (!packageJson || !packageLock) return;
+
+  assert(
+    [
+      '"dist-mobile"',
+      '"android/**/build/**"',
+      '"android/.gradle/**"',
+      '"ios/**/build/**"',
+      '"ios/**/DerivedData/**"',
+    ].every((ignoredPath) => eslintConfig.includes(ignoredPath)),
+    "ESLint must ignore generated native artifacts so quality results do not depend on prior Gradle/Xcode runs.",
+  );
 
   assert(
     packageJson.engines?.node === EXPECTED_NODE_ENGINE,

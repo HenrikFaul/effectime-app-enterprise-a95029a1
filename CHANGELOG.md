@@ -51,7 +51,7 @@ migration apply has been performed.
   Connect in native runtimes, including a handler guard and a localized limitation
   message in all eight supported locales. Native M365 OAuth parity remains open.
 - Foundation validation is green for typecheck, 93 targeted mobile/internal-path
-  tests, 342 built-artifact contract assertions (182 source-only), 2/2
+  tests, 343 built-artifact contract assertions (183 source-only), 2/2
   bridge-emulated mobile E2E, a
   4,077-module mobile build and Android+iOS sync. SHA-pinned Android and iOS CI
   jobs are implemented in source; green GitHub-hosted native CI evidence and
