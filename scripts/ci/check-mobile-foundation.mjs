@@ -45,6 +45,20 @@ const CORE_CAPACITOR_PACKAGES = [
   "@capacitor/core",
   "@capacitor/ios",
 ];
+const EXPECTED_IOS_SWIFT_PACKAGE_PINS = Object.freeze({
+  "capacitor-swift-pm": Object.freeze({
+    kind: "remoteSourceControl",
+    location: "https://github.com/ionic-team/capacitor-swift-pm.git",
+    version: "8.3.1",
+    revision: "f1a8fadf1437c23b825c818fb6509c9dbbae2f61",
+  }),
+  "keychain-swift": Object.freeze({
+    kind: "remoteSourceControl",
+    location: "https://github.com/evgenyneu/keychain-swift.git",
+    version: "21.0.0",
+    revision: "265806607b45687a3d646e4c9837c31c90f202e8",
+  }),
+});
 
 const failures = [];
 let assertionCount = 0;
@@ -1145,13 +1159,31 @@ function checkReleaseReadiness() {
 
   assert(tracked.has(resolvedPath), `iOS dependency lock must be committed: ${resolvedPath}`);
   const resolved = parseJson(resolvedPath);
-  const identities = Array.isArray(resolved?.pins)
-    ? resolved.pins.map((pin) => pin?.identity).filter(Boolean).sort()
-    : [];
+  assert(resolved?.version === 3, "iOS Package.resolved must use the reviewed schema version 3.");
+  const pins = Array.isArray(resolved?.pins) ? resolved.pins : [];
+  const identities = pins.map((pin) => pin?.identity).filter(Boolean).sort();
+  const expectedIdentities = Object.keys(EXPECTED_IOS_SWIFT_PACKAGE_PINS).sort();
   assert(
-    identities.includes("capacitor-swift-pm") && identities.includes("keychain-swift"),
-    "iOS Package.resolved must lock Capacitor and KeychainSwift transitive dependencies.",
+    JSON.stringify(identities) === JSON.stringify(expectedIdentities),
+    `iOS Package.resolved identities must exactly match ${expectedIdentities.join(", ")}.`,
   );
+  for (const [identity, expected] of Object.entries(EXPECTED_IOS_SWIFT_PACKAGE_PINS)) {
+    const pin = pins.find((candidate) => candidate?.identity === identity);
+    if (!pin) continue;
+    assert(pin.kind === expected.kind, `iOS package ${identity} must use ${expected.kind}.`);
+    assert(
+      pin.location === expected.location,
+      `iOS package ${identity} must resolve from the reviewed source URL.`,
+    );
+    assert(
+      pin.state?.version === expected.version,
+      `iOS package ${identity} must resolve to reviewed version ${expected.version}.`,
+    );
+    assert(
+      pin.state?.revision === expected.revision,
+      `iOS package ${identity} must resolve to the reviewed revision.`,
+    );
+  }
 }
 
 checkPackageContract();
