@@ -99,9 +99,10 @@ Android requires Android Studio, SDK Platform 36/Build Tools 35 and accepted SDK
 licenses. On this Windows host the full `testDebugUnitTest lintDebug
 assembleDebug` chain passed with the installed Android Studio SDK: 276 tasks,
 no new lint issue and a generated debug APK. The Java unit-test tasks are
-`NO-SOURCE`, so physical-device and WebView acceptance remain mandatory. iOS
-compilation was not run because it requires macOS and Xcode 26+. The proposed
-application ID is `app.effectime`; it must be confirmed and reserved in both
+`NO-SOURCE`, so physical-device and WebView acceptance remain mandatory. Local
+iOS compilation cannot run on Windows; the first hosted Xcode 26 bootstrap
+resolved the reviewed Swift graph and intentionally stopped before compile. The
+proposed application ID is `app.effectime`; it must be confirmed and reserved in both
 stores before production signing. Generated template icon/splash assets are not
 approved Effectime release assets. See the [mobile handoff](docs/mobile/README.md)
 for auth redirects, signing, secure-storage device validation, verified-link and
@@ -109,11 +110,11 @@ device-test gates.
 
 `npm run mobile:check:release` is the strict candidate-attestation gate. It
 also requires a fully committed clean worktree, committed native/CI source and
-a macOS/Xcode-generated, reviewed, committed Swift `Package.resolved`; it is
-expected to remain red until those release prerequisites are supplied. On the
-first pull request without a lock, the macOS job uploads the generated lock for
-review and deliberately fails; it will only compile after that reviewed file is
-committed.
+a macOS/Xcode-generated, reviewed, committed Swift `Package.resolved`. The
+reviewed lock is now committed and exact-pinned to Capacitor 8.3.1 and
+KeychainSwift 21.0.0; the local release contract is green at 363/363. The first
+pull-request run uploaded that lock and deliberately failed as designed. A
+subsequent hosted run must compile exclusively from the committed graph.
 
 The repository currently has historical lint debt; see `PROJECT_AUDIT.md` for the
 measured baseline: 1,222 errors and 109 warnings across 179 files. `npm run lint`

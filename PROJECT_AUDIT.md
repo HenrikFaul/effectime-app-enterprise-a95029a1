@@ -127,7 +127,7 @@ adatbázis-objektumot nem töröltünk.
 | R-022 | Feature tier/add-on enforcement       | tier docs                         | BIZONYÍTOTT                         | hook, RPC, Edge, RLS                            | igen                  | több kontrakt+PG    | igen         | kritikus bypassok javítva               | teljes table inventory   |
 | R-023 | Fióktörlés                            | UI, feature catalog               | BIZONYÍTOTT                         | `delete-account`                                | igen                  | 25 teszt            | részben      | fail-closed, nem atomi                  | retention workflow       |
 | R-024 | Embed SDK/views                       | CHANGELOG v3.44–3.51              | BIZONYÍTOTT                         | `/embed/:view`, embed RPC-k                     | igen                  | korábbi suite       | igen         | működő, header/token kérdés nyitott     | security design          |
-| R-025 | PWA / Android / iOS, közös adatforrás | explicit felhasználói kérés + mobile spec + runtime | BIZONYÍTOTT | PWA + Capacitor Android/iOS + közös Supabase client + PKCE + secure storage + CSP | lokális foundation igen | 93 contract/component + 2 E2E + build/sync + Android Gradle | igen | secure implementation, candidate source és lokális Android build kész; store release NO-GO | iOS lock, signing/verified links/hosted CI/device evidence |
+| R-025 | PWA / Android / iOS, közös adatforrás | explicit felhasználói kérés + mobile spec + runtime | BIZONYÍTOTT | PWA + Capacitor Android/iOS + közös Supabase client + PKCE + secure storage + CSP | foundation igen | 93 contract/component + 2 E2E + build/sync + Android Gradle + hosted lock bootstrap | igen | secure implementation, candidate source és exact review-zott Swift lock kész; store release NO-GO | final hosted iOS compile, signing/verified links/device evidence |
 | R-026 | Import és data migration              | UI/Edge registry                  | BIZONYÍTOTT                         | import Edge Functionök                          | igen                  | security contract   | részben      | auth javítva, tranzakciósság nyitott    | resumable design         |
 | R-027 | Közvetlen tenant user creation        | CHANGELOG v3.33, paid feature     | BIZONYÍTOTT                         | `create-workspace-user`                         | fail-closed           | 6 kontraktteszt     | most igen    | biztonságosan letiltva, funkcióhiány P1 | provisioning döntés      |
 | R-028 | Reprodukálható DB/CI/release          | repo konvenció, migration history | BIZONYÍTOTT                         | migrations, lock, provenance CI                 | frontend igen; DB nem | ratchet+replay      | igen         | no-new-debt kapu kész; DB release blokkolt | history/schema reconcile |
@@ -209,11 +209,11 @@ Minden alábbi változás csak a munkabranchben létezik:
   logout revokációs hiba esetén atomi local purge; reset latch és best-effort
   secure/legacy cleanup. A Swift sync-utak platformfüggetlenek, az artifactkapu
   teljes fájdfa SHA-256 egyezést és exact kétplatformos plugin allowlistet mér.
-- A natív/CI forrás külön review-zható candidate commitokban rögzítve van. A
-  release-kapu clean worktree-n kizárólag a hiányzó, Xcode által generált és
-  review-zandó `Package.resolved` függőségi lockot tartja nyitva.
-- A macOS CI lock nélküli PR-nél review-artifactként bootstrapolja a
-  `Package.resolved` fájlt, majd fail-closed leáll; fordítás csak commitolt lockkal,
+- A natív/CI forrás és a hosted Xcode által generált, review-zott
+  `Package.resolved` külön candidate commitokban rögzítve van. A release-kapu
+  clean worktree-n 363/363 PASS, exact identity/URL/verzió/revízió allowlisttel.
+- A macOS CI lock nélküli első PR-futásnál review-artifactként bootstrapolta a
+  `Package.resolved` fájlt, majd fail-closed leállt; fordítás csak commitolt lockkal,
   release-ellenőrzés után és `-onlyUsePackageVersionsFromResolvedFile` módban indul.
 
 ## 5. Hiányok és kockázatok
@@ -237,7 +237,7 @@ bizonyítható, ezért a lokálisan javított sebezhetőségek élő státuszát
 | Data migration részleges commit             | több entitás egymás után íródik, hiba esetén részleges eredmény/HTTP-eredmény lehetséges; nincs teljes resumable checksum                                                                                        | `data-migration`, import                               | ismétlés/duplikáció/kevert állapot; L                         | manifest+checksum; idempotens resume; hibastátusz; fixture és rollback doc                                        |
 | Deploy provenance hiány                     | nincs tag/release/build SHA; a live commit nem bizonyítható                                                                                                                                                      | frontend/Edge/DB release                               | rollback és audit nem reprodukálható; M                       | required CI; signed/tagged artifact; UI/API SHA; azonos commitból háromrétegű deploy                              |
 | Payroll időszak/rate/export szemantika      | Tetszőleges részidőszakhoz teljes havi attendance aggregate kerülhet; a rate-választás latest-all; a v1 szerződés az ISO pénznemkódot validálja, de tagonként eltérő pénznemeket egyetlen `total_gross` mezőbe összead (a contract teszt EUR+USD összeget is elfogad); az attendance/leave/rate HTTP-olvasások nem egyetlen MVCC snapshotból készülnek. A lock/export és elsődleges audit már atomi, a snapshot immutable és DB-digestelt. | payroll Edge/DB/domain                                 | magas pénzügyi eltérés vagy időközi read drift; termékdöntés és egyetlen DB-számítási határ kell; L | full-month vagy napi canonical szabály; rate-as-of/effective-to; v1 single-currency vagy v2 per-currency totals; egy statement/transaction számítás; concurrency+staging fixture; legacy snapshot inventory/remediation |
-| Natív store release biztonsági kapuk        | Android/iOS és CI forrás, PKCE, Keychain/AndroidKeyStore adapter, exact-origin CSP és lokális Android build kész; nincs Xcode dependency lock, store reservation/signing, verified HTTPS link, jóváhagyott brand asset, macOS build vagy fizikai smoke | mobile auth/platform/release | dependency provenance, signing/scheme ownership, OS-integráció és rollback kockázat; L | Xcode-resolved lock; app ID/team/cert; AASA/assetlinks; Android+iOS hosted CI/device storage+CSP+auth smoke; signed internal rollout; `docs/mobile/README.md` |
+| Natív store release biztonsági kapuk        | Android/iOS és CI forrás, PKCE, Keychain/AndroidKeyStore adapter, exact-origin CSP, lokális+hosted Android build és exact Xcode dependency lock kész; nincs végső hosted iOS compile, store reservation/signing, verified HTTPS link, jóváhagyott brand asset vagy fizikai smoke | mobile auth/platform/release | signing/scheme ownership, OS-integráció és rollback kockázat; L | final candidate Android+iOS hosted CI; app ID/team/cert; AASA/assetlinks; device storage+CSP+auth smoke; signed internal rollout; `docs/mobile/README.md` |
 
 ### P2
 
@@ -283,8 +283,8 @@ bizonyítható, ezért a lokálisan javított sebezhetőségek élő státuszát
 | I-13   | Payroll Edge/UI contract repair            | `payroll-export/index.ts`, contract/helper/tesztek, `PayrollPanel.tsx`                                  | Deno contract+check, Vitest    | direct provider hamis 200 helyett explicit 501; Edge/web együtt visszaállítható                                  | kész lokálisan; staging és termékdöntés nyitott |
 | I-14   | Generated-schema provenance ratchet        | `scripts/ci/schema-provenance*`, exact baseline, package script és workflow                              | parser unit+current gate       | ratchet only; a 30/1/46/2 hiányzó provenance továbbra is release blocker                                      | kész lokálisan             |
 | I-15   | Immutable payroll snapshot és DB contract  | `20260717134000_payroll_immutable_snapshots.sql`, snapshot helper, generated types, pinned PG18 fixture   | Deno+Vitest+PG18+concurrency   | trusted pgcrypto, TRUNCATE denial, exact audited `reopen_payroll_period_break_glass`, lock/reopen/demotion races; legacy locked/exported snapshot nélkül 409; rollout: payroll write pause, DB → Edge azonnal → web; régi Edge rollbackje az új DB-n nem biztonságos | kész lokálisan; staging/legacy inventory nyitott |
-| I-16   | Android/iOS közös adatforrás foundation    | Capacitor config/package/lock, `android/`, `ios/`, mobile platform+bridge, auth/link/PWA/cache hardening, CI contract, mobil docs | typecheck+source/artifact contract+build+2x sync; lokális Android compile/lint/assemble zöld; Android/iOS hosted CI még nem futott | web/API/DB kompatibilis; platform source git reverttel visszaállítható; app ID store-foglalás előtt módosítható | implementáció, candidate commit és lokális Android build kész; iOS lock/store release NO-GO |
-| I-17   | Natív session storage és CSP hardening     | secure-store adapter/envelope/migráció/recovery, verified reset tombstone, logout fallback, raw-token link tiltás, explicit project/storage key, `dist-mobile`, CSP transform, mobile E2E és CI allowlist | 93/93 mobile target, 183/183 source és 343/343 artifact contract, 2/2 mobile E2E, 534/534 full suite, web 7/7, Android Gradle 276 task | web login/callback/storage és SEO/PWA kompatibilis; a közös logout hibakezelése szándékosan fail-closed módon erősödött; nincs DB/API shape; package/config/source normál reverttel visszaállítható, local purge explicit | kód, emulált regresszió, candidate provenance és Android compile/lint/assemble kész; release gate 1/352 NO-GO; iOS/hosted/fizikai evidence nyitott |
+| I-16   | Android/iOS közös adatforrás foundation    | Capacitor config/package/lock, `android/`, `ios/`, mobile platform+bridge, auth/link/PWA/cache hardening, CI contract, mobil docs | typecheck+source/artifact/release contract+build+2x sync; lokális és első hosted Android compile/lint/assemble zöld; hosted Xcode lock-bootstrap igazolt | web/API/DB kompatibilis; platform source git reverttel visszaállítható; app ID store-foglalás előtt módosítható | implementáció, candidate commit, Android build és reviewed iOS lock kész; final hosted iOS/store release NO-GO |
+| I-17   | Natív session storage és CSP hardening     | secure-store adapter/envelope/migráció/recovery, verified reset tombstone, logout fallback, raw-token link tiltás, explicit project/storage key, `dist-mobile`, CSP transform, mobile E2E és CI allowlist | 93/93 mobile target, 183/183 source, 343/343 artifact és 363/363 release contract, 2/2 mobile E2E, 534/534 full suite, web 7/7, Android Gradle 276 task | web login/callback/storage és SEO/PWA kompatibilis; a közös logout hibakezelése szándékosan fail-closed módon erősödött; nincs DB/API shape; package/config/source normál reverttel visszaállítható, local purge explicit | kód, emulált regresszió, exact Swift provenance és Android compile/lint/assemble kész; final iOS/fizikai evidence nyitott |
 
 ## 7. Ellenőrzések és eredmények
 
@@ -294,11 +294,11 @@ bizonyítható, ezért a lokálisan javított sebezhetőségek élő státuszát
 | `npm run typecheck`                     | PASS                    | `tsc -b --pretty false`; nem a korábbi félrevezető `tsc --noEmit`                                                                                                  |
 | Mobile target suite                     | PASS                    | 93/93 célzott teszt: URL/origin, PKCE/deep-link és HTTPS raw-token tiltás, secure envelope/migráció/reinstall/reset tombstone/logout lock, recovery UX, CSP transform, native bridge és internal path |
 | `mobile:check:source` / `mobile:check`  | PASS                    | 183/183 source és 343/343 build/sync assertion: exact dependency integrity/kétplatformos plugin allowlist, teljes artifact-fájdfa és négy üres Capacitor shim SHA-256, CSP, identity/deep link/minimumok, auth/data-source/CI, iOS lock-bootstrap és natív build-artifact lint-ignore contract |
-| `npm run mobile:check:release`          | VÁRT NO-GO              | Clean, commitolt candidate forráson 1/352 hiba marad: az iOS `Package.resolved` hiányzik; a kapu fail-closed működik és nem enged review-zatlan Swift graphot release-ként attestálni. |
+| `npm run mobile:check:release`          | PASS                    | Clean, commitolt candidate forráson 363/363: a hosted-Xcode lock kizárólag Capacitor 8.3.1 és KeychainSwift 21.0.0 exact upstream URL/tagrevízióit engedi. |
 | `npm run test:e2e:mobile:built`         | PASS                    | 2/2 landing/auth Android bridge-emuláció a friss `dist-mobile` artifacton: secure store meghívás, nulla recovery/CSP/console/page/lokális-asset hiba; külső font/kép availability nem része a bizonyítéknak |
 | `npm run mobile:sync` / `npx cap sync`  | PASS                    | 4 077 modul mobile build; ugyanaz a `dist-mobile` és publikus config Android/iOS projektbe másolva; SecureStorage 8.0.0, App és Browser plugin mindkét platformon felismerve, Keyboard nincs regisztrálva |
 | Android unit/lint/assemble              | PASS KORLÁTTAL          | A tényleges Android Studio SDK-val `testDebugUnitTest lintDebug assembleDebug --no-daemon --stacktrace`: 3m42s, 276/276 task, `BUILD SUCCESSFUL`, nincs új lint finding, 6 049 206 byte debug APK (`EFA61256…`). Az app és plugin unit taskok `NO-SOURCE`; ez compile/lint/assemble bizonyíték, nem natív unit lefedettség. |
-| iOS Xcode build                         | NEM FUTTATHATÓ          | Windows host; macOS + Xcode 26+ és unsigned simulator build szükséges                                                                                              |
+| iOS Xcode build                         | RÉSZBEN FUTOTT          | Hosted Xcode 26 lock-resolve és artifact upload PASS; az első futás tervezetten megállt compile előtt. A commitolt lockos végső unsigned simulator build még szükséges. |
 | `npm test`                              | NEM KÜLÖN FUTOTT        | A végső `npm run test:coverage` ugyanazt a teljes Vitest suite-ot futtatta: 45/45 fájl, 534/534 teszt; külön coverage nélküli teljes ismétlés nem történt. |
 | `npm run test:coverage`                 | PASS                    | 45/45 fájl, 534/534 teszt; statements/lines 46,28% (39 085/84 441), branches 61,41% (651/1 060), functions 28,04% (122/435) |
 | `npm run test:e2e:built`                | PASS                    | 7/7 Chromium public smoke ugyanazon végső `dist` artifacton: asset MIME/runtime, manifest/favicon/PWA, auth, anonymous redirect, 404, accessible names és 320/390/768 px; végső szekvenciális futás 13,8 másodperc. |
@@ -312,8 +312,8 @@ bizonyítható, ezért a lokálisan javított sebezhetőségek élő státuszát
 | Payroll contract és UI regresszió       | PASS                    | Deno payroll contract 15/15; célzott Vitest 20/20; AuditLog allowlist 2/2; typed Edge check PASS; full unit 534/534 |
 | Payroll snapshot DB contract            | PASS                    | runner unit 12/12; pinned PostgreSQL 18.4 migration/digest/ACL/search_path/trigger/negative auth/member drift/audit rollback PASS. A readiness valódi `SELECT 1` lekérdezéssel igazolja a név szerinti céladatbázist, ezért a konténerfolyamat és az adatbázis-létrehozás közti race fail-closed. Négy manipulált pgcrypto/schema trust eset fail-closed; runtime TRUNCATE, direct service reset és reserved-audit forge/tamper/delete tiltott; whitespace/NULL és 7/8/1000/1001 indokhatárok, exact prev/new audit, locked/exported/legacy reopen auditált. Determinisztikus lock és reopen exactly-one-winner, valamint actor-demotion→reopen fail-closed, bitazonos sor/0 audit igazolt. Collisionteszt idegen konténert megőriz; nincs hálózat/host port, csak két read-only mount, ownership-ID+label cleanup PASS. Ez célzott fixture, nem teljes migration replay. |
 | Schema provenance gate                  | PASS                    | parser unit 7/7; 124 migráció; generated/backed/unproven: table 165/135/30, view 4/3/1, function 99/53/46, enum 11/9/2                                             |
-| SBOM és release manifest                | PASS (lokális evidence) | Shared web/mobile package-lock CycloneDX 707 + Edge/Deno 464 komponens. Schema-2 manifest (2026-07-18 14:10:44Z): `dist` 72 fájl/6 828 468 byte (`1c3736bd…`), `dist-mobile` 54 fájl/4 961 960 byte (`5bdf107e…`), exact Capacitor integritások és az iOS lock hiánya rögzítve; 124 migráció és 30 Edge entrypoint. `dirty=true`, ezért nem production attesztáció. |
-| GitHub-hosted quality workflow          | NEM FUTOTT              | A SHA-pinnelt verify, `android-compile` és `ios-compile` jobok forrása, YAML-ja és 183 pontos source contractja PASS. Lock nélküli iOS PR review-artifactot generál és szándékosan fail; fordítás csak commitolt lockkal indul. Hosted bizonyíték csak commit/push/PR után lehetséges. |
+| SBOM és release manifest                | PASS (lokális + hosted evidence) | Shared web/mobile package-lock CycloneDX 707 + Edge/Deno 464 komponens; schema-2 manifest hash-eli a web/mobile artifactot, 124 migrációt, 30 Edge entrypointot, exact Capacitor integritásokat és az iOS lockot. A clean candidate lokálisan generálható; production attesztációhoz a végső hosted artifact szükséges. |
+| GitHub-hosted quality workflow          | RÉSZBEN PASS            | Első PR-run: frontend/provenance, Edge diagnostic, Edge PII, payroll PG18 és Android job PASS; iOS Xcode lock artifact PASS, majd az előírt bootstrap-stop miatt vártan FAIL. A review-zott lock commitolt; final same-candidate rerun szükséges. |
 | Új v3.51.3 migration PG18 compile/apply | PASS                    | Access submit/döntés/ledger/rollback szemantika PASS; candidate dual-feature compile PASS, candidate runtime smoke megszakadt; production/linked apply nem történt |
 | Clean lokális migration replay          | FAIL                    | 104/124 után `20260517230000...`: `plugin_webhook_events` helyi CREATE TABLE hiányzik                                                                              |
 | Linked `db lint --level warning`        | FAIL                    | 7 error, 6 warning; read-only ellenőrzés                                                                                                                           |
@@ -336,8 +336,9 @@ vagy forráskódhibaként van lezárva, mert a tényleges production build PASS.
    invite, leave, access, payroll, API/webhook és integration smoke.
 6. Biztonságos instant provisioning termékdöntése és implementációja.
 7. Account deletion retention/kompenzáció, data migration resumability.
-8. A quality workflow hosted futásának igazolása; a zero-diagnostic és
-   zero-unpinned Edge baseline, illetve a schema-provenance ratchet fenntartása.
+8. A commitolt Swift lockos final quality workflow hosted futásának igazolása;
+   a zero-diagnostic és zero-unpinned Edge baseline, illetve a
+   schema-provenance ratchet fenntartása.
 9. Store/app-ID/signing ownership és verified links; Android CI + macOS/Xcode
    CI; kétplatformos secure-storage/CSP/tenant/RBAC/auth fizikai smoke és csak
    ezután internal TestFlight/Play rollout.
@@ -374,15 +375,16 @@ vagy forráskódhibaként van lezárva, mert a tényleges production build PASS.
 
 ## 10. Release-nyilatkozat
 
-Ez a branch audit- és hardening-csomag, nem production release. Nincs stage,
-commit, push, PR, frontend/Edge deploy vagy linked DB apply. A branch csak a
+Ez a branch audit- és hardening-csomag, nem production release. A candidate
+commitolt, pusholt és draft PR-ben review alatt áll; frontend/Edge deploy vagy
+linked DB apply nem történt. A branch csak a
 DB-history reconcile, approval-chain implementáció, payroll-szemantikai és legacy-
 snapshot döntés/inventory, staging ellenőrzés és emberi provisioning/retention
 döntések után jelölhető release-késznek.
-Az Android/iOS implementáció és candidate forrás fejlesztésre alkalmas, de
-store release-re külön **NO-GO**, amíg az Xcode lock hiányzik, illetve a
-`docs/mobile/README.md` signing, verified-link, brand-asset,
-platform-CI és fizikai secure-storage/CSP/készülékes kapui nem teljesülnek.
+Az Android/iOS implementáció, candidate forrás és reviewed Xcode lock
+fejlesztésre alkalmas, de store release-re külön **NO-GO**, amíg a végső hosted
+iOS compile, illetve a `docs/mobile/README.md` signing, verified-link,
+brand-asset és fizikai secure-storage/CSP/készülékes kapui nem teljesülnek.
 
 **Kiadási döntés: production/backend NO-GO.** A lokális hardening-csomag a fenti
 zöld kapuk alapján **GO FELTÉTELEKKEL**, de csak tiszta candidate SHA, teljes DB-

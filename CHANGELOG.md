@@ -1,7 +1,7 @@
 ## 2026-07-17 — v3.51.3 Project audit and release-boundary hardening (unreleased)
 
-**Status:** local branch only. No frontend/Edge deploy and no linked database
-migration apply has been performed.
+**Status:** candidate branch and draft PR. No frontend/Edge deploy and no linked
+database migration apply has been performed.
 
 ### Android/iOS common-data foundation
 
@@ -43,9 +43,10 @@ migration apply has been performed.
 - Normalizes Capacitor-generated Swift package paths after sync, adds exact iOS
   plugin allowlists, full SHA-256 mobile artifact-tree comparison, clean-checkout
   source and strict release gates, deterministic E2E build ordering, and mobile
-  signing-key filename checks. The native/CI sources are now committed in the
-  candidate branch; the strict gate remains red until Xcode supplies a reviewed,
-  committed `Package.resolved`. Both native compile jobs synchronize both platform
+  signing-key filename checks. The native/CI sources and hosted-Xcode-generated
+  `Package.resolved` are committed in the candidate branch. The lock exactly
+  allowlists Capacitor 8.3.1 and KeychainSwift 21.0.0 by source URL, tag
+  revision and version. Both native compile jobs synchronize both platform
   copies before full-tree validation, including exact empty Capacitor shim hashes.
 - Keeps the existing web M365 redirect flow unchanged while fail-closed disabling
   Connect in native runtimes, including a handler guard and a localized limitation
@@ -54,15 +55,17 @@ migration apply has been performed.
   tests, 343 built-artifact contract assertions (183 source-only), 2/2
   bridge-emulated mobile E2E, a
   4,077-module mobile build and Android+iOS sync. SHA-pinned Android and iOS CI
-  jobs are implemented in source; green GitHub-hosted native CI evidence and
-  physical-device smoke remain pending. The local Android Gradle gate is now
+  jobs are implemented in source. The first hosted run passed frontend, Edge,
+  payroll DB and Android jobs; iOS generated the lock artifact and then failed
+  exactly at the deliberate bootstrap stop. Final same-candidate iOS compilation
+  and physical-device smoke remain pending. The local Android Gradle gate is now
   green: 276 tasks, no new lint issue and a generated debug APK; native unit
-  tasks are `NO-SOURCE`. A lock-less first macOS CI run uploads the generated
-  `Package.resolved` for review and deliberately fails; compilation is allowed
-  only after that lock is committed. Store release remains **NO-GO** pending
+  tasks are `NO-SOURCE`. The reviewed lock artifact is byte-identical to the
+  committed file; its two revisions match the upstream release tags. The local
+  strict release contract is 363/363 PASS. Store release remains **NO-GO** pending
   secure-storage/CSP physical-device evidence, app-ID/signing ownership, verified
   links, approved brand assets and physical-device smoke. iOS compilation still
-  requires macOS/Xcode 26+ and a reviewed dependency lock.
+  requires a green hosted macOS/Xcode 26+ simulator compile from the committed lock.
 
 ### Audit correction
 
