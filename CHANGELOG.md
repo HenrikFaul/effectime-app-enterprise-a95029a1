@@ -57,15 +57,16 @@ database migration apply has been performed.
   4,077-module mobile build and Android+iOS sync. SHA-pinned Android and iOS CI
   jobs are implemented in source. The first hosted run passed frontend, Edge,
   payroll DB and Android jobs; iOS generated the lock artifact and then failed
-  exactly at the deliberate bootstrap stop. Final same-candidate iOS compilation
-  and physical-device smoke remain pending. The local Android Gradle gate is now
-  green: 276 tasks, no new lint issue and a generated debug APK; native unit
+  exactly at the deliberate bootstrap stop. The next hosted run passed all six
+  jobs, including Android and the locked, drift-free unsigned Xcode 26.5
+  simulator build. Physical-device smoke remains pending. The local Android
+  Gradle gate is green: 276 tasks, no new lint issue and a generated debug APK; native unit
   tasks are `NO-SOURCE`. The reviewed lock artifact is byte-identical to the
   committed file; its two revisions match the upstream release tags. The local
   strict release contract is 363/363 PASS. Store release remains **NO-GO** pending
   secure-storage/CSP physical-device evidence, app-ID/signing ownership, verified
   links, approved brand assets and physical-device smoke. iOS compilation still
-  requires a green hosted macOS/Xcode 26+ simulator compile from the committed lock.
+  requires this green hosted contract to remain mandatory on every candidate.
 
 ### Audit correction
 

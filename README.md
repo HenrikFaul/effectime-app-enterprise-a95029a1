@@ -102,7 +102,9 @@ no new lint issue and a generated debug APK. The Java unit-test tasks are
 `NO-SOURCE`, so physical-device and WebView acceptance remain mandatory. Local
 iOS compilation cannot run on Windows; the first hosted Xcode 26 bootstrap
 resolved the reviewed Swift graph and intentionally stopped before compile. The
-proposed application ID is `app.effectime`; it must be confirmed and reserved in both
+next hosted run used Xcode 26.5 and the committed lock to complete an unsigned
+simulator build with zero source/lock drift. The proposed application ID is
+`app.effectime`; it must be confirmed and reserved in both
 stores before production signing. Generated template icon/splash assets are not
 approved Effectime release assets. See the [mobile handoff](docs/mobile/README.md)
 for auth redirects, signing, secure-storage device validation, verified-link and
@@ -114,7 +116,7 @@ a macOS/Xcode-generated, reviewed, committed Swift `Package.resolved`. The
 reviewed lock is now committed and exact-pinned to Capacitor 8.3.1 and
 KeychainSwift 21.0.0; the local release contract is green at 363/363. The first
 pull-request run uploaded that lock and deliberately failed as designed. A
-subsequent hosted run must compile exclusively from the committed graph.
+subsequent hosted run compiled exclusively from the committed graph and passed.
 
 The repository currently has historical lint debt; see `PROJECT_AUDIT.md` for the
 measured baseline: 1,222 errors and 109 warnings across 179 files. `npm run lint`
