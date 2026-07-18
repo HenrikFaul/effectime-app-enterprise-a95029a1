@@ -1,3 +1,237 @@
+## 2026-07-17 — v3.51.3 Project audit and release-boundary hardening (unreleased)
+
+**Status:** local branch only. No frontend/Edge deploy and no linked database
+migration apply has been performed.
+
+### Android/iOS common-data foundation
+
+- Replaces the legacy Lovable/Syncfolk Capacitor preview configuration with a
+  production-safe Effectime Capacitor 8 setup: exact-pinned toolchain,
+  `app.effectime` proposed identity, packaged CSP-hardened `dist-mobile`, no
+  remote `server.url` and no cleartext override. The public web `dist` remains a
+  separate SEO/PWA artifact built from the same React source.
+- Adds repository-local Android API 24+/target 36 and iOS 15+ platform
+  projects. Both package the same React artifact and use the same public
+  Supabase Auth/PostgreSQL/RLS/RPC/Edge configuration as the web application;
+  no separate mobile database or privileged client API was introduced.
+- Adds native PKCE/system-browser authentication, cold/warm deep-link handling,
+  app-lifecycle token refresh, recovery-session verification and fail-closed
+  rejection of implicit custom-scheme token injection.
+- Makes invitation, booking and embed links use the canonical public origin;
+  disables PWA worker/install behavior in native runtimes; prevents token-bearing
+  navigation URLs from being cached or logged and bumps the cache version to
+  purge the previous runtime cache.
+- Registers the custom auth/workspace scheme on Android and iOS. Android
+  explicitly disables cleartext and application-data backup.
+- Adds a fail-closed `mobile:check` CI contract, native bridge behavior tests,
+  platform sync/build commands and `docs/mobile/README.md` handoff.
+- Adds exact-pinned Keychain/AndroidKeyStore-backed Supabase Auth storage with a
+  three-key allowlist, project-bound versioned envelope, verified crash-safe
+  localStorage migration, iOS reinstall marker, serialized Supabase lock and
+  two-step fail-closed recovery UI. No insecure native fallback is permitted.
+- Adds an exact-origin mobile WebView CSP without wildcard Supabase,
+  `unsafe-eval` or inline scripts. Mobile JSON-LD/PWA assets are removed while
+  web SEO/PWA behavior remains unchanged; Android and iOS receive the same
+  verified artifact.
+- Rejects raw access/refresh tokens on every native custom-scheme and HTTPS app
+  link, including ordinary `/auth` links; implicit token restore is web-only.
+  Logout now detects Supabase revocation failures, atomically purges all local
+  credentials and reports the degraded remote-revocation result. Recovery reset
+  blocks late login writes, attempts every legacy token deletion independently,
+  and writes a verified empty secure tombstone so partial cleanup cannot revive a
+  stale legacy session after restart.
+- Normalizes Capacitor-generated Swift package paths after sync, adds exact iOS
+  plugin allowlists, full SHA-256 mobile artifact-tree comparison, clean-checkout
+  source and strict release gates, deterministic E2E build ordering, and mobile
+  signing-key filename checks. The native/CI sources are now committed in the
+  candidate branch; the strict gate remains red until Xcode supplies a reviewed,
+  committed `Package.resolved`. Both native compile jobs synchronize both platform
+  copies before full-tree validation, including exact empty Capacitor shim hashes.
+- Keeps the existing web M365 redirect flow unchanged while fail-closed disabling
+  Connect in native runtimes, including a handler guard and a localized limitation
+  message in all eight supported locales. Native M365 OAuth parity remains open.
+- Foundation validation is green for typecheck, 93 targeted mobile/internal-path
+  tests, 342 built-artifact contract assertions (182 source-only), 2/2
+  bridge-emulated mobile E2E, a
+  4,077-module mobile build and Android+iOS sync. SHA-pinned Android and iOS CI
+  jobs are implemented in source; green GitHub-hosted native CI evidence and
+  physical-device smoke remain pending. The local Android Gradle gate is now
+  green: 276 tasks, no new lint issue and a generated debug APK; native unit
+  tasks are `NO-SOURCE`. A lock-less first macOS CI run uploads the generated
+  `Package.resolved` for review and deliberately fails; compilation is allowed
+  only after that lock is committed. Store release remains **NO-GO** pending
+  secure-storage/CSP physical-device evidence, app-ID/signing ownership, verified
+  links, approved brand assets and physical-device smoke. iOS compilation still
+  requires macOS/Xcode 26+ and a reviewed dependency lock.
+
+### Audit correction
+
+- Retracts the earlier “landing-only” conclusion, which was produced from the
+  wrong nine-commit checkout. The audited repository contains and routes the
+  full Effectime Enterprise application; the evidence and 28-row traceability
+  matrix are in `PROJECT_AUDIT.md`.
+- Records the remaining release blockers: remote/local migration-history drift,
+  a clean replay stopping at missing `plugin_webhook_events` DDL, linked DB lint
+  errors, and the documented multi-step approval chain not being used by the
+  runtime decision flow.
+
+### Security and correctness
+
+- Makes feature resolution fail-closed and applies the same entitlements to
+  navigation, mounted UI, Edge actions and critical direct-CRUD RLS policies.
+- Adds tenant-local FK correlation and paid-feature enforcement for onboarding,
+  access workflows, capacity DNA, decision memory, scenario planning, rates and
+  payroll configuration.
+- Makes leave decisions, admin overrides and access decisions transactional with
+  their immutable ledger/audit rows; adds row locking and direct-write guards.
+- Enforces configured `approvals` / `admin_override` edit permissions on the
+  server, makes role-permission configuration owner-only and restricts private
+  leave/decision visibility.
+- Prevents cross-tenant quota references and refunds only an outstanding net
+  consume, including cancellation after membership suspension.
+- Makes invitation issue/reissue/accept atomic and tenant-local. Direct tenant
+  password creation now returns `DIRECT_CREATE_DISABLED` because the former
+  confirmed-email flow could pre-claim a global identity; invitations remain.
+- Hardens M365 OAuth/cron, Jira/ADO, AI Copilot, document preview/polish, public
+  API, webhook delivery, iCal, reports, payroll, email/unsubscribe, imports and
+  account-deletion preflight.
+- Repairs payroll calculation, locking and export so the UI exclusively uses the
+  typed Edge contract. Tenant/role/entitlement and input/output boundaries are
+  fail-closed; attendance/leave/rate reads are deterministically paginated with
+  explicit safety caps; rate and currency stay on the same row; all 11 UI
+  providers are allowlisted; CSV formula injection and unlocked export are
+  rejected. Open periods calculate live, while locked/exported periods calculate
+  and export only their immutable stored v1 snapshot. Edge and PostgreSQL verify
+  the same recursively key-sorted canonical JSON SHA-256; lock/export state plus
+  primary audit commit atomically. Legacy snapshotless locked/exported periods
+  return HTTP 409 / `PAYROLL_SNAPSHOT_MISSING`. Direct provider API export now
+  returns explicit HTTP 501 / `PAYROLL_PROVIDER_API_NOT_IMPLEMENTED` instead of a
+  false success.
+- Removes the unaudited direct `service_role` payroll reset. Break-glass reopen is
+  now a service-role-only SECURITY DEFINER RPC requiring an active payroll admin
+  and a POSIX-whitespace-normalized 8–1000 character reason; it archives the
+  exact complete previous protected state in the same atomic audit transaction.
+  Reserved lock/export/reopen audit actions reject direct authenticated/service-
+  role forge, update and delete. Runtime `TRUNCATE` is explicitly revoked from
+  PUBLIC/anon/authenticated/service_role on payroll periods and their audit trail.
+- Restores repository source for the deployed public API and webhook dispatcher;
+  restricts sensitive RPC/credential-column privileges.
+- Removes eight non-functional decorative approval controls from the landing
+  page tab order and prevents the tilted hero mock from clipping meaningful
+  content on 320, 390 and 768 px viewports.
+- Removes the manual `/src/main.tsx` module preload that Vite emitted as an
+  `application/octet-stream` data URL in the production document. Production
+  preview smoke now verifies JavaScript/CSS MIME types, manifest, favicon and
+  service-worker registration, so this browser-console failure cannot silently
+  return.
+
+### Reproducibility and developer workflow
+
+- Uses npm as the sole package manager, removes stale Bun locks and dead
+  TanStack Start/Lovable auth code, regenerates `package-lock.json`, and adds a
+  Node/npm engine contract plus `.env.example`.
+- Changes typecheck to the real project-reference command `tsc -b` and adds a
+  SHA-pinned GitHub quality gate: deterministic install, full audit, current-tree
+  secret scan, per-file ESLint debt ratchet, typecheck, coverage floor, build,
+  bundle ceiling, public Playwright smoke, separate web/package-lock and
+  Edge/Deno CycloneDX SBOMs, and a schema-2 release manifest that hashes both
+  tested `dist` and `dist-mobile` trees and records exact native package
+  provenance.
+- Adds a mandatory PII-log redaction contract for the email Edge Functions and
+  a mandatory diagnostic ratchet across all 30 Edge Functions. The ratchet is
+  green with zero Deno diagnostics; the raw check is also green. All 64 remote
+  imports are pinned to exact versions and the unpinned baseline is empty; any
+  new module, diagnostic or unpinned import fails CI.
+- Minimizes the workspace AuditLog browser payload to the exact six rendered
+  fields (`id`, `action`, `actor_id`, `affected_user_id`, `created_at`,
+  `metadata`); protected state snapshots, IP and user-agent remain server-side.
+  Rendered metadata still requires producer-side data-minimization review.
+- Isolates Deno dependency resolution with `--node-modules-dir=none` and pins the
+  command fallback to Deno 2.9.3, preventing Edge checks and SBOM generation from
+  relinking the npm-installed frontend `node_modules` tree.
+- Adds release, rollback, incident-response and isolated-restore runbooks.
+- Adds five additive v3.51.3 migrations:
+  - `20260717130000_v3_51_3_security_boundaries.sql`
+  - `20260717131000_v3_51_3_safe_runtime_repairs.sql`
+  - `20260717132000_v3_51_3_reproducibility_and_atomic_settings.sql`
+  - `20260717133000_v3_51_3_atomic_invitation_acceptance.sql`
+  - `20260717134000_payroll_immutable_snapshots.sql`
+- Repairs five historical migration files so a clean replay advances to the
+  first genuinely missing schema dependency. Applied histories must be
+  reconciled by content/hash; these files must not be blindly replayed on the
+  linked project.
+- Adds an exact generated-schema provenance ratchet for tables, views, functions
+  and enums. The checked-in unproven debt is 30 tables / 1 view / 46 functions /
+  2 enums and remains a release blocker; the gate prevents silent growth or
+  unreviewed baseline changes but does not replace missing DDL.
+
+### Verification
+
+- `npm ci` PASS; `npm run typecheck` PASS.
+- `npm run test:coverage` PASS: 45 files, 534 tests; 46.28% statements/lines
+  (39,085/84,441), 61.41% branches (651/1,060) and 28.04% functions (122/435)
+  against floors of 28% / 47% / 13%.
+- Production `dist` Playwright smoke PASS: 7/7 public Chromium
+  smoke tests covering production asset MIME/runtime health, manifest, favicon,
+  PWA registration, auth, anonymous redirect, 404, accessible names and
+  320/390/768 px clipping, all against the same generated `dist` artifact.
+- `npm run build` PASS: 4,077 transformed modules. The current distribution is
+  4,437,140 raw / 1,267,019 gzip JavaScript bytes, with a 1,735,016 raw /
+  550,550 gzip largest chunk, plus 180,509 raw / 29,561 gzip CSS bytes. The gzip
+  ceilings are 1,267,058 total JS, 558,421 largest JS and 29,849 CSS bytes.
+- `npm audit` PASS: 0 known vulnerabilities.
+- Structured logger Deno test PASS: 2/2; the two hardened email functions check.
+- Edge raw check and diagnostic ratchet PASS: 30/30 entrypoints, zero
+  diagnostics, 64/64 remote imports exactly pinned and zero unpinned. The Deno
+  discovery/ratchet tests are 14/14; automatic recursive Edge test discovery is
+  17/17 and the targeted PII safety job is mandatory and green.
+- Payroll Deno contract 15/15, targeted Vitest 20/20, AuditLog allowlist 2/2 and
+  full unit 534/534 PASS.
+- Payroll snapshot DB contract PASS: runner unit 11/11 and actual migration on
+  digest-pinned PostgreSQL 18.4, covering DB digest, ACL/search path, immutable
+  trigger, invalid payload/member drift, atomic audit rollback, audited
+  locked/exported/legacy reopen, whitespace/NULL and 7/8/1000/1001 reason
+  boundaries, exact prev/new audit state and runtime TRUNCATE denial. Four
+  manipulated pgcrypto/schema trust cases fail closed. Deterministic lock and
+  reopen races have exactly one winner; concurrent actor demotion makes reopen
+  fail closed with a bit-identical locked row and zero reopen audit. The runner
+  exposes no network/host port, mounts only fixture+migration read-only, cleans by
+  owned ID+label and preserves a foreign colliding container in a real smoke.
+- Known financial blocker: snapshot v1 validates each ISO currency code but can
+  still aggregate different currencies into one `total_gross`; the existing
+  contract test demonstrates EUR+USD acceptance. Release requires either
+  fail-closed single-currency v1 or a reviewed per-currency v2 model.
+- Generated-schema provenance parser 7/7 and current 124-migration gate PASS:
+  generated/backed/unproven counts are tables 165/135/30, views 4/3/1,
+  functions 99/53/46 and enums 11/9/2.
+- Current-tree secret scan PASS: 1,403 tracked and non-ignored untracked text
+  files; git-history scanning remains open.
+- ESLint fingerprint ratchet PASS; the reduced baseline is 1,222 errors and 109
+  warnings across 179 files. New or moved findings fail, and fixed debt must
+  be removed from the baseline before it can return.
+- CycloneDX generation PASS: 707 web/package-lock components and 464 Edge/Deno
+  components; the schema-2 manifest hashes both SBOMs and the tested `dist`
+  (72 files / 6,828,468 bytes / `1c3736bd…`) and `dist-mobile`
+  (54 files / 4,961,960 bytes / `5bdf107e…`) trees, 124 migrations / 831,837
+  bytes and 30 Edge entrypoints / 67 source files / 705,335 bytes. The local manifest is
+  `dirty=true`; it is evidence for this worktree, not a production attestation.
+- Isolated clean migration replay applies 104/124 migrations, then stops at
+  `20260517230000_v3_41_5_rls_index_coverage.sql` because
+  `public.plugin_webhook_events` has no local CREATE TABLE.
+- Git history confirms the provenance gap: six attendance tables first appear in
+  generated types in `d4a441a4`; 21 more unproven tables appear in the
+  `7c59e9a7` “Regenerate types.ts from live DB” commit; the `b952a466` v3.6
+  attendance release added 24 frontend/test/docs files and no SQL migration.
+- Linked read-only DB lint remains 7 errors / 6 warnings. See
+  `PROJECT_AUDIT.md`; the release is not ready until schema reconciliation,
+  approval-chain integration and staging verification are complete.
+
+**Release decision:** production/backend **NO-GO**. The local hardening package
+is **GO WITH CONDITIONS** only after all refreshed local gates, a clean frozen
+candidate SHA, database reconciliation, approved payroll semantics and staging.
+
+---
+
 ## 2026-06-19 — v3.51.2 Native calendar: fix the leave-type filter (same enum-vs-UUID bug as the embed)
 
 **Lens:** Carry the embed v3.51.1 audit fix back to the native calendar it was ported from.
