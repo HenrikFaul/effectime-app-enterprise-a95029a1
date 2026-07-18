@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, RefreshCw, Plug, PlugZap, Unlink, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useT } from '@/i18n/I18nProvider';
+import { isNativeRuntime } from '@/lib/platform/mobile';
 
 interface Props {
   workspaceId: string;
@@ -24,6 +25,7 @@ interface Integration {
 
 export function M365IntegrationPanel({ workspaceId }: Props) {
   const t = useT();
+  const nativeRuntime = isNativeRuntime();
   const [items, setItems] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [connecting, setConnecting] = useState(false);
@@ -47,10 +49,18 @@ export function M365IntegrationPanel({ workspaceId }: Props) {
   useEffect(() => { load(); }, [load]);
 
   const connect = async () => {
+    if (nativeRuntime) {
+      toast.error(t('m365.native_oauth_unavailable'));
+      return;
+    }
     setConnecting(true);
     try {
       const { data, error } = await supabase.functions.invoke('ms365-sync', {
-        body: { action: 'get_auth_url', workspace_id: workspaceId, return_to: window.location.href },
+        body: {
+          action: 'get_auth_url',
+          workspace_id: workspaceId,
+          return_to: `${window.location.pathname}${window.location.search}${window.location.hash}`,
+        },
       });
       if (error) throw error;
       const url = (data as any)?.auth_url;
@@ -118,7 +128,12 @@ export function M365IntegrationPanel({ workspaceId }: Props) {
         ) : !m365 ? (
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">{t('m365.not_connected_hint')}</p>
-            <Button onClick={connect} disabled={connecting} size="sm" className="gap-2">
+            {nativeRuntime && (
+              <p role="status" className="text-xs text-amber-700 dark:text-amber-300">
+                {t('m365.native_oauth_unavailable')}
+              </p>
+            )}
+            <Button onClick={connect} disabled={connecting || nativeRuntime} size="sm" className="gap-2">
               {connecting ? <Loader2 className="h-3 w-3 animate-spin" /> : <PlugZap className="h-3 w-3" />}
               {t('m365.connect_btn')}
             </Button>

@@ -8,7 +8,9 @@
 // Full Workbox + vite-plugin-pwa + IndexedDB write queue + FCM push are
 // deferred to v3.32.1+ when the build pipeline is upgraded.
 
-const CACHE_VERSION = 'effectime-v3.32.0';
+// Bump when cache semantics change so activation purges navigation URLs that
+// older workers may have stored with one-time auth or invitation parameters.
+const CACHE_VERSION = 'effectime-v3.51.3';
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const RUNTIME_CACHE = `${CACHE_VERSION}-runtime`;
 
@@ -61,18 +63,14 @@ self.addEventListener('fetch', (event) => {
     return; // Let the request go to network unmediated
   }
 
-  // Same-origin navigation requests → NetworkFirst with offline fallback
+  // Same-origin navigation requests → NetworkFirst with app-shell fallback.
+  // Never persist the full navigation request: auth/invite callbacks may carry
+  // one-time codes or tokens in their query string.
   if (req.mode === 'navigate') {
     event.respondWith(
       fetch(req)
-        .then((res) => {
-          const copy = res.clone();
-          caches.open(RUNTIME_CACHE).then((c) => c.put(req, copy)).catch(() => undefined);
-          return res;
-        })
-        .catch(() =>
-          caches.match(req).then((cached) => cached || caches.match('/')),
-        ),
+        .then((res) => res)
+        .catch(() => caches.match('/')),
     );
     return;
   }

@@ -3133,11 +3133,11 @@ const ro = {
   },
   sql_mode: {
     title: 'SQL Advanced Mode',
-    desc_p1: 'Only SELECT commands are allowed. The workspace filter (workspace_id) is applied automatically.',
+    desc_p1: 'Only simple SELECT field lists from one allowed table are supported, with optional ORDER BY and LIMIT. The workspace filter (workspace_id) is applied automatically. Comments, JOIN, WHERE, GROUP BY and SQL functions are not supported.',
     allowed_tables_label: 'Allowed tables:',
     example_comment_1: '-- Only SELECT queries. workspace_id is filtered automatically.',
     card_title: 'SQL query',
-    card_description: 'Write your own SELECT query — it will be validated and enriched at runtime.',
+    card_description: 'Use column names only; the backend validates the constrained report syntax.',
     label_sql: 'SQL',
   },
   resource_dashboard: {
@@ -3989,6 +3989,7 @@ const ro = {
     not_connected_hint: 'Connect your Microsoft 365 account to sync approved leave with Outlook and surface OOF events as scheduling constraints.',
     connect_btn: 'Connect Microsoft 365',
     connect_error: 'Connection failed',
+    native_oauth_unavailable: 'Conectarea Microsoft 365 nu este încă disponibilă în aplicația mobilă.',
     disconnect: 'Disconnect',
     disconnect_confirm: 'Disconnect this Microsoft 365 account? Synced events will remain in Outlook.',
     disconnect_error: 'Disconnect failed',

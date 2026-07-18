@@ -1,13 +1,14 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.1f5d90f48f30481badc1f044a3751e7b',
-  appName: 'Syncfolk',
-  webDir: 'dist',
-  server: {
-    url: 'https://1f5d90f4-8f30-481b-adc1-f044a3751e7b.lovableproject.com?forceHideBadge=true',
-    cleartext: true,
-  },
+  // The reverse-domain identifier is the proposed Effectime store identity.
+  // It must be reserved in App Store Connect and Google Play before signing a
+  // production build; changing it after publication creates a different app.
+  appId: 'app.effectime',
+  appName: 'Effectime',
+  // Native builds use a separate CSP-hardened shell. The JavaScript source,
+  // Supabase runtime configuration and backend contracts remain shared.
+  webDir: 'dist-mobile',
 };
 
 export default config;
