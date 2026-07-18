@@ -37,7 +37,7 @@ BEGIN
     SELECT tablename
     FROM pg_tables
     WHERE schemaname = 'public'
-      AND tablename LIKE 'enterprise\_%' ESCAPE '\\'
+      AND tablename LIKE 'enterprise\_%' ESCAPE E'\\'
     ORDER BY tablename
   LOOP
     enterprise_tables := array_append(enterprise_tables, rec.tablename);

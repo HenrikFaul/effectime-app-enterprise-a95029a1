@@ -25,16 +25,16 @@ CREATE TABLE IF NOT EXISTS enterprise_office_equipment (
 ALTER TABLE enterprise_office_equipment ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "office_equipment_select" ON enterprise_office_equipment
-  FOR SELECT USING (is_enterprise_member(workspace_id));
+  FOR SELECT USING (is_enterprise_member(workspace_id, auth.uid()));
 
 CREATE POLICY "office_equipment_insert" ON enterprise_office_equipment
-  FOR INSERT WITH CHECK (has_enterprise_role(workspace_id, ARRAY['owner','resourceAssistant']));
+  FOR INSERT WITH CHECK (has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner'::enterprise_role,'resourceAssistant'::enterprise_role]));
 
 CREATE POLICY "office_equipment_update" ON enterprise_office_equipment
-  FOR UPDATE USING (has_enterprise_role(workspace_id, ARRAY['owner','resourceAssistant']));
+  FOR UPDATE USING (has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner'::enterprise_role,'resourceAssistant'::enterprise_role]));
 
 CREATE POLICY "office_equipment_delete" ON enterprise_office_equipment
-  FOR DELETE USING (has_enterprise_role(workspace_id, ARRAY['owner','resourceAssistant']));
+  FOR DELETE USING (has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner'::enterprise_role,'resourceAssistant'::enterprise_role]));
 
 -- 3. Minimum mandatory staffing table (permanent office setting, unlike date-ranged coverage rules)
 CREATE TABLE IF NOT EXISTS enterprise_office_min_staffing (
@@ -53,16 +53,16 @@ CREATE TABLE IF NOT EXISTS enterprise_office_min_staffing (
 ALTER TABLE enterprise_office_min_staffing ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "office_min_staffing_select" ON enterprise_office_min_staffing
-  FOR SELECT USING (is_enterprise_member(workspace_id));
+  FOR SELECT USING (is_enterprise_member(workspace_id, auth.uid()));
 
 CREATE POLICY "office_min_staffing_insert" ON enterprise_office_min_staffing
-  FOR INSERT WITH CHECK (has_enterprise_role(workspace_id, ARRAY['owner','resourceAssistant']));
+  FOR INSERT WITH CHECK (has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner'::enterprise_role,'resourceAssistant'::enterprise_role]));
 
 CREATE POLICY "office_min_staffing_update" ON enterprise_office_min_staffing
-  FOR UPDATE USING (has_enterprise_role(workspace_id, ARRAY['owner','resourceAssistant']));
+  FOR UPDATE USING (has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner'::enterprise_role,'resourceAssistant'::enterprise_role]));
 
 CREATE POLICY "office_min_staffing_delete" ON enterprise_office_min_staffing
-  FOR DELETE USING (has_enterprise_role(workspace_id, ARRAY['owner','resourceAssistant']));
+  FOR DELETE USING (has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner'::enterprise_role,'resourceAssistant'::enterprise_role]));
 
 -- Trigger: keep updated_at current on equipment
 CREATE OR REPLACE FUNCTION update_office_equipment_updated_at()

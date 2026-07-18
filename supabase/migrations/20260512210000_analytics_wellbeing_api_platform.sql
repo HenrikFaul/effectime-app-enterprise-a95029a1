@@ -28,13 +28,13 @@ CREATE POLICY "Members can view own wellbeing score"
       SELECT id FROM public.enterprise_memberships
       WHERE user_id = auth.uid() AND workspace_id = wellbeing_scores.workspace_id
     )
-    OR public.has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant'])
+    OR public.has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']::enterprise_role[])
   );
 
 CREATE POLICY "Admins can manage wellbeing scores"
   ON public.wellbeing_scores FOR ALL
-  USING (public.has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']))
-  WITH CHECK (public.has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']));
+  USING (public.has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']::enterprise_role[]))
+  WITH CHECK (public.has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']::enterprise_role[]));
 
 -- ─── 2. Wellbeing alerts ──────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.wellbeing_alerts (
@@ -59,8 +59,8 @@ ALTER TABLE public.wellbeing_alerts ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins view/manage wellbeing alerts"
   ON public.wellbeing_alerts FOR ALL
-  USING (public.has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']))
-  WITH CHECK (public.has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']));
+  USING (public.has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']::enterprise_role[]))
+  WITH CHECK (public.has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']::enterprise_role[]));
 
 CREATE POLICY "Members view own alerts"
   ON public.wellbeing_alerts FOR SELECT
@@ -94,8 +94,8 @@ ALTER TABLE public.enterprise_api_keys ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins manage API keys"
   ON public.enterprise_api_keys FOR ALL
-  USING (public.has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']))
-  WITH CHECK (public.has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']));
+  USING (public.has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']::enterprise_role[]))
+  WITH CHECK (public.has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']::enterprise_role[]));
 
 -- ─── 4. API usage logs ────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS public.enterprise_api_usage_logs (
@@ -118,7 +118,7 @@ ALTER TABLE public.enterprise_api_usage_logs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins view API usage"
   ON public.enterprise_api_usage_logs FOR SELECT
-  USING (public.has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']));
+  USING (public.has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']::enterprise_role[]));
 
 CREATE POLICY "Service role inserts API usage"
   ON public.enterprise_api_usage_logs FOR INSERT
@@ -146,8 +146,8 @@ ALTER TABLE public.enterprise_webhook_subscriptions ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Admins manage webhooks"
   ON public.enterprise_webhook_subscriptions FOR ALL
-  USING (public.has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']))
-  WITH CHECK (public.has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']));
+  USING (public.has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']::enterprise_role[]))
+  WITH CHECK (public.has_enterprise_role(workspace_id, auth.uid(), ARRAY['owner','resourceAssistant']::enterprise_role[]));
 
 -- updated_at trigger for webhooks
 CREATE OR REPLACE FUNCTION public.set_webhook_updated_at()
