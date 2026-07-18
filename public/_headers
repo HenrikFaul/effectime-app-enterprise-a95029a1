@@ -8,5 +8,8 @@
 /index.html
   Cache-Control: no-cache, no-store, must-revalidate
 
+/.well-known/effectime-release.json
+  Cache-Control: no-cache, no-store, must-revalidate
+
 /assets/*
   Cache-Control: public, max-age=31536000, immutable

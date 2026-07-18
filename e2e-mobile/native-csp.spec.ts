@@ -139,18 +139,22 @@ test.describe("CSP-hardened native shell", () => {
       const response = await page.goto(path, { waitUntil: "commit" });
       expect(response?.ok()).toBe(true);
 
-      if (path === "/") await expect(page.locator("main h1").first()).toBeVisible();
-      else {
-        await expect(
-          page.locator("#email, [data-auth-storage-error-code]").first(),
-        ).toBeVisible();
+      if (path === "/") {
+        // The production bundle is intentionally exercised here, so allow slow CI
+        // machines enough time to hydrate before asserting the first meaningful UI.
+        await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible({
+          timeout: 15_000,
+        });
+      } else {
         const storageError = page.locator("[data-auth-storage-error-code]");
+        const emailInput = page.getByRole("textbox", { name: /e-mail/i }).first();
+        await expect(emailInput.or(storageError).first()).toBeVisible();
         const errorCode =
           (await storageError.count()) > 0
             ? await storageError.getAttribute("data-auth-storage-error-code")
             : null;
         expect(errorCode, "Native auth storage entered its recovery boundary").toBeNull();
-        await expect(page.locator("#email")).toBeVisible();
+        await expect(emailInput).toBeVisible();
       }
 
       const policy = await page

@@ -10,6 +10,9 @@ on:
 permissions:
   contents: read
 
+env:
+  EFFECTIME_RELEASE_SHA: ${{ github.sha }}
+
 concurrency:
   group: quality-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true
@@ -86,6 +89,12 @@ jobs:
       - name: Enforce no-new-debt lint ratchet
         run: node scripts/ci/eslint-ratchet.mjs
 
+      - name: Verify immutable Edge source identity
+        run: npm run release:edge-source:check
+
+      - name: Prove release identity and deployed-verifier contracts
+        run: npm run release:identity:test
+
       - name: Type-check
         run: npm run typecheck
 
@@ -148,6 +157,7 @@ jobs:
             artifacts/web-sbom.cdx.json
             artifacts/edge-sbom.cdx.json
             dist
+          include-hidden-files: true
           if-no-files-found: error
           retention-days: 30
 

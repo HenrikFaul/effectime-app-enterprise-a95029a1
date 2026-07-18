@@ -48,7 +48,10 @@
     "release:sbom:web": "node scripts/release/create-sbom.mjs",
     "release:sbom:edge": "node scripts/release/create-edge-sbom.mjs",
     "release:sbom:edge:test": "node --test scripts/release/create-edge-sbom.test.mjs",
-    "release:manifest": "node scripts/release/create-release-manifest.mjs"
+    "release:edge-source:check": "node scripts/release/edge-source-identity.mjs --check",
+    "release:identity:test": "node --test scripts/release/edge-source-identity.test.mjs scripts/release/release-identity.test.mjs scripts/release/verify-deployment.test.mjs",
+    "release:manifest": "node scripts/release/create-release-manifest.mjs",
+    "release:verify:deployment": "node scripts/release/verify-deployment.mjs"
   },
   "dependencies": {
     "@aparajita/capacitor-secure-storage": "8.0.0",
