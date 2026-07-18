@@ -1,5 +1,6 @@
-import { sendLovableEmail } from 'npm:@lovable.dev/email-js'
-import { createClient } from 'npm:@supabase/supabase-js@2'
+import { sendLovableEmail } from 'npm:@lovable.dev/email-js@0.1.2'
+import { createClient } from 'npm:@supabase/supabase-js@2.98.0'
+import { hasServiceRoleCredential } from '../_shared/request-security.ts'
 
 const MAX_RETRIES = 5
 const DEFAULT_BATCH_SIZE = 10
@@ -32,24 +33,6 @@ function getRetryAfterSeconds(error: unknown): number {
     return (error as { retryAfterSeconds: number | null }).retryAfterSeconds ?? 60
   }
   return 60
-}
-
-function parseJwtClaims(token: string): Record<string, unknown> | null {
-  const parts = token.split('.')
-  if (parts.length < 2) {
-    return null
-  }
-
-  try {
-    const payload = parts[1]
-      .replaceAll('-', '+')
-      .replaceAll('_', '/')
-      .padEnd(Math.ceil(parts[1].length / 4) * 4, '=')
-
-    return JSON.parse(atob(payload)) as Record<string, unknown>
-  } catch {
-    return null
-  }
 }
 
 // Move a message to the dead letter queue and log the reason.
@@ -91,20 +74,9 @@ Deno.serve(async (req) => {
     )
   }
 
-  const authHeader = req.headers.get('Authorization')
-  if (!authHeader?.startsWith('Bearer ')) {
-    return new Response(
-      JSON.stringify({ error: 'Unauthorized' }),
-      { status: 401, headers: { 'Content-Type': 'application/json' } }
-    )
-  }
-
-  // Defense in depth: verify_jwt=true already requires a valid JWT at the
-  // gateway layer. This adds an explicit role check so only service-role
-  // callers can trigger queue processing.
-  const token = authHeader.slice('Bearer '.length).trim()
-  const claims = parseJwtClaims(token)
-  if (claims?.role !== 'service_role') {
+  // Compare the actual credential, not the unverified base64 JWT payload.
+  // This remains fail-closed even if verify_jwt is disabled by deployment drift.
+  if (!hasServiceRoleCredential(req, supabaseServiceKey)) {
     return new Response(
       JSON.stringify({ error: 'Forbidden' }),
       { status: 403, headers: { 'Content-Type': 'application/json' } }
@@ -298,13 +270,20 @@ Deno.serve(async (req) => {
         })
 
         if (isRateLimited(error)) {
-          await supabase.from('email_send_log').insert({
+          const { error: rateLimitLogError } = await supabase.from('email_send_log').insert({
             message_id: payload.message_id,
             template_name: payload.label || queue,
             recipient_email: payload.to,
             status: 'rate_limited',
             error_message: errorMsg.slice(0, 1000),
           })
+          if (rateLimitLogError) {
+            console.error('Failed to persist rate-limit send log', {
+              queue,
+              msg_id: msg.msg_id,
+              error: rateLimitLogError,
+            })
+          }
 
           const retryAfterSecs = getRetryAfterSeconds(error)
           await supabase

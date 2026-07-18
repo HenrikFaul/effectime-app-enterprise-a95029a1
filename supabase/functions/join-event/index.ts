@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.98.0";
 import { corsHeaders } from "../_shared/cors.ts";
+import { normalizeAppPath, safeAppOrigin } from "../_shared/request-security.ts";
 
 function jsonRes(data: any, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -17,6 +18,7 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const appOrigin = safeAppOrigin(Deno.env.get('APP_ORIGIN') || Deno.env.get('SITE_URL'));
     const admin = createClient(supabaseUrl, serviceKey);
 
     const isPastEventRetentionWindow = (eventEndDate: string) => {
@@ -89,10 +91,24 @@ Deno.serve(async (req) => {
     const buildActivationRedirectUrl = (origin: string, activationToken: string, redirectTo?: string | null) => {
       const url = new URL(`${origin}/auth`);
       url.searchParams.set(EMAIL_ACTIVATION_QUERY_PARAM, activationToken);
-      if (redirectTo && redirectTo.startsWith('/')) {
-        url.searchParams.set('redirect', redirectTo);
-      }
+      url.searchParams.set('redirect', normalizeAppPath(redirectTo, '/'));
       return url.toString();
+    };
+
+    const consumeShareToken = async (
+      token: string,
+      currentUseCount: number,
+      maxUses: number | null,
+    ): Promise<boolean> => {
+      let update = admin
+        .from('event_share_tokens')
+        .update({ use_count: currentUseCount + 1 })
+        .eq('token', token)
+        .eq('use_count', currentUseCount);
+      if (maxUses !== null) update = update.lt('use_count', maxUses);
+      const { data, error } = await update.select('token').maybeSingle();
+      if (error) console.error('Share token consume failed:', error.message);
+      return Boolean(data);
     };
 
     const markPendingEmailActivation = async (
@@ -307,14 +323,14 @@ Deno.serve(async (req) => {
         return jsonRes({ error: "Hiba az ideiglenes profil létrehozásakor." }, 500);
       }
 
-      await admin.from('event_participants').insert({
+      const { error: participantError } = await admin.from('event_participants').insert({
         event_id: shareToken.event_id,
         user_id: newUser.user.id,
       });
-
-      await admin.from('event_share_tokens')
-        .update({ use_count: (shareToken.use_count || 0) + 1 })
-        .eq('token', token);
+      if (participantError || !(await consumeShareToken(token, shareToken.use_count || 0, shareToken.max_uses))) {
+        await cleanupTemporaryUser(newUser.user.id);
+        return jsonRes({ error: "Token usage limit reached" }, 409);
+      }
 
       const anonClient = createClient(supabaseUrl, anonKey);
       const { data: signInData, error: signInError } = await anonClient.auth.signInWithPassword({
@@ -427,7 +443,7 @@ Deno.serve(async (req) => {
           return jsonRes({ success: true });
         }
 
-        const siteOrigin = req.headers.get('origin') || supabaseUrl;
+        const siteOrigin = appOrigin;
         const safeRedirect = typeof redirect_to === 'string' && redirect_to.startsWith('/') ? redirect_to : '/';
         const activationRedirectUrl = buildActivationRedirectUrl(siteOrigin, pendingActivation.token, safeRedirect);
         const activationError = await sendUpgradeActivationLink(existingUser.email, activationRedirectUrl);
@@ -525,7 +541,7 @@ Deno.serve(async (req) => {
         return jsonRes({ error: 'Nem sikerült előkészíteni az aktivációt.' }, 500);
       }
 
-      const siteOrigin = req.headers.get('origin') || supabaseUrl;
+      const siteOrigin = appOrigin;
       const safeRedirect = typeof redirect_to === 'string' && redirect_to.startsWith('/') ? redirect_to : '/';
       const activationRedirectUrl = buildActivationRedirectUrl(siteOrigin, pendingActivation.token, safeRedirect);
       const activationEmailError = await sendUpgradeActivationLink(user.email, activationRedirectUrl);
@@ -772,203 +788,60 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'accept-enterprise-invite') {
-      const invitationToken = typeof body.invitation_token === 'string' ? body.invitation_token.trim() : '';
+      const invitationToken =
+        typeof body.invitation_token === 'string' ? body.invitation_token.trim() : '';
 
       if (!invitationToken) {
         return jsonRes({ error: 'Hiányzó meghívó token.' }, 400);
       }
 
-      if (!user.email) {
-        return jsonRes({ error: 'A fiókhoz nincs e-mail cím társítva.' }, 400);
+      const { data: acceptanceData, error: acceptanceError } = await admin.rpc(
+        'accept_enterprise_invitation',
+        {
+          _invitation_token: invitationToken,
+          _user_id: user.id,
+        },
+      );
+
+      if (acceptanceError) {
+        console.error('Enterprise invite transaction error:', acceptanceError);
+        return jsonRes({ error: 'Nem sikerült véglegesíteni a meghívót.' }, 500);
       }
 
-      const { data: invitation, error: invitationError } = await admin
-        .from('enterprise_invitations')
-        .select('id, workspace_id, email, role, accepted_at, expires_at')
-        .eq('token', invitationToken)
-        .maybeSingle();
-
-      if (invitationError) {
-        console.error('Enterprise invite lookup error:', invitationError);
-        return jsonRes({ error: 'Nem sikerült ellenőrizni a meghívót.' }, 500);
-      }
-
-      if (!invitation) {
-        return jsonRes({ error: 'A meghívó nem található vagy már nem érvényes.' }, 404);
-      }
-
-      if (invitation.expires_at && new Date(invitation.expires_at) < new Date()) {
-        return jsonRes({ error: 'Ez a meghívó már lejárt.' }, 400);
-      }
-
-      if (invitation.email.trim().toLowerCase() !== user.email.trim().toLowerCase()) {
-        return jsonRes({
-          error: `Ezzel a fiókkal nem tudod elfogadni a meghívót. A meghívó a(z) ${invitation.email} címre lett kiküldve.`,
-        }, 403);
-      }
-
-      const { data: workspace, error: workspaceError } = await admin
-        .from('enterprise_workspaces')
-        .select('id, is_archived, settings')
-        .eq('id', invitation.workspace_id)
-        .maybeSingle();
-
-      if (workspaceError) {
-        console.error('Enterprise workspace lookup error:', workspaceError);
-        return jsonRes({ error: 'Nem sikerült betölteni a munkaterületet.' }, 500);
-      }
-
-      if (!workspace || workspace.is_archived) {
-        return jsonRes({ error: 'A munkaterület már nem érhető el.' }, 400);
-      }
-
-      const workspaceSettings =
-        workspace.settings && typeof workspace.settings === 'object' && !Array.isArray(workspace.settings)
-          ? (workspace.settings as Record<string, unknown>)
+      const acceptance =
+        acceptanceData && typeof acceptanceData === 'object' && !Array.isArray(acceptanceData)
+          ? (acceptanceData as Record<string, unknown>)
           : {};
-
-      const invitationPrefillsRaw =
-        workspaceSettings.invitation_prefills &&
-        typeof workspaceSettings.invitation_prefills === 'object' &&
-        !Array.isArray(workspaceSettings.invitation_prefills)
-          ? (workspaceSettings.invitation_prefills as Record<string, unknown>)
-          : {};
-
-      const invitationPrefill =
-        invitationPrefillsRaw[invitation.id] &&
-        typeof invitationPrefillsRaw[invitation.id] === 'object' &&
-        !Array.isArray(invitationPrefillsRaw[invitation.id])
-          ? (invitationPrefillsRaw[invitation.id] as Record<string, unknown>)
-          : {};
-
-      const membershipPrefill: Record<string, string> = {};
-      if (typeof invitationPrefill.team === 'string' && invitationPrefill.team.trim()) {
-        membershipPrefill.team = invitationPrefill.team.trim();
-      }
-      if (typeof invitationPrefill.business_role === 'string' && invitationPrefill.business_role.trim()) {
-        membershipPrefill.business_role = invitationPrefill.business_role.trim();
-      }
-      if (typeof invitationPrefill.office_id === 'string' && invitationPrefill.office_id.trim()) {
-        membershipPrefill.office_id = invitationPrefill.office_id.trim();
-      }
-      if (typeof invitationPrefill.city === 'string' && invitationPrefill.city.trim()) {
-        membershipPrefill.city = invitationPrefill.city.trim();
-      }
-      if (typeof invitationPrefill.location === 'string' && invitationPrefill.location.trim()) {
-        membershipPrefill.location = invitationPrefill.location.trim();
-      }
-
-      // Update profile display_name from prefill if provided
-      if (typeof invitationPrefill.display_name === 'string' && invitationPrefill.display_name.trim()) {
-        await admin
-          .from('profiles')
-          .update({ display_name: invitationPrefill.display_name.trim() })
-          .eq('user_id', user.id);
-      }
-
-      const { data: existingMembership, error: membershipLookupError } = await admin
-        .from('enterprise_memberships')
-        .select('id, status')
-        .eq('workspace_id', invitation.workspace_id)
-        .eq('user_id', user.id)
-        .maybeSingle();
-
-      if (membershipLookupError) {
-        console.error('Enterprise membership lookup error:', membershipLookupError);
-        return jsonRes({ error: 'Nem sikerült ellenőrizni a tagságot.' }, 500);
-      }
-
-      const nowIso = new Date().toISOString();
-      const alreadyMember = existingMembership?.status === 'active';
-      let resolvedMembershipId: string | null = existingMembership?.id ?? null;
-
-      if (!existingMembership) {
-        const { data: insertedMembership, error: membershipInsertError } = await admin.from('enterprise_memberships').insert({
-          workspace_id: invitation.workspace_id,
-          user_id: user.id,
-          role: invitation.role,
-          status: 'active',
-          joined_at: nowIso,
-          ...membershipPrefill,
-        }).select('id').single();
-
-        if (membershipInsertError) {
-          console.error('Enterprise membership insert error:', membershipInsertError);
-          return jsonRes({ error: 'Nem sikerült létrehozni a tagságot.' }, 500);
-        }
-        resolvedMembershipId = insertedMembership?.id ?? null;
-      } else if (!alreadyMember) {
-        const { error: membershipUpdateError } = await admin
-          .from('enterprise_memberships')
-          .update({
-            role: invitation.role,
-            status: 'active',
-            joined_at: nowIso,
-            updated_at: nowIso,
-            ...membershipPrefill,
-          })
-          .eq('id', existingMembership.id);
-
-        if (membershipUpdateError) {
-          console.error('Enterprise membership update error:', membershipUpdateError);
-          return jsonRes({ error: 'Nem sikerült frissíteni a tagságot.' }, 500);
+      if (acceptance.ok !== true) {
+        switch (acceptance.code) {
+          case 'INVITE_NOT_FOUND':
+            return jsonRes({ error: 'A meghívó nem található vagy már nem érvényes.' }, 404);
+          case 'USER_EMAIL_MISSING':
+            return jsonRes({ error: 'A fiókhoz nincs e-mail cím társítva.' }, 400);
+          case 'EMAIL_MISMATCH':
+            return jsonRes({ error: 'Ezzel a fiókkal nem tudod elfogadni ezt a meghívót.' }, 403);
+          case 'WORKSPACE_UNAVAILABLE':
+            return jsonRes({ error: 'A munkaterület már nem érhető el.' }, 400);
+          case 'ALREADY_USED':
+            return jsonRes({ error: 'Ez a meghívó már fel lett használva.' }, 409);
+          case 'INVITE_EXPIRED':
+            return jsonRes({ error: 'Ez a meghívó már lejárt.' }, 400);
+          case 'INVALID_PREFILL':
+            return jsonRes({ error: 'A meghívóhoz tartozó beállítások érvénytelenek.' }, 409);
+          default:
+            console.error('Unexpected enterprise invite result:', acceptance);
+            return jsonRes({ error: 'Nem sikerült elfogadni a meghívót.' }, 500);
         }
       }
 
-      // Save role allocations from prefill (multi-position support)
-      if (resolvedMembershipId && Array.isArray(invitationPrefill.role_allocations)) {
-        const allocs = (invitationPrefill.role_allocations as Array<Record<string, unknown>>)
-          .filter(a => typeof a.business_role === 'string' && (a.business_role as string).trim())
-          .map(a => ({
-            workspace_id: invitation.workspace_id,
-            membership_id: resolvedMembershipId!,
-            business_role: (a.business_role as string).trim(),
-            percentage: typeof a.percentage === 'number' ? a.percentage : 100,
-          }));
-        if (allocs.length > 0) {
-          await admin.from('enterprise_member_role_allocations').upsert(allocs, {
-            onConflict: 'membership_id,business_role',
-          });
-        }
-      }
-
-      if (!invitation.accepted_at) {
-        const { error: acceptError } = await admin
-          .from('enterprise_invitations')
-          .update({ accepted_at: nowIso })
-          .eq('id', invitation.id);
-
-        if (acceptError) {
-          console.error('Enterprise invite accept update error:', acceptError);
-          return jsonRes({ error: 'Nem sikerült véglegesíteni a meghívót.' }, 500);
-        }
-      }
-
-      if (Object.keys(invitationPrefillsRaw).length > 0 && invitation.id in invitationPrefillsRaw) {
-        const nextInvitationPrefills = { ...invitationPrefillsRaw };
-        delete nextInvitationPrefills[invitation.id];
-
-        const nextSettings = { ...workspaceSettings };
-        if (Object.keys(nextInvitationPrefills).length > 0) {
-          nextSettings.invitation_prefills = nextInvitationPrefills;
-        } else {
-          delete nextSettings.invitation_prefills;
-        }
-
-        const { error: workspaceSettingsError } = await admin
-          .from('enterprise_workspaces')
-          .update({ settings: nextSettings })
-          .eq('id', invitation.workspace_id);
-
-        if (workspaceSettingsError) {
-          console.error('Enterprise invite prefill cleanup error:', workspaceSettingsError);
-        }
+      if (Array.isArray(acceptance.warnings) && acceptance.warnings.length > 0) {
+        console.warn('Enterprise invite accepted with warnings:', acceptance.warnings);
       }
 
       return jsonRes({
         success: true,
-        already_member: alreadyMember,
-        workspace_id: invitation.workspace_id,
+        already_member: acceptance.already_member === true,
+        workspace_id: acceptance.workspace_id,
       });
     }
 
@@ -1247,7 +1120,7 @@ Deno.serve(async (req) => {
 
       await cleanupTemporaryUser(tempProfile.user_id);
 
-      const siteOrigin = req.headers.get('origin') || supabaseUrl;
+      const siteOrigin = appOrigin;
       const activationRedirectUrl = buildActivationRedirectUrl(siteOrigin, pendingActivation.token, '/');
       if (user.email) {
         const activationEmailError = await sendUpgradeActivationLink(user.email, activationRedirectUrl);
@@ -1479,7 +1352,7 @@ Deno.serve(async (req) => {
           throw new Error('Nem sikerült előkészíteni az aktivációs állapotot.');
         }
 
-        const siteOrigin = req.headers.get('origin') || supabaseUrl;
+        const siteOrigin = appOrigin;
         const activationRedirectUrl = buildActivationRedirectUrl(siteOrigin, pendingActivation.token, '/');
         const activationEmailError = await sendUpgradeActivationLink(normalizedEmail, activationRedirectUrl);
         if (activationEmailError) {
@@ -1504,27 +1377,10 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Search user by email
+    // Removed legacy global account-enumeration endpoint. The scoped
+    // invite-by-email action below performs lookup only after event authz.
     if (action === 'search-user') {
-      const { email } = body;
-      if (!email) return jsonRes({ error: "Email szükséges." }, 400);
-
-      const { data: authData, error: authError } = await admin.auth.admin.listUsers();
-      if (authError) return jsonRes({ error: "Keresési hiba." }, 500);
-
-      const foundUser = authData.users.find(
-        (u) => u.email?.toLowerCase() === email.toLowerCase() && u.email_confirmed_at
-      );
-
-      if (!foundUser) return jsonRes({ error: "Nem található ilyen regisztrált felhasználó." });
-
-      const { data: profileData } = await admin
-        .from("profiles")
-        .select("user_id, display_name")
-        .eq("user_id", foundUser.id)
-        .single();
-
-      return jsonRes({ user: profileData || { user_id: foundUser.id, display_name: foundUser.email } });
+      return jsonRes({ error: 'Legacy action disabled' }, 410);
     }
 
     // Invite by email
@@ -1569,28 +1425,15 @@ Deno.serve(async (req) => {
         return jsonRes({ success: true });
       }
 
-      const expiresAt = new Date(Date.now() + 72 * 60 * 60 * 1000).toISOString();
-      const { data: tokenInsert, error: tokenError } = await admin
-        .from("event_share_tokens")
-        .insert({ event_id, created_by: user.id, expires_at: expiresAt, email: email.toLowerCase(), max_uses: 1 })
-        .select("token").single();
-
-      if (tokenError || !tokenInsert) return jsonRes({ error: "Hiba a meghívó link létrehozásakor." }, 500);
-
-      const siteUrl = req.headers.get("origin") || supabaseUrl;
-      const shareUrl = `${siteUrl}/join/${tokenInsert.token}`;
-
-      const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
-        redirectTo: shareUrl,
-        data: { invited_to_event: event.title, invite_token: tokenInsert.token },
-      });
-
-      if (inviteError) {
-        console.error('Invite email error:', inviteError);
-        return jsonRes({ error: 'Hiba a meghívó e-mail küldésekor.' }, 500);
-      }
-
-      return jsonRes({ success: true, sent_invite: true });
+      // The historical /join/:token page no longer exists in the product, so
+      // sending a Supabase invite to that route would guarantee a NotFound and
+      // falsely report success. Keep the registered-user flow above; require a
+      // product decision before restoring external event invitations with a
+      // real post-auth destination.
+      return jsonRes({
+        error: 'Nem regisztrált felhasználó eseménymeghívása jelenleg nem támogatott.',
+        code: 'EXTERNAL_EVENT_INVITE_UNAVAILABLE',
+      }, 409);
     }
 
     // Invite by user ID
@@ -1624,41 +1467,15 @@ Deno.serve(async (req) => {
       return jsonRes({ success: true });
     }
 
-    // Send invite email (legacy)
+    // Legacy caller-controlled recipient/redirect contract is intentionally
+    // disabled. Registered users can be added through the scoped actions above.
     if (action === 'send-invite-email') {
-      const { email, share_url, event_title } = body;
-      try {
-        const { error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
-          redirectTo: share_url,
-          data: { invited_to_event: event_title },
-        });
-        if (inviteError) {
-          console.error('Invite email error:', inviteError);
-          return jsonRes({ error: 'Hiba a meghívó e-mail küldésekor.' }, 500);
-        }
-        return jsonRes({ success: true });
-      } catch (err) {
-        console.error('Invite email error:', err);
-        return jsonRes({ error: 'Hiba a meghívó e-mail küldésekor.' }, 500);
-      }
+      return jsonRes({ error: 'Legacy action disabled' }, 410);
     }
 
-    // Get emails for user IDs
+    // Removed global auth.users e-mail disclosure endpoint.
     if (action === 'get-user-emails') {
-      const { user_ids } = body;
-      if (!user_ids || !Array.isArray(user_ids) || user_ids.length === 0) {
-        return jsonRes({ emails: {} });
-      }
-      const { data: authData } = await admin.auth.admin.listUsers();
-      const emailMap: Record<string, string> = {};
-      if (authData?.users) {
-        for (const u of authData.users) {
-          if (user_ids.includes(u.id) && u.email && !u.email.endsWith('@temp.syncfolk.local')) {
-            emailMap[u.id] = u.email;
-          }
-        }
-      }
-      return jsonRes({ emails: emailMap });
+      return jsonRes({ error: 'Legacy action disabled' }, 410);
     }
 
     // Default: join event by token
@@ -1711,10 +1528,10 @@ Deno.serve(async (req) => {
 
     if (insertError) return jsonRes({ error: "Failed to join" }, 500);
 
-    await admin
-      .from("event_share_tokens")
-      .update({ use_count: (shareToken.use_count || 0) + 1 })
-      .eq("token", token);
+    if (!(await consumeShareToken(token, shareToken.use_count || 0, shareToken.max_uses))) {
+      await admin.from('event_participants').delete().eq('event_id', actualEventId).eq('user_id', user.id);
+      return jsonRes({ error: "Token usage limit reached" }, 409);
+    }
 
     return jsonRes({ success: true, event_id: actualEventId });
   } catch (err) {

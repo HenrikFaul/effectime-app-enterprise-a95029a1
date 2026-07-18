@@ -8035,6 +8035,9 @@ export type Database = {
       }
       payroll_periods: {
         Row: {
+          calculation_hash: string | null
+          calculation_snapshot: Json | null
+          calculation_version: number | null
           created_at: string
           created_by: string | null
           end_date: string
@@ -8049,6 +8052,9 @@ export type Database = {
           workspace_id: string
         }
         Insert: {
+          calculation_hash?: string | null
+          calculation_snapshot?: Json | null
+          calculation_version?: number | null
           created_at?: string
           created_by?: string | null
           end_date: string
@@ -8063,6 +8069,9 @@ export type Database = {
           workspace_id: string
         }
         Update: {
+          calculation_hash?: string | null
+          calculation_snapshot?: Json | null
+          calculation_version?: number | null
           created_at?: string
           created_by?: string | null
           end_date?: string
@@ -9811,6 +9820,27 @@ export type Database = {
         Returns: boolean
       }
       join_open_shift_waitlist: { Args: { _request_id: string }; Returns: Json }
+      lock_payroll_period_snapshot: {
+        Args: {
+          _actor_id: string
+          _canonical_payload: string
+          _period_id: string
+          _snapshot: Json
+          _snapshot_hash: string
+          _snapshot_version: number
+          _workspace_id: string
+        }
+        Returns: Json
+      }
+      mark_payroll_period_exported: {
+        Args: {
+          _actor_id: string
+          _period_id: string
+          _provider: string
+          _workspace_id: string
+        }
+        Returns: Json
+      }
       marketplace_install_plugin: {
         Args: { _config?: Json; _plugin_id: string; _workspace_id: string }
         Returns: string
@@ -9852,6 +9882,15 @@ export type Database = {
           msg_id: number
           read_ct: number
         }[]
+      }
+      reopen_payroll_period_break_glass: {
+        Args: {
+          _actor_id: string
+          _period_id: string
+          _reason: string
+          _workspace_id: string
+        }
+        Returns: Json
       }
       require_feature_id: { Args: { _feature_key: string }; Returns: string }
       reseller_get_usage: { Args: { _reseller_id: string }; Returns: Json }

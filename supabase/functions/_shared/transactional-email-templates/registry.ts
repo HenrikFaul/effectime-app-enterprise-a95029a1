@@ -11,8 +11,10 @@ export interface TemplateEntry {
 
 import { template as leaveDecision } from './leave-decision.tsx'
 import { template as enterpriseInvite } from './enterprise-invite.tsx'
+import { template as scheduledReport } from './scheduled-report.tsx'
 
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'leave-decision': leaveDecision,
   'enterprise-invite': enterpriseInvite,
+  'scheduled-report': scheduledReport,
 }
