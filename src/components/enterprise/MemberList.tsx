@@ -517,6 +517,7 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
         onOpenChange={setShowInvite}
         workspaceId={workspaceId}
         invitedBy={userId}
+        actorRole={userRole}
         onInvited={fetchMembers}
       />
     </>

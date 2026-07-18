@@ -13,6 +13,7 @@ import { useT } from '@/i18n/I18nProvider';
 import { LanguageSelector } from '@/components/i18n/LanguageSelector';
 import { cn } from '@/lib/utils';
 import SeoHead from '@/components/seo/SeoHead';
+import { resolveInternalPath } from '@/lib/internalPath';
 import panellakoLogo from '@/assets/partner-logos/panellako.png';
 import hobbeastLogo from '@/assets/partner-logos/hobbeast.png';
 
@@ -28,7 +29,7 @@ export default function Landing() {
   useEffect(() => {
     if (!user) return;
     if (searchParams.get('oauth') !== 'google') return;
-    const redirectTo = searchParams.get('redirect') || '/app';
+    const redirectTo = resolveInternalPath(searchParams.get('redirect'), '/app');
     navigate(redirectTo, { replace: true });
   }, [user, searchParams, navigate]);
 
@@ -418,27 +419,27 @@ export default function Landing() {
 
         {/* ========= FINAL CTA — WOW ========= */}
         <section style={{ paddingBlock: 'clamp(4rem, 7vw, 6rem)', paddingInline: 'var(--density-page-pad-x)' }}>
-          <div className="dark-surface mx-auto w-full max-w-[min(1100px,92vw)] relative overflow-hidden rounded-[2rem] border border-white/10 p-10 sm:p-16 text-center shadow-2xl">
+          <div className="dark-surface relative mx-auto w-full min-w-0 max-w-[min(1100px,92vw)] overflow-hidden rounded-[2rem] border border-white/10 p-5 text-center shadow-2xl sm:p-16">
             <div aria-hidden className="aurora-mesh" />
             <div aria-hidden className="absolute inset-0 grid-overlay opacity-50 pointer-events-none" />
-            <div className="relative">
+            <div className="relative min-w-0">
               <div className="inline-flex items-center gap-1.5 rounded-full bg-white/10 border border-white/15 text-white/90 px-3 py-1 text-xs font-semibold uppercase tracking-wider backdrop-blur-md">
                 <Sparkles className="h-3 w-3 text-primary" />
                 {t('landing.final_eyebrow')}
               </div>
-              <h2 className="font-display font-bold text-4xl sm:text-6xl mt-5 tracking-tight text-white leading-[1.05]">
+              <h2 className="mt-5 font-display text-3xl font-bold leading-[1.05] tracking-tight text-white sm:text-6xl">
                 {t('landing.final_title').split(' ').slice(0, -2).join(' ')}{' '}
                 <span className="text-gradient-animate">{t('landing.final_title').split(' ').slice(-2).join(' ')}</span>
               </h2>
               <p className="text-white/70 mt-5 max-w-xl mx-auto text-lg">{t('landing.final_desc')}</p>
               <div className="mt-9 flex flex-col sm:flex-row gap-4 justify-center">
-                <div className="glow-pulse rounded-2xl">
-                  <Button size="lg" className="rounded-2xl bg-gradient-to-r from-primary via-cyan-400 to-accent text-primary-foreground px-9 gap-2 h-14 text-base font-semibold hover:scale-[1.02] transition-transform shadow-2xl" onClick={primaryCta}>
+                <div className="glow-pulse w-full rounded-2xl sm:w-auto">
+                  <Button size="lg" className="h-14 w-full gap-2 rounded-2xl bg-gradient-to-r from-primary via-cyan-400 to-accent px-4 text-base font-semibold text-primary-foreground shadow-2xl transition-transform hover:scale-[1.02] sm:w-auto sm:px-9" onClick={primaryCta}>
                     {user ? t('landing.btn_goto_workspace') : t('landing.final_cta')}
                     <ArrowRight className="h-5 w-5" />
                   </Button>
                 </div>
-                <Button size="lg" variant="outline" className="rounded-2xl px-8 h-14 text-base font-semibold bg-white/5 border-white/20 text-white hover:bg-white/10 hover:text-white backdrop-blur-md" onClick={() => navigate('/auth')}>
+                <Button size="lg" variant="outline" className="h-14 w-full rounded-2xl border-white/20 bg-white/5 px-4 text-base font-semibold text-white backdrop-blur-md hover:bg-white/10 hover:text-white sm:w-auto sm:px-8" onClick={() => navigate('/auth')}>
                   {t('landing.final_cta_secondary')}
                 </Button>
               </div>
@@ -496,8 +497,8 @@ function ShowcaseRow({ eyebrow, title, desc, bullets, icon: Icon, reverse, tinte
       className={cn(tinted && 'bg-muted/30 border-y border-border')}
       style={{ paddingBlock: 'clamp(3rem, 6vw, 5rem)', paddingInline: 'var(--density-page-pad-x)' }}
     >
-      <div className="mx-auto w-full max-w-[min(1280px,92vw)] grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
-        <div className={cn('order-1', reverse ? 'lg:order-2' : 'lg:order-1')}>
+      <div className="mx-auto grid w-full min-w-0 max-w-[min(1280px,92vw)] items-center gap-10 lg:grid-cols-2 lg:gap-16">
+        <div className={cn('min-w-0 order-1', reverse ? 'lg:order-2' : 'lg:order-1')}>
           <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 text-primary px-3 py-1 text-xs font-semibold uppercase tracking-wider mb-4">
             <Icon className="h-3.5 w-3.5" />
             {eyebrow}
@@ -515,8 +516,8 @@ function ShowcaseRow({ eyebrow, title, desc, bullets, icon: Icon, reverse, tinte
             ))}
           </ul>
         </div>
-        <div className={cn('order-2', reverse ? 'lg:order-1' : 'lg:order-2')}>
-          <div className="relative">
+        <div className={cn('min-w-0 order-2', reverse ? 'lg:order-1' : 'lg:order-2')}>
+          <div className="relative min-w-0">
             <div aria-hidden className="absolute -inset-4 bg-gradient-to-br from-primary/20 to-accent/10 blur-2xl rounded-3xl -z-10" />
             {mock}
           </div>
@@ -533,18 +534,18 @@ function HeroMockup({ t }: { t: (k: string, p?: Record<string, string>) => strin
       <div aria-hidden className="absolute -inset-6 bg-gradient-to-br from-primary/30 via-accent/20 to-transparent rounded-[2rem] blur-3xl -z-10" />
       <div className="rounded-2xl border border-border bg-card shadow-elevated overflow-hidden">
         {/* Window chrome */}
-        <div className="flex items-center gap-2 px-4 py-3 border-b border-border bg-muted/40">
+        <div className="flex min-w-0 items-center gap-2 px-3 py-3 sm:px-4 border-b border-border bg-muted/40">
           <div className="flex gap-1.5">
             <div className="h-2.5 w-2.5 rounded-full bg-destructive/60" />
             <div className="h-2.5 w-2.5 rounded-full bg-yellow-500/60" />
             <div className="h-2.5 w-2.5 rounded-full bg-primary/60" />
           </div>
-          <div className="ml-3 text-xs font-mono text-muted-foreground">effectime.app/w/budapest-hq</div>
+          <div className="ml-2 min-w-0 truncate text-xs font-mono text-muted-foreground sm:ml-3">effectime.app/w/budapest-hq</div>
         </div>
         {/* Body */}
-        <div className="grid grid-cols-[140px_1fr] min-h-[340px]">
+        <div className="grid min-h-[340px] grid-cols-[72px_minmax(0,1fr)] sm:grid-cols-[140px_minmax(0,1fr)]">
           {/* Sidebar */}
-          <div className="border-r border-border bg-muted/20 p-3 space-y-1">
+          <div className="space-y-1 border-r border-border bg-muted/20 p-2 sm:p-3">
             {[
               { icon: LayoutDashboard, l: 'Dashboard', active: true },
               { icon: CalendarDays, l: 'Calendar' },
@@ -553,16 +554,16 @@ function HeroMockup({ t }: { t: (k: string, p?: Record<string, string>) => strin
               { icon: Users, l: 'Team' },
             ].map(({ icon: Icon, l, active }) => (
               <div key={l} className={cn(
-                'flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs font-medium',
+                'flex items-center justify-center gap-2 rounded-lg px-2 py-1.5 text-xs font-medium sm:justify-start',
                 active ? 'bg-primary/15 text-primary' : 'text-muted-foreground'
               )}>
                 <Icon className="h-3.5 w-3.5" />
-                {l}
+                <span className="hidden sm:inline">{l}</span>
               </div>
             ))}
           </div>
           {/* Main */}
-          <div className="p-4 space-y-3">
+          <div className="min-w-0 space-y-3 p-2 sm:p-4">
             <div className="flex items-center justify-between">
               <div className="font-semibold text-sm">This week</div>
               <div className="text-xs text-muted-foreground">82% capacity</div>
@@ -791,7 +792,7 @@ function ApprovalQueueMock({ t }: { t: (k: string) => string }) {
     { who: 'Tomáš H.', type: 'Annual leave', range: 'Jul 1 – 5', age: '1d', sla: 'late' },
   ];
   return (
-    <div className="rounded-2xl border border-border bg-card shadow-elevated overflow-hidden max-w-lg mx-auto lg:mx-0">
+    <div className="mx-auto w-full min-w-0 max-w-lg overflow-hidden rounded-2xl border border-border bg-card shadow-elevated lg:mx-0">
       <div className="px-5 py-3 border-b border-border bg-muted/40 flex items-center justify-between">
         <div className="text-sm font-semibold flex items-center gap-2">
           <Zap className="h-4 w-4 text-primary" />
@@ -803,7 +804,7 @@ function ApprovalQueueMock({ t }: { t: (k: string) => string }) {
       </div>
       <div className="divide-y divide-border">
         {items.map((it) => (
-          <div key={it.who + it.type} className="flex items-center gap-3 px-4 py-3">
+          <div key={it.who + it.type} className="flex min-w-0 items-center gap-3 px-4 py-3">
             <div className="h-8 w-8 rounded-full bg-primary/15 text-primary text-[11px] font-bold flex items-center justify-center shrink-0">
               {it.who.split(' ').map(s => s[0]).join('')}
             </div>
@@ -819,12 +820,12 @@ function ApprovalQueueMock({ t }: { t: (k: string) => string }) {
             )}>
               {it.sla === 'ok' ? 'On time' : it.sla === 'warn' ? 'Soon' : 'Late'}
             </div>
-            <button className="h-7 px-2.5 rounded-md gradient-primary text-primary-foreground text-[11px] font-semibold shadow-sm">
+            <span aria-hidden="true" className="inline-flex h-7 items-center justify-center rounded-md px-2.5 gradient-primary text-primary-foreground text-[11px] font-semibold shadow-sm">
               <Check className="h-3 w-3 inline" strokeWidth={3} />
-            </button>
-            <button className="h-7 px-2 rounded-md border border-border text-[11px] font-semibold text-muted-foreground hover:bg-muted/40">
+            </span>
+            <span aria-hidden="true" className="inline-flex h-7 items-center justify-center rounded-md border border-border px-2 text-[11px] font-semibold text-muted-foreground">
               <X className="h-3 w-3 inline" strokeWidth={3} />
-            </button>
+            </span>
           </div>
         ))}
       </div>

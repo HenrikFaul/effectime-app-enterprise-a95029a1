@@ -3,10 +3,10 @@
  * is enabled for the active workspace's tenant. Optionally shows a fallback
  * (e.g. an upgrade prompt).
  *
- * Fail-open default: if the workspace returns *zero* enabled features
- * (legacy workspace with no tenant/tier binding), the gate stays open so
- * pre-tiering workspaces keep working. Once any feature is enabled, the
- * gate enforces strictly. Override with `strictWhenEmpty` to disable this.
+ * The gate is deliberately fail-closed: a missing workspace binding, an
+ * empty entitlement result, or an entitlement lookup error must never expose
+ * gated content. Loading also renders no children, preventing a brief flash
+ * of unavailable functionality while the query resolves.
  */
 import type { ReactNode } from "react";
 import { useEnabledFeatures } from "@/hooks/useFeature";
@@ -18,7 +18,7 @@ interface FeatureGateProps {
   fallback?: ReactNode;
   /** When true, renders fallback while loading instead of nothing. */
   showFallbackWhileLoading?: boolean;
-  /** When true, the gate is strict even when no features are returned. */
+  /** @deprecated Gates are now always strict when the entitlement result is empty. */
   strictWhenEmpty?: boolean;
 }
 
@@ -28,11 +28,8 @@ export function FeatureGate({
   children,
   fallback = null,
   showFallbackWhileLoading = false,
-  strictWhenEmpty = false,
 }: FeatureGateProps) {
-  const { isEnabled, isLoading, features } = useEnabledFeatures(workspaceId);
+  const { isEnabled, isLoading, isError } = useEnabledFeatures(workspaceId);
   if (isLoading) return showFallbackWhileLoading ? <>{fallback}</> : null;
-  const tierActive = features.length > 0 || strictWhenEmpty;
-  const allow = !tierActive || isEnabled(feature);
-  return <>{allow ? children : fallback}</>;
+  return <>{workspaceId && !isError && isEnabled(feature) ? children : fallback}</>;
 }

@@ -25,6 +25,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Plus, Copy, XCircle, CheckCircle2, RefreshCw, Code2, ExternalLink, Settings2, Pencil, Palette } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
+import { buildPublicAppUrl, getPublicAppOrigin } from '@/lib/platform/mobile';
 
 interface Props {
   workspaceId: string;
@@ -53,13 +54,12 @@ function buildEmbedUrl(
   view: string,
   params: { office?: string; from?: string; mode?: string; member?: string },
 ): string {
-  const base = window.location.origin;
   const sp = new URLSearchParams({ token: rawToken });
   if (params.office) sp.set('office', params.office);
   if (params.from)   sp.set('from', params.from);
   if (params.mode && params.mode !== 'weekly') sp.set('mode', params.mode);
   if (params.member) sp.set('member', params.member);
-  return `${base}/#/embed/${view}?${sp.toString()}`;
+  return buildPublicAppUrl(`/#/embed/${view}?${sp.toString()}`);
 }
 
 function buildIframeSnippet(url: string, height = 500): string {
@@ -245,12 +245,11 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
   const builderUrl = (() => {
     if (!builderToken?.token) return '';
     if (builderView === '__multi__') {
-      const base = window.location.origin;
       const views = (builderToken.allowed_views ?? []).join(',');
       const sp = new URLSearchParams({ token: builderToken.token, views });
       if (builderOffice) sp.set('office', builderOffice);
       if (builderMember) sp.set('member', builderMember);
-      return `${base}/#/embed/multi?${sp.toString()}`;
+      return buildPublicAppUrl(`/#/embed/multi?${sp.toString()}`);
     }
     return buildEmbedUrl(builderToken.token, builderView, {
       office:  builderOffice  || undefined,
@@ -272,7 +271,7 @@ export function EmbedManager({ workspaceId, userId: _userId }: Props) {
         office: builderOffice || undefined,
         member: (views.includes('member_schedule') || views.length > 1) ? (builderMember || undefined) : undefined,
         mode:   views.includes('capacity_planner') ? (builderMode !== 'weekly' ? builderMode : undefined) : undefined,
-        origin: window.location.origin,
+        origin: getPublicAppOrigin(),
       });
     }
     return builderUrl

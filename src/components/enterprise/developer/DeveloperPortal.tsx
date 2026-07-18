@@ -91,8 +91,11 @@ interface UsageDay {
   count: number;
 }
 
-const ALL_SCOPES = ['read', 'write', 'admin'] as const;
-type Scope = (typeof ALL_SCOPES)[number];
+// The restored public gateway is intentionally read-only. Write/admin scopes
+// were advertised before their endpoints existed and must not be issued as a
+// promise of capabilities the server cannot honour.
+const CREATABLE_SCOPES = ['read'] as const;
+type Scope = (typeof CREATABLE_SCOPES)[number];
 
 const ALL_EVENTS = [
   'leave.approved',
@@ -366,12 +369,10 @@ export function DeveloperPortal({ workspaceId, userId }: Props) {
   };
 
   const API_ENDPOINTS = [
-    t('developer.endpoint_employees'),
-    t('developer.endpoint_leave_get'),
-    t('developer.endpoint_leave_post'),
-    t('developer.endpoint_schedules_get'),
-    t('developer.endpoint_schedules_post'),
-    t('developer.endpoint_teams'),
+    `GET /v1/health — ${t('integrations.api_endpoint_health')}`,
+    `GET /v1/employees — ${t('integrations.api_endpoint_employees')}`,
+    `GET /v1/schedules — ${t('integrations.api_endpoint_schedules')}`,
+    `GET /v1/leave-requests — ${t('integrations.api_endpoint_leave_requests')}`,
   ];
 
   // ── Render ──────────────────────────────────────────────────────────────────
@@ -708,7 +709,7 @@ export function DeveloperPortal({ workspaceId, userId }: Props) {
             </div>
             <div className="space-y-2">
               <Label>{t('developer.scopes')}</Label>
-              {ALL_SCOPES.map((scope) => (
+              {CREATABLE_SCOPES.map((scope) => (
                 <div key={scope} className="flex items-start gap-3 rounded-md border p-3">
                   <Checkbox
                     id={`scope-${scope}`}

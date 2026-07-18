@@ -11,9 +11,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Plus, Trash2, ArrowLeft, Save, Play, Code, Wand2, BarChart3, LineChart as LineIcon, PieChart as PieIcon, Table2, Hash, Trophy, Grid3x3, Layers as LayersIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { getDataSourceFields, getDataSourceLabels, type ReportDataSource, type ReportChartType, type ReportConfig, type ReportFilter, type SemanticDataset } from './reportTemplates';
+import { getDataSourceFields, getDataSourceLabels, normalizeReportConfig, type ReportDataSource, type ReportChartType, type ReportConfig, type ReportFilter, type SemanticDataset } from './reportTemplates';
 import type { SavedReport } from './ReportLibrary';
 import { SqlMode } from './SqlMode';
+import { SQL_MODE_EXAMPLE } from './sqlModeContract';
 import { ReportRunner } from './ReportRunner';
 import { DatasetBrowser } from './DatasetBrowser';
 import { LivePreviewPane } from './LivePreviewPane';
@@ -35,15 +36,10 @@ export function ReportBuilder({ workspaceId, userId, existing, onCancel, onSaved
   const [dataSource, setDataSource] = useState<ReportDataSource>(existing?.data_source || 'memberships');
   const [chartType, setChartType] = useState<ReportChartType>(existing?.chart_type || 'table');
   const [isShared, setIsShared] = useState(existing?.is_shared ?? true);
-  const [config, setConfig] = useState<ReportConfig>(existing?.config || {
-    fields: [],
-    filters: [],
-    group_by: [],
-    aggregations: [],
-  });
+  const [config, setConfig] = useState<ReportConfig>(() => normalizeReportConfig(existing?.config));
   const [previewOpen, setPreviewOpen] = useState(false);
-  const [mode, setMode] = useState<'visual' | 'sql'>('visual');
-  const [sqlText, setSqlText] = useState('');
+  const [mode, setMode] = useState<'visual' | 'sql'>(() => existing?.config.sql ? 'sql' : 'visual');
+  const [sqlText, setSqlText] = useState(() => existing?.config.sql || SQL_MODE_EXAMPLE);
   const [selectedDataset, setSelectedDataset] = useState<SemanticDataset | null>(null);
   const isMobile = useIsMobile();
 

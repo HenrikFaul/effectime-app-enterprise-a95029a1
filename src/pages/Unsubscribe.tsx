@@ -4,6 +4,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useI18n } from '@/i18n/I18nProvider';
+import { resolveUnsubscribeOutcome } from '@/lib/unsubscribeResult';
+import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from '@/config/publicRuntime';
 
 export default function Unsubscribe() {
   const { t } = useI18n();
@@ -16,10 +18,15 @@ export default function Unsubscribe() {
     if (!token) { setStatus('invalid'); return; }
     (async () => {
       try {
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/handle-email-unsubscribe?token=${token}`,
-          { headers: { apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY } }
+        const endpoint = new URL(
+          '/functions/v1/handle-email-unsubscribe',
+          SUPABASE_URL,
         );
+        endpoint.searchParams.set('token', token);
+        const res = await fetch(endpoint, {
+          headers: { apikey: SUPABASE_PUBLISHABLE_KEY },
+        });
+        if (!res.ok) { setStatus(res.status === 404 ? 'invalid' : 'error'); return; }
         const data = await res.json();
         if (data.valid === false && data.reason === 'already_unsubscribed') setStatus('already');
         else if (data.valid) setStatus('valid');
@@ -31,10 +38,12 @@ export default function Unsubscribe() {
   const handleUnsubscribe = async () => {
     setProcessing(true);
     try {
-      await supabase.functions.invoke('handle-email-unsubscribe', { body: { token } });
-      setStatus('done');
+      const { data, error } = await supabase.functions.invoke('handle-email-unsubscribe', {
+        body: { token },
+      });
+      setStatus(resolveUnsubscribeOutcome(data, error));
     } catch { setStatus('error'); }
-    setProcessing(false);
+    finally { setProcessing(false); }
   };
 
   return (

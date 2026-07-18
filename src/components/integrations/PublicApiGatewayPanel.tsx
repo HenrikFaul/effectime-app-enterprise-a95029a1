@@ -5,13 +5,12 @@ import { Badge } from '@/components/ui/badge';
 import { Copy, Webhook, Globe } from 'lucide-react';
 import { toast } from 'sonner';
 import { useI18n } from '@/i18n/I18nProvider';
+import { SUPABASE_URL, buildSupabaseFunctionUrl } from '@/config/publicRuntime';
 
 interface Props {
   /** Supabase project URL (without trailing slash). Read from import.meta.env or constant. */
   projectUrl?: string;
 }
-
-const SUPABASE_URL = 'https://oezlzzmzzvbvinuysxaz.supabase.co';
 
 /**
  * PublicApiGatewayPanel — Top-20 Rank 9, v3.24.0.
@@ -26,7 +25,7 @@ export function PublicApiGatewayPanel({ projectUrl = SUPABASE_URL }: Props) {
   const { t } = useI18n();
   const [copied, setCopied] = useState<string | null>(null);
 
-  const base = `${projectUrl}/functions/v1/public-api`;
+  const base = buildSupabaseFunctionUrl('public-api', projectUrl);
   const examples = [
     { route: 'GET /v1/health', desc: t('integrations.api_endpoint_health'), curl: `curl -H "Authorization: Bearer YOUR_API_KEY" ${base}/v1/health` },
     { route: 'GET /v1/employees', desc: t('integrations.api_endpoint_employees'), curl: `curl -H "Authorization: Bearer YOUR_API_KEY" ${base}/v1/employees` },

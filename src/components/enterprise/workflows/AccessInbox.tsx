@@ -74,7 +74,7 @@ export function AccessInbox({ workspaceId, isAdmin, userId }: Props) {
   const submit = async () => {
     if (!memberId || !systemId) return;
     setBusy(true);
-    const { data, error } = await (supabase as any)
+    const { error } = await (supabase as any)
       .from('enterprise_access_requests')
       .insert({
         workspace_id: workspaceId,
@@ -83,20 +83,11 @@ export function AccessInbox({ workspaceId, isAdmin, userId }: Props) {
         reason: reason.trim() || null,
         status: 'pending',
         requested_by: userId,
-      })
-      .select('id')
-      .single();
+      });
     if (error) {
       setBusy(false);
       toast.error(error.message);
       return;
-    }
-    if (data) {
-      await (supabase as any).from('enterprise_access_decisions').insert({
-        request_id: data.id,
-        action: 'submit',
-        actor_id: userId,
-      });
     }
     setBusy(false);
     setMemberId('');
@@ -107,26 +98,15 @@ export function AccessInbox({ workspaceId, isAdmin, userId }: Props) {
   };
 
   const decide = async (req: AccessRequest, action: 'approve' | 'reject' | 'revoke' | 'cancel' | 'mark_granted') => {
-    const newStatus =
-      action === 'approve' ? 'approved' :
-      action === 'reject' ? 'rejected' :
-      action === 'revoke' ? 'revoked' :
-      action === 'cancel' ? 'cancelled' :
-      action === 'mark_granted' ? 'granted' : req.status;
-
-    const { error } = await (supabase as any)
-      .from('enterprise_access_requests')
-      .update({ status: newStatus, decided_at: new Date().toISOString(), decided_by: userId })
-      .eq('id', req.id);
+    const { error } = await (supabase as any).rpc('decide_access_request', {
+      _workspace_id: workspaceId,
+      _request_id: req.id,
+      _action: action,
+    });
     if (error) {
       toast.error(error.message);
       return;
     }
-    await (supabase as any).from('enterprise_access_decisions').insert({
-      request_id: req.id,
-      action: action === 'mark_granted' ? 'approve' : action,
-      actor_id: userId,
-    });
     load();
   };
 

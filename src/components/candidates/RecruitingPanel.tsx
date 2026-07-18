@@ -13,6 +13,7 @@ import {
   createInterviewSlot,
   generateCandidateOnboarding,
 } from '@/hooks/useCandidates';
+import { buildPublicAppUrl } from '@/lib/platform/mobile';
 
 interface Props {
   workspaceId: string;
@@ -62,7 +63,9 @@ export function RecruitingPanel({ workspaceId }: Props) {
       // Auto-show the booking link
       const newSlot = (await (await refetchSlots()).data)?.find((s) => s.id === slotId);
       if (newSlot?.booking_token) {
-        await navigator.clipboard?.writeText(`${window.location.origin}/book/${newSlot.booking_token}`)
+        await navigator.clipboard?.writeText(
+          buildPublicAppUrl(`/book/${encodeURIComponent(newSlot.booking_token)}`),
+        )
           .catch(() => undefined);
         toast.message(t('recruiting.booking_url_copied'));
       }
@@ -88,7 +91,7 @@ export function RecruitingPanel({ workspaceId }: Props) {
   };
 
   const copyBookingUrl = async (token: string) => {
-    const url = `${window.location.origin}/book/${token}`;
+    const url = buildPublicAppUrl(`/book/${encodeURIComponent(token)}`);
     try {
       await navigator.clipboard.writeText(url);
       toast.success(t('recruiting.booking_url_copied'));

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,15 +7,21 @@ import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
+import type { Database } from '@/integrations/supabase/types';
 
 interface Props {
   workspaceId: string;
 }
 
+type AuditEvent = Pick<
+  Database['public']['Tables']['enterprise_audit_events']['Row'],
+  'id' | 'action' | 'actor_id' | 'affected_user_id' | 'created_at' | 'metadata'
+>;
+
 export function AuditLog({ workspaceId }: Props) {
   const { t } = useI18n();
   const dateFnsLocale = useDateLocale();
-  const [events, setEvents] = useState<any[]>([]);
+  const [events, setEvents] = useState<AuditEvent[]>([]);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [actionFilter, setActionFilter] = useState('all');
@@ -46,11 +52,11 @@ export function AuditLog({ workspaceId }: Props) {
     { value: 'settings', label: t('audit_log.filter_settings') },
   ];
 
-  const fetchEvents = async () => {
+  const fetchEvents = useCallback(async () => {
     setLoading(true);
     let query = supabase
       .from('enterprise_audit_events')
-      .select('*')
+      .select('id,action,actor_id,affected_user_id,created_at,metadata')
       .eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false })
       .limit(100);
@@ -61,25 +67,25 @@ export function AuditLog({ workspaceId }: Props) {
 
     const { data, error: eventsErr } = await query;
     if (eventsErr) {
-      console.error('[AuditLog] Failed to fetch events:', eventsErr.message);
+      console.error('AuditLog event query failed', eventsErr.message);
       setLoading(false);
       return;
     }
-    const items = (data as any[]) || [];
+    const items: AuditEvent[] = data || [];
     setEvents(items);
 
     const userIds = [...new Set([...items.map(e => e.actor_id), ...items.filter(e => e.affected_user_id).map(e => e.affected_user_id)])];
     if (userIds.length > 0) {
       const { data: profileData, error: profileErr } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);
-      if (profileErr) console.error('[AuditLog] Failed to fetch profiles:', profileErr.message);
+      if (profileErr) console.error('AuditLog profile query failed', profileErr.message);
       const map: Record<string, string> = {};
-      (profileData || []).forEach((p: any) => { map[p.user_id] = p.display_name || t('audit_log.actor_unknown'); });
+      (profileData || []).forEach(p => { map[p.user_id] = p.display_name || t('audit_log.actor_unknown'); });
       setProfiles(map);
     }
     setLoading(false);
-  };
+  }, [actionFilter, t, workspaceId]);
 
-  useEffect(() => { fetchEvents(); }, [workspaceId, actionFilter]);
+  useEffect(() => { void fetchEvents(); }, [fetchEvents]);
 
   const filteredEvents = searchQuery
     ? events.filter(e => {
@@ -127,7 +133,7 @@ export function AuditLog({ workspaceId }: Props) {
                   {e.affected_user_id && e.affected_user_id !== e.actor_id && (
                     <p className="text-muted-foreground">→ {profiles[e.affected_user_id] || e.affected_user_id}</p>
                   )}
-                  {e.metadata && Object.keys(e.metadata).length > 0 && (
+                  {e.metadata && Object.keys(e.metadata as object).length > 0 && (
                     <p className="text-muted-foreground truncate">{JSON.stringify(e.metadata)}</p>
                   )}
                 </div>

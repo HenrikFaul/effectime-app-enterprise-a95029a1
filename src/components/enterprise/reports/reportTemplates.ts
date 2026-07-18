@@ -21,12 +21,24 @@ export interface ReportFilter {
 }
 
 export interface ReportConfig {
+  sql?: string;
   fields: string[];
   filters: ReportFilter[];
   group_by: string[];
   aggregations: { field: string; fn: 'count' | 'sum' | 'avg' | 'min' | 'max'; alias?: string }[];
   sort?: { field: string; dir: 'asc' | 'desc' }[];
   limit?: number;
+}
+
+export function normalizeReportConfig(config?: Partial<ReportConfig> | null): ReportConfig {
+  return {
+    ...config,
+    fields: Array.isArray(config?.fields) ? config.fields : [],
+    filters: Array.isArray(config?.filters) ? config.filters : [],
+    group_by: Array.isArray(config?.group_by) ? config.group_by : [],
+    aggregations: Array.isArray(config?.aggregations) ? config.aggregations : [],
+    sort: Array.isArray(config?.sort) ? config.sort : [],
+  };
 }
 
 export interface ReportTemplate {

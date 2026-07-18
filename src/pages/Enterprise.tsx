@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -31,6 +31,7 @@ import { useT } from '@/i18n/I18nProvider';
 import { AppShell, SkipToContent } from '@/components/shell/AppShell';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { DensityToggle } from '@/components/shell/DensityToggle';
+import { normalizeWorkspaceTab } from '@/lib/workspaceTabs';
 
 interface Workspace {
   id: string;
@@ -66,6 +67,7 @@ export default function Enterprise() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [acceptingInvite, setAcceptingInvite] = useState(false);
+  const acceptingInviteTokenRef = useRef<string | null>(null);
   const [workspaceToDelete, setWorkspaceToDelete] = useState<Workspace | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [showSeedConfig, setShowSeedConfig] = useState(false);
@@ -75,7 +77,7 @@ export default function Enterprise() {
   // Workspace identity comes from the URL path (/w/<workspaceId>). When the
   // user is on /app the path param is undefined → picker mode. ?ws=<id> is the
   // legacy query-param shape; we redirect it to the path shape on mount.
-  const activeTab = searchParams.get('tab') || 'members';
+  const activeTab = normalizeWorkspaceTab(searchParams.get('tab'));
   const inviteToken = searchParams.get('invite') || null;
   const forceSelector = searchParams.get('select') === '1';
   const legacyWsParam = searchParams.get('ws');
@@ -92,10 +94,21 @@ export default function Enterprise() {
     navigate(`/w/${legacyWsParam}${qs ? `?${qs}` : ''}`, { replace: true });
   }, [workspaceIdFromUrl, legacyWsParam, navigate, searchParams]);
 
+  // Keep workspace deep links canonical. Unknown tab values previously left
+  // Radix Tabs with no matching content, producing an empty dashboard.
+  useEffect(() => {
+    if (!workspaceIdFromUrl) return;
+    const requestedTab = searchParams.get('tab');
+    if (!requestedTab || requestedTab === activeTab) return;
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('tab', activeTab);
+    setSearchParams(nextParams, { replace: true });
+  }, [activeTab, searchParams, setSearchParams, workspaceIdFromUrl]);
+
   const setActiveTab = (tab: string) => {
     if (!selectedWorkspaceId) return;
     const nextParams = new URLSearchParams(searchParams);
-    nextParams.set('tab', tab);
+    nextParams.set('tab', normalizeWorkspaceTab(tab));
     nextParams.delete('ws');
     // push (not replace) so the browser Back button traverses tab history
     setSearchParams(nextParams);
@@ -126,23 +139,23 @@ export default function Enterprise() {
         .eq('user_id', user.id)
         .in('status', ['active', 'invited']);
 
-      setMemberships((membershipData as any[]) || []);
+      setMemberships(membershipData || []);
 
       if (membershipData && membershipData.length > 0) {
-        const wsIds = (membershipData as any[]).map((m: any) => m.workspace_id);
+        const wsIds = membershipData.map((membership) => membership.workspace_id);
         const { data: wsData } = await supabase
           .from('enterprise_workspaces')
           .select('*')
           .in('id', wsIds)
           .eq('is_archived', false);
-        setWorkspaces((wsData as any[]) || []);
+        setWorkspaces(wsData || []);
       } else {
         const { data: ownedData } = await supabase
           .from('enterprise_workspaces')
           .select('*')
           .eq('created_by', user.id)
           .eq('is_archived', false);
-        setWorkspaces((ownedData as any[]) || []);
+        setWorkspaces(ownedData || []);
       }
     } catch (err) {
       console.error('Error fetching workspaces:', err);
@@ -220,54 +233,53 @@ export default function Enterprise() {
   }, [workspaceIdFromUrl, workspaces, loading, navigate, t]);
 
   useEffect(() => {
-    if (!user || !inviteToken || acceptingInvite) return;
-
-    let cancelled = false;
+    if (!user || !inviteToken || acceptingInviteTokenRef.current === inviteToken) return;
+    acceptingInviteTokenRef.current = inviteToken;
 
     const acceptInvite = async () => {
       setAcceptingInvite(true);
+      try {
+        const { data, error } = await supabase.functions.invoke('join-event', {
+          body: {
+            action: 'accept-enterprise-invite',
+            invitation_token: inviteToken,
+          },
+        });
 
-      const { data, error } = await supabase.functions.invoke('join-event', {
-        body: {
-          action: 'accept-enterprise-invite',
-          invitation_token: inviteToken,
-        },
-      });
+        const nextParams = new URLSearchParams(searchParams);
+        nextParams.delete('invite');
+        nextParams.delete('ws');
 
-      if (cancelled) return;
+        if (error || data?.error) {
+          toast.error(data?.error || t('enterprise_page.accept_invite_error'));
+          setSearchParams(nextParams, { replace: true });
+          return;
+        }
 
-      const nextParams = new URLSearchParams(searchParams);
-      nextParams.delete('invite');
-      nextParams.delete('ws');
+        await fetchWorkspaces();
 
-      if (error || data?.error) {
-        toast.error(data?.error || t('enterprise_page.accept_invite_error'));
+        if (data?.workspace_id) {
+          localStorage.setItem(ACTIVE_WORKSPACE_KEY, data.workspace_id);
+          // Replace history — the /app?invite=<token> URL is one-time and
+          // back-buttoning to it would attempt to re-accept the invite.
+          navigate(`/w/${data.workspace_id}`, { replace: true });
+        } else {
+          setSearchParams(nextParams, { replace: true });
+        }
+        toast.success(data?.already_member ? t('enterprise_page.already_member') : t('enterprise_page.invite_accepted'));
+      } catch (error) {
+        console.error('[Enterprise] Invitation acceptance failed:', error);
+        toast.error(t('enterprise_page.accept_invite_error'));
+        const nextParams = new URLSearchParams(searchParams);
+        nextParams.delete('invite');
         setSearchParams(nextParams, { replace: true });
+      } finally {
         setAcceptingInvite(false);
-        return;
       }
-
-      await fetchWorkspaces();
-      if (cancelled) return;
-
-      if (data?.workspace_id) {
-        localStorage.setItem(ACTIVE_WORKSPACE_KEY, data.workspace_id);
-        // Replace history — the /app?invite=<token> URL is one-time and
-        // back-buttoning to it would attempt to re-accept the invite.
-        navigate(`/w/${data.workspace_id}`, { replace: true });
-      } else {
-        setSearchParams(nextParams, { replace: true });
-      }
-      toast.success(data?.already_member ? t('enterprise_page.already_member') : t('enterprise_page.invite_accepted'));
-      setAcceptingInvite(false);
     };
 
-    acceptInvite();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [user, inviteToken, acceptingInvite, fetchWorkspaces, searchParams, setSearchParams]);
+    void acceptInvite();
+  }, [user, inviteToken, fetchWorkspaces, navigate, searchParams, setSearchParams, t]);
 
   const getRoleForWorkspace = (wsId: string) => {
     const m = memberships.find(m => m.workspace_id === wsId);

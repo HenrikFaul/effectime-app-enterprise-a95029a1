@@ -9,17 +9,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
-import { FileUser, UserPlus, Building2, ListChecks, Mail, KeyRound, Check, X, Eye, EyeOff } from 'lucide-react';
+import { FileUser, UserPlus, Building2, ListChecks } from 'lucide-react';
 import { RoleAllocationEditor, Allocation } from './RoleAllocationEditor';
 import { PositionPickerDialog, type PositionPickerResult } from './positions/PositionPickerDialog';
 import { useT, useI18n } from '@/i18n/I18nProvider';
-import { validatePasswordPolicy, PASSWORD_POLICY_RULES, type PasswordPolicyFailure } from '@/lib/security/passwordPolicy';
+import { buildPublicAppUrl } from '@/lib/platform/mobile';
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workspaceId: string;
   invitedBy: string;
+  actorRole: string;
   onInvited: () => void;
 }
 
@@ -39,7 +40,7 @@ interface MemberTemplate {
   default_location: string | null;
 }
 
-export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy, onInvited }: Props) {
+export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy, actorRole, onInvited }: Props) {
   const tt = useT();
   const { t } = useI18n();
   const [email, setEmail] = useState('');
@@ -75,13 +76,11 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
   const [showNewTemplate, setShowNewTemplate] = useState(false);
   const [newTemplateName, setNewTemplateName] = useState('');
 
-  // v3.33.0 — direct-create-with-password mode (no email sent; admin sets pw)
-  const [mode, setMode] = useState<'invite' | 'create'>('invite');
-  const [password, setPassword] = useState('');
-  const [passwordConfirm, setPasswordConfirm] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const policy = validatePasswordPolicy(password);
-  const passwordMatches = password.length > 0 && password === passwordConfirm;
+  const canAssignElevatedRole = actorRole === 'owner';
+
+  useEffect(() => {
+    if (!canAssignElevatedRole && role !== 'member') setRole('member');
+  }, [canAssignElevatedRole, role]);
 
   useEffect(() => {
     if (!open) return;
@@ -129,21 +128,16 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
     };
   }, [open, workspaceId]);
 
-  // Mode-toggle helper: switching invite ↔ create resets password fields
-  // so a half-typed password never leaks across modes (B-11).
-  const handleModeChange = (next: 'invite' | 'create') => {
-    setMode(next);
-    setPassword('');
-    setPasswordConfirm('');
-    setShowPassword(false);
-  };
-
   const applyTemplate = (templateId: string) => {
     const tmpl = templates.find(t => t.id === templateId);
     if (!tmpl) return;
     setSelectedTemplate(templateId);
-    setRole(tmpl.default_role || 'member');
-    setAllocations(tmpl.default_business_role ? [{ business_role: tmpl.default_business_role, percentage: 100 }] : []);
+    setRole(canAssignElevatedRole ? (tmpl.default_role || 'member') : 'member');
+    setAllocations(tmpl.default_business_role ? [{
+      business_role: tmpl.default_business_role,
+      percentage: 100,
+      is_priority: true,
+    }] : []);
     setOfficeId(tmpl.default_office_id || '');
     setCity(tmpl.default_city || '');
     setLocation(tmpl.default_location || '');
@@ -165,70 +159,35 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
     setLeadershipCategory('');
     setEmployerRights(false);
     setPickedPosition(null);
-    setMode('invite');
-    setPassword('');
-    setPasswordConfirm('');
-    setShowPassword(false);
   };
 
-  // v3.33.0 — direct-create handler (no email; admin-set password).
-  // Validates client-side first; the edge fn re-validates server-side
-  // using validate_password_policy() for defense in depth.
-  const handleCreateUser = async () => {
-    const normEmail = email.trim().toLowerCase();
-    if (!normEmail || !normEmail.includes('@')) {
-      toast.error(tt('members.invite_email_invalid'));
-      return;
+  const buildMemberPrefill = (includeDisplayName: boolean) => {
+    const prefill: Record<string, unknown> = {};
+    const primaryRole = pickedPosition?.positionLabel
+      || allocations.find((allocation) => allocation.is_priority)?.business_role
+      || allocations[0]?.business_role
+      || null;
+    if (includeDisplayName && displayName.trim()) prefill.display_name = displayName.trim();
+    if (primaryRole) prefill.business_role = primaryRole;
+    if (allocations.length > 0) prefill.role_allocations = allocations;
+    if (officeId) prefill.office_id = officeId;
+    if (city) prefill.city = city;
+    if (location) prefill.location = location;
+    if (orgUnitId) prefill.org_unit_id = orgUnitId;
+    if (managerId) prefill.manager_id = managerId;
+    if (contractTypeId) prefill.contract_type_id = contractTypeId;
+    if (leadershipLevelId) prefill.leadership_level_id = leadershipLevelId;
+    if (leadershipCategory) prefill.leadership_category = leadershipCategory;
+    if (employerRights) prefill.employer_rights = true;
+    if (pickedPosition) {
+      prefill.position_catalog_id = pickedPosition.positionRoleId;
+      prefill.position_source = pickedPosition.source;
+      prefill.seniority = pickedPosition.seniority;
+      prefill.position_skills = pickedPosition.skillIds;
     }
-    if (!displayName.trim()) {
-      toast.error(tt('members.invite_name_required'));
-      return;
-    }
-    if (!policy.ok) {
-      toast.error(tt('members.create_password_policy_failed'));
-      return;
-    }
-    if (!passwordMatches) {
-      toast.error(tt('members.create_password_mismatch'));
-      return;
-    }
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke('create-workspace-user', {
-        body: {
-          workspace_id: workspaceId,
-          email: normEmail,
-          display_name: displayName.trim(),
-          password,
-          role,
-          business_role: pickedPosition?.business_role ?? null,
-          team: null,
-          location: location.trim() || null,
-        },
-      });
-      if (error) throw error;
-      const payload = data as { ok?: boolean; error?: string; failures?: string[] };
-      if (payload?.error) throw new Error(payload.error);
-
-      toast.success(tt('members.create_success', { name: displayName.trim() }));
-      try {
-        await logAuditEvent({
-          workspace_id: workspaceId,
-          actor_id: invitedBy,
-          action: 'enterprise.member.create_direct',
-          metadata: { email: normEmail, role },
-        });
-      } catch { /* audit failure is non-blocking */ }
-      resetForm();
-      onOpenChange(false);
-      onInvited();
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      toast.error(tt('members.create_error') + ': ' + msg);
-    } finally {
-      setLoading(false);
-    }
+    return prefill;
   };
+
 
   const handleInvite = async () => {
     if (!email.trim() || !email.includes('@')) {
@@ -241,98 +200,83 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
     }
 
     const normalizedEmail = email.trim().toLowerCase();
+    const requestedRole = canAssignElevatedRole ? role : 'member';
     const inviteExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const prefillData = buildMemberPrefill(true);
 
     setLoading(true);
     try {
-      const { data: invData, error: invError } = await supabase
-        .from('enterprise_invitations')
-        .insert({
-          workspace_id: workspaceId,
-          email: normalizedEmail,
-          role: role as any,
-          invited_by: invitedBy,
-          expires_at: inviteExpiresAt.toISOString(),
-        })
-        .select('id, token')
-        .single();
+      const { data: issuedData, error: invError } = await (supabase as any).rpc(
+        'issue_enterprise_invitation',
+        {
+          _workspace_id: workspaceId,
+          _email: normalizedEmail,
+          _role: requestedRole,
+          _expires_at: inviteExpiresAt.toISOString(),
+          _prefill: prefillData,
+        },
+      );
 
       if (invError) {
-        if (invError.code === '23505') {
+        throw invError;
+      }
+      if (issuedData?.ok !== true) {
+        if (issuedData?.code === 'ALREADY_MEMBER') {
           toast.error(tt('members.invite_already_member'));
-        } else {
-          throw invError;
+          return;
         }
-        return;
+        throw new Error('Invitation could not be issued');
       }
-
-      const prefillData: Record<string, any> = {};
-      const primaryRole = pickedPosition?.positionLabel || allocations[0]?.business_role || null;
-      if (displayName.trim()) prefillData.display_name = displayName.trim();
-      if (primaryRole) prefillData.business_role = primaryRole;
-      if (allocations.length > 0) prefillData.role_allocations = allocations;
-      if (officeId) prefillData.office_id = officeId;
-      if (city) prefillData.city = city;
-      if (location) prefillData.location = location;
-      if (orgUnitId) prefillData.org_unit_id = orgUnitId;
-      if (managerId) prefillData.manager_id = managerId;
-      if (contractTypeId) prefillData.contract_type_id = contractTypeId;
-      if (leadershipLevelId) prefillData.leadership_level_id = leadershipLevelId;
-      if (leadershipCategory) prefillData.leadership_category = leadershipCategory;
-      if (employerRights) prefillData.employer_rights = true;
-      if (pickedPosition) {
-        prefillData.position_catalog_id = pickedPosition.positionRoleId;
-        prefillData.seniority = pickedPosition.seniority;
-        prefillData.position_skills = pickedPosition.skillIds;
-      }
+      const invData = {
+        id: String(issuedData.invitation_id),
+        token: String(issuedData.token),
+      };
 
       let workspaceName = t('invitations.workspace_name_fallback');
 
       if (invData) {
-        try {
-          const { data: ws } = await supabase
-            .from('enterprise_workspaces')
-            .select('name, settings')
-            .eq('id', workspaceId)
-            .single();
-
+        const { data: ws, error: workspaceNameError } = await supabase
+          .from('enterprise_workspaces')
+          .select('name')
+          .eq('id', workspaceId)
+          .single();
+        if (workspaceNameError) {
+          console.warn('Could not load invitation workspace name:', workspaceNameError);
+        } else {
           workspaceName = ws?.name || workspaceName;
-
-          if (Object.keys(prefillData).length > 0) {
-            const settings = (ws?.settings as Record<string, any>) || {};
-            if (!settings.invitation_prefills) settings.invitation_prefills = {};
-            settings.invitation_prefills[invData.id] = prefillData;
-
-            await supabase
-              .from('enterprise_workspaces')
-              .update({ settings: settings as any })
-              .eq('id', workspaceId);
-          }
-        } catch (prefillErr) {
-          console.warn('Could not save prefill data:', prefillErr);
         }
+
       }
 
       const inviteRedirectPath = invData?.token ? `/app?invite=${invData.token}` : '/app';
-      const signInUrl = new URL('/', window.location.origin);
-      signInUrl.hash = `/auth?redirect=${encodeURIComponent(inviteRedirectPath)}`;
-      const roleLabel = getRoleLabel(role);
+      const signInUrl = buildPublicAppUrl(
+        `/#/auth?redirect=${encodeURIComponent(inviteRedirectPath)}`,
+      );
+      const roleLabel = getRoleLabel(requestedRole);
 
-      const { error: emailError } = await supabase.functions.invoke('send-transactional-email', {
+      const { data: emailData, error: emailError } = await supabase.functions.invoke('send-transactional-email', {
         body: {
           templateName: 'enterprise-invite',
           recipientEmail: normalizedEmail,
           idempotencyKey: `enterprise-invite-${invData?.id}`,
+          workspaceId,
+          invitationId: invData?.id,
           templateData: {
             workspaceName,
             inviteeEmail: normalizedEmail,
             inviteeName: displayName.trim(),
             roleLabel,
-            signInUrl: signInUrl.toString(),
+            signInUrl,
             expiresAt: inviteExpiresAt.toLocaleDateString('hu-HU'),
           },
         },
       });
+      const emailQueued = !emailError && emailData?.success === true;
+      const emailDelivery = emailQueued
+        ? 'queued'
+        : emailData?.reason === 'email_suppressed'
+          ? 'suppressed'
+          : 'failed';
 
       await logAuditEvent({
         workspace_id: workspaceId,
@@ -340,14 +284,14 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
         action: 'membership.invited',
         metadata: {
           email: normalizedEmail,
-          role,
-          email_delivery: emailError ? 'failed' : 'queued',
+          role: requestedRole,
+          email_delivery: emailDelivery,
           ...prefillData,
         },
       });
 
-      if (emailError) {
-        console.error('Invitation email failed:', emailError);
+      if (!emailQueued) {
+        console.error('Invitation email was not queued:', emailError || emailData);
         toast.error(tt('members.invite_email_failed'));
       } else {
         toast.success(tt('members.invite_success', { email: normalizedEmail }));
@@ -369,7 +313,7 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
     const { error } = await supabase.from('enterprise_member_templates').insert({
       workspace_id: workspaceId,
       template_name: newTemplateName.trim(),
-      default_role: role,
+      default_role: canAssignElevatedRole ? role : 'member',
       default_business_role: allocations[0]?.business_role || null,
       default_office_id: officeId || null,
       default_city: city || null,
@@ -401,34 +345,12 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <UserPlus className="h-5 w-5" />
-            {mode === 'invite' ? tt('members.invite_title') : tt('members.create_title')}
+            {tt('members.invite_title')}
           </DialogTitle>
         </DialogHeader>
 
-        {/* v3.33.0 — Mode toggle: invite-by-email vs direct-create-with-password.
-            Same form, same fields, only the submit path differs. */}
-        <div className="inline-flex rounded-md border bg-background overflow-hidden self-start text-xs w-full">
-          <button
-            type="button"
-            onClick={() => handleModeChange('invite')}
-            className={`flex-1 px-3 py-1.5 inline-flex items-center justify-center gap-1.5 ${
-              mode === 'invite' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-            }`}
-          >
-            <Mail className="h-3.5 w-3.5" /> {tt('members.mode_invite')}
-          </button>
-          <button
-            type="button"
-            onClick={() => handleModeChange('create')}
-            className={`flex-1 px-3 py-1.5 inline-flex items-center justify-center gap-1.5 ${
-              mode === 'create' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'
-            }`}
-          >
-            <KeyRound className="h-3.5 w-3.5" /> {tt('members.mode_create')}
-          </button>
-        </div>
         <p className="text-[11px] text-muted-foreground -mt-1">
-          {mode === 'invite' ? tt('members.mode_invite_hint') : tt('members.mode_create_hint')}
+          {tt('members.mode_invite_hint')}
         </p>
 
         {/* Templates */}
@@ -471,8 +393,12 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="member">{tt('members.roles.member')}</SelectItem>
-                <SelectItem value="resourceAssistant">{tt('members.roles.resource_assistant')}</SelectItem>
-                <SelectItem value="owner">{tt('members.roles.owner')}</SelectItem>
+                {canAssignElevatedRole && (
+                  <SelectItem value="resourceAssistant">{tt('members.roles.resource_assistant')}</SelectItem>
+                )}
+                {canAssignElevatedRole && (
+                  <SelectItem value="owner">{tt('members.roles.owner')}</SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -659,90 +585,12 @@ export function InviteMemberDialog({ open, onOpenChange, workspaceId, invitedBy,
           )}
         </div>
 
-        {/* v3.33.0 — Password section, shown only in create mode. */}
-        {mode === 'create' && (
-          <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <KeyRound className="h-4 w-4 text-primary" />
-              {tt('members.create_password_section_title')}
-            </div>
-            <p className="text-[11px] text-muted-foreground">
-              {tt('members.create_password_hint')}
-            </p>
-
-            <div className="space-y-1">
-              <Label htmlFor="create-pw" className="text-xs">{tt('members.create_password_label')}</Label>
-              <div className="relative">
-                <Input
-                  id="create-pw"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pr-9 font-mono"
-                  autoComplete="new-password"
-                  spellCheck={false}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  aria-label={tt(showPassword ? 'members.create_password_hide' : 'members.create_password_show')}
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-1">
-              <Label htmlFor="create-pw-confirm" className="text-xs">{tt('members.create_password_confirm_label')}</Label>
-              <Input
-                id="create-pw-confirm"
-                type={showPassword ? 'text' : 'password'}
-                value={passwordConfirm}
-                onChange={(e) => setPasswordConfirm(e.target.value)}
-                className="font-mono"
-                autoComplete="new-password"
-                spellCheck={false}
-              />
-              {passwordConfirm.length > 0 && !passwordMatches && (
-                <p className="text-[11px] text-red-600 dark:text-red-400">
-                  {tt('members.create_password_mismatch')}
-                </p>
-              )}
-            </div>
-
-            {/* Live policy checklist */}
-            <ul className="space-y-0.5 mt-1">
-              {PASSWORD_POLICY_RULES.map((rule: PasswordPolicyFailure) => {
-                const pass = !policy.failures.includes(rule);
-                return (
-                  <li key={rule} className={`flex items-center gap-1.5 text-[11px] ${
-                    pass ? 'text-emerald-600 dark:text-emerald-400' : 'text-muted-foreground'
-                  }`}>
-                    {pass ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
-                    {tt(`members.password_rule_${rule}` as 'members.password_rule_min_length_10')}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => { resetForm(); onOpenChange(false); }}>{tt('common.cancel')}</Button>
-          {mode === 'invite' ? (
-            <Button onClick={handleInvite} disabled={loading || !email.trim() || !displayName.trim()}>
-              {loading ? tt('members.invite_sending') : tt('members.invite_submit')}
-            </Button>
-          ) : (
-            <Button
-              onClick={handleCreateUser}
-              disabled={loading || !email.trim() || !displayName.trim() || !policy.ok || !passwordMatches}
-            >
-              {loading ? tt('members.create_submitting') : tt('members.create_submit')}
-            </Button>
-          )}
+          <Button onClick={handleInvite} disabled={loading || !email.trim() || !displayName.trim()}>
+            {loading ? tt('members.invite_sending') : tt('members.invite_submit')}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
