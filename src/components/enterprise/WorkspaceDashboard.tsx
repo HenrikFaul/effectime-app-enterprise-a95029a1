@@ -11,6 +11,7 @@ import { CopilotPanel } from '@/components/ai-copilot/CopilotPanel';
 import { PluginMarketplacePanel } from '@/components/marketplace/PluginMarketplacePanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { CollapsibleCardTrigger } from '@/components/ui/collapsible-card-trigger';
 import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft, LogOut, Building2, GitMerge, CircleHelp, Clock, LayoutDashboard, TrendingUp, Code2, CreditCard, ShieldCheck } from 'lucide-react';
 import { useWorkspaceTier } from '@/hooks/useWorkspaceTier';
 import { tierName } from '@/lib/tiering/labels';
@@ -663,17 +664,17 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canVi
 
       {isAdmin && (canViewApprovals || canApprove || canOverride) && (
         <Collapsible open={approvalsOpen} onOpenChange={setApprovalsOpen}>
-          <CollapsibleTrigger asChild>
-            <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
-              <CardContent className="flex items-center justify-between py-3 px-4">
-                <div className="flex items-center gap-2">
-                  <Shield className="h-4 w-4 text-primary" />
-                  <span className="font-medium text-sm">{t('ws_nav.section_approvals')}</span>
-                </div>
-                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${approvalsOpen ? 'rotate-180' : ''}`} />
-              </CardContent>
-            </Card>
-          </CollapsibleTrigger>
+          <CollapsibleCardTrigger
+            label={t('ws_nav.section_approvals')}
+            className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden"
+            contentClassName="flex items-center justify-between py-3 px-4"
+          >
+            <div className="flex items-center gap-2">
+              <Shield className="h-4 w-4 text-primary" />
+              <span className="font-medium text-sm">{t('ws_nav.section_approvals')}</span>
+            </div>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${approvalsOpen ? 'rotate-180' : ''}`} />
+          </CollapsibleCardTrigger>
           <CollapsibleContent className="mt-2">
             {canOverride ? <div className="flex justify-end mb-2">
               <Button size="sm" variant="outline" onClick={() => setShowOverride(true)} className="text-xs">
@@ -700,17 +701,17 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canVi
       )}
 
       <Collapsible open={requestsOpen} onOpenChange={setRequestsOpen}>
-        <CollapsibleTrigger asChild>
-          <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
-            <CardContent className="flex items-center justify-between py-3 px-4">
-              <div className="flex items-center gap-2">
-                <FileText className="h-4 w-4 text-muted-foreground" />
-                <span className="font-medium text-sm">{t('ws_nav.section_requests')}</span>
-              </div>
-              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${requestsOpen ? 'rotate-180' : ''}`} />
-            </CardContent>
-          </Card>
-        </CollapsibleTrigger>
+        <CollapsibleCardTrigger
+          label={t('ws_nav.section_requests')}
+          className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden"
+          contentClassName="flex items-center justify-between py-3 px-4"
+        >
+          <div className="flex items-center gap-2">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium text-sm">{t('ws_nav.section_requests')}</span>
+          </div>
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${requestsOpen ? 'rotate-180' : ''}`} />
+        </CollapsibleCardTrigger>
         <CollapsibleContent className="mt-2">
           <LeaveRequestList
             workspaceId={workspaceId}
@@ -725,99 +726,99 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canVi
 
       {canViewRules && (
         <Collapsible open={rulesOpen} onOpenChange={setRulesOpen}>
-          <CollapsibleTrigger asChild>
-            <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
-              <CardContent className="flex items-center justify-between py-3 px-4">
-                <div className="flex items-center gap-2">
-                  <ShieldAlert className="h-4 w-4 text-primary" />
-                  <span className="font-medium text-sm">{t('ws_nav.section_rules')}</span>
-                </div>
-                <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${rulesOpen ? 'rotate-180' : ''}`} />
-              </CardContent>
-            </Card>
-          </CollapsibleTrigger>
+          <CollapsibleCardTrigger
+            label={t('ws_nav.section_rules')}
+            className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden"
+            contentClassName="flex items-center justify-between py-3 px-4"
+          >
+            <div className="flex items-center gap-2">
+              <ShieldAlert className="h-4 w-4 text-primary" />
+              <span className="font-medium text-sm">{t('ws_nav.section_rules')}</span>
+            </div>
+            <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${rulesOpen ? 'rotate-180' : ''}`} />
+          </CollapsibleCardTrigger>
           <CollapsibleContent className="mt-2 space-y-2">
             <Collapsible open={openApprovalChain} onOpenChange={setOpenApprovalChain}>
-              <CollapsibleTrigger asChild>
-                <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
-                  <CardContent className="flex items-center justify-between py-2.5 px-4">
-                    <span className="text-xs font-medium">{t('ws_nav.section_approval_chains')}</span>
-                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openApprovalChain ? 'rotate-180' : ''}`} />
-                  </CardContent>
-                </Card>
-              </CollapsibleTrigger>
+              <CollapsibleCardTrigger
+                label={t('ws_nav.section_approval_chains')}
+                className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden"
+                contentClassName="flex items-center justify-between py-2.5 px-4"
+              >
+                <span className="text-xs font-medium">{t('ws_nav.section_approval_chains')}</span>
+                <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openApprovalChain ? 'rotate-180' : ''}`} />
+              </CollapsibleCardTrigger>
               <CollapsibleContent className="mt-2"><ApprovalChainManager workspaceId={workspaceId} /></CollapsibleContent>
             </Collapsible>
 
             <Collapsible open={openLeaveTypes} onOpenChange={setOpenLeaveTypes}>
-              <CollapsibleTrigger asChild>
-                <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
-                  <CardContent className="flex items-center justify-between py-2.5 px-4">
-                    <span className="text-xs font-medium">{t('ws_nav.section_leave_types')}</span>
-                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openLeaveTypes ? 'rotate-180' : ''}`} />
-                  </CardContent>
-                </Card>
-              </CollapsibleTrigger>
+              <CollapsibleCardTrigger
+                label={t('ws_nav.section_leave_types')}
+                className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden"
+                contentClassName="flex items-center justify-between py-2.5 px-4"
+              >
+                <span className="text-xs font-medium">{t('ws_nav.section_leave_types')}</span>
+                <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openLeaveTypes ? 'rotate-180' : ''}`} />
+              </CollapsibleCardTrigger>
               <CollapsibleContent className="mt-2"><LeaveTypeManager workspaceId={workspaceId} /></CollapsibleContent>
             </Collapsible>
 
             <Collapsible open={openHolidays} onOpenChange={setOpenHolidays}>
-              <CollapsibleTrigger asChild>
-                <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
-                  <CardContent className="flex items-center justify-between py-2.5 px-4">
-                    <span className="text-xs font-medium">{t('ws_nav.section_holidays')}</span>
-                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openHolidays ? 'rotate-180' : ''}`} />
-                  </CardContent>
-                </Card>
-              </CollapsibleTrigger>
+              <CollapsibleCardTrigger
+                label={t('ws_nav.section_holidays')}
+                className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden"
+                contentClassName="flex items-center justify-between py-2.5 px-4"
+              >
+                <span className="text-xs font-medium">{t('ws_nav.section_holidays')}</span>
+                <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openHolidays ? 'rotate-180' : ''}`} />
+              </CollapsibleCardTrigger>
               <CollapsibleContent className="mt-2"><HolidayManager workspaceId={workspaceId} /></CollapsibleContent>
             </Collapsible>
 
             <Collapsible open={openCompanyDays} onOpenChange={setOpenCompanyDays}>
-              <CollapsibleTrigger asChild>
-                <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
-                  <CardContent className="flex items-center justify-between py-2.5 px-4">
-                    <span className="text-xs font-medium">{t('ws_nav.section_company_days')}</span>
-                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openCompanyDays ? 'rotate-180' : ''}`} />
-                  </CardContent>
-                </Card>
-              </CollapsibleTrigger>
+              <CollapsibleCardTrigger
+                label={t('ws_nav.section_company_days')}
+                className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden"
+                contentClassName="flex items-center justify-between py-2.5 px-4"
+              >
+                <span className="text-xs font-medium">{t('ws_nav.section_company_days')}</span>
+                <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openCompanyDays ? 'rotate-180' : ''}`} />
+              </CollapsibleCardTrigger>
               <CollapsibleContent className="mt-2"><CompanyLeaveDayManager workspaceId={workspaceId} userId={userId} /></CollapsibleContent>
             </Collapsible>
 
             <Collapsible open={openBlockedDates} onOpenChange={setOpenBlockedDates}>
-              <CollapsibleTrigger asChild>
-                <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
-                  <CardContent className="flex items-center justify-between py-2.5 px-4">
-                    <span className="text-xs font-medium">{t('ws_nav.section_blocked_dates')}</span>
-                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openBlockedDates ? 'rotate-180' : ''}`} />
-                  </CardContent>
-                </Card>
-              </CollapsibleTrigger>
+              <CollapsibleCardTrigger
+                label={t('ws_nav.section_blocked_dates')}
+                className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden"
+                contentClassName="flex items-center justify-between py-2.5 px-4"
+              >
+                <span className="text-xs font-medium">{t('ws_nav.section_blocked_dates')}</span>
+                <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openBlockedDates ? 'rotate-180' : ''}`} />
+              </CollapsibleCardTrigger>
               <CollapsibleContent className="mt-2"><BlockedDateManager workspaceId={workspaceId} userId={userId} /></CollapsibleContent>
             </Collapsible>
 
             <Collapsible open={openDailyRules} onOpenChange={setOpenDailyRules}>
-              <CollapsibleTrigger asChild>
-                <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
-                  <CardContent className="flex items-center justify-between py-2.5 px-4">
-                    <span className="text-xs font-medium">{t('ws_nav.section_daily_rules')}</span>
-                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openDailyRules ? 'rotate-180' : ''}`} />
-                  </CardContent>
-                </Card>
-              </CollapsibleTrigger>
+              <CollapsibleCardTrigger
+                label={t('ws_nav.section_daily_rules')}
+                className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden"
+                contentClassName="flex items-center justify-between py-2.5 px-4"
+              >
+                <span className="text-xs font-medium">{t('ws_nav.section_daily_rules')}</span>
+                <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openDailyRules ? 'rotate-180' : ''}`} />
+              </CollapsibleCardTrigger>
               <CollapsibleContent className="mt-2"><DailyRuleManager workspaceId={workspaceId} userId={userId} /></CollapsibleContent>
             </Collapsible>
 
             <Collapsible open={openRuleTemplates} onOpenChange={setOpenRuleTemplates}>
-              <CollapsibleTrigger asChild>
-                <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
-                  <CardContent className="flex items-center justify-between py-2.5 px-4">
-                    <span className="text-xs font-medium">{t('ws_nav.section_rule_templates')}</span>
-                    <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openRuleTemplates ? 'rotate-180' : ''}`} />
-                  </CardContent>
-                </Card>
-              </CollapsibleTrigger>
+              <CollapsibleCardTrigger
+                label={t('ws_nav.section_rule_templates')}
+                className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden"
+                contentClassName="flex items-center justify-between py-2.5 px-4"
+              >
+                <span className="text-xs font-medium">{t('ws_nav.section_rule_templates')}</span>
+                <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${openRuleTemplates ? 'rotate-180' : ''}`} />
+              </CollapsibleCardTrigger>
               <CollapsibleContent className="mt-2"><RuleTemplateLibrary workspaceId={workspaceId} userId={userId} /></CollapsibleContent>
             </Collapsible>
           </CollapsibleContent>
@@ -837,51 +838,51 @@ function ReportsAndAuditTab({ workspaceId, userId }: { workspaceId: string; user
   return (
     <div className="space-y-4">
       <Collapsible open={auditOpen} onOpenChange={setAuditOpen}>
-        <CollapsibleTrigger asChild>
-          <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
-            <CardContent className="flex items-center justify-between py-3 px-4">
-              <div className="flex items-center gap-2">
-                <History className="h-4 w-4 text-primary" />
-                <span className="font-medium text-sm">{t('ws_nav.section_audit')}</span>
-              </div>
-              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${auditOpen ? 'rotate-180' : ''}`} />
-            </CardContent>
-          </Card>
-        </CollapsibleTrigger>
+        <CollapsibleCardTrigger
+          label={t('ws_nav.section_audit')}
+          className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden"
+          contentClassName="flex items-center justify-between py-3 px-4"
+        >
+          <div className="flex items-center gap-2">
+            <History className="h-4 w-4 text-primary" />
+            <span className="font-medium text-sm">{t('ws_nav.section_audit')}</span>
+          </div>
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${auditOpen ? 'rotate-180' : ''}`} />
+        </CollapsibleCardTrigger>
         <CollapsibleContent className="mt-2">
           <AuditLog workspaceId={workspaceId} />
         </CollapsibleContent>
       </Collapsible>
 
       <Collapsible open={exportOpen} onOpenChange={setExportOpen}>
-        <CollapsibleTrigger asChild>
-          <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
-            <CardContent className="flex items-center justify-between py-3 px-4">
-              <div className="flex items-center gap-2">
-                <Download className="h-4 w-4 text-primary" />
-                <span className="font-medium text-sm">{t('ws_nav.section_export')}</span>
-              </div>
-              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${exportOpen ? 'rotate-180' : ''}`} />
-            </CardContent>
-          </Card>
-        </CollapsibleTrigger>
+        <CollapsibleCardTrigger
+          label={t('ws_nav.section_export')}
+          className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden"
+          contentClassName="flex items-center justify-between py-3 px-4"
+        >
+          <div className="flex items-center gap-2">
+            <Download className="h-4 w-4 text-primary" />
+            <span className="font-medium text-sm">{t('ws_nav.section_export')}</span>
+          </div>
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${exportOpen ? 'rotate-180' : ''}`} />
+        </CollapsibleCardTrigger>
         <CollapsibleContent className="mt-2">
           <ExportCenter workspaceId={workspaceId} userId={userId} />
         </CollapsibleContent>
       </Collapsible>
 
       <Collapsible open={reportsOpen} onOpenChange={setReportsOpen}>
-        <CollapsibleTrigger asChild>
-          <Card className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden">
-            <CardContent className="flex items-center justify-between py-3 px-4">
-              <div className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4 text-primary" />
-                <span className="font-medium text-sm">{t('ws_nav.section_reports')}</span>
-              </div>
-              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${reportsOpen ? 'rotate-180' : ''}`} />
-            </CardContent>
-          </Card>
-        </CollapsibleTrigger>
+        <CollapsibleCardTrigger
+          label={t('ws_nav.section_reports')}
+          className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden"
+          contentClassName="flex items-center justify-between py-3 px-4"
+        >
+          <div className="flex items-center gap-2">
+            <BarChart3 className="h-4 w-4 text-primary" />
+            <span className="font-medium text-sm">{t('ws_nav.section_reports')}</span>
+          </div>
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${reportsOpen ? 'rotate-180' : ''}`} />
+        </CollapsibleCardTrigger>
         <CollapsibleContent className="mt-2 space-y-3">
           <PinnedReportsWidget workspaceId={workspaceId} />
           <ReportingDashboard workspaceId={workspaceId} />

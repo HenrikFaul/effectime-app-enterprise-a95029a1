@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
+import { CollapsibleCardTrigger } from '@/components/ui/collapsible-card-trigger';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Mail, Trash2, ChevronDown, Filter } from 'lucide-react';
 import { toast } from 'sonner';
@@ -82,24 +83,26 @@ export function InvitationsPanel({ workspaceId, isAdmin }: Props) {
 
   return (
     <Collapsible open={open} onOpenChange={setOpen}>
-      <CollapsibleTrigger asChild>
-        <Card className="cursor-pointer hover:border-primary/50 transition-colors">
-          <CardContent className="flex items-center justify-between py-3 px-4">
-            <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-primary" />
-              <span className="font-medium text-sm">{t('members.invitations_title')}</span>
-              {sentCount > 0 && (
-                <Badge variant="outline" className="text-[10px] border-orange-400 text-orange-500">
-                  {sentCount} {t('invitations.sent_label')}
-                </Badge>
-              )}
-            </div>
-            <ChevronDown
-              className={`h-4 w-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
-            />
-          </CardContent>
-        </Card>
-      </CollapsibleTrigger>
+      <CollapsibleCardTrigger
+        label={sentCount > 0
+          ? `${t('members.invitations_title')}: ${sentCount} ${t('invitations.sent_label')}`
+          : t('members.invitations_title')}
+        className="cursor-pointer hover:border-primary/50 transition-colors"
+        contentClassName="flex items-center justify-between py-3 px-4"
+      >
+        <div className="flex items-center gap-2">
+          <Mail className="h-4 w-4 text-primary" />
+          <span className="font-medium text-sm">{t('members.invitations_title')}</span>
+          {sentCount > 0 && (
+            <Badge variant="outline" className="text-[10px] border-orange-400 text-orange-500">
+              {sentCount} {t('invitations.sent_label')}
+            </Badge>
+          )}
+        </div>
+        <ChevronDown
+          className={`h-4 w-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </CollapsibleCardTrigger>
       <CollapsibleContent className="mt-2 space-y-2">
         {/* Filters */}
         <Card>

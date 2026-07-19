@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
+import { CollapsibleCardTrigger } from '@/components/ui/collapsible-card-trigger';
 import { Plus, Trash2, ChevronDown, BookOpen } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
@@ -207,19 +208,19 @@ function TemplateRow({ template, steps, onLoadSteps, onPublish, onArchive, onAdd
 
   return (
     <Collapsible open={open} onOpenChange={toggle}>
-      <CollapsibleTrigger asChild>
-        <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
-          <CardContent className="flex items-center gap-2 py-2.5 px-4">
-            <BookOpen className="h-4 w-4 text-primary" />
-            <span className="font-medium text-sm flex-1">{template.name}</span>
-            <Badge variant={template.status === 'published' ? 'default' : 'outline'} className="text-[10px]">
-              {t(`onboarding.${template.status}`)}
-            </Badge>
-            <Badge variant="secondary" className="text-[10px]">v{template.version}</Badge>
-            <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
-          </CardContent>
-        </Card>
-      </CollapsibleTrigger>
+      <CollapsibleCardTrigger
+        label={`${template.name}: ${t(`onboarding.${template.status}`)}, v${template.version}`}
+        className="cursor-pointer hover:bg-accent/30 transition-colors"
+        contentClassName="flex items-center gap-2 py-2.5 px-4"
+      >
+        <BookOpen className="h-4 w-4 text-primary" />
+        <span className="font-medium text-sm flex-1">{template.name}</span>
+        <Badge variant={template.status === 'published' ? 'default' : 'outline'} className="text-[10px]">
+          {t(`onboarding.${template.status}`)}
+        </Badge>
+        <Badge variant="secondary" className="text-[10px]">v{template.version}</Badge>
+        <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
+      </CollapsibleCardTrigger>
       <CollapsibleContent className="mt-2 space-y-2 pl-4">
         {isAdmin ? (
           <div className="flex flex-wrap items-end gap-2 rounded-md border bg-muted/30 px-3 py-2">

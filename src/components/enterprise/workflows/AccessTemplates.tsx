@@ -5,7 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
+import { CollapsibleCardTrigger } from '@/components/ui/collapsible-card-trigger';
 import { Plus, ChevronDown, Plug } from 'lucide-react';
 import { toast } from 'sonner';
 import { useT } from '@/i18n/I18nProvider';
@@ -118,6 +119,7 @@ export function AccessTemplates({ workspaceId, isAdmin }: Props) {
               template={tpl}
               systems={systems}
               links={linksByTemplate[tpl.id] ?? []}
+              systemsLabel={t('access.systems_title')}
               onLoad={() => loadLinks(tpl.id)}
               onToggle={(sysId, link) => toggleSystem(tpl.id, sysId, link)}
               isAdmin={isAdmin}
@@ -133,6 +135,7 @@ function TemplateBlock({
   template,
   systems,
   links,
+  systemsLabel,
   onLoad,
   onToggle,
   isAdmin,
@@ -140,6 +143,7 @@ function TemplateBlock({
   template: Template;
   systems: SystemRow[];
   links: TemplateSystemRow[];
+  systemsLabel: string;
   onLoad: () => void;
   onToggle: (systemId: string, link: TemplateSystemRow | undefined) => void;
   isAdmin: boolean;
@@ -148,16 +152,16 @@ function TemplateBlock({
   const linkBySystem = new Map(links.map((l) => [l.system_id, l] as const));
   return (
     <Collapsible open={open} onOpenChange={(next) => { setOpen(next); if (next) onLoad(); }}>
-      <CollapsibleTrigger asChild>
-        <Card className="cursor-pointer hover:bg-accent/30 transition-colors">
-          <CardContent className="flex items-center gap-2 py-2.5 px-4">
-            <Plug className="h-4 w-4 text-primary" />
-            <span className="font-medium text-sm flex-1">{template.name}</span>
-            <Badge variant="secondary" className="text-[10px]">{links.length}</Badge>
-            <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
-          </CardContent>
-        </Card>
-      </CollapsibleTrigger>
+      <CollapsibleCardTrigger
+        label={`${template.name}: ${links.length} ${systemsLabel}`}
+        className="cursor-pointer hover:bg-accent/30 transition-colors"
+        contentClassName="flex items-center gap-2 py-2.5 px-4"
+      >
+        <Plug className="h-4 w-4 text-primary" />
+        <span className="font-medium text-sm flex-1">{template.name}</span>
+        <Badge variant="secondary" className="text-[10px]">{links.length}</Badge>
+        <ChevronDown className={`h-3.5 w-3.5 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
+      </CollapsibleCardTrigger>
       <CollapsibleContent className="mt-2 pl-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
           {systems.map((s) => {
