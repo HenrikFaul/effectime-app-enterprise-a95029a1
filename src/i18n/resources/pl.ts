@@ -1306,6 +1306,7 @@ const pl = {
     fill_all_fields: 'Wypełnij wszystkie wymagane pola',
     justification_required: 'Uzasadnienie administratora jest wymagane',
     create_failed: 'Błąd podczas tworzenia wniosku',
+    outcome_uncertain: 'Wynik poprzedniego wysłania jest niepewny. Ponów je bez zmian lub skontaktuj się z administratorem przed kolejnym wnioskiem.',
     created_approved: 'Wniosek utworzony i zatwierdzony',
     created: 'Wniosek utworzony',
   },

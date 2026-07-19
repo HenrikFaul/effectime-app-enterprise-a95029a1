@@ -15,11 +15,36 @@ import { format } from 'date-fns';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
+import {
+  AdminLeaveOverrideApiError,
+  createAdminLeaveOverride,
+  createSecureAdminLeaveOverrideKey,
+  fingerprintAdminLeaveOverrideCommand,
+  type AdminLeaveOverrideCommand,
+  type AdminLeaveOverrideLeaveType,
+} from '@/lib/adminLeaveOverrideApi';
+import {
+  createAdminLeaveOverrideOutbox,
+} from '@/lib/adminLeaveOverrideOutbox';
+
+const adminLeaveOverrideOutbox = createAdminLeaveOverrideOutbox({
+  keyFactory: createSecureAdminLeaveOverrideKey,
+});
+
+function requiresAdminLeaveOverrideReconciliation(error: unknown): boolean {
+  if (error instanceof AdminLeaveOverrideApiError) return error.outcomeUnknown;
+  if (!(error instanceof Error) || error.name !== 'AdminLeaveOverrideOutboxError') return false;
+  const code = (error as Error & { code?: unknown }).code;
+  return code === 'corrupted-entry'
+    || code === 'expired-entry'
+    || code === 'unresolved-operation';
+}
 
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   workspaceId: string;
+  actorId: string;
   onCreated: () => void;
   dialogContentId?: string;
   returnFocusRef?: RefObject<HTMLButtonElement>;
@@ -28,35 +53,11 @@ interface Props {
 type ValidationPhase = 'idle' | 'validating' | 'valid' | 'failed';
 type MemberLoadPhase = 'idle' | 'loading' | 'ready' | 'failed';
 
-interface AdminOverrideRpcPayload {
-  _workspace_id: string;
-  _user_id: string;
-  _leave_type: string;
-  _start_date: string;
-  _end_date: string;
-  _justification: string;
-  _auto_approve: boolean;
-  _is_half_day: boolean;
-  _half_day_period: string | null;
-  _comment: string | null;
-}
-
-interface AdminOverrideRpcResponse {
-  data: { ok?: boolean } | null;
-  error: unknown;
-}
-
-interface AdminOverrideRpcClient {
-  rpc: (
-    functionName: 'create_admin_leave_override',
-    payload: AdminOverrideRpcPayload,
-  ) => Promise<AdminOverrideRpcResponse>;
-}
-
 export function AdminLeaveOverride({
   open,
   onOpenChange,
   workspaceId,
+  actorId,
   onCreated,
   dialogContentId,
   returnFocusRef,
@@ -88,7 +89,9 @@ export function AdminLeaveOverride({
   const [justification, setJustification] = useState('');
   const [autoApprove, setAutoApprove] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState(false);
+  const [submitErrorKey, setSubmitErrorKey] = useState<
+    'create_failed' | 'outcome_uncertain' | null
+  >(null);
   const [conflicts, setConflicts] = useState<ConflictResult[]>([]);
   const [validationPhase, setValidationPhase] = useState<ValidationPhase>('idle');
   const [memberLoadPhase, setMemberLoadPhase] = useState<MemberLoadPhase>('idle');
@@ -97,7 +100,7 @@ export function AdminLeaveOverride({
   const validatedContextRef = useRef<string | null>(null);
   const submitInFlightRef = useRef(false);
   const submitRunRef = useRef(0);
-  const committedScopeRef = useRef({ open, workspaceId });
+  const committedScopeRef = useRef({ open, workspaceId, actorId });
   const memberLoadRunRef = useRef(0);
   const loadedMemberWorkspaceRef = useRef<string | null>(null);
   const memberSelectRef = useRef<HTMLButtonElement>(null);
@@ -115,7 +118,7 @@ export function AdminLeaveOverride({
     validatedContextRef.current = null;
     setValidationPhase('idle');
     setConflicts([]);
-    setSubmitError(false);
+    setSubmitErrorKey(current => current === 'outcome_uncertain' ? current : null);
   }, []);
 
   const resetForm = useCallback(() => {
@@ -123,11 +126,11 @@ export function AdminLeaveOverride({
     setSelectedUserId(''); setLeaveType('vacation'); setStartDate(undefined); setEndDate(undefined);
     setComment(''); setJustification(''); setAutoApprove(true);
     setIsHalfDay(false); setHalfDayPeriod('morning');
-    setSubmitError(false);
+    setSubmitErrorKey(null);
   }, [invalidateValidation]);
 
   useLayoutEffect(() => {
-    committedScopeRef.current = { open, workspaceId };
+    committedScopeRef.current = { open, workspaceId, actorId };
     submitRunRef.current += 1;
     submitInFlightRef.current = false;
     setSubmitting(false);
@@ -136,7 +139,7 @@ export function AdminLeaveOverride({
       submitRunRef.current += 1;
       submitInFlightRef.current = false;
     };
-  }, [open, workspaceId]);
+  }, [actorId, open, workspaceId]);
 
   useEffect(() => {
     const loadRun = ++memberLoadRunRef.current;
@@ -205,7 +208,7 @@ export function AdminLeaveOverride({
     return () => {
       if (memberLoadRunRef.current === loadRun) memberLoadRunRef.current += 1;
     };
-  }, [memberLoadRevision, open, resetForm, workspaceId]);
+  }, [actorId, memberLoadRevision, open, resetForm, workspaceId]);
 
   const effectiveEndDate = isHalfDay ? startDate : endDate;
   const memberDirectoryIsCurrent = memberLoadPhase === 'ready'
@@ -308,48 +311,58 @@ export function AdminLeaveOverride({
       submitRunRef.current === submitRun
       && committedScopeRef.current.open
       && committedScopeRef.current.workspaceId === workspaceId
+      && committedScopeRef.current.actorId === actorId
     );
     setSubmitting(true);
-    setSubmitError(false);
-    const rpcPayload = {
-      _workspace_id: workspaceId,
-      _user_id: selectedUserId,
-      _leave_type: leaveType,
-      _start_date: format(startDate, 'yyyy-MM-dd'),
-      _end_date: format(effectiveEndDate, 'yyyy-MM-dd'),
-      _justification: justification.trim(),
-      _auto_approve: autoApprove,
-      _is_half_day: isHalfDay,
-      _half_day_period: isHalfDay ? halfDayPeriod : null,
-      _comment: comment.trim() || null,
+    setSubmitErrorKey(null);
+    const command: AdminLeaveOverrideCommand = {
+      workspaceId,
+      userId: selectedUserId,
+      leaveType: leaveType as AdminLeaveOverrideLeaveType,
+      startDate: format(startDate, 'yyyy-MM-dd'),
+      endDate: format(effectiveEndDate, 'yyyy-MM-dd'),
+      justification,
+      autoApprove,
+      isHalfDay,
+      halfDayPeriod: isHalfDay ? halfDayPeriod as 'morning' | 'afternoon' : null,
+      comment,
     };
 
     try {
-      // The checked-in generated schema predates this migration-backed RPC;
-      // keep its local call contract explicit until schema provenance is reconciled.
-      const { data, error } = await (supabase as unknown as AdminOverrideRpcClient)
-        .rpc('create_admin_leave_override', rpcPayload);
+      const fingerprint = fingerprintAdminLeaveOverrideCommand(command);
+      const outboxEntry = await adminLeaveOverrideOutbox.getOrCreate(
+        { workspaceId, actorId },
+        fingerprint,
+      );
       if (!submitIsCurrent()) return;
-      if (error || data?.ok !== true) {
-        setSubmitError(true);
-        toast.error(t('admin_leave_override.create_failed'));
+
+      const attempt = { key: outboxEntry.key, fingerprint };
+      await createAdminLeaveOverride(command, attempt);
+      try {
+        await adminLeaveOverrideOutbox.complete(outboxEntry);
+      } catch (cleanupError) {
+        // The server receipt is authoritative. Keeping a verified outbox entry
+        // is safe (a later retry replays the same result), while reporting the
+        // operation as failed here would encourage an unnecessary new request.
         console.error(
-          '[AdminLeaveOverride] create_admin_leave_override returned an unsuccessful result',
-          error ? 'RpcError' : 'UnexpectedResponse',
+          '[AdminLeaveOverride] Retry receipt cleanup failed',
+          cleanupError instanceof Error ? cleanupError.name : 'UnknownError',
         );
-        return;
       }
+      if (!submitIsCurrent()) return;
 
       toast.success(autoApprove ? t('admin_leave_override.created_approved') : t('admin_leave_override.created'));
       resetForm();
       onOpenChange(false);
       onCreated();
     } catch (err) {
+      const outcomeUnknown = requiresAdminLeaveOverrideReconciliation(err);
       if (!submitIsCurrent()) return;
-      setSubmitError(true);
-      toast.error(t('admin_leave_override.create_failed'));
+      const errorKey = outcomeUnknown ? 'outcome_uncertain' : 'create_failed';
+      setSubmitErrorKey(errorKey);
+      toast.error(t(`admin_leave_override.${errorKey}`));
       console.error(
-        '[AdminLeaveOverride] create_admin_leave_override failed',
+        '[AdminLeaveOverride] create_admin_leave_override_v2 failed',
         err instanceof Error ? err.name : 'UnknownError',
       );
     } finally {
@@ -575,7 +588,7 @@ export function AdminLeaveOverride({
               value={comment}
               onChange={e => {
                 setComment(e.target.value);
-                setSubmitError(false);
+                setSubmitErrorKey(current => current === 'outcome_uncertain' ? current : null);
               }}
               placeholder={t('admin_leave_override.comment_placeholder')}
               rows={2}
@@ -592,7 +605,7 @@ export function AdminLeaveOverride({
               value={justification}
               onChange={e => {
                 setJustification(e.target.value);
-                setSubmitError(false);
+                setSubmitErrorKey(current => current === 'outcome_uncertain' ? current : null);
               }}
               placeholder={t('admin_leave_override.justification_placeholder')}
               rows={2}
@@ -609,7 +622,7 @@ export function AdminLeaveOverride({
               checked={autoApprove}
               onCheckedChange={v => {
                 setAutoApprove(!!v);
-                setSubmitError(false);
+                setSubmitErrorKey(current => current === 'outcome_uncertain' ? current : null);
               }}
               disabled={submitting}
             />
@@ -644,9 +657,9 @@ export function AdminLeaveOverride({
             </p>
           )}
 
-          {submitError && (
+          {submitErrorKey && (
             <p className="text-xs text-destructive" role="alert">
-              {t('admin_leave_override.create_failed')}
+              {t(`admin_leave_override.${submitErrorKey}`)}
             </p>
           )}
         </div>

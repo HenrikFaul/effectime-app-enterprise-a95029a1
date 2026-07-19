@@ -185,8 +185,15 @@ describe('restored and hardened runtime contracts', () => {
       join(root, 'src/components/enterprise/AdminLeaveOverride.tsx'),
       'utf8',
     );
-    expect(overrideUi).toContain("rpc('create_admin_leave_override'");
+    const overrideApi = readFileSync(
+      join(root, 'src/lib/adminLeaveOverrideApi.ts'),
+      'utf8',
+    );
+    expect(overrideUi).toContain('await createAdminLeaveOverride(command, attempt)');
+    expect(overrideApi).toContain("client.rpc('create_admin_leave_override_v2'");
+    expect(overrideApi).not.toMatch(/client\.rpc\(['"]create_admin_leave_override['"]/);
     expect(overrideUi).not.toContain("from('leave_requests').insert");
+    expect(overrideApi).not.toContain("from('leave_requests').insert");
     expect(overrideUi).not.toContain('logAuditEvent');
     expect(dashboard).toContain('onCreated={() => setLeaveRefreshKey(current => current + 1)}');
     expect(dashboard).toContain('const overrideTriggerRef = useRef<HTMLButtonElement>(null)');

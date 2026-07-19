@@ -1306,6 +1306,7 @@ const cs = {
     fill_all_fields: 'Vyplňte všechna povinná pole',
     justification_required: 'Zdůvodnění administrátora je povinné',
     create_failed: 'Chyba při vytváření žádosti',
+    outcome_uncertain: 'Výsledek předchozího odeslání není jistý. Zkuste jej znovu beze změn nebo před další žádostí kontaktujte správce.',
     created_approved: 'Žádost vytvořena a schválena',
     created: 'Žádost vytvořena',
   },

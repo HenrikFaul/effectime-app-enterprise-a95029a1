@@ -1,7 +1,7 @@
 {
   "name": "effectime-app-enterprise",
   "private": true,
-  "version": "3.51.3",
+  "version": "3.51.4",
   "type": "module",
   "packageManager": "npm@11.13.0",
   "engines": {
@@ -44,6 +44,7 @@
     "schema:provenance:test": "node --test scripts/ci/schema-provenance.test.mjs",
     "db:payroll:test": "node scripts/ci/payroll-snapshot-db-contract.mjs",
     "db:hr-workflow:test": "node scripts/ci/hr-workflow-tenant-db-contract.mjs",
+    "db:admin-override:test": "node scripts/ci/admin-leave-override-db-contract.mjs",
     "security:secrets": "node scripts/ci/secret-scan.mjs",
     "release:sbom": "npm run release:sbom:web && npm run release:sbom:edge",
     "release:sbom:web": "node scripts/release/create-sbom.mjs",

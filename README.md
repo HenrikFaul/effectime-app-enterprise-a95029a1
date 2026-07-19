@@ -196,15 +196,36 @@ The generated public schema currently contains 30 tables, one view, 46
 functions and two enums whose defining migrations cannot be proven locally.
 `npm run schema:provenance` prevents this reviewed debt from changing silently;
 it does not make a clean install reproducible. A read-only live schema export,
-transitively complete recovery migration, 125/125 clean replay, regenerated-type
+transitively complete recovery migration, 126/126 clean replay, regenerated-type
 comparison, schema fingerprint and RLS/adversarial tests are required before a
 backend release.
 
-The v3.51.3 audit hardening and release-identity source was merged to `main` by
-PR #167 as `9e2911b30b84f1040b3dbeb8865c575d0891c7bc`; all six hosted Quality Gate
-jobs passed on that merge SHA. It remains **unreleased**: the live web manifest
-still returns 404, the linked database has not been migrated, and no matching
-Edge Function artifact has been deployed to production.
+The current v3.51.3 audit hardening source through PR #174 is merged to `main`
+as `0a33e8cd0309d35e820fb1df9e8194dfbcce7242`; all seven hosted Quality Gate
+jobs passed in run `29678100165`, with schema-2 artifact `8439647584`. It remains
+**unreleased**: the live web manifest still returns 404, the linked database has
+not been migrated, and no matching Edge Function artifact has been deployed to
+production.
+
+The v3.51.4 I-26 candidate adds a backward-compatible admin-override v2 RPC,
+private hash-only idempotency ledger and a common web/Android/iOS retry adapter/
+outbox. Its pinned PostgreSQL 18.4 contract is local-only evidence. Rollout must
+be DB-first and client-second; do not deploy the v2 client until restored staging
+and the target PostgREST schema cache prove the exact v1/v2 signatures and ACLs.
+The outbox's seven-day value is a retry/reconciliation horizon, not an automatic
+deletion TTL. Uncertain, expired or corrupt evidence is retained: one unresolved
+operation is allowed per actor/workspace scope, an unchanged payload reuses its
+key, and a different payload is blocked. Exact-key cleanup occurs only after a
+valid server receipt; every error response retains the evidence. Known 4xx
+failures remain exact-key retryable, while HTTP 408/499, 5xx, transport
+ambiguity, status `0` and malformed responses surface the localized
+`outcome_uncertain` state. Origin-wide Web Locks are mandatory for this critical
+operation; unsupported/disabled runtimes fail closed before RPC dispatch. The
+iOS deployment target is therefore 15.4 and the mobile quality gate rejects an
+older target. Lockdown Mode intentionally leaves this privileged operation
+unavailable rather than weakening cross-context idempotency.
+Production/backend remains **NO-GO**
+while the linked migration-history/schema drift is unresolved.
 
 The linked production history currently has 59 migration IDs in common with the
 repository, 65 local-only IDs and 84 remote-only IDs. Three local-only HR/office/

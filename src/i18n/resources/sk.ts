@@ -1306,6 +1306,7 @@ const sk = {
     fill_all_fields: 'Vyplňte všetky povinné polia',
     justification_required: 'Zdôvodnenie administrátora je povinné',
     create_failed: 'Chyba pri vytváraní žiadosti',
+    outcome_uncertain: 'Výsledok predchádzajúceho odoslania je neistý. Skúste ho znova bez zmien alebo pred ďalšou žiadosťou kontaktujte správcu.',
     created_approved: 'Žiadosť vytvorená a schválená',
     created: 'Žiadosť vytvorená',
   },
