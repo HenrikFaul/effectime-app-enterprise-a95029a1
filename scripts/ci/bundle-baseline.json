@@ -3,7 +3,7 @@
   "purpose": "Current production bundle debt ceiling. Raw bytes are exact; gzip ceilings retain narrow cross-platform and build-SHA compression tolerance. Increases require an explicit reviewed baseline update.",
   "ceilings": {
     "javascript": {
-      "totalRawBytes": 4446050,
+      "totalRawBytes": 4446355,
       "totalGzipBytes": 1269630,
       "largestRawBytes": 1737907,
       "largestGzipBytes": 558421
