@@ -1,11 +1,10 @@
 ## 2026-07-17 — v3.51.3 Project audit and release-boundary hardening (unreleased)
 
-**Status:** PR #167, the HR tenant-boundary PR #168 and the HR request-lifecycle
-PR #169 were merged to `main`; the current merge SHA is
-`a5a79136dcd003bf73b208f20febc470960ee173`, and all seven
-hosted Quality Gate jobs passed on that SHA. The live web release manifest is
-still absent; no matching Edge production deploy and no linked database
-migration apply has been performed.
+**Status:** PR #167–#170 were merged to `main`; the current merge SHA is
+`f2348c559958931a65e68157d5dd590ec22782aa`, and all seven hosted Quality Gate
+jobs passed in run `29669034798`. The live web release manifest is still absent;
+no matching Edge production deploy and no linked database migration apply has
+been performed.
 
 ### Release identity and deployment evidence
 
@@ -88,12 +87,46 @@ migration apply has been performed.
   entire fail-closed tab shell, including the revoke UI, until lookup recovery;
   a dedicated core-shell/error recovery surface remains P2. No database, Edge
   API or dependency changed in this frontend package.
+- Repairs the admin-created leave-request flow without changing its RPC shape:
+  half-day validation and submission use the start date as the effective end,
+  full-day requests still require an explicit end date, and every relevant form
+  change invalidates the exact validated context. Obsolete validation responses
+  are ignored, infrastructure failures remain fail-closed and retryable, while
+  successfully evaluated business conflicts remain explicitly overrideable.
+- Makes admin submission exception-safe and synchronously re-entrancy guarded;
+  rejected RPC calls restore the retryable UI instead of leaving it stuck. The
+  member directory now has explicit loading/error/retry states and binds every
+  response to the current open session and workspace, including profile-stage,
+  close/reopen and unmount invalidation.
+- Wires a successful admin-created request into both request-list refresh paths.
+  `ApprovalInbox` and `LeaveRequestList` now use monotonically generated query
+  contexts and atomic state commits so an older base or enrichment response
+  cannot overwrite the current workspace/filter/access scope. Permission
+  downgrade immediately refetches the current user's narrower result set.
+- Adds 16 admin-flow and 7 list-concurrency component tests; together with the
+  related conflict/i18n and runtime contracts, the targeted regression set is
+  75/75. This remains a frontend candidate: PostgreSQL 18 acceptance,
+  server-side role alignment, cross-client idempotency and restored-staging
+  validation are still required before the complete APR-004 flow is releasable.
 - Reviews the clean, committed package's bundle cost: 1,559 raw JavaScript
   bytes and 192 gzip bytes (+0.035% raw). The artifact measures 4,447,914 raw
   and 1,269,822 gzip bytes; the reviewed ceilings are 4,447,914 raw and
   1,269,950 gzip to retain a narrow build-SHA compression tolerance. Largest
   raw increases by 468 bytes to 1,738,375, while largest-gzip and CSS ceilings
   remain unchanged.
+- Reviews the I-22 candidate's additional bundle cost against that clean main
+  artifact: +4,999 raw / +1,360 gzip JavaScript bytes (+0.112% raw). The final
+  local artifact is 4,452,913 raw / 1,271,182 gzip; largest raw is 1,739,506 and
+  largest gzip 551,842 bytes; CSS remains 180,798 / 29,589. Only the exact raw
+  ceilings and the prior 128-byte total-gzip tolerance move; the largest-gzip
+  and CSS ceilings remain unchanged.
+- Passes the complete local candidate gate: 54 files and 586/586 coverage tests,
+  typecheck, reduced ESLint fingerprint, production build, bundle ratchet, 7/7
+  web smoke, 183/183 mobile source, 345/345 synced artifact, 2/2 mobile bridge
+  smoke, zero high-level npm vulnerabilities and a 1,437-file current-tree
+  secret scan. Two preceding full coverage runs exposed three DOM-heavy tests
+  crossing the 5-second default only under suite contention; isolated assertions
+  passed, and only those proven cases now use a bounded 10-second timeout.
 
 ### Android/iOS common-data foundation
 

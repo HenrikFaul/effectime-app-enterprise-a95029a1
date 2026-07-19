@@ -15,6 +15,7 @@
 
 **Státusz jelölések:**
 - `verified` — közvetlenül a kódbázisból / CHANGELOG-ból igazolt
+- `candidate` — a forrásba integrált, de a teljes dinamikus vagy release-validáció még nyitott
 - `inferred` — architektúra és kontextus alapján következtetett
 
 ---
@@ -90,10 +91,15 @@
 | APR-001 | Jóváhagyó inbox | `?tab=requests` / `workspace.approvals` | owner/resourceAssistant | ApprovalInbox | verified |
 | APR-002 | Egyenkénti jóváhagyás/elutasítás | `?tab=requests` | owner/resourceAssistant | ApprovalInbox | verified |
 | APR-003 | Tömeges jóváhagyás | `?tab=requests` | owner/resourceAssistant | ApprovalInbox | verified |
-| APR-004 | Admin felülbírálat | `?tab=requests` / `approval-flow` | owner/resourceAssistant | AdminLeaveOverride | verified |
+| APR-004 | Kérelem létrehozása más nevében + opcionális admin auto-approve | `?tab=requests` / `approval-flow` | owner/resourceAssistant a jelenlegi UI-ban; szerver-kontrakt nyitott | AdminLeaveOverride | candidate |
 | APR-005 | Döntésmemória figyelés | `?tab=requests` | owner/resourceAssistant | DecisionMemoryStaleInbox | verified |
 | APR-006 | Jóváhagyási lánc konfiguráció | `?tab=requests` → Szabályok | owner/resourceAssistant | ApprovalChainManager | verified |
 | APR-007 | Eszkaláció | Automatikus (cron/threshold) | — | Approval Chain Engine | verified |
+
+Az APR-004 frontend útvonala, félnapos dátumkezelése, fail-closed validációja és
+lista-frissítése célzottan igazolt. `verified` státuszhoz még dinamikus adatbázis-
+RBAC/tenant/audit/idempotencia teszt, egységesített szerepkör-szerződés és staging
+acceptance szükséges; a funkció új kérelmet hoz létre, nem meglévő döntést ír át.
 
 ---
 

@@ -3,8 +3,8 @@
   "purpose": "Existing ESLint diagnostic fingerprint ceiling. CI fails on new findings and requires baseline reduction when findings are fixed.",
   "command": "eslint . --format json",
   "totals": {
-    "errors": 1218,
-    "warnings": 108
+    "errors": 1209,
+    "warnings": 104
   },
   "counts": {
     "@next/next/no-img-element": {
@@ -20,7 +20,7 @@
       "warnings": 0
     },
     "@typescript-eslint/no-explicit-any": {
-      "errors": 1189,
+      "errors": 1180,
       "warnings": 0
     },
     "@typescript-eslint/no-require-imports": {
@@ -45,7 +45,7 @@
     },
     "react-hooks/exhaustive-deps": {
       "errors": 0,
-      "warnings": 75
+      "warnings": 71
     },
     "react-refresh/only-export-components": {
       "errors": 0,
@@ -111,16 +111,6 @@
       "@typescript-eslint/no-unused-expressions": {
         "errors": 1,
         "warnings": 0
-      }
-    },
-    "src/components/enterprise/AdminLeaveOverride.tsx": {
-      "@typescript-eslint/no-explicit-any": {
-        "errors": 4,
-        "warnings": 0
-      },
-      "react-hooks/exhaustive-deps": {
-        "errors": 0,
-        "warnings": 1
       }
     },
     "src/components/enterprise/agile/AgileBoards.tsx": {
@@ -257,16 +247,12 @@
     },
     "src/components/enterprise/ApprovalInbox.tsx": {
       "@typescript-eslint/no-explicit-any": {
-        "errors": 12,
+        "errors": 9,
         "warnings": 0
       },
       "@typescript-eslint/no-unused-expressions": {
         "errors": 1,
         "warnings": 0
-      },
-      "react-hooks/exhaustive-deps": {
-        "errors": 0,
-        "warnings": 2
       }
     },
     "src/components/enterprise/BirthdayAnniversaryWidget.tsx": {
@@ -537,12 +523,8 @@
     },
     "src/components/enterprise/LeaveRequestList.tsx": {
       "@typescript-eslint/no-explicit-any": {
-        "errors": 8,
+        "errors": 6,
         "warnings": 0
-      },
-      "react-hooks/exhaustive-deps": {
-        "errors": 0,
-        "warnings": 1
       }
     },
     "src/components/enterprise/LeaveTypeManager.tsx": {
@@ -1626,43 +1608,6 @@
         "count": 1
       }
     },
-    "src/components/enterprise/AdminLeaveOverride.tsx": {
-      "3546ddda2fb9cf1fc898": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const userIds = (mData || []).map((m: any) => m.user_id);",
-        "count": 1
-      },
-      "5c50b57e740f2043bde2": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const { data, error } = await (supabase as any).rpc('create_admin_leave_override', {",
-        "count": 1
-      },
-      "5f47a6917c93120732dd": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "setMembers((profiles || []).map((p: any) => ({ user_id: p.user_id, display_name: p.display_name || t('approval_inbox.unknown') })).sort((a, b) => a.display_name.localeCompare(b.display_name)));",
-        "count": 1
-      },
-      "72573345182343bedb61": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const { data: mData } = await supabase.from('enterprise_memberships').select('user_id').eq('workspace_id', workspaceId).eq('status', 'active' as any);",
-        "count": 1
-      },
-      "7e5326778ab35a6e3179": {
-        "ruleId": "react-hooks/exhaustive-deps",
-        "severity": "warnings",
-        "message": "React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array.",
-        "source": "}, [open, workspaceId]);",
-        "count": 1
-      }
-    },
     "src/components/enterprise/agile/AgileBoards.tsx": {
       "10b232dceb42cf1a12b2": {
         "ruleId": "@typescript-eslint/no-explicit-any",
@@ -2389,27 +2334,6 @@
         "source": "setSelectedIds(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });",
         "count": 1
       },
-      "2c46917c99fe04b4f92e": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "let items = (data as any[]) || [];",
-        "count": 1
-      },
-      "49040cfcdae962337e68": {
-        "ruleId": "react-hooks/exhaustive-deps",
-        "severity": "warnings",
-        "message": "React Hook useEffect has a missing dependency: 'fetchRequests'. Either include it or remove the dependency array.",
-        "source": "useEffect(() => { fetchRequests(); }, [workspaceId, statusFilter, typeFilter, dateFrom, dateTo]);",
-        "count": 1
-      },
-      "9120b0d8b6c5b70f8694": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "(memData || []).forEach((m: any) => {",
-        "count": 1
-      },
       "932ac76651eecff1c091": {
         "ruleId": "@typescript-eslint/no-explicit-any",
         "severity": "errors",
@@ -2438,13 +2362,6 @@
         "source": "const [requests, setRequests] = useState<any[]>([]);",
         "count": 1
       },
-      "e7e1c553b9512ff3591e": {
-        "ruleId": "react-hooks/exhaustive-deps",
-        "severity": "warnings",
-        "message": "React Hook useEffect has missing dependencies: 'fetchRequests' and 'loading'. Either include them or remove the dependency array.",
-        "source": "}, [teamFilter, roleFilter, requesterFilter]);",
-        "count": 1
-      },
       "ebf19113da1d6857fb9e": {
         "ruleId": "@typescript-eslint/no-explicit-any",
         "severity": "errors",
@@ -2464,13 +2381,6 @@
         "severity": "errors",
         "message": "Unexpected any. Specify a different type.",
         "source": "if (typeFilter !== 'all') query = query.eq('leave_type', typeFilter as any);",
-        "count": 1
-      },
-      "f7f4bec7714bb05f21b5": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "(profileData || []).forEach((p: any) => { pMap[p.user_id] = p.display_name || t('approval_inbox.unknown'); });",
         "count": 1
       },
       "fc43c1611fd51af9b5c2": {
@@ -4032,20 +3942,6 @@
       }
     },
     "src/components/enterprise/LeaveRequestList.tsx": {
-      "046a4035426aa7dc7f4e": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const items = (data as any[]) || [];",
-        "count": 1
-      },
-      "40e3601dea91eacde059": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "(profileData || []).forEach((p: any) => { map[p.user_id] = p.display_name || t('approval_inbox.unknown'); });",
-        "count": 1
-      },
       "6fe3f3165010112eb146": {
         "ruleId": "@typescript-eslint/no-explicit-any",
         "severity": "errors",
@@ -4079,13 +3975,6 @@
         "severity": "errors",
         "message": "Unexpected any. Specify a different type.",
         "source": ".update({ status: 'cancelled' as any })",
-        "count": 1
-      },
-      "ef96d99cf5aa0d865510": {
-        "ruleId": "react-hooks/exhaustive-deps",
-        "severity": "warnings",
-        "message": "React Hook useEffect has a missing dependency: 'fetchRequests'. Either include it or remove the dependency array.",
-        "source": "useEffect(() => { fetchRequests(); }, [workspaceId]);",
         "count": 1
       }
     },

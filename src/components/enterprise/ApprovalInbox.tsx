@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -20,6 +20,7 @@ interface Props {
   workspaceId: string;
   userId: string;
   canApprove?: boolean;
+  refreshKey?: number;
 }
 
 const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
@@ -31,7 +32,7 @@ const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'outline' | 'des
   expired: 'outline',
 };
 
-export function ApprovalInbox({ workspaceId, userId, canApprove = false }: Props) {
+export function ApprovalInbox({ workspaceId, userId, canApprove = false, refreshKey = 0 }: Props) {
   const { t } = useI18n();
   const dateFnsLocale = useDateLocale();
   const { enabled: decisionMemoryEnabled } = useFeature(workspaceId, 'decision_memory');
@@ -52,65 +53,118 @@ export function ApprovalInbox({ workspaceId, userId, canApprove = false }: Props
   const [teams, setTeams] = useState<string[]>([]);
   const [roles, setRoles] = useState<string[]>([]);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [refreshRevision, setRefreshRevision] = useState(0);
+  const [committedQueryScope, setCommittedQueryScope] = useState<string | null>(null);
+  const requestSequenceRef = useRef(0);
+  const queryScope = JSON.stringify([
+    workspaceId,
+    userId,
+    statusFilter,
+    typeFilter,
+    dateFrom ? format(dateFrom, 'yyyy-MM-dd') : null,
+    dateTo ? format(dateTo, 'yyyy-MM-dd') : null,
+    teamFilter,
+    roleFilter,
+    requesterFilter,
+    refreshKey,
+    refreshRevision,
+  ]);
 
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
+    const requestId = ++requestSequenceRef.current;
+    const queryScopeSnapshot = queryScope;
     setLoading(true);
-    let query = supabase
-      .from('leave_requests')
-      .select('*')
-      .eq('workspace_id', workspaceId)
-      .order('created_at', { ascending: false });
+    try {
+      let query = supabase
+        .from('leave_requests')
+        .select('*')
+        .eq('workspace_id', workspaceId)
+        .order('created_at', { ascending: false });
 
-    if (statusFilter !== 'all') query = query.eq('status', statusFilter as any);
-    if (typeFilter !== 'all') query = query.eq('leave_type', typeFilter as any);
-    if (dateFrom) query = query.gte('start_date', format(dateFrom, 'yyyy-MM-dd'));
-    if (dateTo) query = query.lte('end_date', format(dateTo, 'yyyy-MM-dd'));
+      if (statusFilter !== 'all') query = query.eq('status', statusFilter as any);
+      if (typeFilter !== 'all') query = query.eq('leave_type', typeFilter as any);
+      if (dateFrom) query = query.gte('start_date', format(dateFrom, 'yyyy-MM-dd'));
+      if (dateTo) query = query.lte('end_date', format(dateTo, 'yyyy-MM-dd'));
 
-    const { data, error: queryErr } = await query;
-    if (queryErr) {
-      console.error('[ApprovalInbox] Failed to fetch leave requests:', queryErr.message);
-      setLoading(false);
-      return;
-    }
-    let items = (data as any[]) || [];
-    setSelectedIds(new Set());
+      const { data, error: queryErr } = await query;
+      if (requestId !== requestSequenceRef.current) return;
+      if (queryErr) throw new Error('leave_query_failed');
 
-    const userIds = [...new Set(items.map(r => r.user_id))];
-    const mMap: Record<string, { team: string | null; role: string | null }> = {};
-    if (userIds.length > 0) {
-      const [{ data: profileData }, { data: memData }] = await Promise.all([
-        supabase.from('profiles').select('user_id, display_name').in('user_id', userIds),
-        supabase.from('enterprise_memberships').select('user_id, team, business_role').eq('workspace_id', workspaceId).in('user_id', userIds),
-      ]);
+      let items = data || [];
+      const userIds = [...new Set(items.map(r => r.user_id))];
       const pMap: Record<string, string> = {};
-      (profileData || []).forEach((p: any) => { pMap[p.user_id] = p.display_name || t('approval_inbox.unknown'); });
-      setProfiles(pMap);
+      const mMap: Record<string, { team: string | null; role: string | null }> = {};
+      const tSet = new Set<string>();
+      const rSet = new Set<string>();
 
-      const tSet = new Set<string>(); const rSet = new Set<string>();
-      (memData || []).forEach((m: any) => {
-        mMap[m.user_id] = { team: m.team, role: m.business_role };
-        if (m.team) tSet.add(m.team);
-        if (m.business_role) rSet.add(m.business_role);
-      });
+      if (userIds.length > 0) {
+        const [profileResult, membershipResult] = await Promise.all([
+          supabase.from('profiles').select('user_id, display_name').in('user_id', userIds),
+          supabase.from('enterprise_memberships').select('user_id, team, business_role').eq('workspace_id', workspaceId).in('user_id', userIds),
+        ]);
+        if (requestId !== requestSequenceRef.current) return;
+        if (profileResult.error || membershipResult.error) throw new Error('directory_query_failed');
+
+        (profileResult.data || []).forEach(p => {
+          pMap[p.user_id] = p.display_name || t('approval_inbox.unknown');
+        });
+        (membershipResult.data || []).forEach(m => {
+          mMap[m.user_id] = { team: m.team, role: m.business_role };
+          if (m.team) tSet.add(m.team);
+          if (m.business_role) rSet.add(m.business_role);
+        });
+      }
+
+      // Client-side filters use maps from the same request generation.
+      if (teamFilter !== 'all') items = items.filter(r => mMap[r.user_id]?.team === teamFilter);
+      if (roleFilter !== 'all') items = items.filter(r => mMap[r.user_id]?.role === roleFilter);
+      if (requesterFilter !== 'all') items = items.filter(r => r.user_id === requesterFilter);
+      if (requestId !== requestSequenceRef.current) return;
+
+      setRequests(items);
+      setProfiles(pMap);
       setMemberInfo(mMap);
       setTeams(Array.from(tSet).sort());
       setRoles(Array.from(rSet).sort());
+      setSelectedIds(new Set());
+      setCommittedQueryScope(queryScopeSnapshot);
+    } catch (err) {
+      if (requestId !== requestSequenceRef.current) return;
+      console.error(
+        '[ApprovalInbox] Failed to fetch leave requests',
+        err instanceof Error ? err.message : 'unknown_failure',
+      );
+      setRequests([]);
+      setProfiles({});
+      setMemberInfo({});
+      setTeams([]);
+      setRoles([]);
+      setSelectedIds(new Set());
+      setCommittedQueryScope(queryScopeSnapshot);
+    } finally {
+      if (requestId === requestSequenceRef.current) setLoading(false);
     }
+  }, [
+    dateFrom,
+    dateTo,
+    queryScope,
+    requesterFilter,
+    roleFilter,
+    statusFilter,
+    t,
+    teamFilter,
+    typeFilter,
+    workspaceId,
+  ]);
 
-    // Client-side filters — use local mMap (freshly fetched), not stale memberInfo state
-    if (teamFilter !== 'all') items = items.filter(r => mMap[r.user_id]?.team === teamFilter);
-    if (roleFilter !== 'all') items = items.filter(r => mMap[r.user_id]?.role === roleFilter);
-    if (requesterFilter !== 'all') items = items.filter(r => r.user_id === requesterFilter);
-
-    setRequests(items);
-    setLoading(false);
-  };
-
-  useEffect(() => { fetchRequests(); }, [workspaceId, statusFilter, typeFilter, dateFrom, dateTo]);
-  // Re-filter on client-side filter changes
+  // Every query-scope input owns a new generation. Cleanup invalidates any
+  // response still in flight before the next context is allowed to commit.
   useEffect(() => {
-    if (!loading) fetchRequests();
-  }, [teamFilter, roleFilter, requesterFilter]);
+    void fetchRequests();
+    return () => {
+      requestSequenceRef.current += 1;
+    };
+  }, [fetchRequests]);
 
   const handleDecision = async (requestId: string, decision: 'approved' | 'rejected') => {
     setProcessing(true);
@@ -148,7 +202,7 @@ export function ApprovalInbox({ workspaceId, userId, canApprove = false }: Props
 
     toast.success(decision === 'approved' ? t('approval_inbox.approved') : t('approval_inbox.rejected'));
     setCommentMap(prev => { const n = { ...prev }; delete n[requestId]; return n; });
-    fetchRequests();
+    setRefreshRevision(current => current + 1);
     setProcessing(false);
   };
 
@@ -177,7 +231,7 @@ export function ApprovalInbox({ workspaceId, userId, canApprove = false }: Props
     if (failed > 0) {
       toast.error(`${t('approval_inbox.decision_failed')} (${failed})`);
     }
-    fetchRequests();
+    setRefreshRevision(current => current + 1);
     setProcessing(false);
   };
 
@@ -193,7 +247,9 @@ export function ApprovalInbox({ workspaceId, userId, canApprove = false }: Props
   const pendingRequests = requests.filter(r => r.status === 'pending');
   const uniqueRequesters = [...new Set(requests.map(r => r.user_id))];
 
-  if (loading) return <div className="flex justify-center py-8"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
+  if (loading || committedQueryScope !== queryScope) {
+    return <div className="flex justify-center py-8"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
+  }
 
   return (
     <div className="space-y-3">

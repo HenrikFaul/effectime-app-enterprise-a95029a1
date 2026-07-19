@@ -330,6 +330,7 @@ export default function Enterprise() {
     if (ws) {
       return (
         <WorkspaceDashboard
+          key={`${ws.id}:${user?.id || ''}`}
           workspace={ws}
           userRole={role}
           userId={user?.id || ''}

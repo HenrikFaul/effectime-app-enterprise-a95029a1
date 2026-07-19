@@ -14,6 +14,7 @@ const importer = readContract('supabase/functions/import-entity-data/index.ts');
 const importerSecurity = readContract('supabase/functions/import-entity-data/security.ts');
 const emailWorker = readContract('supabase/functions/process-email-queue/index.ts');
 const approvalInbox = readContract('src/components/enterprise/ApprovalInbox.tsx');
+const enterprisePage = readContract('src/pages/Enterprise.tsx');
 const workflowsModule = readContract(
   'src/components/enterprise/workflows/WorkflowsModule.tsx',
 );
@@ -187,6 +188,12 @@ describe('restored and hardened runtime contracts', () => {
     expect(overrideUi).toContain("rpc('create_admin_leave_override'");
     expect(overrideUi).not.toContain("from('leave_requests').insert");
     expect(overrideUi).not.toContain('logAuditEvent');
+    expect(dashboard).toContain('onCreated={() => setLeaveRefreshKey(current => current + 1)}');
+    expect(dashboard.match(/refreshKey=\{leaveRefreshKey\}/g)).toHaveLength(2);
+    expect(approvalInbox).toContain('refreshKey = 0');
+    expect(approvalInbox).toContain('setRefreshRevision(current => current + 1)');
+    expect(approvalInbox).toContain('committedQueryScope !== queryScope');
+    expect(enterprisePage).toContain("key={`${ws.id}:${user?.id || ''}`}");
   });
 
   it('enforces the paid iCal entitlement at the token table boundary', () => {

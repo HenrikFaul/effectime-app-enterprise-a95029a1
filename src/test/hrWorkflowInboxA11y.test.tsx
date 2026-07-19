@@ -63,7 +63,7 @@ beforeEach(() => {
       error: null,
     });
     return query;
-  });
+  }, 10_000);
 });
 
 afterEach(() => {

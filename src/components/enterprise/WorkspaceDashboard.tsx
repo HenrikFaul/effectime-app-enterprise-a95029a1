@@ -637,6 +637,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
 function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canViewApprovals, canApprove, canOverride, canSubmit, canViewOwn, canViewTeam, canViewRules }: { workspaceId: string; userId: string; userRole: string; isAdmin: boolean; canViewApprovals?: boolean; canApprove?: boolean; canOverride?: boolean; canSubmit?: boolean; canViewOwn?: boolean; canViewTeam?: boolean; canViewRules?: boolean }) {
   const { t } = useI18n();
   const [showOverride, setShowOverride] = useState(false);
+  const [leaveRefreshKey, setLeaveRefreshKey] = useState(0);
   // Per user request: all top-level sections start collapsed.
   const [approvalsOpen, setApprovalsOpen] = useState(false);
   const [requestsOpen, setRequestsOpen] = useState(false);
@@ -683,9 +684,15 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canVi
               workspaceId={workspaceId}
               userId={userId}
               canApprove={canApprove}
+              refreshKey={leaveRefreshKey}
             />
             {canOverride ? (
-              <AdminLeaveOverride open={showOverride} onOpenChange={setShowOverride} workspaceId={workspaceId} onCreated={() => {}} />
+              <AdminLeaveOverride
+                open={showOverride}
+                onOpenChange={setShowOverride}
+                workspaceId={workspaceId}
+                onCreated={() => setLeaveRefreshKey(current => current + 1)}
+              />
             ) : null}
             <DecisionMemoryStaleInbox workspaceId={workspaceId} isAdmin={isAdmin} authoredBy={userId} />
           </CollapsibleContent>
@@ -705,7 +712,14 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canVi
           </Card>
         </CollapsibleTrigger>
         <CollapsibleContent className="mt-2">
-          <LeaveRequestList workspaceId={workspaceId} userId={userId} userRole={userRole} canViewOwn={canViewOwn} canViewTeam={canViewTeam} />
+          <LeaveRequestList
+            workspaceId={workspaceId}
+            userId={userId}
+            userRole={userRole}
+            canViewOwn={canViewOwn}
+            canViewTeam={canViewTeam}
+            refreshKey={leaveRefreshKey}
+          />
         </CollapsibleContent>
       </Collapsible>
 

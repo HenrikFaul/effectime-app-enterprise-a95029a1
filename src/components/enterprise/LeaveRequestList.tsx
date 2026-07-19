@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,6 +16,7 @@ interface Props {
   userRole: string;
   canViewOwn?: boolean;
   canViewTeam?: boolean;
+  refreshKey?: number;
 }
 
 const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'outline' | 'destructive'> = {
@@ -28,51 +29,87 @@ const STATUS_VARIANTS: Record<string, 'default' | 'secondary' | 'outline' | 'des
   expired: 'outline',
 };
 
-export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = true, canViewTeam = false }: Props) {
+export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = true, canViewTeam = false, refreshKey = 0 }: Props) {
   const { t } = useI18n();
   const dateFnsLocale = useDateLocale();
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
+  const [refreshRevision, setRefreshRevision] = useState(0);
+  const [committedQueryScope, setCommittedQueryScope] = useState<string | null>(null);
+  const requestSequenceRef = useRef(0);
 
   const isAdmin = userRole === 'owner' || userRole === 'resourceAssistant';
   // Admin always sees all; otherwise respect canViewTeam
   const showAllRequests = isAdmin || canViewTeam;
+  const queryScope = JSON.stringify([
+    workspaceId,
+    userId,
+    showAllRequests,
+    refreshKey,
+    refreshRevision,
+  ]);
 
-  const fetchRequests = async () => {
+  const fetchRequests = useCallback(async () => {
+    const requestId = ++requestSequenceRef.current;
+    const queryScopeSnapshot = queryScope;
     setLoading(true);
-    let query = supabase
-      .from('leave_requests')
-      .select('*')
-      .eq('workspace_id', workspaceId)
-      .order('created_at', { ascending: false });
+    try {
+      let query = supabase
+        .from('leave_requests')
+        .select('*')
+        .eq('workspace_id', workspaceId)
+        .order('created_at', { ascending: false });
 
-    // If not admin and no team view permission, only show own
-    if (!showAllRequests) {
-      query = query.eq('user_id', userId);
+      // If not admin and no team view permission, only show own.
+      if (!showAllRequests) query = query.eq('user_id', userId);
+
+      const { data, error: queryError } = await query;
+      if (requestId !== requestSequenceRef.current) return;
+      if (queryError) throw new Error('leave_query_failed');
+      const items = data || [];
+      const profileMap: Record<string, string> = {};
+
+      const userIds = [...new Set(items.map(r => r.user_id))];
+      if (userIds.length > 0) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('user_id, display_name')
+          .in('user_id', userIds);
+        if (requestId !== requestSequenceRef.current) return;
+        if (profileError) throw new Error('profile_query_failed');
+        (profileData || []).forEach(p => {
+          profileMap[p.user_id] = p.display_name || t('approval_inbox.unknown');
+        });
+      }
+      if (requestId !== requestSequenceRef.current) return;
+
+      setRequests(items);
+      setProfiles(profileMap);
+      setCommittedQueryScope(queryScopeSnapshot);
+    } catch (err) {
+      if (requestId !== requestSequenceRef.current) return;
+      console.error(
+        '[LeaveRequestList] Failed to fetch leave requests',
+        err instanceof Error ? err.message : 'unknown_failure',
+      );
+      setRequests([]);
+      setProfiles({});
+      setCommittedQueryScope(queryScopeSnapshot);
+    } finally {
+      if (requestId === requestSequenceRef.current) setLoading(false);
     }
+  }, [queryScope, showAllRequests, t, userId, workspaceId]);
 
-    const { data } = await query;
-    const items = (data as any[]) || [];
-    setRequests(items);
-
-    // Fetch display names
-    const userIds = [...new Set(items.map(r => r.user_id))];
-    if (userIds.length > 0) {
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('user_id, display_name')
-        .in('user_id', userIds);
-      const map: Record<string, string> = {};
-      (profileData || []).forEach((p: any) => { map[p.user_id] = p.display_name || t('approval_inbox.unknown'); });
-      setProfiles(map);
-    }
-
-    setLoading(false);
-  };
-
-  useEffect(() => { fetchRequests(); }, [workspaceId]);
+  // Query scope includes the effective access context; cleanup prevents a
+  // broader obsolete response from committing after a permission downgrade.
+  useEffect(() => {
+    void fetchRequests();
+    return () => {
+      requestSequenceRef.current += 1;
+    };
+  }, [fetchRequests]);
 
   const handleCancel = async (id: string) => {
     const reason = window.prompt(t('approval_inbox.cancel_prompt')) ?? '';
@@ -92,7 +129,7 @@ export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = t
         metadata: { reason: reason.trim() || null },
       });
       toast.success(t('approval_inbox.cancelled'));
-      fetchRequests();
+      setRefreshRevision(current => current + 1);
     }
   };
 
@@ -113,11 +150,11 @@ export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = t
         metadata: { reason: 'Approved leave withdrawn by requester' },
       });
       toast.success(t('approval_inbox.withdrawn'));
-      fetchRequests();
+      setRefreshRevision(current => current + 1);
     }
   };
 
-  if (loading) {
+  if (loading || committedQueryScope !== queryScope) {
     return <div className="flex justify-center py-8"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
   }
 
@@ -181,7 +218,7 @@ export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = t
         onOpenChange={setShowCreate}
         workspaceId={workspaceId}
         userId={userId}
-        onCreated={fetchRequests}
+        onCreated={() => setRefreshRevision(current => current + 1)}
       />
     </div>
   );

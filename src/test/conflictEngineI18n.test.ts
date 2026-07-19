@@ -72,13 +72,14 @@ describe('formatConflict — locale-aware rendering of ConflictResult', () => {
     expect(out.length).toBeGreaterThan(5);
   });
 
-  it('VALIDATION_ERROR falls through to the raw message (system error, not a translation)', () => {
+  it('VALIDATION_ERROR hides raw system details behind a localized retry message', () => {
     const t = makeT(en);
     const out = formatConflict({
       code: 'VALIDATION_ERROR', severity: 'blocking',
       message: 'Error: network failure',
     }, t);
-    expect(out).toBe('Error: network failure');
+    expect(out).toBe(en.leave_request.error_validation_failed);
+    expect(out).not.toContain('network failure');
   });
 
   it('unknown code falls back to the Hungarian engine message', () => {
