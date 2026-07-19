@@ -3,8 +3,8 @@
 Audit dátuma: 2026-07-17–19
 Repository: `C:\Work\Github\effectime-app-enterprise-a95029a1`
 Remote: `HenrikFaul/effectime-app-enterprise-a95029a1`
-Auditált main HEAD: `5b502e12ca4f9169a366347e1d9d9079f7b1517e`
-Munkabranch: `codex/collapsible-card-trigger`
+Auditált main HEAD: `b0d129c41c56920c432d97eae3c93d63cb6dbd9a`
+Munkabranch: `codex/admin-override-a11y`
 
 ## 1. Átvételi összkép
 
@@ -134,8 +134,9 @@ adatbázis-objektumot nem töröltünk.
 | R-028 | Reprodukálható DB/CI/release          | repo konvenció, migration history | BIZONYÍTOTT                         | migrations, lock, provenance CI                 | frontend igen; DB nem | ratchet+replay      | igen         | no-new-debt kapu kész; DB release blokkolt | history/schema reconcile |
 | R-029 | HR task-kérés sorrend és lifecycle    | runtime call path + reprodukált komponens-race | BIZONYÍTOTT              | `HRWorkflowInbox.tsx`                           | igen                  | 4 concurrency teszt | igen         | PR #169-ben mainre merge-elve             | production publish       |
 | R-030 | iCal/admin-override entitlement paritás | tier/permission docs + UI/DB/Edge call path  | BIZONYÍTOTT              | `WorkspaceDashboard`, `ICalSubscription`        | igen                  | 8 komponens + 28 contract | igen      | PR #170-ben mainre merge-elve; fail-closed downgrade/revoke UX | production publish |
-| R-031 | Kérelem létrehozása más nevében + opcionális admin auto-approve | APR-004 UI/RPC call path | BIZONYÍTOTT frontend / részleges szerver | `AdminLeaveOverride`, `create_admin_leave_override`, request listák | frontend igen | 23 komponens-race + statikus contract; dinamikus DB részleges | pontosítva | frontend hotfix candidate; teljes APR-004 NO-GO | szerepkör-egységesítés, PG18/staging/idempotencia |
-| R-032 | Enterprise collapsible kártyák billentyűzetes és AT-elérése | runtime source audit + reprodukált div-backed trigger | BIZONYÍTOTT | `CollapsibleCardTrigger` és 17 call-site öt enterprise modulban | igen | 4 célzott + teljes unit/type/web/mobile/release gate | igen | I-24 commitolt candidate kész | hosted CI, production publish |
+| R-031 | Kérelem létrehozása más nevében + opcionális admin auto-approve | APR-004 UI/RPC call path | BIZONYÍTOTT frontend / részleges szerver | `AdminLeaveOverride`, `create_admin_leave_override`, request listák | frontend igen | 28 admin + 4 valós Dialog + 31 i18n/runtime contract; teljes lokális gate; dinamikus DB részleges | pontosítva | I-25 frontend candidate lokális GO; hosted/PR folyamatban; teljes APR-004 NO-GO | szerepkör-egységesítés, PG18/staging/idempotencia |
+| R-032 | Enterprise collapsible kártyák billentyűzetes és AT-elérése | runtime source audit + reprodukált div-backed trigger | BIZONYÍTOTT | `CollapsibleCardTrigger` és 17 call-site öt enterprise modulban | igen | 4 célzott + teljes unit/type/web/mobile/release + hosted 7/7 | igen | I-24 PR #173-ban mainre merge-elve | production publish/acceptance |
+| R-033 | Admin override dialog programozott név, fókusz és aszinkron lifecycle | runtime source audit + reprodukált label/focus/stale-response hiány | BIZONYÍTOTT frontend | `AdminLeaveOverride`, `WorkspaceDashboard`, shared `DialogContent` | candidate-ben igen | 28 admin + 4 valós Radix Dialog; 63/63 célzott; 56/56 és 616/616 coverage; teljes lokális gate | igen | I-25 candidate lokális GO | hosted/PR; production keyboard/AT; szerver P1 külön |
 
 ## 4. Megtalált és kijavított hiányok
 
@@ -243,6 +244,24 @@ státuszoszlopai jelzik:
   jogosultság-szűkítés előtti széles lekérdezést generációs guard dobja el.
   Célzottan 16 admin-flow + 7 lista-race, a kapcsolódó contractokkal 75/75 teszt
   PASS; szerveroldali szerepkör-, idempotencia- és dinamikus PG18 bizonyíték nyitott.
+- Az I-25 candidate az admin override dialógus minden látható formmezőjét egyedi,
+  programozott label/required szerződéshez köti, lokalizált élő validációs és
+  submit státuszt, generikus fail-visible hibát, valamint determinisztikus
+  retry/empty fókuszkezelést ad. A nyitógomb és a Dialog explicit kapcsolatban
+  áll, bezáráskor a fókusz a még elérhető nyitóra tér vissza; submit közben a
+  natív close, Escape, outside interaction és minden módosítható kontroll zárt.
+  A shared `DialogContent` új propjai opcionálisak és a korábbi `Close`/enabled
+  viselkedésre defaultolnak.
+- A submit payload a validált aktuális kontextusból egyszer készül, a szinkron
+  re-entry guard és a futás/scope generáció pedig nem enged elavult workspace-
+  vagy unmount utáni success/error UI-mellékhatást. A candidate 28/28 admin,
+  4/4 valós Radix Dialog és összesen 63/63 célzott tesztet, továbbá 56/56 fájlban
+  616/616 full coverage tesztet teljesít. A type/lint/build, exact bundle,
+  web/mobile, audit/secrets, schema/release/Edge és a már meglévő dinamikus PG18
+  payroll/HR contract lokális kapuk is zöldek; az I-25 lokális GO. A hosted
+  workflow és a PR még folyamatban van. A kliensjavítás nem helyettesíti az RPC
+  idempotenciát, a dinamikus admin-override PG18 acceptance-et vagy a globális
+  `profiles` RLS rendezését.
 
 ## 5. Hiányok és kockázatok
 
@@ -263,10 +282,11 @@ státuszoszlopai jelzik:
 | Fióktörlés nem atomi                        | GoTrue delete és DB cleanup nem egy tranzakció; a preflight csak ismert FK-ket fed                                                                                                                               | `delete-account`, retention                            | részleges törlés / blokkolt GDPR-flow; jogi döntés; XL        | retention policy; job/RPC+kompenzáció; retry/idempotency/concurrency; audit és runbook                            |
 | Webhook/API DDL és producer provenance      | live/repo function source helyreállt, de egyes delivery/config objektumok és producer-ek helyi eredete nem teljes                                                                                                | public API/webhook                                     | következő clean deploy nem reprodukálja a live viselkedést; L | helyi DDL+producer inventory; staging key/revoke/rate/delivery/SSRF E2E; source↔deploy checksum                   |
 | Data migration részleges commit             | több entitás egymás után íródik, hiba esetén részleges eredmény/HTTP-eredmény lehetséges; nincs teljes resumable checksum                                                                                        | `data-migration`, import                               | ismétlés/duplikáció/kevert állapot; L                         | manifest+checksum; idempotens resume; hibastátusz; fixture és rollback doc                                        |
-| Deploy provenance és provider lánc          | A main merge SHA és CI artifact bizonyított, de a jelenlegi `effectime.app` Lovable/Cloudflare deploymentje nem köthető Git SHA-hoz; a Lovable webhook HTTP 405. A release-identity kód ebben a következő candidate branchben elkészült, productionben még nincs. | frontend/Edge/DB release | rollback és audit nem reprodukálható; M | élő `/.well-known/effectime-release.json`; Edge body/header SHA; provider deployment-ID↔SHA rekord; fail-closed verifier; azonos commitból háromrétegű deploy |
+| Deploy provenance és provider lánc          | Az I-24 main merge SHA, hosted CI és schema-2 artifact bizonyított, de a jelenlegi `effectime.app` Lovable/Cloudflare deploymentje továbbra sem köthető Git SHA-hoz: a live release marker hiányzik, a repository webhook HTTP 405, a kézi publish pedig authenticated Lovable loginon blokkolt. A release-identity kód mainen van, productionben még nincs igazolva. | frontend/Edge/DB release | rollback és audit nem reprodukálható; M | élő `/.well-known/effectime-release.json`; Edge body/header SHA; provider deployment-ID↔SHA rekord; fail-closed verifier; azonos commitból háromrétegű deploy |
 | Payroll időszak/rate/export szemantika      | Tetszőleges részidőszakhoz teljes havi attendance aggregate kerülhet; a rate-választás latest-all; a v1 szerződés az ISO pénznemkódot validálja, de tagonként eltérő pénznemeket egyetlen `total_gross` mezőbe összead (a contract teszt EUR+USD összeget is elfogad); az attendance/leave/rate HTTP-olvasások nem egyetlen MVCC snapshotból készülnek. A lock/export és elsődleges audit már atomi, a snapshot immutable és DB-digestelt. | payroll Edge/DB/domain                                 | magas pénzügyi eltérés vagy időközi read drift; termékdöntés és egyetlen DB-számítási határ kell; L | full-month vagy napi canonical szabály; rate-as-of/effective-to; v1 single-currency vagy v2 per-currency totals; egy statement/transaction számítás; concurrency+staging fixture; legacy snapshot inventory/remediation |
 | Natív store release biztonsági kapuk        | Android/iOS és CI forrás, PKCE, Keychain/AndroidKeyStore adapter, exact-origin CSP, hosted Android build és locked Xcode 26.5 simulator build kész; nincs store reservation/signing, verified HTTPS link, jóváhagyott brand asset vagy fizikai smoke | mobile auth/platform/release | signing/scheme ownership, OS-integráció és rollback kockázat; L | app ID/team/cert; AASA/assetlinks; device storage+CSP+auth smoke; signed internal rollout; `docs/mobile/README.md` |
 | Admin-created leave szerver acceptance      | A frontend exact-kontekstukezelése és race-védelme bizonyított, de a repository csak statikusan ellenőrzi a `create_admin_leave_override` RPC-t; nincs teljes PG18 pozitív/negatív RBAC, tenant, audit, kvóta/rollback, konkurens duplikáció és actor-demotion futtatás. | admin override RPC/RBAC/audit | jogosulatlan vagy duplikált kérelem kockázata több kliens/retry esetén; M/L | egységes szerepkör-szerződés; idempotency key/unique ledger; pinned PG18 race suite; restored-staging acceptance |
+| Globális `profiles` SELECT tenant/PII határ | A jelenlegi migration policy minden authenticated felhasználónak olvashatóvá teszi más felhasználó token-null profile sorát. A sor `display_name`, avatar, preferences, locale és időbélyeg mezőket is tartalmazhat; a signup email-fallback miatt a `display_name` PII lehet. Az I-25 komponens tenantból származó aktív member ID-kre és `user_id, display_name` oszlopokra szűkít, de a kliensfilter nem jogosultsági határ. | `profiles` RLS, member-directory és profile call-site inventory | cross-tenant PII/GDPR kitettség; a live policy és összes fogyasztó inventorizálása kell; M/L | tenant-korrelált policy vagy minimális oszlopú workspace-member RPC/view; caller inventory; két-tenant PG18 negatív teszt; restored-staging/live policy diff; rollout és visszaállítás |
 
 ### P2
 
@@ -274,7 +294,7 @@ státuszoszlopai jelzik:
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ----- | ------------------------------------------------------------------- |
 | ESLint-adósság                      | 1 209 error + 104 warning 178 fájlban; az I-22 9 errort, 4 warningot és 1 érintett fájlt szüntetett meg, az I-23/I-24 nem ad új findingot; a csökkentett fingerprint-baseline védi a javítást | XL    | modulonkénti csökkentés, baseline-frissítés, végül 0                |
 | E2E/coverage                        | nincs teljes auth/workspace/RBAC/leave/payroll/integration böngészős release gate                                                    | L     | Playwright staging suite, fixture, coverage baseline                |
-| Bundle-méret                        | I-24 Windows candidate: JS 4 454 848 raw / 1 271 801 gzip; largest 1 740 007 / 551 960; CSS 180 862 / 29 599. A reviewed plafon a mért Windows/Linux varianciával 4 454 976 / 1 272 080; largest-raw és CSS-raw exact, largest-gzip/CSS-gzip meglévő plafonja nem nőtt. | M | további route split és regressziós mérés |
+| Bundle-méret                        | Két I-25 clean, commit-SHA-attributed rebuild PASS: JS 4 459 891 raw és 1 273 439–1 273 445 gzip; largest 1 741 005 raw és 552 245–552 257 gzip; CSS 180 862 / 29 599. A reviewed total ceiling 4 460 019 / 1 273 724, így a korábbi 128/279 byte cross-platform/SHA mozgástér változatlan; largest-raw exact, a largest-gzip/CSS plafon nem nőtt. | M | további route split; hosted artifact összevetés; regressziós mérés |
 | Payroll provider config             | Nincs explicit default/unique aktív konfiguráció; több aktív sor esetén a `.maybeSingle()` hibázik                                    | M     | default mező vagy partial unique index; migration+concurrency teszt |
 | Public function privilege inventory | linked baselineban 114 public function, 94 SECURITY DEFINER, mind anon executable volt; az új revoke-ok nem fednek teljes inventoryt | L     | funkciónként owner/search_path/ACL audit, negatív auth teszt        |
 | M365 inbound ígéret                 | kimenő sync bizonyított, teljes tartós inbound OOF integráció nem                                                                    | M     | scope döntés, implementáció vagy marketingkorrekció                 |
@@ -286,8 +306,8 @@ státuszoszlopai jelzik:
 | iCal credential lifecycle           | Demotion/inaktiválás/tier downgrade esetén az Edge 403-at ad, de a bearer token nem rotálódik vagy törlődik; későbbi reenable újraaktiválja. Owner más RA team tokenjét nem tudja inventoryzni/revokálni. | M | forward revoke/expiry modell, role/tier transition teszt, owner admin inventory |
 | Feature-entitlement outage UX       | A feature RPC hibája minden top-level tab entitlementet fail-closed hamisra állít; paid akció nem szivárog ki, de a core shell és a dormant iCal token revoke UI is eltűnik a lookup helyreállásáig. | M | külön core/error recovery surface, revoke-only runtime teszt, retry/hibaállapot |
 | Admin-override role szerződés       | backend bármely explicit `admin_override=edit` active role-t elfogad, a UI továbbra is admin szerepre szűkít; default member permission none | S | termékdöntés: hard admin role vagy teljesen konfigurálható permission |
-| Collapsible trigger szemantika      | Az I-24 candidate mind a 17 div-backed `CollapsibleTrigger`/`Card` kontrollt shared native-button overlayre váltja (WorkspaceDashboard 13, Invitations 1, MemberList 1, Onboarding 1, Access 1), explicit accessible labellel és `aria-hidden` vizuális tartalommal; callback/state/API/DB változatlan. A lokális web, mobil és clean release kapuk zöldek; hosted még nyitott. | S | hosted 7/7 után merge; production billentyűzetes acceptance |
-| Admin dialog/select a11y            | Az `AdminLeaveOverride` látható Select/date/textarea/justification labeljei nincsenek teljesen programozottan társítva; a beépített close név lokalizálatlan, submit alatti disabled állapota és DialogTrigger nélküli fókusz-visszaállítás nincs igazolva; validáció/submission live-state részleges | S/M | egyedi ID+label association, required semantics, lokalizált/disabled close, explicit return-focus ref, status/alert és valódi Radix fókuszteszt |
+| Collapsible trigger production acceptance | Az I-24 mind a 17 div-backed `CollapsibleTrigger`/`Card` kontrollt shared native-button overlayre váltotta (WorkspaceDashboard 13, Invitations 1, MemberList 1, Onboarding 1, Access 1), explicit accessible labellel és `aria-hidden` vizuális tartalommal; callback/state/API/DB változatlan. PR #173 mainen, hosted Quality Gate 7/7 PASS; a live release marker és production billentyűzetes acceptance még hiányzik. | S | authenticated Lovable publish; live SHA-marker; production keyboard/AT smoke |
+| Admin dialog/select a11y candidate  | Az I-25 candidate egyedi ID+label/required szerződést, lokalizált busy/error állapotot, natively disabled close-t, explicit return focus-t, submit alatti dismissal/control lockot és stale RPC scope guardot ad. 28 admin + 4 valós Dialog teszt, 63/63 célzott, 616/616 coverage és a teljes lokális gate PASS. | S/M | hosted/PR; merge után production keyboard/AT smoke |
 | OG/native/observability             | hiányzó OG asset; natív M365 Connect már fail-closed tiltott, de az OAuth-paritás, export/GPS/safe-area teljes device UX, secure telemetry és release marker/SLO nincs igazolva | M | asset/device smoke; platform adapterek; structured telemetry/release marker |
 
 ### P3
@@ -324,50 +344,54 @@ státuszoszlopai jelzik:
 | I-21   | iCal/admin override UI és token-state hardening | fail-closed permission/entitlement, approval-only Requests elérés, role-gated create, revoke-only downgrade UX, bearer request-generation, lokalizált accessible kontrollok | 8 komponens + 28 DB/Edge/static contract; teljes unit/type/lint/build/bundle/web+mobile smoke | nincs DB/API/dependency változás; saját dormant token törölhető; frontend commit reverttel visszaállítható; automatikus token-revocation külön P2 | PR #170-ben mainre merge-elve; run `29669034798` 7/7 PASS; production publish nyitott |
 | I-22   | Admin-created leave és request-list race hardening | half-day exact dátum, kontextuskötött fail-closed validáció, tagkönyvtár readiness/retry, exception-safe submit, exact actor/workspace scope és monoton query-generation | 16 admin + 7 lista-race + 52 kapcsolódó célzott contract/unit; teljes unit/type/lint/build/bundle/web+mobile gate | nincs DB/API/dependency változás; frontend commit egyben reverttel visszaállítható; szerveroldali szerepkör/idempotencia külön kapu | PR #171-ben mainre merge-elve; run `29672580843` 7/7 PASS; dinamikus admin-override PG18 és production publish nyitott |
 | I-23   | Leave-list fail-visible recovery és a11y | explicit lokalizált alert/retry, accessible loading/empty state, fail-closed adatürítés és a monoton query-generation megtartása | 8 új lista-state teszt + 7 meglévő race + 10 i18n contract; teljes 595/595 coverage, type/lint/build/bundle, web 7/7, mobile source 183/artifact 345/E2E 2, clean release contract 365 | nincs DB/API/dependency változás; komponens+i18n commit reverttel visszaállítható; raw backend hiba nem kerül DOM-ba | PR #172-ben `main`-re merge-elve (`5b502e12ca4f9169a366347e1d9d9079f7b1517e`); run `29673606633` 7/7 PASS; schema-2 artifact `8438122116`; production publish nyitott |
-| I-24   | Native collapsible-card trigger a11y | shared native-button overlay a 17 korábbi div-backed triggerhez; explicit accessible label és `aria-hidden` vizuális Card, callback/open-state/layout változatlan | targeted 4/4, typecheck, 55 fájl 599/599 coverage, build/bundle/lint/audit/secrets, mobile source 183/artifact 345/release 365/E2E 2, tracked native drift 0, web 7/7 + post-tightening 2/2 | nincs API/DB/dependency változás; shared komponens és 17 call-site egy frontend commitból visszaállítható | teljes lokális és clean release candidate PASS; hosted pending |
+| I-24   | Native collapsible-card trigger a11y | shared native-button overlay a 17 korábbi div-backed triggerhez; explicit accessible label és `aria-hidden` vizuális Card, callback/open-state/layout változatlan | targeted 4/4, typecheck, 55 fájl 599/599 coverage, build/bundle/lint/audit/secrets, mobile source 183/artifact 345/release 365/E2E 2, tracked native drift 0, web 7/7 + post-tightening 2/2; hosted 7/7 | nincs API/DB/dependency változás; shared komponens és 17 call-site egy frontend commitból visszaállítható | PR #173-ban `main`-re merge-elve (`b0d129c41c56920c432d97eae3c93d63cb6dbd9a`); run `29675611155` 7/7 PASS; artifact `8438782050`; production publish nyitott |
+| I-25   | Admin override a11y, fókusz és async race hardening | programozott label/required, localized live/error/empty/retry, opener↔dialog kapcsolat és return focus, native disabled close, submit dismissal/control lock, immutable payload + stale scope suppression; shared Dialog opcionális backward-compatible propok | 63/63 célzott; 56/56 és 616/616 coverage; type/lint/build/exact bundle/web 7/7/audit/secrets; mobile source 183/artifact 345/sync/drift 0/E2E 2; schema/release/Edge/PG18 lokális kapuk | nincs API/DB/Edge/dependency változás; frontend/shared-dialog commit reverttel visszaállítható; RPC idempotency, admin PG18 és profile RLS külön P1 | candidate lokális gate GO; hosted/PR folyamatban |
 
 ## 7. Ellenőrzések és eredmények
 
-Az I-23 commitolt főágán a hosted kapu 7/7 PASS, és rendelkezésre áll a tiszta
-schema-2 release-artifact. Az alábbi táblázat az erre épülő I-24 commitolt candidate
-aktuális állapotát is rögzíti; a clean release contract és a mobil
-sync/artifact/E2E ellenőrzés zöld, az I-24 hosted kapu pending. A dinamikus PG18
-admin-override acceptance nem része egyik frontend PASS-nak sem.
+Az I-24 PR #173-mal a főágra került, hosted kapuja 7/7 PASS, és rendelkezésre áll
+a tiszta schema-2 release-artifact. Az erre épülő I-25 admin-override candidate
+teljes lokális kapuja zöld: célzott/coverage, type/lint/build/bundle, web/mobile,
+audit/secrets, schema/release/Edge és a meglévő payroll/HR PG18 contract PASS.
+Hosted validációja és PR-ja még folyamatban van. A dinamikus PG18 admin-override
+acceptance, a cross-client idempotencia és a globális `profiles` RLS rendezése
+nem része egyik frontend PASS-nak sem.
 
 | Ellenőrzés                              | Eredmény                | Megjegyzés / fennmaradó kockázat                                                                                                                                   |
 | --------------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `npm ci --no-audit --no-fund`           | PASS                    | lockfile-ból determinisztikus install                                                                                                                              |
-| `npm run typecheck`                     | PASS                    | `tsc -b --pretty false`; nem a korábbi félrevezető `tsc --noEmit`                                                                                                  |
+| `npm run typecheck`                     | I-25 PASS               | `tsc -b --pretty false`; nem a korábbi félrevezető `tsc --noEmit`. |
 | Admin override I-22 célzott regresszió  | PASS KORLÁTTAL          | 16 admin-flow + 7 lista-race + 32 conflict-i18n + 20 runtime contract = 75/75; typecheck és diff check PASS. A dinamikus PG18 szerver acceptance még nyitott. |
-| Release identity unit/UI contract       | PASS                    | Node 55/55 + Vitest 9/9: strict full-SHA és clean HEAD, deterministic per-file web/mobile fingerprint, immutable Edge source-tree, source/header/origin eltérés, same-SHA stale Edge, Superadmin match/mismatch/unknown/error |
+| Admin override I-25 a11y/fókusz/race    | PASS KORLÁTTAL          | 28/28 admin komponens + 4/4 valós Radix Dialog + 11 i18n + 20 runtime contract = 63/63. Programozott label/required, retry/empty/return focus, localized close/live/error, native submit lock, re-entry és workspace/unmount stale RPC suppression. Nincs DB/API/Edge/dependency változás; idempotency, PG18 és profile RLS P1 nyitott. |
+| Release identity / Edge SBOM contract   | I-25 PASS               | Release-identity 55/55 és Edge SBOM 2/2: strict full-SHA/clean HEAD, deterministic web/mobile fingerprint, immutable Edge source-tree és pontos Edge inventory. |
 | `release:verify:deployment`             | LOKÁLIS CONTRACT PASS / LIVE FAIL | A fail-closed verifier unit 27/27; a jelenlegi `effectime.app` még nem szolgál release manifestet, és a Lovable/Cloudflare immutable deployment-ID header/API mapping sincs igazolva, ezért production attestation NO-GO. |
 | Mobile target suite                     | PASS                    | 93/93 célzott teszt: URL/origin, PKCE/deep-link és HTTPS raw-token tiltás, secure envelope/migráció/reinstall/reset tombstone/logout lock, recovery UX, CSP transform, native bridge és internal path |
-| `npm run mobile:check:source`           | I-24 PASS               | 183/183 source assertion: exact dependency integrity/kétplatformos plugin allowlist, release identity, CSP, identity/deep link/minimumok, auth/data-source/CI és natív build-artifact contract. |
-| `mobile:check` / `mobile:check:release` | I-24 PASS               | Az I-24 synced artifact 345/345 és a clean, commitolt forrás 365/365 fail-closed release assertionje PASS. |
-| `npm run test:e2e:mobile:built`         | I-24 PASS               | 2/2 landing/auth Android bridge-emuláció a friss I-24 `dist-mobile` artifacton PASS. |
-| `npm run mobile:sync` / `npx cap sync`  | I-24 PASS               | Android/iOS sync PASS; a tracked native drift 0, ezért a shared UI-javítás nem módosította a commitolt natív forrást. |
+| `npm run mobile:check:source`           | I-25 PASS               | 183/183 source assertion: exact dependency integrity/kétplatformos plugin allowlist, release identity, CSP, identity/deep link/minimumok, auth/data-source/CI és natív build-artifact contract. |
+| `npm run mobile:check` / `mobile:check:release` | I-25 PASS       | A friss I-25 synced artifact 345/345, a tiszta commit-SHA-hoz kötött release contract 365/365 fail-closed assertionje PASS. |
+| `npm run test:e2e:mobile:built`         | I-25 PASS               | 2/2 landing/auth Android bridge-emuláció a friss I-25 `dist-mobile` artifacton PASS. |
+| `npm run mobile:sync` / `npx cap sync`  | I-25 PASS               | Android/iOS sync PASS; tracked native drift 0, ezért a shared UI-javítás nem módosította a commitolt natív forrást. |
 | Android unit/lint/assemble              | PASS KORLÁTTAL          | A tényleges Android Studio SDK-val `testDebugUnitTest lintDebug assembleDebug --no-daemon --stacktrace`: 3m42s, 276/276 task, `BUILD SUCCESSFUL`, nincs új lint finding, 6 049 206 byte debug APK (`EFA61256…`). Az app és plugin unit taskok `NO-SOURCE`; ez compile/lint/assemble bizonyíték, nem natív unit lefedettség. |
 | iOS Xcode build                         | PASS                    | GitHub `macos-26-arm64`, image `20260715.0248.1`, Xcode 26.5: commitolt lock felismerve; 363/363 gate, `-onlyUsePackageVersionsFromResolvedFile`, drift check és `CODE_SIGNING_ALLOWED=NO` generic simulator build PASS (`BUILD SUCCEEDED`). |
-| `npm test`                              | PASS                    | Az I-24 teljes Vitest suite 55/55 fájlban 599/599 tesztet futtatott zölden. Az első teljes körben egy timing-only failure jelent meg; az érintett izolált ellenőrzés és a teljes retry is PASS, funkcionális assertion-hiba nem reprodukálódott. |
-| `npm run test:coverage`                 | PASS                    | 55/55 fájl, 599/599 teszt; statements/lines 47,71% (40 668/85 237), branches 65,75% (960/1 460), functions 32,40% (163/503). A collapsible-trigger célzott regresszió 4/4 PASS. |
-| `npm run test:e2e:built`                | PASS KORLÁTTAL          | Az első két I-24 full kör 6/7 volt: előbb service-worker retry abort, majd egy 22,8 KB-os HTML dokumentum 21,48 s helyi I/O timeoutja. A trace mindkettőt harness/environment eredetűnek mutatta. A recovered-image filter szigorítása és decoded-logo assertion után a teljes kör 7/7, a célzott `/auth` + legacy-route ismétlés 2/2 PASS. |
-| `npm run build`                         | PASS                    | Vite 6.4.3, 4 081 modul; nagy chunk warning; nincs API/DB/dependency változás |
-| `npm run bundle:check`                  | PASS                    | I-24 Windows candidate: JS 4 454 848 raw / 1 271 801 gzip; largest 1 740 007 / 551 960; CSS 180 862 / 29 599. A reviewed ceiling 4 454 976 / 1 272 080; largest-raw és CSS-raw exact, largest-gzip/CSS-gzip meglévő plafonja változatlan. |
-| `npm audit --audit-level=high`          | PASS                    | 0 ismert vulnerability |
-| `npm run security:secrets`              | PASS                    | 1 439 tracked és nem ignorált untracked text file magas bizonyosságú current-tree scan + tracked mobil signing-key fájlnév tiltás; history scan még nyitott |
-| `npm run lint:ratchet`                  | PASS                    | fingerprint-baseline változatlan: 1 209 error / 104 warning 178 fájlban; új vagy áthelyezett finding hibát okoz, csökkentéskor baseline-frissítés kötelező |
-| Strukturált logger Deno teszt/check     | PASS                    | 2/2 redaction teszt; `auth-email-hook` és `send-transactional-email` check PASS                                                                                    |
-| `npm run edge:check` / ratchet / test    | PASS                    | 30/30 entrypoint és config, 0 Deno diagnostic; 64/64 remote import exact, 0 unpinned; Deno 2.9.3, `node_modules=none`; runner/ratchet unit 14/14 és automatikusan felderített Edge teszt 25/25 PASS, ebből 4 endpoint release body/header/CORS contract; immutable source gate 73 fájl |
+| `npm test`                              | I-25 PASS (coverage runner) | Az I-25 teljes Vitest állománya a coverage futásban 56/56 fájl és 616/616 teszt PASS; külön funkcionális assertion-hiba nincs. |
+| `npm run test:coverage`                 | I-25 PASS               | 56/56 fájl, 616/616 teszt; statements/lines 47,82%, branches 66,57%, functions 32,48%. Az I-25 célzott regresszió 63/63 PASS. |
+| `npm run test:e2e:built`                | I-25 PASS               | A teljes built-web smoke 7/7 PASS. A korábbi I-24 harness transiensek után bevezetett recovered-image és decoded-logo védelem zöld maradt. |
+| `npm run build`                         | I-25 PASS               | Vite 6.4.3, 4 081 modul; nagy chunk warning; nincs API/DB/dependency változás. |
+| `npm run bundle:check`                  | I-25 PASS               | Két clean, commit-SHA rebuild: JS 4 459 891 raw és 1 273 439–1 273 445 gzip; largest 1 741 005 raw és 552 245–552 257 gzip; CSS 180 862 / 29 599. Reviewed total ceiling 4 460 019 / 1 273 724; a korábbi 128/279 byte mozgástér változatlan, largest-raw exact, a többi érintetlen plafon nem nőtt. |
+| `npm audit --audit-level=high`          | I-25 PASS               | 0 ismert vulnerability. |
+| `npm run security:secrets`              | I-25 PASS               | 1 440 tracked és nem ignorált untracked text file magas bizonyosságú current-tree scan + tracked mobil signing-key fájlnév tiltás; history scan még nyitott. |
+| `npm run lint:ratchet`                  | I-25 PASS               | Fingerprint-baseline változatlan: 1 209 error / 104 warning 178 fájlban; új vagy áthelyezett finding hibát okoz, csökkentéskor baseline-frissítés kötelező. |
+| Strukturált logger Deno teszt/check     | I-25 PASS               | Edge log-safety/redaction 2/2; `auth-email-hook` és `send-transactional-email` check PASS; strukturálatlan érzékeny hiba nem került vissza. |
+| `npm run edge:check` / ratchet / test    | I-25 PASS               | 30/30 entrypoint és config, 0 Deno diagnostic; 64/64 remote import exact, 0 unpinned; Deno 2.9.3, `node_modules=none`; runner/ratchet unit 14/14 és automatikusan felderített Deno teszt 25/25 PASS, ebből 4 endpoint release body/header/CORS contract; immutable source gate 73 fájl. |
 | Payroll contract és UI regresszió       | PASS                    | Deno payroll contract 15/15; célzott Vitest 20/20; AuditLog allowlist 2/2; typed Edge check PASS; current full unit 549/549 |
-| Payroll snapshot DB contract            | PASS                    | runner unit 12/12; pinned PostgreSQL 18.4 migration/digest/ACL/search_path/trigger/negative auth/member drift/audit rollback PASS. A readiness valódi `SELECT 1` lekérdezéssel igazolja a név szerinti céladatbázist, ezért a konténerfolyamat és az adatbázis-létrehozás közti race fail-closed. Négy manipulált pgcrypto/schema trust eset fail-closed; runtime TRUNCATE, direct service reset és reserved-audit forge/tamper/delete tiltott; whitespace/NULL és 7/8/1000/1001 indokhatárok, exact prev/new audit, locked/exported/legacy reopen auditált. Determinisztikus lock és reopen exactly-one-winner, valamint actor-demotion→reopen fail-closed, bitazonos sor/0 audit igazolt. Collisionteszt idegen konténert megőriz; nincs hálózat/host port, csak két read-only mount, ownership-ID+label cleanup PASS. Ez célzott fixture, nem teljes migration replay. |
-| HR workflow tenant DB/UI contract       | PASS                    | runner unit 8/8; pinned PostgreSQL 18.4 static contract, repeat apply és legacy-row preservation PASS; cross-workspace template/membership/instance/task/assignee, inactive membership, member/admin RLS, list PII, parent cascade és exact RPC/FK catalog fail-closed. Négy determinisztikus reassignment/suspension/direct-write lock-race PASS. UI data+a11y+request-ordering 10/10; nincs `eq.undefined`, backend/task hiba fail-visible, pending instance-read deduplikált, workspace-váltás és unmount utáni válasz invalidált. Nincs hálózat/host port; exact ownership cleanup és bounded child termination. Célzott fixture, nem teljes migration replay vagy restored-staging bizonyíték. |
-| Schema provenance gate                  | PASS                    | parser unit 7/7; 125 migráció; generated/backed/unproven: table 165/135/30, view 4/3/1, function 99/53/46, enum 11/9/2                                             |
-| SBOM és release manifest                | PASS (I-23 hosted evidence) | Main `5b502e12ca4f9169a366347e1d9d9079f7b1517e` clean schema-2 artifact `8438122116`, web fingerprint `1c23ca292286620013c5840696d4d206d49206ebc3651fab0e0c143a641582d7`; shared web/mobile SBOM, migration/Edge inventory és exact native provenance. |
-| GitHub-hosted quality workflow          | I-23 PASS / I-24 PENDING | Main run `29673606633`: mind a hét hosted job PASS az I-23 `5b502e12ca4f9169a366347e1d9d9079f7b1517e` merge SHA-n. Az I-24 candidate hosted futása commit után kötelező; PR/SHA/run még nincs dokumentálható állapotban. |
+| Payroll snapshot DB contract            | I-25 REVALIDÁLVA PASS   | runner unit 12/12; pinned PostgreSQL 18.4 migration/digest/ACL/search_path/trigger/negative auth/member drift/audit rollback PASS. A readiness valódi `SELECT 1` lekérdezéssel igazolja a név szerinti céladatbázist, ezért a konténerfolyamat és az adatbázis-létrehozás közti race fail-closed. Négy manipulált pgcrypto/schema trust eset fail-closed; runtime TRUNCATE, direct service reset és reserved-audit forge/tamper/delete tiltott; whitespace/NULL és 7/8/1000/1001 indokhatárok, exact prev/new audit, locked/exported/legacy reopen auditált. Determinisztikus lock és reopen exactly-one-winner, valamint actor-demotion→reopen fail-closed, bitazonos sor/0 audit igazolt. Collisionteszt idegen konténert megőriz; nincs hálózat/host port, csak két read-only mount, ownership-ID+label cleanup PASS. Ez célzott fixture, nem teljes migration replay. |
+| HR workflow tenant DB/UI contract       | I-25 REVALIDÁLVA PASS   | runner unit 8/8; pinned PostgreSQL 18.4 static contract, repeat apply és legacy-row preservation PASS; cross-workspace template/membership/instance/task/assignee, inactive membership, member/admin RLS, list PII, parent cascade és exact RPC/FK catalog fail-closed. Négy determinisztikus reassignment/suspension/direct-write lock-race PASS. UI data+a11y+request-ordering 10/10; nincs `eq.undefined`, backend/task hiba fail-visible, pending instance-read deduplikált, workspace-váltás és unmount utáni válasz invalidált. Nincs hálózat/host port; exact ownership cleanup és bounded child termination. Célzott fixture, nem teljes migration replay vagy restored-staging bizonyíték. |
+| Schema provenance gate                  | I-25 PASS               | parser unit 7/7; mind a 125 migráció; exact generated/backed/unproven debt változatlan: table 165/135/30, view 4/3/1, function 99/53/46, enum 11/9/2. |
+| SBOM és release manifest                | PASS (I-24 hosted evidence) | Main `b0d129c41c56920c432d97eae3c93d63cb6dbd9a` clean schema-2 artifact `8438782050`, web fingerprint `ff55afd37bca750ed33ef0246ea8a10509bc25cbd29a634c58717db149a4c219`; shared web/mobile SBOM, migration/Edge inventory és exact native provenance. |
+| GitHub-hosted quality workflow          | I-24 PASS / I-25 PENDING | Main run `29675611155`: mind a hét hosted job PASS az I-24 `b0d129c41c56920c432d97eae3c93d63cb6dbd9a` merge SHA-n, PR #173 után. Az I-25 lokális gate GO; hosted futás és PR még folyamatban, SHA/run nincs késznek deklarálva. |
 | Új v3.51.3 migration PG18 compile/apply | PASS                    | Access submit/döntés/ledger/rollback szemantika PASS; candidate dual-feature compile PASS, candidate runtime smoke megszakadt; production/linked apply nem történt |
 | Clean lokális migration replay          | FAIL                    | 104/125 után `20260517230000...`: `plugin_webhook_events` helyi CREATE TABLE hiányzik                                                                              |
 | Linked `db lint --level warning`        | FAIL                    | 7 error, 6 warning; read-only ellenőrzés                                                                                                                           |
-| Live `effectime.app` release attestation | FAIL                    | A Lovable/Cloudflare root és a hét felderített asset ugyanazt a stabil `x-deployment-id: 205b23c0-72e8-4158-853e-348a2358fd10` értéket adja, de `/.well-known/effectime-release.json` továbbra is 404. A live artifact ezért nem köthető a merge SHA-hoz; authenticated Lovable publish nélkül production attestation NO-GO. |
+| Live `effectime.app` release attestation | FAIL                    | A Lovable/Cloudflare root és a hét felderített asset ugyanazt a stabil `x-deployment-id: 205b23c0-72e8-4158-853e-348a2358fd10` értéket adja, de `/.well-known/effectime-release.json` továbbra is 404. A live artifact ezért nem köthető az I-24 merge SHA-hoz; a publish az authenticated Lovable login hiányán blokkol, production attestation NO-GO. |
 | Linked DB write/deploy                  | NEM FUTOTT              | szándékosan; history drift miatt veszélyes lenne                                                                                                                   |
 
 Az első build-újrafutásnál átmeneti helyi npm/Node launcher hiba jelent meg; az
@@ -432,19 +456,22 @@ vagy forráskódhibaként van lezárva, mert a tényleges production build PASS.
 
 ## 10. Release-nyilatkozat
 
-Az audit-, hardening-, release-identity, HR lifecycle, iCal entitlement és
-leave-list recovery forrás PR #167–#172-ből bekerült a `main` ágba. Az I-23
-`5b502e12ca4f9169a366347e1d9d9079f7b1517e` merge SHA mind a hét hosted kaput
-teljesítette a `29673606633` runban; a clean schema-2 evidence artifact
-`8438122116`, web fingerprintje
-`1c23ca292286620013c5840696d4d206d49206ebc3651fab0e0c143a641582d7`. Ez nem
-production release: a live manifest továbbra is 404, matching Edge deploy és
-linked DB apply nem történt. Az I-24 collapsible-trigger csomag commitolt lokális
-web, mobil és clean-release candidate-ként **GO FELTÉTELEKKEL**, de hosted CI még
-kötelező; PR/SHA/run nincs előre deklarálva. A teljes APR-004 továbbra is
-**NO-GO** az egységes szerepkör, dinamikus PG18
-tenant/RBAC/audit/rollback/concurrency/idempotencia és restored-staging bizonyíték
-nélkül. A HR tenant-boundary backend csak DB-history reconcile, restored-staging
+Az audit-, hardening-, release-identity, HR lifecycle, iCal entitlement,
+leave-list recovery és collapsible-trigger forrás PR #167–#173-ból bekerült a
+`main` ágba. Az I-24 `b0d129c41c56920c432d97eae3c93d63cb6dbd9a` merge SHA mind
+a hét hosted kaput teljesítette a `29675611155` runban; a clean schema-2 evidence
+artifact `8438782050`, web fingerprintje
+`ff55afd37bca750ed33ef0246ea8a10509bc25cbd29a634c58717db149a4c219`. Ez nem
+production release: a live manifest továbbra is 404, az authenticated Lovable
+login hiánya blokkolja a publish-t, matching Edge deploy és linked DB apply nem
+történt. Az I-25 admin-override a11y/fókusz/async-race candidate 63/63 célzott,
+56/56 fájlban 616/616 coverage, valamint type/lint/build/exact bundle, web 7/7,
+mobile 183/345/sync/drift-0/E2E 2/2, audit/secrets, schema/release/Edge és payroll/
+HR PG18 kapuval **LOKÁLIS GO**. A hosted futás és a PR még folyamatban van. A
+teljes APR-004 továbbra is **NO-GO** az egységes szerepkör, dinamikus PG18
+tenant/RBAC/audit/rollback/concurrency, cross-client idempotencia és
+restored-staging bizonyíték nélkül; a globális `profiles` SELECT tenant/PII
+határa külön P1. A HR tenant-boundary backend csak DB-history reconcile, restored-staging
 inventory/adversarial teszt, approval-chain, payroll-szemantikai/legacy-snapshot
 döntés és provisioning/retention döntések után jelölhető release-késznek.
 Az Android/iOS implementáció, candidate forrás, reviewed Xcode lock és unsigned
@@ -452,6 +479,9 @@ hosted Android/iOS build fejlesztésre alkalmas, de store release-re külön
 **NO-GO**, amíg a `docs/mobile/README.md` signing, verified-link, brand-asset és
 fizikai secure-storage/CSP/készülékes kapui nem teljesülnek.
 
-**Kiadási döntés: production/backend NO-GO.** A lokális hardening-csomag a fenti
-zöld kapuk alapján **GO FELTÉTELEKKEL**, de csak tiszta candidate SHA, teljes DB-
-reconcile, payroll-döntések, staging és jóváhagyott rollout után bocsátható ki.
+**Kiadási döntés: production/backend NO-GO.** Az I-24 main-forrás hosted
+bizonyítéka zöld, de live publish/attestation nincs. Az I-25 candidate csak a
+hosted kapu és PR sikeres lezárása után kaphat merge-GO döntést; production web
+publish attestation továbbra is FAIL, DB/Edge deploy továbbra is NO-GO.
+Production csak tiszta candidate SHA, teljes DB-reconcile, payroll-döntések,
+staging és jóváhagyott rollout után bocsátható ki.

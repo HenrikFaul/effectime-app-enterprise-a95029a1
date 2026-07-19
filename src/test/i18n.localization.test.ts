@@ -128,4 +128,18 @@ describe('i18n key parity — EN and HU bundles', () => {
       }
     }
   });
+
+  it('admin override accessibility state keys are non-empty in every supported locale', () => {
+    const criticalKeys = [
+      'common.close',
+      'admin_leave_override.label_half_day_period',
+      'admin_leave_override.members_empty',
+      'admin_leave_override.btn_validating',
+    ];
+    for (const [locale, bundle] of supportedBundles) {
+      for (const key of criticalKeys) {
+        expect(bundle.get(key)?.trim(), `${locale} missing or empty: ${key}`).toBeTruthy();
+      }
+    }
+  });
 });

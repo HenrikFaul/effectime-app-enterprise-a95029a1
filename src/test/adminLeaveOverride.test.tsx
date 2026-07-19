@@ -1,5 +1,6 @@
 import type {
   ButtonHTMLAttributes,
+  HTMLAttributes,
   InputHTMLAttributes,
   LabelHTMLAttributes,
   PropsWithChildren,
@@ -42,25 +43,47 @@ vi.mock('sonner', () => ({
 
 vi.mock('@/components/ui/dialog', () => ({
   Dialog: ({ open, children }: PropsWithChildren<{ open: boolean }>) => open ? <>{children}</> : null,
-  DialogContent: ({ children }: PropsWithChildren) => <div>{children}</div>,
+  DialogContent: ({
+    children,
+    closeLabel = 'Close',
+    closeDisabled = false,
+    onCloseAutoFocus: _onCloseAutoFocus,
+    onEscapeKeyDown: _onEscapeKeyDown,
+    onInteractOutside: _onInteractOutside,
+    ...props
+  }: PropsWithChildren<HTMLAttributes<HTMLDivElement> & {
+    closeLabel?: string;
+    closeDisabled?: boolean;
+    onCloseAutoFocus?: unknown;
+    onEscapeKeyDown?: unknown;
+    onInteractOutside?: unknown;
+  }>) => (
+    <div role="dialog" {...props}>
+      <button type="button" aria-label={closeLabel} disabled={closeDisabled} />
+      {children}
+    </div>
+  ),
   DialogHeader: ({ children }: PropsWithChildren) => <div>{children}</div>,
   DialogTitle: ({ children }: PropsWithChildren) => <h2>{children}</h2>,
   DialogFooter: ({ children }: PropsWithChildren) => <div>{children}</div>,
 }));
 
-vi.mock('@/components/ui/button', () => ({
-  Button: ({
-    children,
-    variant: _variant,
-    size: _size,
-    asChild: _asChild,
-    ...props
-  }: ButtonHTMLAttributes<HTMLButtonElement> & {
+vi.mock('@/components/ui/button', async () => {
+  const React = await vi.importActual<typeof import('react')>('react');
+  return {
+    Button: React.forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & {
     variant?: string;
     size?: string;
     asChild?: boolean;
-  }) => <button {...props}>{children}</button>,
-}));
+    }>(({
+      children,
+      variant: _variant,
+      size: _size,
+      asChild: _asChild,
+      ...props
+    }, ref) => <button ref={ref} {...props}>{children}</button>),
+  };
+});
 
 vi.mock('@/components/ui/label', () => ({
   Label: ({ children, ...props }: LabelHTMLAttributes<HTMLLabelElement>) => <label {...props}>{children}</label>,
@@ -72,16 +95,31 @@ vi.mock('@/components/ui/textarea', () => ({
 
 vi.mock('@/components/ui/select', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
-  const SelectContext = React.createContext<(value: string) => void>(() => undefined);
+  const SelectContext = React.createContext<{
+    disabled: boolean;
+    onValueChange: (value: string) => void;
+  }>({ disabled: false, onValueChange: () => undefined });
   return {
-    Select: ({ onValueChange, children }: PropsWithChildren<{ onValueChange: (value: string) => void }>) => (
-      <SelectContext.Provider value={onValueChange}>{children}</SelectContext.Provider>
+    Select: ({ disabled = false, onValueChange, children }: PropsWithChildren<{
+      disabled?: boolean;
+      onValueChange: (value: string) => void;
+    }>) => (
+      <SelectContext.Provider value={{ disabled, onValueChange }}>{children}</SelectContext.Provider>
     ),
-    SelectTrigger: ({ children }: PropsWithChildren) => <div>{children}</div>,
+    SelectTrigger: React.forwardRef<HTMLButtonElement, PropsWithChildren<ButtonHTMLAttributes<HTMLButtonElement>>>(
+      ({ children, ...props }, ref) => {
+        const { disabled } = React.useContext(SelectContext);
+        return (
+          <button ref={ref} type="button" role="combobox" {...props} disabled={disabled || props.disabled}>
+            {children}
+          </button>
+        );
+      },
+    ),
     SelectValue: () => null,
     SelectContent: ({ children }: PropsWithChildren) => <div>{children}</div>,
     SelectItem: ({ value, children }: PropsWithChildren<{ value: string }>) => {
-      const onValueChange = React.useContext(SelectContext);
+      const { onValueChange } = React.useContext(SelectContext);
       return <button type="button" onClick={() => onValueChange(value)}>{children}</button>;
     },
   };
@@ -162,7 +200,7 @@ function membershipQuery<T>(result: Promise<T>) {
 async function renderReadyOverride() {
   const onOpenChange = vi.fn();
   const onCreated = vi.fn();
-  render(
+  const view = render(
     <AdminLeaveOverride
       open
       onOpenChange={onOpenChange}
@@ -170,8 +208,8 @@ async function renderReadyOverride() {
       onCreated={onCreated}
     />,
   );
-  fireEvent.click(await screen.findByRole('button', { name: 'Member A' }));
-  return { onCreated, onOpenChange };
+  fireEvent.click(await screen.findByRole('button', { name: 'Member A' }, { timeout: 5_000 }));
+  return { onCreated, onOpenChange, view };
 }
 
 function enableHalfDay() {
@@ -409,13 +447,19 @@ describe('admin leave override half-day and validation contract', () => {
     await waitFor(() => expect(toastError).toHaveBeenCalledWith('admin_leave_override.create_failed'));
     expect(onCreated).not.toHaveBeenCalled();
     expect(screen.queryByText('internal endpoint details')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('admin_leave_override.create_failed');
+
+    fireEvent.change(screen.getByRole('textbox', {
+      name: 'admin_leave_override.label_justification',
+    }), { target: { value: 'Updated documented exception' } });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 
     const retryButton = screen.getByRole('button', { name: 'admin_leave_override.btn_create' });
     expect(retryButton).toBeEnabled();
     fireEvent.click(retryButton);
     await waitFor(() => expect(onCreated).toHaveBeenCalledOnce());
     expect(rpc).toHaveBeenCalledTimes(2);
-  });
+  }, 10_000);
 
   it('uses a synchronous guard against re-entrant duplicate RPC submissions', async () => {
     const { onCreated } = await prepareValidatedHalfDay();
@@ -432,6 +476,49 @@ describe('admin leave override half-day and validation contract', () => {
     pendingRpc.resolve({ data: { ok: true }, error: null });
     await waitFor(() => expect(onCreated).toHaveBeenCalledOnce());
     expect(rpc).toHaveBeenCalledOnce();
+  });
+
+  it('ignores an obsolete successful RPC response after the workspace scope changes', async () => {
+    const { onCreated, onOpenChange, view } = await prepareValidatedHalfDay();
+    const pendingRpc = deferred<{ data: { ok: boolean }; error: null }>();
+    rpc.mockReturnValueOnce(pendingRpc.promise);
+    fireEvent.click(screen.getByRole('button', { name: 'admin_leave_override.btn_create' }));
+    expect(rpc).toHaveBeenCalledOnce();
+
+    view.rerender(
+      <AdminLeaveOverride
+        open
+        workspaceId="workspace-b"
+        onCreated={onCreated}
+        onOpenChange={onOpenChange}
+      />,
+    );
+    await act(async () => {
+      pendingRpc.resolve({ data: { ok: true }, error: null });
+      await pendingRpc.promise;
+    });
+
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(onCreated).not.toHaveBeenCalled();
+    expect(toastSuccess).not.toHaveBeenCalled();
+  });
+
+  it('does not publish stale RPC side effects after unmount', async () => {
+    const { onCreated, onOpenChange, view } = await prepareValidatedHalfDay();
+    const pendingRpc = deferred<{ data: { ok: boolean }; error: null }>();
+    rpc.mockReturnValueOnce(pendingRpc.promise);
+    fireEvent.click(screen.getByRole('button', { name: 'admin_leave_override.btn_create' }));
+    expect(rpc).toHaveBeenCalledOnce();
+
+    view.unmount();
+    await act(async () => {
+      pendingRpc.resolve({ data: { ok: true }, error: null });
+      await pendingRpc.promise;
+    });
+
+    expect(onOpenChange).not.toHaveBeenCalled();
+    expect(onCreated).not.toHaveBeenCalled();
+    expect(toastSuccess).not.toHaveBeenCalled();
   });
 
   it('discards an obsolete member-directory response after the workspace changes', async () => {
@@ -636,5 +723,340 @@ describe('admin leave override half-day and validation contract', () => {
       await membershipLoad.promise;
     });
     expect(from).toHaveBeenCalledTimes(1);
+  });
+
+  it('associates every visible field label with its control and exposes required state', async () => {
+    await renderReadyOverride();
+
+    expect(screen.getByRole('combobox', {
+      name: 'admin_leave_override.label_member (common.required)',
+    })).toHaveAttribute('aria-required', 'true');
+    expect(screen.getByRole('combobox', {
+      name: 'admin_leave_override.label_type',
+    })).toHaveAttribute('aria-required', 'true');
+    expect(screen.getByRole('button', {
+      name: 'admin_leave_override.label_start_date (common.required) admin_leave_override.pick_date',
+    })).not.toHaveAttribute('aria-required');
+    expect(screen.getByRole('button', {
+      name: 'admin_leave_override.label_end_date (common.required) admin_leave_override.pick_date',
+    })).not.toHaveAttribute('aria-required');
+    expect(screen.getByRole('textbox', {
+      name: 'admin_leave_override.label_comment',
+    })).toHaveAttribute('maxlength', '4000');
+    expect(screen.getByRole('textbox', {
+      name: 'admin_leave_override.label_justification',
+    })).toBeRequired();
+    expect(screen.getByRole('textbox', {
+      name: 'admin_leave_override.label_justification',
+    })).toHaveAttribute('maxlength', '2000');
+    expect(screen.getByRole('checkbox', {
+      name: 'admin_leave_override.auto_approve_label',
+    })).toBeChecked();
+
+    const halfDay = screen.getByRole('checkbox', {
+      name: 'admin_leave_override.label_half_day',
+    });
+    expect(halfDay.id).not.toBe('halfday');
+    fireEvent.click(halfDay);
+    expect(screen.getByRole('combobox', {
+      name: 'admin_leave_override.label_half_day_period',
+    })).toHaveAttribute('aria-required', 'true');
+  });
+
+  it('generates collision-free half-day identifiers across concurrent dialogs', async () => {
+    render(
+      <>
+        <AdminLeaveOverride open workspaceId="workspace-a" onCreated={vi.fn()} onOpenChange={vi.fn()} />
+        <AdminLeaveOverride open workspaceId="workspace-a" onCreated={vi.fn()} onOpenChange={vi.fn()} />
+      </>,
+    );
+
+    const halfDayControls = await screen.findAllByRole('checkbox', {
+      name: 'admin_leave_override.label_half_day',
+    });
+    expect(halfDayControls).toHaveLength(2);
+    expect(halfDayControls[0].id).not.toBe(halfDayControls[1].id);
+  });
+
+  it('keeps an empty member directory fail-closed and explains the state', async () => {
+    from.mockImplementation((table: string) => {
+      if (table === 'enterprise_memberships') {
+        return membershipQuery(Promise.resolve({ data: [], error: null }));
+      }
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    render(
+      <AdminLeaveOverride
+        open
+        workspaceId="workspace-a"
+        onCreated={vi.fn()}
+        onOpenChange={vi.fn()}
+      />,
+    );
+
+    const emptyMessage = await screen.findByText('admin_leave_override.members_empty');
+    expect(emptyMessage).toHaveAttribute('role', 'status');
+    expect(screen.getByRole('combobox', {
+      name: 'admin_leave_override.label_member (common.required)',
+    })).toBeDisabled();
+    expect(screen.getByRole('button', {
+      name: 'admin_leave_override.btn_validate',
+    })).toBeDisabled();
+  });
+
+  it('announces and exposes busy state while conflict validation is in flight', async () => {
+    const pendingValidation = deferred<Array<{ code: string; severity: string; message: string }>>();
+    validateLeaveRequest.mockReturnValueOnce(pendingValidation.promise);
+    await renderReadyOverride();
+    enableHalfDay();
+    pickStartDate();
+
+    fireEvent.click(screen.getByRole('button', {
+      name: 'admin_leave_override.btn_validate',
+    }));
+
+    const validatingButton = screen.getByRole('button', {
+      name: 'admin_leave_override.btn_validating',
+    });
+    expect(validatingButton).toBeDisabled();
+    expect(validatingButton).toHaveAttribute('aria-busy', 'true');
+    const liveMessage = screen.getByText('admin_leave_override.btn_validating', {
+      selector: 'p',
+    });
+    const busyRegion = screen.getByRole('textbox', {
+      name: 'admin_leave_override.label_justification',
+    }).closest('[aria-busy]');
+    expect(busyRegion).toHaveAttribute('aria-busy', 'true');
+    expect(busyRegion).not.toContainElement(liveMessage);
+    expect(liveMessage).toHaveAttribute('role', 'status');
+    expect(liveMessage).toHaveAttribute('aria-live', 'polite');
+    expect(liveMessage).toHaveAttribute('aria-atomic', 'true');
+
+    pendingValidation.resolve([]);
+    const noConflictMessage = await screen.findByText('admin_leave_override.no_conflicts');
+    expect(noConflictMessage).toHaveAttribute('role', 'status');
+  });
+
+  it('announces blocking validation results as alerts', async () => {
+    validateLeaveRequest.mockResolvedValueOnce([{
+      code: 'BLOCKED_DATE',
+      severity: 'blocking',
+      message: 'Business rule conflict',
+    }]);
+    await renderReadyOverride();
+    enableHalfDay();
+    pickStartDate();
+    fireEvent.click(screen.getByRole('button', {
+      name: 'admin_leave_override.btn_validate',
+    }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('BLOCKED_DATE');
+    expect(alert).toHaveAttribute('aria-live', 'assertive');
+  });
+
+  it('locks visible dismissal actions and mutable controls while creation is in flight', async () => {
+    await prepareValidatedHalfDay();
+    const pendingRpc = deferred<{ data: { ok: boolean }; error: null }>();
+    rpc.mockReturnValueOnce(pendingRpc.promise);
+
+    fireEvent.click(screen.getByRole('button', {
+      name: 'admin_leave_override.btn_create',
+    }));
+
+    const busyRegion = screen.getByRole('textbox', {
+      name: 'admin_leave_override.label_justification',
+    }).closest('[aria-busy]');
+    expect(busyRegion).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByRole('button', { name: 'common.close' })).toBeDisabled();
+    expect(screen.getByRole('button', {
+      name: 'admin_leave_override.btn_cancel',
+    })).toBeDisabled();
+    expect(screen.getByRole('button', {
+      name: 'admin_leave_override.btn_creating',
+    })).toHaveAttribute('aria-busy', 'true');
+    const liveMessage = screen.getByText('admin_leave_override.btn_creating', {
+      selector: 'p',
+    });
+    expect(liveMessage).toHaveAttribute('role', 'status');
+    expect(liveMessage).toHaveAttribute('aria-live', 'polite');
+    expect(busyRegion).not.toContainElement(liveMessage);
+    expect(screen.getByRole('combobox', {
+      name: 'admin_leave_override.label_member (common.required)',
+    })).toBeDisabled();
+    expect(screen.getByRole('textbox', {
+      name: 'admin_leave_override.label_justification',
+    })).toBeDisabled();
+    expect(screen.getByRole('checkbox', {
+      name: 'admin_leave_override.auto_approve_label',
+    })).toBeDisabled();
+
+    pendingRpc.resolve({ data: { ok: true }, error: null });
+    await waitFor(() => expect(busyRegion).toHaveAttribute('aria-busy', 'false'));
+  });
+
+  it('restores focus after retrying the member directory', async () => {
+    let membershipCalls = 0;
+    from.mockImplementation((table: string) => {
+      if (table === 'enterprise_memberships') {
+        membershipCalls += 1;
+        return membershipQuery(Promise.resolve(membershipCalls === 1
+          ? { data: null, error: { message: 'temporary failure' } }
+          : { data: [{ user_id: 'member-a' }], error: null }));
+      }
+      if (table === 'profiles') {
+        return {
+          select: vi.fn(() => ({
+            in: vi.fn().mockResolvedValue({
+              data: [{ user_id: 'member-a', display_name: 'Member A' }],
+              error: null,
+            }),
+          })),
+        };
+      }
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    render(
+      <AdminLeaveOverride
+        open
+        workspaceId="workspace-a"
+        onCreated={vi.fn()}
+        onOpenChange={vi.fn()}
+      />,
+    );
+    const retry = await screen.findByRole('button', {
+      name: 'admin_leave_override.members_retry',
+    });
+    retry.focus();
+    fireEvent.click(retry);
+
+    const memberSelect = await screen.findByRole('combobox', {
+      name: 'admin_leave_override.label_member (common.required)',
+    });
+    await waitFor(() => expect(memberSelect).toHaveFocus());
+  });
+
+  it('returns focus to the retry action when the directory remains unavailable', async () => {
+    let membershipCalls = 0;
+    from.mockImplementation((table: string) => {
+      if (table === 'enterprise_memberships') {
+        membershipCalls += 1;
+        return membershipQuery(Promise.resolve({
+          data: null,
+          error: { message: 'temporary failure' },
+        }));
+      }
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    render(
+      <AdminLeaveOverride
+        open
+        workspaceId="workspace-a"
+        onCreated={vi.fn()}
+        onOpenChange={vi.fn()}
+      />,
+    );
+    const retry = await screen.findByRole('button', {
+      name: 'admin_leave_override.members_retry',
+    });
+    fireEvent.click(retry);
+
+    await waitFor(() => expect(membershipCalls).toBe(2));
+    const retryAgain = await screen.findByRole('button', {
+      name: 'admin_leave_override.members_retry',
+    });
+    await waitFor(() => expect(retryAgain).toHaveFocus());
+  });
+
+  it('moves focus to the empty-state explanation after a successful empty retry', async () => {
+    let membershipCalls = 0;
+    from.mockImplementation((table: string) => {
+      if (table === 'enterprise_memberships') {
+        membershipCalls += 1;
+        return membershipQuery(Promise.resolve(membershipCalls === 1
+          ? { data: null, error: { message: 'temporary failure' } }
+          : { data: [], error: null }));
+      }
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    render(
+      <AdminLeaveOverride
+        open
+        workspaceId="workspace-a"
+        onCreated={vi.fn()}
+        onOpenChange={vi.fn()}
+      />,
+    );
+    fireEvent.click(await screen.findByRole('button', {
+      name: 'admin_leave_override.members_retry',
+    }));
+
+    const emptyMessage = await screen.findByText('admin_leave_override.members_empty');
+    await waitFor(() => expect(emptyMessage).toHaveFocus());
+  });
+
+  it('does not restore stale retry focus after leaving and returning to a workspace', async () => {
+    const staleRetryLoad = deferred<{
+      data: Array<{ user_id: string }>;
+      error: null;
+    }>();
+    let membershipCalls = 0;
+    from.mockImplementation((table: string) => {
+      if (table === 'enterprise_memberships') {
+        membershipCalls += 1;
+        if (membershipCalls === 1) {
+          return membershipQuery(Promise.resolve({
+            data: null,
+            error: { message: 'temporary failure' },
+          }));
+        }
+        if (membershipCalls === 2) return membershipQuery(staleRetryLoad.promise);
+        const userId = membershipCalls === 3 ? 'member-b' : 'member-a';
+        return membershipQuery(Promise.resolve({ data: [{ user_id: userId }], error: null }));
+      }
+      if (table === 'profiles') {
+        return {
+          select: vi.fn(() => ({
+            in: vi.fn((_column: string, userIds: string[]) => Promise.resolve({
+              data: userIds.map(userId => ({
+                user_id: userId,
+                display_name: userId === 'member-b' ? 'Member B' : 'Member A',
+              })),
+              error: null,
+            })),
+          })),
+        };
+      }
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    const callbacks = { onCreated: vi.fn(), onOpenChange: vi.fn() };
+    const renderScope = (workspaceId: string) => (
+      <>
+        <button type="button">Stable focus target</button>
+        <AdminLeaveOverride open workspaceId={workspaceId} {...callbacks} />
+      </>
+    );
+    const view = render(renderScope('workspace-a'));
+    fireEvent.click(await screen.findByRole('button', {
+      name: 'admin_leave_override.members_retry',
+    }));
+
+    view.rerender(renderScope('workspace-b'));
+    expect(await screen.findByRole('button', { name: 'Member B' })).toBeInTheDocument();
+    const stableTarget = screen.getByRole('button', { name: 'Stable focus target' });
+    stableTarget.focus();
+
+    view.rerender(renderScope('workspace-a'));
+    expect(await screen.findByRole('button', { name: 'Member A' })).toBeInTheDocument();
+    await act(async () => {
+      staleRetryLoad.resolve({ data: [{ user_id: 'member-a' }], error: null });
+      await staleRetryLoad.promise;
+    });
+    expect(stableTarget).toHaveFocus();
   });
 });

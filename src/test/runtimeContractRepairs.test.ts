@@ -189,6 +189,16 @@ describe('restored and hardened runtime contracts', () => {
     expect(overrideUi).not.toContain("from('leave_requests').insert");
     expect(overrideUi).not.toContain('logAuditEvent');
     expect(dashboard).toContain('onCreated={() => setLeaveRefreshKey(current => current + 1)}');
+    expect(dashboard).toContain('const overrideTriggerRef = useRef<HTMLButtonElement>(null)');
+    expect(dashboard).toContain('aria-haspopup="dialog"');
+    expect(dashboard).toContain('aria-expanded={showOverride}');
+    expect(dashboard).toContain('aria-controls={overrideDialogContentId}');
+    expect(dashboard).toContain('dialogContentId={overrideDialogContentId}');
+    expect(dashboard).toContain('returnFocusRef={overrideTriggerRef}');
+    expect(overrideUi).toContain('onCloseAutoFocus={(event) => {');
+    expect(overrideUi).toContain('onEscapeKeyDown={(event) => {');
+    expect(overrideUi).toContain('onInteractOutside={(event) => {');
+    expect(overrideUi).toContain('if (submitInFlightRef.current) event.preventDefault()');
     expect(dashboard.match(/refreshKey=\{leaveRefreshKey\}/g)).toHaveLength(2);
     expect(approvalInbox).toContain('refreshKey = 0');
     expect(approvalInbox).toContain('setRefreshRevision(current => current + 1)');

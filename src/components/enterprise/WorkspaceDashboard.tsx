@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useId, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -638,6 +638,8 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
 function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canViewApprovals, canApprove, canOverride, canSubmit, canViewOwn, canViewTeam, canViewRules }: { workspaceId: string; userId: string; userRole: string; isAdmin: boolean; canViewApprovals?: boolean; canApprove?: boolean; canOverride?: boolean; canSubmit?: boolean; canViewOwn?: boolean; canViewTeam?: boolean; canViewRules?: boolean }) {
   const { t } = useI18n();
   const [showOverride, setShowOverride] = useState(false);
+  const overrideTriggerRef = useRef<HTMLButtonElement>(null);
+  const overrideDialogContentId = useId();
   const [leaveRefreshKey, setLeaveRefreshKey] = useState(0);
   // Per user request: all top-level sections start collapsed.
   const [approvalsOpen, setApprovalsOpen] = useState(false);
@@ -677,8 +679,18 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canVi
           </CollapsibleCardTrigger>
           <CollapsibleContent className="mt-2">
             {canOverride ? <div className="flex justify-end mb-2">
-              <Button size="sm" variant="outline" onClick={() => setShowOverride(true)} className="text-xs">
-                <ShieldAlert className="h-3.5 w-3.5 mr-1" /> {t('ws_nav.override_btn')}
+              <Button
+                ref={overrideTriggerRef}
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setShowOverride(true)}
+                className="text-xs"
+                aria-haspopup="dialog"
+                aria-expanded={showOverride}
+                aria-controls={overrideDialogContentId}
+              >
+                <ShieldAlert className="h-3.5 w-3.5 mr-1" aria-hidden="true" /> {t('ws_nav.override_btn')}
               </Button>
             </div> : null}
             <ApprovalInbox
@@ -693,6 +705,8 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canVi
                 onOpenChange={setShowOverride}
                 workspaceId={workspaceId}
                 onCreated={() => setLeaveRefreshKey(current => current + 1)}
+                dialogContentId={overrideDialogContentId}
+                returnFocusRef={overrideTriggerRef}
               />
             ) : null}
             <DecisionMemoryStaleInbox workspaceId={workspaceId} isAdmin={isAdmin} authoredBy={userId} />

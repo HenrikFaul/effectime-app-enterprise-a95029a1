@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useLayoutEffect, useRef, useCallback, useId, type RefObject } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { validateLeaveRequest, ConflictResult } from '@/lib/conflictEngine';
 import { formatConflict } from '@/lib/conflictEngineI18n';
@@ -21,6 +21,8 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   workspaceId: string;
   onCreated: () => void;
+  dialogContentId?: string;
+  returnFocusRef?: RefObject<HTMLButtonElement>;
 }
 
 type ValidationPhase = 'idle' | 'validating' | 'valid' | 'failed';
@@ -51,9 +53,30 @@ interface AdminOverrideRpcClient {
   ) => Promise<AdminOverrideRpcResponse>;
 }
 
-export function AdminLeaveOverride({ open, onOpenChange, workspaceId, onCreated }: Props) {
+export function AdminLeaveOverride({
+  open,
+  onOpenChange,
+  workspaceId,
+  onCreated,
+  dialogContentId,
+  returnFocusRef,
+}: Props) {
   const { t } = useI18n();
   const dateFnsLocale = useDateLocale();
+  const fieldIdPrefix = useId();
+  const resolvedDialogContentId = dialogContentId ?? `${fieldIdPrefix}-dialog`;
+  const memberSelectId = `${fieldIdPrefix}-member`;
+  const memberStatusId = `${fieldIdPrefix}-member-status`;
+  const leaveTypeId = `${fieldIdPrefix}-leave-type`;
+  const halfDayId = `${fieldIdPrefix}-half-day`;
+  const halfDayPeriodId = `${fieldIdPrefix}-half-day-period`;
+  const startDateLabelId = `${fieldIdPrefix}-start-date-label`;
+  const startDateValueId = `${fieldIdPrefix}-start-date-value`;
+  const endDateLabelId = `${fieldIdPrefix}-end-date-label`;
+  const endDateValueId = `${fieldIdPrefix}-end-date-value`;
+  const commentId = `${fieldIdPrefix}-comment`;
+  const justificationId = `${fieldIdPrefix}-justification`;
+  const autoApproveId = `${fieldIdPrefix}-auto-approve`;
   const [members, setMembers] = useState<{ user_id: string; display_name: string }[]>([]);
   const [selectedUserId, setSelectedUserId] = useState('');
   const [leaveType, setLeaveType] = useState('vacation');
@@ -65,6 +88,7 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, onCreated 
   const [justification, setJustification] = useState('');
   const [autoApprove, setAutoApprove] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
   const [conflicts, setConflicts] = useState<ConflictResult[]>([]);
   const [validationPhase, setValidationPhase] = useState<ValidationPhase>('idle');
   const [memberLoadPhase, setMemberLoadPhase] = useState<MemberLoadPhase>('idle');
@@ -72,16 +96,26 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, onCreated 
   const validationRunRef = useRef(0);
   const validatedContextRef = useRef<string | null>(null);
   const submitInFlightRef = useRef(false);
+  const submitRunRef = useRef(0);
+  const committedScopeRef = useRef({ open, workspaceId });
   const memberLoadRunRef = useRef(0);
   const loadedMemberWorkspaceRef = useRef<string | null>(null);
+  const memberSelectRef = useRef<HTMLButtonElement>(null);
+  const memberRetryRef = useRef<HTMLButtonElement>(null);
+  const memberEmptyRef = useRef<HTMLParagraphElement>(null);
+  const memberFocusRestoreWorkspaceRef = useRef<string | null>(null);
   const translationRef = useRef(t);
-  translationRef.current = t;
+
+  useLayoutEffect(() => {
+    translationRef.current = t;
+  }, [t]);
 
   const invalidateValidation = useCallback(() => {
     validationRunRef.current += 1;
     validatedContextRef.current = null;
     setValidationPhase('idle');
     setConflicts([]);
+    setSubmitError(false);
   }, []);
 
   const resetForm = useCallback(() => {
@@ -89,13 +123,30 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, onCreated 
     setSelectedUserId(''); setLeaveType('vacation'); setStartDate(undefined); setEndDate(undefined);
     setComment(''); setJustification(''); setAutoApprove(true);
     setIsHalfDay(false); setHalfDayPeriod('morning');
+    setSubmitError(false);
   }, [invalidateValidation]);
+
+  useLayoutEffect(() => {
+    committedScopeRef.current = { open, workspaceId };
+    submitRunRef.current += 1;
+    submitInFlightRef.current = false;
+    setSubmitting(false);
+
+    return () => {
+      submitRunRef.current += 1;
+      submitInFlightRef.current = false;
+    };
+  }, [open, workspaceId]);
 
   useEffect(() => {
     const loadRun = ++memberLoadRunRef.current;
     loadedMemberWorkspaceRef.current = null;
+    if (memberFocusRestoreWorkspaceRef.current !== workspaceId) {
+      memberFocusRestoreWorkspaceRef.current = null;
+    }
     resetForm();
     if (!open) {
+      memberFocusRestoreWorkspaceRef.current = null;
       setMembers([]);
       setMemberLoadPhase('idle');
       return () => {
@@ -167,6 +218,23 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, onCreated 
         ? 'failed'
         : 'loading';
   const visibleMembers = memberDirectoryIsCurrent ? members : [];
+  const memberStatusIsVisible = currentMemberLoadPhase === 'loading'
+    || currentMemberLoadPhase === 'failed'
+    || (currentMemberLoadPhase === 'ready' && visibleMembers.length === 0);
+
+  useEffect(() => {
+    if (memberFocusRestoreWorkspaceRef.current !== workspaceId) return;
+    if (currentMemberLoadPhase === 'loading' || currentMemberLoadPhase === 'idle') return;
+
+    memberFocusRestoreWorkspaceRef.current = null;
+    if (currentMemberLoadPhase === 'failed') {
+      memberRetryRef.current?.focus();
+    } else if (visibleMembers.length > 0) {
+      memberSelectRef.current?.focus();
+    } else {
+      memberEmptyRef.current?.focus();
+    }
+  }, [currentMemberLoadPhase, visibleMembers.length, workspaceId]);
   const dateRangeIsValid = Boolean(
     startDate
     && effectiveEndDate
@@ -235,7 +303,14 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, onCreated 
     }
 
     submitInFlightRef.current = true;
+    const submitRun = ++submitRunRef.current;
+    const submitIsCurrent = () => (
+      submitRunRef.current === submitRun
+      && committedScopeRef.current.open
+      && committedScopeRef.current.workspaceId === workspaceId
+    );
     setSubmitting(true);
+    setSubmitError(false);
     const rpcPayload = {
       _workspace_id: workspaceId,
       _user_id: selectedUserId,
@@ -254,7 +329,9 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, onCreated 
       // keep its local call contract explicit until schema provenance is reconciled.
       const { data, error } = await (supabase as unknown as AdminOverrideRpcClient)
         .rpc('create_admin_leave_override', rpcPayload);
+      if (!submitIsCurrent()) return;
       if (error || data?.ok !== true) {
+        setSubmitError(true);
         toast.error(t('admin_leave_override.create_failed'));
         console.error(
           '[AdminLeaveOverride] create_admin_leave_override returned an unsuccessful result',
@@ -268,14 +345,18 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, onCreated 
       onOpenChange(false);
       onCreated();
     } catch (err) {
+      if (!submitIsCurrent()) return;
+      setSubmitError(true);
       toast.error(t('admin_leave_override.create_failed'));
       console.error(
         '[AdminLeaveOverride] create_admin_leave_override failed',
         err instanceof Error ? err.name : 'UnknownError',
       );
     } finally {
-      submitInFlightRef.current = false;
-      setSubmitting(false);
+      if (submitRunRef.current === submitRun) {
+        submitInFlightRef.current = false;
+        setSubmitting(false);
+      }
     }
   };
 
@@ -294,23 +375,64 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, onCreated 
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent
+        id={resolvedDialogContentId}
+        className="sm:max-w-lg"
+        closeLabel={t('common.close')}
+        closeDisabled={submitting}
+        onEscapeKeyDown={(event) => {
+          if (submitInFlightRef.current) event.preventDefault();
+        }}
+        onInteractOutside={(event) => {
+          if (submitInFlightRef.current) event.preventDefault();
+        }}
+        onCloseAutoFocus={(event) => {
+          const trigger = returnFocusRef?.current;
+          if (trigger?.isConnected && !trigger.disabled) {
+            event.preventDefault();
+            trigger.focus();
+          }
+        }}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <ShieldAlert className="h-5 w-5 text-primary" />
+            <ShieldAlert className="h-5 w-5 text-primary" aria-hidden="true" />
             {t('admin_leave_override.dialog_title')}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 max-h-[60vh] overflow-y-auto">
+        <p className="sr-only" role="status" aria-live="polite" aria-atomic="true">
+          {submitting
+            ? t('admin_leave_override.btn_creating')
+            : validationPhase === 'validating'
+              ? t('admin_leave_override.btn_validating')
+              : ''}
+        </p>
+
+        <div
+          className="space-y-4 max-h-[60vh] overflow-y-auto"
+          aria-busy={submitting || validationPhase === 'validating'}
+        >
           <div>
-            <Label>{t('admin_leave_override.label_member')}</Label>
+            <Label htmlFor={memberSelectId}>
+              {t('admin_leave_override.label_member')}
+              <span className="text-destructive" aria-hidden="true"> *</span>
+              <span className="sr-only"> ({t('common.required')})</span>
+            </Label>
             <Select
               value={selectedUserId}
-              disabled={currentMemberLoadPhase !== 'ready'}
+              disabled={submitting || currentMemberLoadPhase !== 'ready' || visibleMembers.length === 0}
               onValueChange={v => { setSelectedUserId(v); invalidateValidation(); }}
             >
-              <SelectTrigger className="mt-1"><SelectValue placeholder={t('admin_leave_override.select_member_placeholder')} /></SelectTrigger>
+              <SelectTrigger
+                ref={memberSelectRef}
+                id={memberSelectId}
+                className="mt-1"
+                aria-required="true"
+                aria-describedby={memberStatusIsVisible ? memberStatusId : undefined}
+              >
+                <SelectValue placeholder={t('admin_leave_override.select_member_placeholder')} />
+              </SelectTrigger>
               <SelectContent>
                 {visibleMembers.map(m => (
                   <SelectItem key={m.user_id} value={m.user_id}>
@@ -320,29 +442,46 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, onCreated 
               </SelectContent>
             </Select>
             {currentMemberLoadPhase === 'loading' && (
-              <p className="mt-1 text-xs text-muted-foreground" role="status">
+              <p id={memberStatusId} className="mt-1 text-xs text-muted-foreground" role="status">
                 {t('admin_leave_override.members_loading')}
               </p>
             )}
             {currentMemberLoadPhase === 'failed' && (
-              <div className="mt-1 flex items-center justify-between gap-2" role="alert">
+              <div id={memberStatusId} className="mt-1 flex items-center justify-between gap-2" role="alert">
                 <p className="text-xs text-destructive">{t('admin_leave_override.members_load_failed')}</p>
                 <Button
+                  ref={memberRetryRef}
                   type="button"
                   variant="ghost"
                   size="sm"
-                  onClick={() => setMemberLoadRevision(current => current + 1)}
+                  onClick={() => {
+                    memberFocusRestoreWorkspaceRef.current = workspaceId;
+                    setMemberLoadRevision(current => current + 1);
+                  }}
                 >
                   {t('admin_leave_override.members_retry')}
                 </Button>
               </div>
             )}
+            {currentMemberLoadPhase === 'ready' && visibleMembers.length === 0 && (
+              <p
+                ref={memberEmptyRef}
+                id={memberStatusId}
+                className="mt-1 text-xs text-muted-foreground outline-none"
+                role="status"
+                tabIndex={-1}
+              >
+                {t('admin_leave_override.members_empty')}
+              </p>
+            )}
           </div>
 
           <div>
-            <Label>{t('admin_leave_override.label_type')}</Label>
-            <Select value={leaveType} onValueChange={v => { setLeaveType(v); invalidateValidation(); }}>
-              <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+            <Label htmlFor={leaveTypeId}>{t('admin_leave_override.label_type')}</Label>
+            <Select disabled={submitting} value={leaveType} onValueChange={v => { setLeaveType(v); invalidateValidation(); }}>
+              <SelectTrigger id={leaveTypeId} className="mt-1" aria-required="true">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="vacation">{t('leave_request.types.vacation')}</SelectItem>
                 <SelectItem value="sick_leave">{t('leave_request.types.sick_leave')}</SelectItem>
@@ -353,11 +492,16 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, onCreated 
           </div>
 
           <div className="flex items-center gap-2">
-            <Checkbox checked={isHalfDay} onCheckedChange={v => { setIsHalfDay(!!v); invalidateValidation(); }} id="halfday" />
-            <Label htmlFor="halfday" className="cursor-pointer">{t('admin_leave_override.label_half_day')}</Label>
+            <Checkbox disabled={submitting} checked={isHalfDay} onCheckedChange={v => { setIsHalfDay(!!v); invalidateValidation(); }} id={halfDayId} />
+            <Label htmlFor={halfDayId} className="cursor-pointer">{t('admin_leave_override.label_half_day')}</Label>
             {isHalfDay && (
-              <Select value={halfDayPeriod} onValueChange={v => { setHalfDayPeriod(v); invalidateValidation(); }}>
-                <SelectTrigger className="w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
+              <Select disabled={submitting} value={halfDayPeriod} onValueChange={v => { setHalfDayPeriod(v); invalidateValidation(); }}>
+                <Label htmlFor={halfDayPeriodId} className="sr-only">
+                  {t('admin_leave_override.label_half_day_period')}
+                </Label>
+                <SelectTrigger id={halfDayPeriodId} className="w-32 h-8 text-xs" aria-required="true">
+                  <SelectValue />
+                </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="morning">{t('leave_request.morning')}</SelectItem>
                   <SelectItem value="afternoon">{t('leave_request.afternoon')}</SelectItem>
@@ -368,31 +512,55 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, onCreated 
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>{t('admin_leave_override.label_start_date')}</Label>
+              <Label id={startDateLabelId}>
+                {t('admin_leave_override.label_start_date')}
+                <span className="text-destructive" aria-hidden="true"> *</span>
+                <span className="sr-only"> ({t('common.required')})</span>
+              </Label>
               <Popover>
                 <PopoverTrigger asChild>
-                  <Button variant="outline" className={cn("w-full mt-1 justify-start text-left font-normal", !startDate && "text-muted-foreground")}>
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, 'yyyy.MM.dd', { locale: dateFnsLocale }) : t('admin_leave_override.pick_date')}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    disabled={submitting}
+                    aria-labelledby={`${startDateLabelId} ${startDateValueId}`}
+                    className={cn("w-full mt-1 justify-start text-left font-normal", !startDate && "text-muted-foreground")}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                    <span id={startDateValueId}>
+                      {startDate ? format(startDate, 'yyyy.MM.dd', { locale: dateFnsLocale }) : t('admin_leave_override.pick_date')}
+                    </span>
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={startDate} onSelect={handleStartDate} locale={dateFnsLocale} className="p-3 pointer-events-auto" />
+                  <Calendar mode="single" selected={startDate} onSelect={handleStartDate} locale={dateFnsLocale} disabled={submitting ? () => true : undefined} className="p-3 pointer-events-auto" />
                 </PopoverContent>
               </Popover>
             </div>
             {!isHalfDay && (
               <div>
-                <Label>{t('admin_leave_override.label_end_date')}</Label>
+                <Label id={endDateLabelId}>
+                  {t('admin_leave_override.label_end_date')}
+                  <span className="text-destructive" aria-hidden="true"> *</span>
+                  <span className="sr-only"> ({t('common.required')})</span>
+                </Label>
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className={cn("w-full mt-1 justify-start text-left font-normal", !endDate && "text-muted-foreground")}>
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {endDate ? format(endDate, 'yyyy.MM.dd', { locale: dateFnsLocale }) : t('admin_leave_override.pick_date')}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={submitting}
+                      aria-labelledby={`${endDateLabelId} ${endDateValueId}`}
+                      className={cn("w-full mt-1 justify-start text-left font-normal", !endDate && "text-muted-foreground")}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" aria-hidden="true" />
+                      <span id={endDateValueId}>
+                        {endDate ? format(endDate, 'yyyy.MM.dd', { locale: dateFnsLocale }) : t('admin_leave_override.pick_date')}
+                      </span>
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={endDate} onSelect={handleEndDate} locale={dateFnsLocale} disabled={d => startDate ? d < startDate : false} className="p-3 pointer-events-auto" />
+                    <Calendar mode="single" selected={endDate} onSelect={handleEndDate} locale={dateFnsLocale} disabled={d => submitting || (startDate ? d < startDate : false)} className="p-3 pointer-events-auto" />
                   </PopoverContent>
                 </Popover>
               </div>
@@ -400,26 +568,67 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, onCreated 
           </div>
 
           <div>
-            <Label>{t('admin_leave_override.label_comment')}</Label>
-            <Textarea className="mt-1" value={comment} onChange={e => setComment(e.target.value)} placeholder={t('admin_leave_override.comment_placeholder')} rows={2} />
+            <Label htmlFor={commentId}>{t('admin_leave_override.label_comment')}</Label>
+            <Textarea
+              id={commentId}
+              className="mt-1"
+              value={comment}
+              onChange={e => {
+                setComment(e.target.value);
+                setSubmitError(false);
+              }}
+              placeholder={t('admin_leave_override.comment_placeholder')}
+              rows={2}
+              maxLength={4000}
+              disabled={submitting}
+            />
           </div>
 
           <div>
-            <Label className="text-destructive">{t('admin_leave_override.label_justification')}</Label>
-            <Textarea className="mt-1 border-destructive/30" value={justification} onChange={e => setJustification(e.target.value)} placeholder={t('admin_leave_override.justification_placeholder')} rows={2} />
+            <Label htmlFor={justificationId} className="text-destructive">{t('admin_leave_override.label_justification')}</Label>
+            <Textarea
+              id={justificationId}
+              className="mt-1 border-destructive/30"
+              value={justification}
+              onChange={e => {
+                setJustification(e.target.value);
+                setSubmitError(false);
+              }}
+              placeholder={t('admin_leave_override.justification_placeholder')}
+              rows={2}
+              maxLength={2000}
+              disabled={submitting}
+              required
+              aria-required="true"
+            />
           </div>
 
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <Checkbox checked={autoApprove} onCheckedChange={v => setAutoApprove(!!v)} />
-            {t('admin_leave_override.auto_approve_label')}
-          </label>
+          <div className="flex items-center gap-2 text-sm">
+            <Checkbox
+              id={autoApproveId}
+              checked={autoApprove}
+              onCheckedChange={v => {
+                setAutoApprove(!!v);
+                setSubmitError(false);
+              }}
+              disabled={submitting}
+            />
+            <Label htmlFor={autoApproveId} className="cursor-pointer font-normal">
+              {t('admin_leave_override.auto_approve_label')}
+            </Label>
+          </div>
 
           {(validationPhase === 'valid' || validationPhase === 'failed') && conflicts.length > 0 && (
-            <div className="space-y-1 rounded-md border p-3">
+            <div
+              className="space-y-1 rounded-md border p-3"
+              role={hasBlockingConflicts ? 'alert' : 'status'}
+              aria-live={hasBlockingConflicts ? 'assertive' : 'polite'}
+              aria-atomic="true"
+            >
               <p className="text-xs font-semibold mb-1">{t('admin_leave_override.conflicts_title')}</p>
               {conflicts.map((c, i) => (
                 <div key={i} className={cn("flex items-start gap-2 text-xs rounded px-2 py-1", c.severity === 'blocking' ? 'bg-destructive/10 text-destructive' : 'bg-yellow-500/10 text-yellow-700 dark:text-yellow-400')}>
-                  {c.severity === 'blocking' ? <XCircle className="h-3 w-3 mt-0.5 shrink-0" /> : <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" />}
+                  {c.severity === 'blocking' ? <XCircle className="h-3 w-3 mt-0.5 shrink-0" aria-hidden="true" /> : <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" aria-hidden="true" />}
                   <span>{formatConflict(c, t)}</span>
                 </div>
               ))}
@@ -430,21 +639,38 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, onCreated 
           )}
 
           {validationPhase === 'valid' && conflicts.length === 0 && (
-            <p className="text-xs text-green-600 dark:text-green-400">{t('admin_leave_override.no_conflicts')}</p>
+            <p className="text-xs text-green-600 dark:text-green-400" role="status" aria-live="polite">
+              {t('admin_leave_override.no_conflicts')}
+            </p>
+          )}
+
+          {submitError && (
+            <p className="text-xs text-destructive" role="alert">
+              {t('admin_leave_override.create_failed')}
+            </p>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={submitting}>{t('admin_leave_override.btn_cancel')}</Button>
+          <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={submitting}>{t('admin_leave_override.btn_cancel')}</Button>
           {!isValidationCurrent ? (
             <Button
+              type="button"
               onClick={handleValidate}
               disabled={validationPhase === 'validating' || !validationContext}
+              aria-busy={validationPhase === 'validating'}
             >
-              {t('admin_leave_override.btn_validate')}
+              {validationPhase === 'validating'
+                ? t('admin_leave_override.btn_validating')
+                : t('admin_leave_override.btn_validate')}
             </Button>
           ) : (
-            <Button onClick={handleSubmit} disabled={submitting || !justification.trim() || !validationContext}>
+            <Button
+              type="button"
+              onClick={handleSubmit}
+              disabled={submitting || !justification.trim() || !validationContext}
+              aria-busy={submitting}
+            >
               {submitting ? t('admin_leave_override.btn_creating') : t('admin_leave_override.btn_create')}
             </Button>
           )}
