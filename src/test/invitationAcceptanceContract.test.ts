@@ -3,33 +3,24 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const root = join(__dirname, '..', '..');
-const migration = readFileSync(
-  join(root, 'supabase/migrations/20260717133000_v3_51_3_atomic_invitation_acceptance.sql'),
-  'utf8',
+const readContract = (...path: string[]) =>
+  readFileSync(join(root, ...path), 'utf8').replace(/\r\n?/g, '\n');
+const migration = readContract(
+  'supabase/migrations/20260717133000_v3_51_3_atomic_invitation_acceptance.sql',
 );
-const boundaryMigration = readFileSync(
-  join(root, 'supabase/migrations/20260717132000_v3_51_3_reproducibility_and_atomic_settings.sql'),
-  'utf8',
+const boundaryMigration = readContract(
+  'supabase/migrations/20260717132000_v3_51_3_reproducibility_and_atomic_settings.sql',
 );
-const joinEvent = readFileSync(
-  join(root, 'supabase/functions/join-event/index.ts'),
-  'utf8',
+const joinEvent = readContract('supabase/functions/join-event/index.ts');
+const createWorkspaceUser = readContract(
+  'supabase/functions/create-workspace-user/index.ts',
 );
-const createWorkspaceUser = readFileSync(
-  join(root, 'supabase/functions/create-workspace-user/index.ts'),
-  'utf8',
+const inviteDialog = readContract('src/components/enterprise/InviteMemberDialog.tsx');
+const positionPicker = readContract(
+  'src/components/enterprise/positions/PositionPickerDialog.tsx',
 );
-const inviteDialog = readFileSync(
-  join(root, 'src/components/enterprise/InviteMemberDialog.tsx'),
-  'utf8',
-);
-const positionPicker = readFileSync(
-  join(root, 'src/components/enterprise/positions/PositionPickerDialog.tsx'),
-  'utf8',
-);
-const transactionalEmail = readFileSync(
-  join(root, 'supabase/functions/send-transactional-email/index.ts'),
-  'utf8',
+const transactionalEmail = readContract(
+  'supabase/functions/send-transactional-email/index.ts',
 );
 
 describe('atomic invitation acceptance contract', () => {

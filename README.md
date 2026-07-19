@@ -67,6 +67,7 @@ npm run security:secrets
 npm run schema:provenance:test
 npm run schema:provenance
 npm run db:payroll:test
+npm run db:hr-workflow:test
 npm run edge:check
 npm run edge:log-safety
 npm run edge:ratchet:test
@@ -119,7 +120,7 @@ pull-request run uploaded that lock and deliberately failed as designed. A
 subsequent hosted run compiled exclusively from the committed graph and passed.
 
 The repository currently has historical lint debt; see `PROJECT_AUDIT.md` for the
-measured baseline: 1,222 errors and 109 warnings across 179 files. `npm run lint`
+measured baseline: 1,218 errors and 108 warnings across 179 files. `npm run lint`
 still reports the complete debt, while `npm run lint:ratchet` rejects new or
 moved diagnostic fingerprints and requires the baseline to be reduced when debt
 is removed. Do not weaken lint rules, coverage floors or bundle ceilings to hide
@@ -195,25 +196,31 @@ The generated public schema currently contains 30 tables, one view, 46
 functions and two enums whose defining migrations cannot be proven locally.
 `npm run schema:provenance` prevents this reviewed debt from changing silently;
 it does not make a clean install reproducible. A read-only live schema export,
-transitively complete recovery migration, 124/124 clean replay, regenerated-type
+transitively complete recovery migration, 125/125 clean replay, regenerated-type
 comparison, schema fingerprint and RLS/adversarial tests are required before a
 backend release.
 
-The v3.51.3 audit hardening source was merged to `main` as
-`a132f179c024428f9cfd8ff6779d1c02c9d4c6d4`, and all six hosted Quality Gate
-jobs passed on that merge SHA. It remains **unreleased**: it has not been applied
-to the linked database and no matching Edge Function or frontend artifact has
-been deployed to production.
+The v3.51.3 audit hardening and release-identity source was merged to `main` by
+PR #167 as `9e2911b30b84f1040b3dbeb8865c575d0891c7bc`; all six hosted Quality Gate
+jobs passed on that merge SHA. It remains **unreleased**: the live web manifest
+still returns 404, the linked database has not been migrated, and no matching
+Edge Function artifact has been deployed to production.
 
 The linked production history currently has 59 migration IDs in common with the
 repository, 65 local-only IDs and 84 remote-only IDs. Three local-only HR/office/
 analytics migrations are proven duplicate-content variants of remote migrations
 under different IDs; bulk `migration repair --status reverted` would therefore
-be unsafe. The existing HR workflow policies/RPCs also fail to correlate every
-membership, assignee and joined row to the workflow workspace and do not always
-require an active assignee. Treat this as a P0-candidate tenant-isolation issue:
-use a new forward-only migration and adversarial authenticated-role tests; do
-not edit or replay the already-applied historical migration as a production fix.
+be unsafe. A forward-only HR workflow candidate now adds fail-closed tenant
+reference guards, cross-tenant parent-cascade protection, workspace/active-member
+RLS correlation, locked RPC validation and explicit execution ACLs without
+rewriting legacy rows. The inbox now selects explicit admin/member data paths
+and renders retryable query failures instead of false empty states. Run
+`npm run db:hr-workflow:test` for the pinned PostgreSQL 18.4 two-tenant, inactive-
+assignee, PII-leak, parent-delete, idempotence and four deterministic concurrency
+contracts. Do not
+edit/replay the historical migration or apply this candidate to production until
+the aggregate legacy inventory, restored-staging validation and migration-history
+reconciliation are approved.
 
 ### Tenant user creation compatibility note
 

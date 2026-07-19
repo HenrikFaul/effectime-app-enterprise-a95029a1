@@ -3,8 +3,8 @@
   "purpose": "Existing ESLint diagnostic fingerprint ceiling. CI fails on new findings and requires baseline reduction when findings are fixed.",
   "command": "eslint . --format json",
   "totals": {
-    "errors": 1222,
-    "warnings": 109
+    "errors": 1218,
+    "warnings": 108
   },
   "counts": {
     "@next/next/no-img-element": {
@@ -20,7 +20,7 @@
       "warnings": 0
     },
     "@typescript-eslint/no-explicit-any": {
-      "errors": 1193,
+      "errors": 1189,
       "warnings": 0
     },
     "@typescript-eslint/no-require-imports": {
@@ -45,7 +45,7 @@
     },
     "react-hooks/exhaustive-deps": {
       "errors": 0,
-      "warnings": 76
+      "warnings": 75
     },
     "react-refresh/only-export-components": {
       "errors": 0,
@@ -1041,12 +1041,8 @@
     },
     "src/components/enterprise/workflows/HRWorkflowInbox.tsx": {
       "@typescript-eslint/no-explicit-any": {
-        "errors": 17,
+        "errors": 13,
         "warnings": 0
-      },
-      "react-hooks/exhaustive-deps": {
-        "errors": 0,
-        "warnings": 1
       }
     },
     "src/components/enterprise/workflows/HRWorkflowTemplates.tsx": {
@@ -6959,13 +6955,6 @@
       }
     },
     "src/components/enterprise/workflows/HRWorkflowInbox.tsx": {
-      "10b232dceb42cf1a12b2": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const { data } = await (supabase as any)",
-        "count": 1
-      },
       "1d93dff14b5f7fa2ff34": {
         "ruleId": "@typescript-eslint/no-explicit-any",
         "severity": "errors",
@@ -7001,13 +6990,6 @@
         "source": "<SelectItem key={k} value={k}>{t(`hr_workflow.priority_${k}` as any)}</SelectItem>",
         "count": 1
       },
-      "50f9655518a14c28adeb": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const { data, error } = await (supabase as any).rpc('hr_workflow_list_instances', {",
-        "count": 1
-      },
       "55cb373e555c6c6611c7": {
         "ruleId": "@typescript-eslint/no-explicit-any",
         "severity": "errors",
@@ -7020,13 +7002,6 @@
         "severity": "errors",
         "message": "Unexpected any. Specify a different type.",
         "source": "const { error } = await (supabase as any).rpc('hr_workflow_create_instance', {",
-        "count": 1
-      },
-      "8c4dd6956865d33d3e2c": {
-        "ruleId": "react-hooks/exhaustive-deps",
-        "severity": "warnings",
-        "message": "React Hook useCallback has a missing dependency: 't'. Either include it or remove the dependency array.",
-        "source": "}, [workspaceId, statusFilter]);",
         "count": 1
       },
       "8e56ed877ee789b7b443": {
@@ -7043,13 +7018,6 @@
         "source": "<Badge variant={sm.variant} className=\"text-xs\">{t(`hr_workflow.status_${inst.status}` as any)}</Badge>",
         "count": 1
       },
-      "bd1d7ea506b618d6b886": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "setInstances((memberInstances || []).map((i: any) => ({ ...i, member_name: t('hr_workflow.self_member'), total_tasks: 0, done_tasks: 0 })));",
-        "count": 1
-      },
       "c4f4689f9b361470505e": {
         "ruleId": "@typescript-eslint/no-explicit-any",
         "severity": "errors",
@@ -7063,13 +7031,6 @@
         "message": "Unexpected any. Specify a different type.",
         "source": "setMembers(((ms as any[]) || []).map((m: any) => ({ ...m, display_name: nameMap.get(m.user_id) })));",
         "count": 2
-      },
-      "e53c045df2fad455bbce": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const { data: memberInstances } = await (supabase as any)",
-        "count": 1
       }
     },
     "src/components/enterprise/workflows/HRWorkflowTemplates.tsx": {
