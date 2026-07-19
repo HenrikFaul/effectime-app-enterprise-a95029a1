@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { validateLeaveRequest, ConflictResult } from '@/lib/conflictEngine';
 import { formatConflict } from '@/lib/conflictEngineI18n';
@@ -23,6 +23,34 @@ interface Props {
   onCreated: () => void;
 }
 
+type ValidationPhase = 'idle' | 'validating' | 'valid' | 'failed';
+type MemberLoadPhase = 'idle' | 'loading' | 'ready' | 'failed';
+
+interface AdminOverrideRpcPayload {
+  _workspace_id: string;
+  _user_id: string;
+  _leave_type: string;
+  _start_date: string;
+  _end_date: string;
+  _justification: string;
+  _auto_approve: boolean;
+  _is_half_day: boolean;
+  _half_day_period: string | null;
+  _comment: string | null;
+}
+
+interface AdminOverrideRpcResponse {
+  data: { ok?: boolean } | null;
+  error: unknown;
+}
+
+interface AdminOverrideRpcClient {
+  rpc: (
+    functionName: 'create_admin_leave_override',
+    payload: AdminOverrideRpcPayload,
+  ) => Promise<AdminOverrideRpcResponse>;
+}
+
 export function AdminLeaveOverride({ open, onOpenChange, workspaceId, onCreated }: Props) {
   const { t } = useI18n();
   const dateFnsLocale = useDateLocale();
@@ -38,80 +66,234 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, onCreated 
   const [autoApprove, setAutoApprove] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [conflicts, setConflicts] = useState<ConflictResult[]>([]);
-  const [validated, setValidated] = useState(false);
+  const [validationPhase, setValidationPhase] = useState<ValidationPhase>('idle');
+  const [memberLoadPhase, setMemberLoadPhase] = useState<MemberLoadPhase>('idle');
+  const [memberLoadRevision, setMemberLoadRevision] = useState(0);
+  const validationRunRef = useRef(0);
+  const validatedContextRef = useRef<string | null>(null);
+  const submitInFlightRef = useRef(false);
+  const memberLoadRunRef = useRef(0);
+  const loadedMemberWorkspaceRef = useRef<string | null>(null);
+  const translationRef = useRef(t);
+  translationRef.current = t;
+
+  const invalidateValidation = useCallback(() => {
+    validationRunRef.current += 1;
+    validatedContextRef.current = null;
+    setValidationPhase('idle');
+    setConflicts([]);
+  }, []);
+
+  const resetForm = useCallback(() => {
+    invalidateValidation();
+    setSelectedUserId(''); setLeaveType('vacation'); setStartDate(undefined); setEndDate(undefined);
+    setComment(''); setJustification(''); setAutoApprove(true);
+    setIsHalfDay(false); setHalfDayPeriod('morning');
+  }, [invalidateValidation]);
 
   useEffect(() => {
-    if (!open) return;
+    const loadRun = ++memberLoadRunRef.current;
+    loadedMemberWorkspaceRef.current = null;
+    resetForm();
+    if (!open) {
+      setMembers([]);
+      setMemberLoadPhase('idle');
+      return () => {
+        if (memberLoadRunRef.current === loadRun) memberLoadRunRef.current += 1;
+      };
+    }
+    setMembers([]);
+    setMemberLoadPhase('loading');
+
     (async () => {
-      const { data: mData } = await supabase.from('enterprise_memberships').select('user_id').eq('workspace_id', workspaceId).eq('status', 'active' as any);
-      const userIds = (mData || []).map((m: any) => m.user_id);
-      if (userIds.length === 0) { setMembers([]); return; }
-      const { data: profiles } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);
-      setMembers((profiles || []).map((p: any) => ({ user_id: p.user_id, display_name: p.display_name || t('approval_inbox.unknown') })).sort((a, b) => a.display_name.localeCompare(b.display_name)));
+      try {
+        const { data: mData, error: membershipError } = await supabase
+          .from('enterprise_memberships')
+          .select('user_id')
+          .eq('workspace_id', workspaceId)
+          .eq('status', 'active');
+        if (membershipError) throw new Error('membership_query_failed');
+        const userIds = (mData || []).map(m => m.user_id);
+        if (memberLoadRunRef.current !== loadRun) return;
+        if (userIds.length === 0) {
+          setMembers([]);
+          loadedMemberWorkspaceRef.current = workspaceId;
+          setMemberLoadPhase('ready');
+          return;
+        }
+
+        const { data: profiles, error: profileError } = await supabase
+          .from('profiles')
+          .select('user_id, display_name')
+          .in('user_id', userIds);
+        if (profileError) throw new Error('profile_query_failed');
+        if (memberLoadRunRef.current !== loadRun) return;
+        setMembers((profiles || [])
+          .map(p => ({
+            user_id: p.user_id,
+            display_name: p.display_name?.trim() || '',
+          }))
+          .sort((a, b) => (
+            a.display_name || a.user_id
+          ).localeCompare(b.display_name || b.user_id)));
+        loadedMemberWorkspaceRef.current = workspaceId;
+        setMemberLoadPhase('ready');
+      } catch (err) {
+        if (memberLoadRunRef.current !== loadRun) return;
+        loadedMemberWorkspaceRef.current = null;
+        setMembers([]);
+        setMemberLoadPhase('failed');
+        console.error(
+          '[AdminLeaveOverride] Member directory load failed',
+          err instanceof Error ? err.message : 'unknown_failure',
+        );
+        toast.error(translationRef.current('admin_leave_override.members_load_failed'));
+      }
     })();
-  }, [open, workspaceId]);
+
+    return () => {
+      if (memberLoadRunRef.current === loadRun) memberLoadRunRef.current += 1;
+    };
+  }, [memberLoadRevision, open, resetForm, workspaceId]);
+
+  const effectiveEndDate = isHalfDay ? startDate : endDate;
+  const memberDirectoryIsCurrent = memberLoadPhase === 'ready'
+    && loadedMemberWorkspaceRef.current === workspaceId;
+  const currentMemberLoadPhase: MemberLoadPhase = !open
+    ? 'idle'
+    : memberDirectoryIsCurrent
+      ? 'ready'
+      : memberLoadPhase === 'failed'
+        ? 'failed'
+        : 'loading';
+  const visibleMembers = memberDirectoryIsCurrent ? members : [];
+  const dateRangeIsValid = Boolean(
+    startDate
+    && effectiveEndDate
+    && effectiveEndDate.getTime() >= startDate.getTime(),
+  );
+  const selectedMemberIsCurrent = memberDirectoryIsCurrent
+    && members.some(member => member.user_id === selectedUserId);
+  const validationContext = dateRangeIsValid && startDate && effectiveEndDate
+    && selectedUserId && selectedMemberIsCurrent
+    ? JSON.stringify([
+      workspaceId,
+      selectedUserId,
+      leaveType,
+      format(startDate, 'yyyy-MM-dd'),
+      format(effectiveEndDate, 'yyyy-MM-dd'),
+      isHalfDay,
+      isHalfDay ? halfDayPeriod : null,
+    ])
+    : null;
+  const isValidationCurrent = validationPhase === 'valid'
+    && validationContext !== null
+    && validatedContextRef.current === validationContext;
 
   const handleValidate = async () => {
-    if (!startDate || !endDate || !selectedUserId) return;
+    if (!startDate || !effectiveEndDate || !selectedUserId || !validationContext) return;
+    const validationRun = ++validationRunRef.current;
+    const contextSnapshot = validationContext;
+    setValidationPhase('validating');
+    setConflicts([]);
     try {
-      const results = await validateLeaveRequest(workspaceId, selectedUserId, startDate, endDate);
+      const results = await validateLeaveRequest(workspaceId, selectedUserId, startDate, effectiveEndDate);
+      if (validationRun !== validationRunRef.current) return;
       setConflicts(results);
-      setValidated(true);
+      validatedContextRef.current = contextSnapshot;
+      setValidationPhase('valid');
     } catch (err) {
-      // Engine threw because validation data could not be loaded — surface as
-      // a blocking conflict so the admin cannot bypass-approve a request whose
-      // constraints were never evaluated.
+      if (validationRun !== validationRunRef.current) return;
+      console.error(
+        '[AdminLeaveOverride] Leave validation failed',
+        err instanceof Error ? err.name : 'UnknownError',
+      );
       toast.error(t('leave_request.error_validation_failed'));
-      setConflicts([{ code: 'VALIDATION_ERROR', severity: 'blocking', message: String(err) }]);
-      setValidated(true);
+      setConflicts([{
+        code: 'VALIDATION_ERROR',
+        severity: 'blocking',
+        message: t('leave_request.error_validation_failed'),
+      }]);
+      validatedContextRef.current = null;
+      setValidationPhase('failed');
     }
   };
 
   const hasBlockingConflicts = conflicts.some(c => c.severity === 'blocking');
 
   const handleSubmit = async () => {
-    if (!startDate || !endDate || !selectedUserId) { toast.error(t('admin_leave_override.fill_all_fields')); return; }
+    if (submitInFlightRef.current) return;
+    if (!startDate || !effectiveEndDate || !selectedUserId || !validationContext) {
+      toast.error(t('admin_leave_override.fill_all_fields'));
+      return;
+    }
     if (!justification.trim()) { toast.error(t('admin_leave_override.justification_required')); return; }
 
-    if (!validated) { await handleValidate(); return; }
+    if (!isValidationCurrent || validatedContextRef.current !== validationContext) {
+      await handleValidate();
+      return;
+    }
 
+    submitInFlightRef.current = true;
     setSubmitting(true);
-    const { data, error } = await (supabase as any).rpc('create_admin_leave_override', {
+    const rpcPayload = {
       _workspace_id: workspaceId,
       _user_id: selectedUserId,
       _leave_type: leaveType,
       _start_date: format(startDate, 'yyyy-MM-dd'),
-      _end_date: isHalfDay ? format(startDate, 'yyyy-MM-dd') : format(endDate, 'yyyy-MM-dd'),
+      _end_date: format(effectiveEndDate, 'yyyy-MM-dd'),
       _justification: justification.trim(),
       _auto_approve: autoApprove,
       _is_half_day: isHalfDay,
       _half_day_period: isHalfDay ? halfDayPeriod : null,
       _comment: comment.trim() || null,
-    });
+    };
 
-    if (error || data?.ok !== true) {
-      toast.error(t('admin_leave_override.create_failed'));
-      console.error(error ?? data);
-    } else {
+    try {
+      // The checked-in generated schema predates this migration-backed RPC;
+      // keep its local call contract explicit until schema provenance is reconciled.
+      const { data, error } = await (supabase as unknown as AdminOverrideRpcClient)
+        .rpc('create_admin_leave_override', rpcPayload);
+      if (error || data?.ok !== true) {
+        toast.error(t('admin_leave_override.create_failed'));
+        console.error(
+          '[AdminLeaveOverride] create_admin_leave_override returned an unsuccessful result',
+          error ? 'RpcError' : 'UnexpectedResponse',
+        );
+        return;
+      }
+
       toast.success(autoApprove ? t('admin_leave_override.created_approved') : t('admin_leave_override.created'));
       resetForm();
       onOpenChange(false);
       onCreated();
+    } catch (err) {
+      toast.error(t('admin_leave_override.create_failed'));
+      console.error(
+        '[AdminLeaveOverride] create_admin_leave_override failed',
+        err instanceof Error ? err.name : 'UnknownError',
+      );
+    } finally {
+      submitInFlightRef.current = false;
+      setSubmitting(false);
     }
-    setSubmitting(false);
   };
 
-  const resetForm = () => {
-    setSelectedUserId(''); setLeaveType('vacation'); setStartDate(undefined); setEndDate(undefined);
-    setComment(''); setJustification(''); setAutoApprove(true); setConflicts([]); setValidated(false);
-    setIsHalfDay(false); setHalfDayPeriod('morning');
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen && submitInFlightRef.current) return;
+    if (!nextOpen) resetForm();
+    onOpenChange(nextOpen);
   };
 
-  const handleStartDate = (d: Date | undefined) => { setStartDate(d); setValidated(false); setConflicts([]); };
-  const handleEndDate = (d: Date | undefined) => { setEndDate(d); setValidated(false); setConflicts([]); };
+  const handleStartDate = (d: Date | undefined) => {
+    setStartDate(d);
+    if (d && endDate && endDate.getTime() < d.getTime()) setEndDate(undefined);
+    invalidateValidation();
+  };
+  const handleEndDate = (d: Date | undefined) => { setEndDate(d); invalidateValidation(); };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
@@ -123,17 +305,43 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, onCreated 
         <div className="space-y-4 max-h-[60vh] overflow-y-auto">
           <div>
             <Label>{t('admin_leave_override.label_member')}</Label>
-            <Select value={selectedUserId} onValueChange={v => { setSelectedUserId(v); setValidated(false); setConflicts([]); }}>
+            <Select
+              value={selectedUserId}
+              disabled={currentMemberLoadPhase !== 'ready'}
+              onValueChange={v => { setSelectedUserId(v); invalidateValidation(); }}
+            >
               <SelectTrigger className="mt-1"><SelectValue placeholder={t('admin_leave_override.select_member_placeholder')} /></SelectTrigger>
               <SelectContent>
-                {members.map(m => <SelectItem key={m.user_id} value={m.user_id}>{m.display_name}</SelectItem>)}
+                {visibleMembers.map(m => (
+                  <SelectItem key={m.user_id} value={m.user_id}>
+                    {m.display_name || t('approval_inbox.unknown')}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
+            {currentMemberLoadPhase === 'loading' && (
+              <p className="mt-1 text-xs text-muted-foreground" role="status">
+                {t('admin_leave_override.members_loading')}
+              </p>
+            )}
+            {currentMemberLoadPhase === 'failed' && (
+              <div className="mt-1 flex items-center justify-between gap-2" role="alert">
+                <p className="text-xs text-destructive">{t('admin_leave_override.members_load_failed')}</p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setMemberLoadRevision(current => current + 1)}
+                >
+                  {t('admin_leave_override.members_retry')}
+                </Button>
+              </div>
+            )}
           </div>
 
           <div>
             <Label>{t('admin_leave_override.label_type')}</Label>
-            <Select value={leaveType} onValueChange={setLeaveType}>
+            <Select value={leaveType} onValueChange={v => { setLeaveType(v); invalidateValidation(); }}>
               <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="vacation">{t('leave_request.types.vacation')}</SelectItem>
@@ -145,10 +353,10 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, onCreated 
           </div>
 
           <div className="flex items-center gap-2">
-            <Checkbox checked={isHalfDay} onCheckedChange={v => setIsHalfDay(!!v)} id="halfday" />
+            <Checkbox checked={isHalfDay} onCheckedChange={v => { setIsHalfDay(!!v); invalidateValidation(); }} id="halfday" />
             <Label htmlFor="halfday" className="cursor-pointer">{t('admin_leave_override.label_half_day')}</Label>
             {isHalfDay && (
-              <Select value={halfDayPeriod} onValueChange={setHalfDayPeriod}>
+              <Select value={halfDayPeriod} onValueChange={v => { setHalfDayPeriod(v); invalidateValidation(); }}>
                 <SelectTrigger className="w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="morning">{t('leave_request.morning')}</SelectItem>
@@ -206,7 +414,7 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, onCreated 
             {t('admin_leave_override.auto_approve_label')}
           </label>
 
-          {validated && conflicts.length > 0 && (
+          {(validationPhase === 'valid' || validationPhase === 'failed') && conflicts.length > 0 && (
             <div className="space-y-1 rounded-md border p-3">
               <p className="text-xs font-semibold mb-1">{t('admin_leave_override.conflicts_title')}</p>
               {conflicts.map((c, i) => (
@@ -215,23 +423,28 @@ export function AdminLeaveOverride({ open, onOpenChange, workspaceId, onCreated 
                   <span>{formatConflict(c, t)}</span>
                 </div>
               ))}
-              {autoApprove && hasBlockingConflicts && (
+              {validationPhase === 'valid' && autoApprove && hasBlockingConflicts && (
                 <p className="text-xs text-amber-600 font-medium mt-1">{t('admin_leave_override.blocking_override')}</p>
               )}
             </div>
           )}
 
-          {validated && conflicts.length === 0 && (
+          {validationPhase === 'valid' && conflicts.length === 0 && (
             <p className="text-xs text-green-600 dark:text-green-400">{t('admin_leave_override.no_conflicts')}</p>
           )}
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>{t('admin_leave_override.btn_cancel')}</Button>
-          {!validated ? (
-            <Button onClick={handleValidate} disabled={!startDate || (!isHalfDay && !endDate) || !selectedUserId}>{t('admin_leave_override.btn_validate')}</Button>
+          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={submitting}>{t('admin_leave_override.btn_cancel')}</Button>
+          {!isValidationCurrent ? (
+            <Button
+              onClick={handleValidate}
+              disabled={validationPhase === 'validating' || !validationContext}
+            >
+              {t('admin_leave_override.btn_validate')}
+            </Button>
           ) : (
-            <Button onClick={handleSubmit} disabled={submitting || !selectedUserId || !justification.trim() || !startDate || (!isHalfDay && !endDate)}>
+            <Button onClick={handleSubmit} disabled={submitting || !justification.trim() || !validationContext}>
               {submitting ? t('admin_leave_override.btn_creating') : t('admin_leave_override.btn_create')}
             </Button>
           )}

@@ -46,9 +46,9 @@ export function formatConflict(c: ConflictResult, t: TFn): string {
     case 'SELF_OVERLAP':
       return t('conflict.self_overlap');
     case 'VALIDATION_ERROR':
-      // VALIDATION_ERROR carries a freeform message (a thrown error) — render as-is
-      // since the error text comes from the underlying system, not a translation key.
-      return c.message;
+      // Infrastructure errors may contain internal endpoint or policy details.
+      // Always show the localized generic retry message to end users.
+      return t('leave_request.error_validation_failed');
     default:
       // Unknown code — fall back to the engine's HU message rather than show a key.
       return c.message;

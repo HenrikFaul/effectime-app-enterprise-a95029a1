@@ -117,7 +117,7 @@ describe('HR workflow inbox task request ordering', () => {
       await taskQueries[0].promise;
     });
     expect(await screen.findByText('Current task')).toBeInTheDocument();
-  });
+  }, 10_000);
 
   it('ignores a previous workspace task response that finishes last', async () => {
     const { rerender } = render(

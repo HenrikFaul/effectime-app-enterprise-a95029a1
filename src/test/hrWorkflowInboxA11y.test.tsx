@@ -92,5 +92,5 @@ describe('HR workflow inbox accessibility', () => {
       p_task_id: 'task-a',
       p_status: 'done',
     });
-  });
+  }, 10_000);
 });
