@@ -12,7 +12,8 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
+import { CollapsibleCardTrigger } from '@/components/ui/collapsible-card-trigger';
 import { Shield, UserMinus, ChevronRight, UserPlus, MapPin, Users as UsersIcon, ChevronDown, Filter, X } from 'lucide-react';
 import { MemberProfileSheet } from './MemberProfileSheet';
 import { InviteMemberDialog } from './InviteMemberDialog';
@@ -299,18 +300,18 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
       )}
 
       <Collapsible open={open} onOpenChange={setOpen}>
-        <CollapsibleTrigger asChild>
-          <Card className="cursor-pointer hover:border-primary/50 transition-colors">
-            <CardContent className="flex items-center justify-between py-3 px-4">
-              <div className="flex items-center gap-2">
-                <UsersIcon className="h-4 w-4 text-primary" />
-                <span className="font-medium text-sm">{t('members.members_title')}</span>
-                <Badge variant="outline" className="text-[10px]">{members.length}</Badge>
-              </div>
-              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
-            </CardContent>
-          </Card>
-        </CollapsibleTrigger>
+        <CollapsibleCardTrigger
+          label={`${t('members.members_title')}: ${members.length}`}
+          className="cursor-pointer hover:border-primary/50 transition-colors"
+          contentClassName="flex items-center justify-between py-3 px-4"
+        >
+          <div className="flex items-center gap-2">
+            <UsersIcon className="h-4 w-4 text-primary" />
+            <span className="font-medium text-sm">{t('members.members_title')}</span>
+            <Badge variant="outline" className="text-[10px]">{members.length}</Badge>
+          </div>
+          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
+        </CollapsibleCardTrigger>
 
         <CollapsibleContent className="mt-2 space-y-2">
           {loading ? (

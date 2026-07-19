@@ -25,7 +25,15 @@ function isApplicationUrl(rawUrl: string): boolean {
 function observeRuntime(page: Page) {
   const consoleErrors: string[] = [];
   const pageErrors: string[] = [];
-  const failedAssets: string[] = [];
+  const failedAssets: Array<{
+    method: string;
+    url: string;
+    resourceType: string;
+    errorText: string;
+    sequence: number;
+  }> = [];
+  const completedAssets = new Map<string, number>();
+  let requestSequence = 0;
   const badAssetResponses: string[] = [];
   const applicationResponses: Array<{
     url: string;
@@ -47,8 +55,21 @@ function observeRuntime(page: Page) {
   page.on("requestfailed", (request) => {
     if (!isApplicationUrl(request.url())) return;
     if (!ASSET_RESOURCE_TYPES.has(request.resourceType())) return;
-    failedAssets.push(
-      `${request.method()} ${request.url()} (${request.failure()?.errorText || "unknown failure"})`,
+    failedAssets.push({
+      method: request.method(),
+      url: request.url(),
+      resourceType: request.resourceType(),
+      errorText: request.failure()?.errorText || "unknown failure",
+      sequence: ++requestSequence,
+    });
+  });
+
+  page.on("requestfinished", (request) => {
+    if (!isApplicationUrl(request.url())) return;
+    if (!ASSET_RESOURCE_TYPES.has(request.resourceType())) return;
+    completedAssets.set(
+      `${request.method()}\u0000${request.url()}\u0000${request.resourceType()}`,
+      ++requestSequence,
     );
   });
 
@@ -90,14 +111,32 @@ function observeRuntime(page: Page) {
     consoleErrors,
     applicationResponses,
     assertHealthy(allowedConsoleErrors: readonly RegExp[] = []) {
+      // A newly activated service worker can claim the page while an image is
+      // in flight. Chromium reports the superseded request as ERR_ABORTED and
+      // immediately repeats it through the worker. Ignore only that exact,
+      // browser-directed cancellation when an identical asset request later
+      // completed; every unrecovered abort and every other failure still fails.
+      const unrecoveredFailedAssets = failedAssets
+        .filter(
+          (failure) =>
+            failure.errorText !== "net::ERR_ABORTED" ||
+            failure.resourceType !== "image" ||
+            (completedAssets.get(
+              `${failure.method}\u0000${failure.url}\u0000${failure.resourceType}`,
+            ) ?? -1) <= failure.sequence,
+        )
+        .map(
+          (failure) =>
+            `${failure.method} ${failure.url} (${failure.errorText})`,
+        );
       const unexpectedConsoleErrors = consoleErrors.filter(
         (message) => !allowedConsoleErrors.some((allowed) => allowed.test(message)),
       );
 
       expect(pageErrors, `Uncaught page errors:\n${pageErrors.join("\n\n")}`).toEqual([]);
       expect(
-        failedAssets,
-        `Failed same-origin document/assets:\n${failedAssets.join("\n")}`,
+        unrecoveredFailedAssets,
+        `Failed same-origin document/assets:\n${unrecoveredFailedAssets.join("\n")}`,
       ).toEqual([]);
       expect(
         badAssetResponses,
@@ -138,6 +177,23 @@ async function assertVisibleButtonsHaveAccessibleNames(page: Page) {
     visibleButtonCount,
     "The rendered page should expose at least one visible button",
   ).toBeGreaterThan(0);
+}
+
+async function assertEffectimeLogoLoaded(page: Page) {
+  for (const selector of [".effectime-logo-mark", ".effectime-logo-wordmark"]) {
+    const logo = page.locator(selector).first();
+    await expect(logo).toBeVisible();
+    await expect
+      .poll(() =>
+        logo.evaluate(
+          (element) =>
+            element instanceof HTMLImageElement &&
+            element.complete &&
+            element.naturalWidth > 0,
+        ),
+      )
+      .toBe(true);
+  }
 }
 
 async function assertSuccessfulNavigation(page: Page, path: string) {
@@ -288,6 +344,7 @@ test.describe("public application smoke", () => {
     await expect(page).toHaveURL(/\/auth(?:[?#]|$)/);
     await expect(page.locator("#email")).toBeVisible();
     await expect(page.locator("#password")).toBeVisible();
+    await assertEffectimeLogoLoaded(page);
     await assertVisibleButtonsHaveAccessibleNames(page);
 
     await waitForLateRuntimeFailures(page);
@@ -303,6 +360,7 @@ test.describe("public application smoke", () => {
     await expect(page).toHaveURL(/\/auth(?:[?#]|$)/);
     await expect(page.locator("#email")).toBeVisible();
     await expect(page.locator("#password")).toBeVisible();
+    await assertEffectimeLogoLoaded(page);
 
     await waitForLateRuntimeFailures(page);
     runtime.assertHealthy();

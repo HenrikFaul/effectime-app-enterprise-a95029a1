@@ -1,10 +1,10 @@
 ## 2026-07-17 — v3.51.3 Project audit and release-boundary hardening (unreleased)
 
-**Status:** PR #167–#171 were merged to `main`; the current merge SHA is
-`21b2fed29913194cc6fcf4c7d26904ed48325959`, and all seven hosted Quality Gate
-jobs passed in run `29672580843`. The clean schema-2 release evidence is
-available as artifact `8437804119` with web fingerprint
-`2837a4c4348418ab9dd67f1c0061ab2d2475c37d82215123d29a18a7f8a3184c`. The live
+**Status:** PR #167–#172 were merged to `main`; the current merge SHA is
+`5b502e12ca4f9169a366347e1d9d9079f7b1517e`, and all seven hosted Quality Gate
+jobs passed in run `29673606633`. The clean schema-2 release evidence is
+available as artifact `8438122116` with web fingerprint
+`1c23ca292286620013c5840696d4d206d49206ebc3651fab0e0c143a641582d7`. The live
 web release manifest is still absent; no matching Edge production deploy and no
 linked database migration apply has been performed.
 
@@ -146,6 +146,32 @@ linked database migration apply has been performed.
   Total ceilings include the previously measured 93-byte raw and 151-byte gzip
   Windows/Linux variance, a 35-byte raw rounding margin, and the existing
   128-byte gzip allowance; largest-gzip and CSS ceilings remain unchanged.
+- Adds the I-24 accessibility candidate for all 17 div-backed
+  `CollapsibleTrigger`/`Card` controls: 13 in `WorkspaceDashboard` and one each
+  in `InvitationsPanel`, `MemberList`, `OnboardingTemplates` and
+  `AccessTemplates`. A shared native-button overlay now owns the interactive
+  semantics, exposes an explicit accessible label and keeps the visual card
+  content `aria-hidden`. Existing callbacks, open state, content layout and
+  application behavior remain unchanged; there is no API, database or dependency
+  change.
+- Passes the I-24 targeted 4/4 trigger tests, typecheck, unchanged ESLint ratchet
+  (1,209 errors / 104 warnings / 178 files), 55-file 599/599 full coverage
+  (statements/lines 40,668/85,237, branches 960/1,460, functions 163/503), a
+  4,081-module production build, bundle ratchet, zero-vulnerability npm audit, a
+  1,439-file secret scan and 183/183 mobile source contract. The reviewed bundle
+  is 4,454,848 raw / 1,271,801 gzip JavaScript bytes; largest is
+  1,740,007 / 551,960 and CSS is 180,862 / 29,599. The clean committed I-24
+  source passes all 365 release assertions; hosted I-24 validation remains
+  pending. Mobile sync, the 345/345 artifact check and 2/2 bridge-emulated E2E
+  are PASS with zero tracked native drift.
+- Records the non-product test transients instead of hiding them. The first full
+  coverage run had one timing-only failure; the isolated assertion and full retry
+  both passed. The first two full browser-smoke attempts were 6/7 because of a
+  service-worker retry abort and then a 21.48-second local I/O timeout while
+  loading a 22.8 KB HTML document. Trace evidence classified both as harness/
+  environment failures. After tightening the recovered-image filter and requiring
+  a decoded logo assertion, the complete web smoke passed 7/7 and the focused
+  `/auth` plus legacy-route rerun passed 2/2.
 
 ### Android/iOS common-data foundation
 
