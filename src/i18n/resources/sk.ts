@@ -1137,6 +1137,8 @@ const sk = {
     },
   },
   approval_inbox: {
+    load_error: 'Žiadosti sa nepodarilo načítať.',
+    retry: 'Skúsiť znova',
     decision_failed: 'Chyba pri ukladaní rozhodnutia',
     approved: 'Žiadosť schválená',
     rejected: 'Žiadosť zamietnutá',

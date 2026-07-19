@@ -1,10 +1,12 @@
 ## 2026-07-17 — v3.51.3 Project audit and release-boundary hardening (unreleased)
 
-**Status:** PR #167–#170 were merged to `main`; the current merge SHA is
-`f2348c559958931a65e68157d5dd590ec22782aa`, and all seven hosted Quality Gate
-jobs passed in run `29669034798`. The live web release manifest is still absent;
-no matching Edge production deploy and no linked database migration apply has
-been performed.
+**Status:** PR #167–#171 were merged to `main`; the current merge SHA is
+`21b2fed29913194cc6fcf4c7d26904ed48325959`, and all seven hosted Quality Gate
+jobs passed in run `29672580843`. The clean schema-2 release evidence is
+available as artifact `8437804119` with web fingerprint
+`2837a4c4348418ab9dd67f1c0061ab2d2475c37d82215123d29a18a7f8a3184c`. The live
+web release manifest is still absent; no matching Edge production deploy and no
+linked database migration apply has been performed.
 
 ### Release identity and deployment evidence
 
@@ -128,6 +130,22 @@ been performed.
   secret scan. Two preceding full coverage runs exposed three DOM-heavy tests
   crossing the 5-second default only under suite contention; isolated assertions
   passed, and only those proven cases now use a bounded 10-second timeout.
+- Separates request-loading failures from genuine empty results in both the
+  approval inbox and personal/workspace leave list. Current-generation query or
+  directory failures keep data fail-closed, show a localized `role="alert"`
+  recovery surface and retry through a fresh monotonic query generation instead
+  of invoking a stale fetch closure.
+- Makes loading and successful empty results screen-reader visible with explicit
+  status/busy semantics while keeping visual spinners decorative. Eight new
+  component tests cover loading, primary and enrichment failures, retry recovery,
+  stale-error suppression and true empty results; a locale contract covers the
+  new error/retry copy in all eight bundles. The complete suite is 595/595 PASS.
+- Reviews the I-23 Windows candidate bundle at 4,454,357 raw / 1,271,510 gzip
+  JavaScript bytes, +1,444 / +328 over the I-22 Windows artifact (+0.032% raw).
+  Largest raw/gzip grow by 501/125 bytes to 1,740,007 / 551,967; CSS is unchanged.
+  Total ceilings include the previously measured 93-byte raw and 151-byte gzip
+  Windows/Linux variance, a 35-byte raw rounding margin, and the existing
+  128-byte gzip allowance; largest-gzip and CSS ceilings remain unchanged.
 
 ### Android/iOS common-data foundation
 

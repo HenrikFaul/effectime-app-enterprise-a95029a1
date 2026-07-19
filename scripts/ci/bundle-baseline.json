@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "purpose": "Current production bundle debt ceiling. Raw bytes are exact; gzip ceilings retain narrow cross-platform and build-SHA compression tolerance. Increases require an explicit reviewed baseline update.",
+  "purpose": "Current production bundle debt ceiling. Total raw allows the measured 93-byte cross-platform variance plus 35 bytes of rounding margin; total gzip allows the measured 151-byte variance plus 128 bytes of compression margin. Largest raw stays exact. Increases require an explicit reviewed baseline update.",
   "ceilings": {
     "javascript": {
-      "totalRawBytes": 4453006,
-      "totalGzipBytes": 1271461,
-      "largestRawBytes": 1739506,
+      "totalRawBytes": 4454485,
+      "totalGzipBytes": 1271789,
+      "largestRawBytes": 1740007,
       "largestGzipBytes": 558421
     },
     "css": {

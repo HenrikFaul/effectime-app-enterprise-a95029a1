@@ -110,8 +110,8 @@ interface LeaveRow {
 }
 
 interface QueryResult {
-  data: LeaveRow[];
-  error: null;
+  data: LeaveRow[] | null;
+  error: { message: string } | null;
 }
 
 function deferred<T>() {
@@ -539,5 +539,248 @@ describe('leave list refresh ordering', () => {
       await scoped.promise;
     });
     expect(await screen.findByText('Name user-current')).toBeInTheDocument();
+  });
+});
+
+describe('leave list loading, error, retry, and empty states', () => {
+  it('announces the ApprovalInbox loading state accessibly', () => {
+    const pending = deferred<QueryResult>();
+    from.mockImplementation((table: string) => {
+      if (table === 'leave_requests') return thenableQuery(pending.promise);
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    render(<ApprovalInbox workspaceId="workspace-a" userId="admin-a" />);
+
+    const status = screen.getByRole('status');
+    expect(status).toHaveAttribute('aria-live', 'polite');
+    expect(status).toHaveAttribute('aria-busy', 'true');
+    expect(status).toHaveAccessibleName('common.loading');
+    expect(status.querySelector('[aria-hidden="true"]')).not.toBeNull();
+  });
+
+  it('announces the LeaveRequestList loading state accessibly', () => {
+    const pending = deferred<QueryResult>();
+    from.mockImplementation((table: string) => {
+      if (table === 'leave_requests') return thenableQuery(pending.promise);
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    render(
+      <LeaveRequestList workspaceId="workspace-a" userId="user-a" userRole="member" />,
+    );
+
+    const status = screen.getByRole('status');
+    expect(status).toHaveAttribute('aria-live', 'polite');
+    expect(status).toHaveAttribute('aria-busy', 'true');
+    expect(status).toHaveAccessibleName('common.loading');
+    expect(status.querySelector('[aria-hidden="true"]')).not.toBeNull();
+  });
+
+  it('shows an explicit ApprovalInbox error and recovers through a fresh retry request', async () => {
+    const rawBackendMessage = 'permission denied for internal_tenant_secret';
+    const { membershipQuery, profileQuery } = installDirectoryQueries();
+    let leaveQueryCount = 0;
+    from.mockImplementation((table: string) => {
+      if (table === 'leave_requests') {
+        leaveQueryCount += 1;
+        return thenableQuery(Promise.resolve(leaveQueryCount === 1
+          ? { data: null, error: { message: rawBackendMessage } }
+          : {
+              data: [leaveRow('request-recovered', 'user-recovered', 'recovered response')],
+              error: null,
+            }));
+      }
+      if (table === 'profiles') return { select: vi.fn(() => profileQuery) };
+      if (table === 'enterprise_memberships') {
+        return { select: vi.fn(() => ({ eq: vi.fn(() => membershipQuery) })) };
+      }
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    render(<ApprovalInbox workspaceId="workspace-a" userId="admin-a" />);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('approval_inbox.load_error');
+    expect(screen.queryByText('approval_inbox.no_requests')).not.toBeInTheDocument();
+    expect(screen.queryByText(rawBackendMessage)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'approval_inbox.retry' }));
+
+    await waitFor(() => expect(leaveQueryCount).toBe(2));
+    expect(await screen.findByText('Name user-recovered')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText(rawBackendMessage)).not.toBeInTheDocument();
+  });
+
+  it('shows an explicit LeaveRequestList enrichment error and recovers through retry', async () => {
+    const rawBackendMessage = 'profiles query leaked-internal-endpoint.example';
+    let leaveQueryCount = 0;
+    let profileQueryCount = 0;
+    from.mockImplementation((table: string) => {
+      if (table === 'leave_requests') {
+        leaveQueryCount += 1;
+        return thenableQuery(Promise.resolve({
+          data: [leaveRow('request-recovered', 'user-recovered', 'recovered response')],
+          error: null,
+        }));
+      }
+      if (table === 'profiles') {
+        return {
+          select: vi.fn(() => ({
+            in: vi.fn(() => {
+              profileQueryCount += 1;
+              return Promise.resolve(profileQueryCount === 1
+                ? { data: null, error: { message: rawBackendMessage } }
+                : {
+                    data: [{ user_id: 'user-recovered', display_name: 'Recovered User' }],
+                    error: null,
+                  });
+            }),
+          })),
+        };
+      }
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    render(
+      <LeaveRequestList workspaceId="workspace-a" userId="user-recovered" userRole="member" />,
+    );
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('approval_inbox.load_error');
+    expect(screen.queryByText('approval_inbox.no_own_requests')).not.toBeInTheDocument();
+    expect(screen.queryByText(rawBackendMessage)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'approval_inbox.retry' }));
+
+    await waitFor(() => {
+      expect(leaveQueryCount).toBe(2);
+      expect(profileQueryCount).toBe(2);
+    });
+    expect(await screen.findByText('Recovered User')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText(rawBackendMessage)).not.toBeInTheDocument();
+  });
+
+  it('does not let a stale ApprovalInbox error replace the latest successful result', async () => {
+    const first = deferred<QueryResult>();
+    const second = deferred<QueryResult>();
+    const { membershipQuery, profileQuery } = installDirectoryQueries();
+    let leaveQueryCount = 0;
+    from.mockImplementation((table: string) => {
+      if (table === 'leave_requests') {
+        leaveQueryCount += 1;
+        return thenableQuery(leaveQueryCount === 1 ? first.promise : second.promise);
+      }
+      if (table === 'profiles') return { select: vi.fn(() => profileQuery) };
+      if (table === 'enterprise_memberships') {
+        return { select: vi.fn(() => ({ eq: vi.fn(() => membershipQuery) })) };
+      }
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    const view = render(
+      <ApprovalInbox workspaceId="workspace-a" userId="admin-a" refreshKey={0} />,
+    );
+    view.rerender(<ApprovalInbox workspaceId="workspace-a" userId="admin-a" refreshKey={1} />);
+
+    await act(async () => {
+      second.resolve({
+        data: [leaveRow('request-current', 'user-current', 'current response')],
+        error: null,
+      });
+      await second.promise;
+    });
+    expect(await screen.findByText('Name user-current')).toBeInTheDocument();
+
+    await act(async () => {
+      first.resolve({ data: null, error: { message: 'obsolete backend failure' } });
+      await first.promise;
+    });
+    expect(screen.getByText('Name user-current')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('obsolete backend failure')).not.toBeInTheDocument();
+  });
+
+  it('does not let a stale LeaveRequestList error replace the latest successful result', async () => {
+    const first = deferred<QueryResult>();
+    const second = deferred<QueryResult>();
+    const { profileQuery } = installDirectoryQueries();
+    let leaveQueryCount = 0;
+    from.mockImplementation((table: string) => {
+      if (table === 'leave_requests') {
+        leaveQueryCount += 1;
+        return thenableQuery(leaveQueryCount === 1 ? first.promise : second.promise);
+      }
+      if (table === 'profiles') return { select: vi.fn(() => profileQuery) };
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    const view = render(
+      <LeaveRequestList
+        workspaceId="workspace-a"
+        userId="user-current"
+        userRole="member"
+        refreshKey={0}
+      />,
+    );
+    view.rerender(
+      <LeaveRequestList
+        workspaceId="workspace-a"
+        userId="user-current"
+        userRole="member"
+        refreshKey={1}
+      />,
+    );
+
+    await act(async () => {
+      second.resolve({
+        data: [leaveRow('request-current', 'user-current', 'current response')],
+        error: null,
+      });
+      await second.promise;
+    });
+    expect(await screen.findByText('Name user-current')).toBeInTheDocument();
+
+    await act(async () => {
+      first.resolve({ data: null, error: { message: 'obsolete backend failure' } });
+      await first.promise;
+    });
+    expect(screen.getByText('Name user-current')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.queryByText('obsolete backend failure')).not.toBeInTheDocument();
+  });
+
+  it('announces a successful empty ApprovalInbox result as a status, not an error', async () => {
+    from.mockImplementation((table: string) => {
+      if (table === 'leave_requests') {
+        return thenableQuery(Promise.resolve({ data: [], error: null }));
+      }
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    render(<ApprovalInbox workspaceId="workspace-a" userId="admin-a" />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('approval_inbox.no_requests');
+    });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it('announces a successful empty LeaveRequestList result as a status, not an error', async () => {
+    from.mockImplementation((table: string) => {
+      if (table === 'leave_requests') {
+        return thenableQuery(Promise.resolve({ data: [], error: null }));
+      }
+      throw new Error(`Unexpected table: ${table}`);
+    });
+
+    render(<LeaveRequestList workspaceId="workspace-a" userId="user-a" userRole="member" />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('status')).toHaveTextContent('approval_inbox.no_own_requests');
+    });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

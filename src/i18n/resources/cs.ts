@@ -1137,6 +1137,8 @@ const cs = {
     },
   },
   approval_inbox: {
+    load_error: 'Žádosti se nepodařilo načíst.',
+    retry: 'Zkusit znovu',
     decision_failed: 'Chyba při uložení rozhodnutí',
     approved: 'Žádost schválena',
     rejected: 'Žádost zamítnuta',
