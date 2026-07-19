@@ -502,6 +502,7 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
         onOpenChange={(o) => !o && setSelectedMember(null)}
         member={selectedMember}
         workspaceId={workspaceId}
+        currentUserId={userId}
         allMembers={members}
         isAdmin={isAdmin}
         onMemberUpdated={fetchMembers}

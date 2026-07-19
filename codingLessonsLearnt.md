@@ -1424,3 +1424,43 @@ const load = useCallback((opts?: { silent?: boolean }) => {
 **Problem**: A `loadId` ref only dedupes loads against each other. It does NOT stop an EARLIER silent reload (whose server snapshot predates a newer optimistic write) from resolving and `setData()`-ing away the newer optimistic change — a visible flicker-out/in under rapid clicks or slow network.
 **Fix**: Add a `writeSeq` ref bumped at the start of every optimistic write; capture it when a load is issued and, for silent reloads, drop the result if `writeSeq.current !== captured`. The newest write's own reload carries the truth. Keep non-silent (initial/navigation) loads always-apply.
 **Also**: keep DERIVED summaries and the cells they summarize on the SAME precedence (e.g. holiday > leave > shift) — computing them with different orderings makes the header contradict the grid for the same day.
+
+---
+
+## ➕ APPEND — 2026-07-19 Profiles tenant privacy (v3.51.5)
+
+### [LESSON-PRIVACY-001]: Row-level RLS is not column confidentiality
+**Context**: A global identity row such as `public.profiles` is reused by multiple workspaces, while one JSON column may contain both benign preferences and authentication-adjacent material.
+**Problem**: A row-level policy that lets authenticated users resolve directory names also exposes every granted column in those rows. Filtering profile IDs in React is not authorization: the raw response, including `preferences` or token fields, has already crossed the tenant and browser boundary before client-side filtering runs.
+**Fix**: Enforce the tenant relationship in a restrictive database policy, revoke table-wide browser privileges, grant only an explicit safe column projection, and expose privacy-sensitive derived values through a minimal versioned RPC that repeats membership, permission and entitlement checks server-side. Prove the negative cases with two isolated tenants and direct-column denial tests; never add a raw-table fallback when the RPC fails.
+**Prevention**: Review row visibility and column confidentiality as separate controls. Every shared identity/profile change must inventory direct callers, verify exact selected columns, include inactive/historical semantics explicitly, and test anonymous, cross-tenant, suspended, missing-entitlement and stale-client behavior before rollout.
+
+### [LESSON-PRIVACY-002]: A workspace administrator must not mutate a global identity claim
+**Context**: `profiles.display_name` is keyed by global `user_id` and is reused in every workspace containing that account.
+**Problem**: A tenant-bound RPC can correctly authorize an administrator inside workspace A and still create a cross-workspace integrity bug if it writes the target's global profile row: workspace B observes the changed identity even though its administrators never approved it.
+**Fix**: Keep global profile presentation fields self-service only. If the product needs administrator-managed names, model a separate workspace-membership alias owned by that workspace; do not disguise a global write as tenant-safe merely because the authorization lookup is tenant-bound.
+**Prevention**: For every write, identify the ownership scope of the mutated record independently from the scope used to authorize the actor. A tenant admin may edit tenant-owned membership metadata, never another person's global identity record.
+
+### [LESSON-PRIVACY-003]: Revoke column ACLs from the live catalog, not from a remembered schema
+**Context**: Migration-history drift can leave production-only columns on a shared table.
+**Problem**: `REVOKE` over a hard-coded list closes only known columns. An untracked column-level grant can survive table-level revocation and remain browser-readable, making a security migration look complete in a clean fixture while failing on the real target.
+**Fix**: Enumerate every non-dropped live column from `pg_attribute`, revoke browser column privileges dynamically, fail if the catalog inventory is empty, then grant back only the reviewed projection. Add a drift-only secret column and explicit grant to the PostgreSQL fixture to prove removal.
+**Prevention**: Security migrations for drifted schemas need catalog-driven negative tests and exact post-migration ACL assertions. Do not regenerate trusted types or derive the revoke set from an unverified remote schema.
+
+### [LESSON-PRIVACY-004]: Caller inventories must parse code, not grep formatting
+**Context**: Dozens of browser modules call `supabase.from('profiles')` through chained expressions with casts, parentheses and multiline formatting.
+**Problem**: Regex inventory misses syntactic variants and cannot reliably distinguish literal projections, mutation payload keys or dead/unreachable modules. A future broad select can therefore bypass a hand-maintained list.
+**Fix**: Parse every reachable TypeScript/TSX source file with the TypeScript AST. For `profiles`, allow only literal safe read columns and literal self-service update keys; reject insert/upsert/delete and non-literal projections. Quarantine a legacy file only when an independent import assertion proves it unreachable.
+**Prevention**: Run the AST contract in CI beside the PostgreSQL ACL contract. Database grants and browser callers are two halves of the same boundary and must fail the same change together.
+
+### [LESSON-RELEASE-006]: Privacy hardening can be fail-closed and still require a maintenance rollout
+**Context**: Cached web and installed mobile clients may continue to call a raw profile field after the server revokes it.
+**Problem**: DB-first deployment prevents leakage but makes an old client lose the affected feature with a permission error; client-first deployment cannot use the new RPC. Calling either order fully backward compatible hides a real operational interruption.
+**Fix**: Treat the single hardening migration as a controlled/maintenance rollout: reconcile history and backup first, prove old-client fail-closed plus new-client success on restored staging, apply DB and refresh the schema cache, then immediately release the attestable shared client. Roll back the client capability, never the privacy ACL.
+**Prevention**: Include supported cached/native versions in every security migration's compatibility matrix. Distinguish confidentiality-safe failure from functional compatibility, and publish an explicit change-window/runbook before production apply.
+
+### [LESSON-PRIVACY-005]: Display name is presentation data, not a unique join key
+**Context**: External planning providers can expose assignee names or emails while the browser-safe workspace directory deliberately exposes only identity, display-name and avatar projection data.
+**Problem**: A naive name loop can attach one issue to multiple members with the same display name and double-count its hours. Falling back to email would widen the privacy boundary and still would not prove tenant identity.
+**Fix**: Normalize once and accept a display-name match only when it is unique. Keep duplicate, empty and email-only identities in an explicit unmatched bucket, count their planned hours once, and never request profile email for convenience matching.
+**Prevention**: Cover unique, duplicate, empty and email-only cases with focused tests. If exact cross-system attribution becomes a requirement, introduce an explicit immutable provider-to-member mapping rather than weakening browser profile projection.

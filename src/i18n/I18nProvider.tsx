@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   DEFAULT_LOCALE,
@@ -26,6 +26,18 @@ import {
 import type { Locale as DateFnsLocale } from 'date-fns';
 
 type Bundle = typeof en;
+
+interface OwnProfileLocaleRpcClient {
+  rpc: (name: 'get_my_profile_locale_v1') => PromiseLike<{
+    data: string | null;
+    error: unknown;
+  }>;
+}
+
+// Generated database types cannot represent this additive RPC until the
+// reconciled schema is regenerated. Keep the temporary contract exact and
+// isolated instead of widening the application client to `any`.
+const ownProfileLocaleRpcClient = supabase as unknown as OwnProfileLocaleRpcClient;
 
 // Indexed by locale tag; all non-English bundles are cast so missing keys
 // silently fall back to English at runtime via the lookup chain.
@@ -57,7 +69,12 @@ const I18nContext = createContext<I18nContextValue | null>(null);
 
 function detectInitialLocale(): Locale {
   if (typeof window === 'undefined') return DEFAULT_LOCALE;
-  const stored = window.localStorage.getItem(LOCALE_STORAGE_KEY) as Locale | null;
+  let stored: Locale | null = null;
+  try {
+    stored = window.localStorage.getItem(LOCALE_STORAGE_KEY) as Locale | null;
+  } catch {
+    // Storage can be unavailable in hardened browsers and native WebViews.
+  }
   if (stored && SUPPORTED_LOCALES.includes(stored)) return stored;
   const browser = (navigator.language || '').toLowerCase().split('-')[0] as Locale;
   if (SUPPORTED_LOCALES.includes(browser)) return browser;
@@ -79,72 +96,164 @@ function interpolate(value: string, vars?: Record<string, string | number>): str
   return value.replace(/\{\{(\w+)\}\}/g, (_m, k) => (vars[k] != null ? String(vars[k]) : `{{${k}}}`));
 }
 
+function persistLocaleLocally(locale: Locale): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(LOCALE_STORAGE_KEY, locale);
+  } catch {
+    // Locale state remains usable when persistent storage is unavailable.
+  }
+}
+
+function createEmptyWorkspaceOverrides(): Record<string, Map<string, string>> {
+  return Object.fromEntries(
+    SUPPORTED_LOCALES.map((locale) => [locale, new Map<string, string>()]),
+  );
+}
+
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [locale, setLocaleState] = useState<Locale>(() => detectInitialLocale());
+  const localeRevisionRef = useRef(0);
+  const authenticatedUserIdRef = useRef<string | null>(null);
+  const pendingLocaleSelectionRef = useRef<Locale | null>(null);
+  const localePersistenceQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const workspaceOverrideGenerationRef = useRef(0);
   const [ready, setReady] = useState(false);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
   const [overridesByLocale, setOverridesByLocale] = useState<Record<string, Map<string, string>>>(
-    () => Object.fromEntries(SUPPORTED_LOCALES.map((l) => [l, new Map<string, string>()])),
+    createEmptyWorkspaceOverrides,
   );
 
+  const queueLocalePersistence = useCallback((userId: string, next: Locale) => {
+    // Serialize writes so a slower earlier request cannot overwrite a newer
+    // locale selection. The account is captured at interaction/hydration time.
+    localePersistenceQueueRef.current = localePersistenceQueueRef.current.then(async () => {
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .update({ preferred_locale: next })
+          .eq('user_id', userId);
+        if (error) {
+          console.warn('[i18n] profile locale persistence failed');
+        }
+      } catch {
+        console.warn('[i18n] profile locale persistence failed');
+      }
+    });
+  }, []);
+
   const loadWorkspaceOverrides = useCallback(async (workspaceId: string | null) => {
+    const generation = ++workspaceOverrideGenerationRef.current;
     setActiveWorkspaceId(workspaceId);
-    if (!workspaceId) {
-      setOverridesByLocale(
-        Object.fromEntries(SUPPORTED_LOCALES.map((l) => [l, new Map<string, string>()])),
-      );
-      return;
-    }
+    // Never display the previous tenant's overrides while the next tenant is
+    // loading or after its request fails.
+    setOverridesByLocale(createEmptyWorkspaceOverrides());
+    if (!workspaceId) return;
+
     try {
-      const { data } = await (supabase as any)
+      const { data, error } = await supabase
         .from('enterprise_translation_overrides')
         .select('locale, key, value')
         .eq('workspace_id', workspaceId);
-      const next: Record<string, Map<string, string>> = Object.fromEntries(
-        SUPPORTED_LOCALES.map((l) => [l, new Map<string, string>()]),
-      );
-      ((data as any[]) || []).forEach((row: any) => {
+      if (generation !== workspaceOverrideGenerationRef.current) return;
+      if (error) {
+        console.warn('[i18n] workspace overrides load failed');
+        return;
+      }
+      const next = createEmptyWorkspaceOverrides();
+      (data || []).forEach((row) => {
         const l = row.locale as string;
         if (l in next) next[l].set(row.key, row.value);
       });
       setOverridesByLocale(next);
     } catch {
-      // table may not exist yet in dev — degrade silently
+      if (generation === workspaceOverrideGenerationRef.current) {
+        console.warn('[i18n] workspace overrides load failed');
+      }
     }
   }, []);
 
-  // Hydrate from profiles.preferred_locale once, when a user is signed in.
+  // Hydrate the own-profile locale on initial auth and account changes. A
+  // locale chosen while an RPC is in flight always wins over the stale reply.
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
+    let disposed = false;
+    let authEventGeneration = 0;
+    let hydrationGeneration = 0;
+    let activeUserId: string | null | undefined;
+
+    const hydrateForUser = async (userId: string | null) => {
+      authenticatedUserIdRef.current = userId;
+      if (activeUserId === userId) return;
+      activeUserId = userId;
+      const generation = ++hydrationGeneration;
+      const localeRevision = localeRevisionRef.current;
+
+      if (!userId) {
+        if (!disposed) setReady(true);
+        return;
+      }
+
+      setReady(false);
+      const pendingLocale = pendingLocaleSelectionRef.current;
+      if (pendingLocale) {
+        pendingLocaleSelectionRef.current = null;
+        queueLocalePersistence(userId, pendingLocale);
+        if (!disposed) setReady(true);
+        return;
+      }
       try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (cancelled) return;
-        if (user) {
-          const { data } = await (supabase as any)
-            .from('profiles')
-            .select('preferred_locale')
-            .eq('id', user.id)
-            .maybeSingle();
-          if (cancelled) return;
-          const remote = data?.preferred_locale as Locale | null;
-          if (remote && SUPPORTED_LOCALES.includes(remote) && remote !== locale) {
-            setLocaleState(remote);
-            window.localStorage.setItem(LOCALE_STORAGE_KEY, remote);
-          }
+        const { data, error } = await ownProfileLocaleRpcClient.rpc('get_my_profile_locale_v1');
+        if (
+          disposed
+          || generation !== hydrationGeneration
+          || localeRevision !== localeRevisionRef.current
+        ) {
+          return;
+        }
+        if (error) {
+          activeUserId = undefined;
+          console.warn('[i18n] profile locale hydration failed');
+          return;
+        }
+        const remote = data as Locale | null;
+        if (remote && SUPPORTED_LOCALES.includes(remote)) {
+          setLocaleState(remote);
+          persistLocaleLocally(remote);
         }
       } catch {
-        // Silent: profile or column may not exist in dev/local
+        if (!disposed && generation === hydrationGeneration) {
+          activeUserId = undefined;
+          console.warn('[i18n] profile locale hydration failed');
+        }
       } finally {
-        if (!cancelled) setReady(true);
+        if (!disposed && generation === hydrationGeneration) setReady(true);
       }
-    })();
-    return () => {
-      cancelled = true;
     };
-    // Run only on first mount; locale changes do their own persistence below.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+
+    const initialAuthGeneration = authEventGeneration;
+    void supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!disposed && authEventGeneration === initialAuthGeneration) {
+        void hydrateForUser(user?.id ?? null);
+      }
+    }).catch(() => {
+      if (!disposed && authEventGeneration === initialAuthGeneration) {
+        console.warn('[i18n] authenticated user lookup failed');
+        setReady(true);
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      authEventGeneration += 1;
+      void hydrateForUser(session?.user?.id ?? null);
+    });
+
+    return () => {
+      disposed = true;
+      hydrationGeneration += 1;
+      authenticatedUserIdRef.current = null;
+      subscription.unsubscribe();
+    };
+  }, [queueLocalePersistence]);
 
   // Update <html lang>
   useEffect(() => {
@@ -155,26 +264,20 @@ export function I18nProvider({ children }: { children: ReactNode }) {
 
   const setLocale = useCallback((next: Locale) => {
     if (!SUPPORTED_LOCALES.includes(next)) return;
+    localeRevisionRef.current += 1;
     setLocaleState(next);
-    try {
-      window.localStorage.setItem(LOCALE_STORAGE_KEY, next);
-    } catch {
-      // ignore storage failures
+    persistLocaleLocally(next);
+    // Capture the account at interaction time. If the initial auth lookup is
+    // still pending, retain the explicit choice and bind it once to the user
+    // that lookup resolves for instead of letting remote hydration overwrite it.
+    const userId = authenticatedUserIdRef.current;
+    if (!userId) {
+      pendingLocaleSelectionRef.current = next;
+      return;
     }
-    // Best-effort persist on profile
-    (async () => {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) return;
-        await (supabase as any)
-          .from('profiles')
-          .update({ preferred_locale: next })
-          .eq('id', user.id);
-      } catch {
-        // Silent: column may not exist yet
-      }
-    })();
-  }, []);
+    pendingLocaleSelectionRef.current = null;
+    queueLocalePersistence(userId, next);
+  }, [queueLocalePersistence]);
 
   const t = useCallback(
     (key: string, vars?: Record<string, string | number>) => {
@@ -189,7 +292,6 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       const value = lookup(bundle, key) ?? overrideFallback ?? lookup(fallback, key);
       if (!value) {
         if (import.meta.env.DEV) {
-          // eslint-disable-next-line no-console
           console.warn(`[i18n] missing key: "${key}" (locale: ${locale})`);
         }
         return key;

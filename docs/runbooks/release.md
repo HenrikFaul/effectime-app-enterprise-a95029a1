@@ -32,7 +32,7 @@ frontend build alone is not release approval.
   extension membership, digest, fixed search path, trigger/rollback, runtime
   TRUNCATE denial, normalized reason boundaries, exact audit state, deterministic
   lock/reopen races and actor-demotion serialization. It is a targeted fixture
-  and never substitutes for the clean 126-migration replay.
+  and never substitutes for the clean 127-migration replay.
 - `node --test scripts/ci/hr-workflow-tenant-db-contract.test.mjs` and
   `npm run db:hr-workflow:test` for the HR workflow tenant-boundary migration.
   The pinned PostgreSQL 18.4 fixture must pass cross-workspace template,
@@ -137,7 +137,7 @@ frontend build alone is not release approval.
 ## Immediate NO-GO conditions
 
 - Migration history or schema differs from the approved staging result.
-- Clean migration replay is not 126/126, or the 30-table / 1-view / 46-function /
+- Clean migration replay is not 127/127, or the 30-table / 1-view / 46-function /
   2-enum provenance debt has not been replaced by transitively complete reviewed
   DDL with regenerated-types and schema-fingerprint comparison.
 - Backup/restore evidence is absent or stale.
@@ -212,3 +212,12 @@ The admin-override rollout remains DB-first and client-second. The documented
 migration-history/schema drift is an immediate production/backend **NO-GO**;
 do not apply the v2 migration or publish a v2 client until restored staging and
 the target PostgREST schema cache prove the exact approved contracts.
+
+The v3.51.5 profile-privacy rollout requires a controlled maintenance window.
+Do not publish its web or native client before the three exact profile/milestone
+RPCs exist and schema-cache smoke is green. After the database ACL hardening,
+older cached clients that read `profiles.preferences` fail closed, so the tested
+client must follow immediately. Never restore that broad column access as a
+rollback; roll the client forward or use a separately reviewed privacy-preserving
+recovery. The current linked history is 59 shared / 68 local-only / 84
+remote-only and therefore remains production **NO-GO**.

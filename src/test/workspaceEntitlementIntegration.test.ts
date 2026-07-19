@@ -52,6 +52,15 @@ describe('workspace navigation/content entitlement integration', () => {
     );
   });
 
+  it('fails closed before mounting the privacy-sensitive birthday widget', () => {
+    expect(dashboard).toMatch(
+      /const canUseBirthdayWidget = canView\('members'\)\s*&&\s*!featuresLoading\s*&&\s*!featuresError\s*&&\s*isFeatureEnabled\('birthday_widget'\)\s*&&\s*isFeatureEnabled\('members_list'\);/,
+    );
+    expect(dashboard).toMatch(
+      /canUseBirthdayWidget && \([\s\S]*?<BirthdayAnniversaryWidget[\s\S]*?workspaceId=\{workspace\.id\}[\s\S]*?workspaceTimeZone=\{workspace\.timezone\}[\s\S]*?\/>[\s\S]*?\)/,
+    );
+  });
+
   it('fails closed for iCal use while keeping token revocation mounted', () => {
     expect(dashboard).toMatch(
       /const canUseIcalFeed = !featuresLoading\s*&&\s*!featuresError\s*&&\s*isFeatureEnabled\('ical_feed'\);/,

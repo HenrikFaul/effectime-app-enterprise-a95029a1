@@ -413,6 +413,7 @@ export function OrgChart({ workspaceId, isAdmin, onNavigateTab, userId }: Props)
         onOpenChange={(o) => !o && setProfileMember(null)}
         member={profileMember}
         workspaceId={workspaceId}
+        currentUserId={userId}
         allMembers={allMembersForProfile as any}
         isAdmin={isAdmin}
         showEmail={!!userId && profileMember?.user_id === userId}
