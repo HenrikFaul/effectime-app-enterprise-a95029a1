@@ -109,6 +109,8 @@ export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
   const [taskErrorsByInstance, setTaskErrorsByInstance] = useState<Record<string, boolean>>({});
   const [showStartDialog, setShowStartDialog] = useState(false);
   const loadRequestId = useRef(0);
+  const taskLoadRequestSequence = useRef(0);
+  const activeTaskLoadRequestIds = useRef<Record<string, number>>({});
 
   // Start-workflow form
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -168,8 +170,21 @@ export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
     return () => { loadRequestId.current += 1; };
   }, [loadInstances]);
 
+  useEffect(() => {
+    activeTaskLoadRequestIds.current = {};
+    setTasksByInstance({});
+    setTaskLoadingByInstance({});
+    setTaskErrorsByInstance({});
+    setOpenId(null);
+    return () => { activeTaskLoadRequestIds.current = {}; };
+  }, [workspaceId]);
+
   const loadTasks = async (instanceId: string, force = false) => {
     if (!force && tasksByInstance[instanceId] && !taskErrorsByInstance[instanceId]) return;
+    if (!force && activeTaskLoadRequestIds.current[instanceId] !== undefined) return;
+    const requestId = ++taskLoadRequestSequence.current;
+    activeTaskLoadRequestIds.current[instanceId] = requestId;
+    const isCurrentRequest = () => activeTaskLoadRequestIds.current[instanceId] === requestId;
     setTaskLoadingByInstance(prev => ({ ...prev, [instanceId]: true }));
     setTaskErrorsByInstance(prev => ({ ...prev, [instanceId]: false }));
     try {
@@ -177,6 +192,7 @@ export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
         supabase as unknown as WorkflowDataClient,
         instanceId,
       );
+      if (!isCurrentRequest()) return;
       if (error) {
         setTaskErrorsByInstance(prev => ({ ...prev, [instanceId]: true }));
         toast.error(t('hr_workflow.task_load_error'));
@@ -184,10 +200,14 @@ export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
       }
       setTasksByInstance(prev => ({ ...prev, [instanceId]: (data as Task[]) || [] }));
     } catch {
+      if (!isCurrentRequest()) return;
       setTaskErrorsByInstance(prev => ({ ...prev, [instanceId]: true }));
       toast.error(t('hr_workflow.task_load_error'));
     } finally {
-      setTaskLoadingByInstance(prev => ({ ...prev, [instanceId]: false }));
+      if (isCurrentRequest()) {
+        delete activeTaskLoadRequestIds.current[instanceId];
+        setTaskLoadingByInstance(prev => ({ ...prev, [instanceId]: false }));
+      }
     }
   };
 

@@ -1,10 +1,10 @@
 ## 2026-07-17 — v3.51.3 Project audit and release-boundary hardening (unreleased)
 
-**Status:** PR #167 was merged to `main` as
-`9e2911b30b84f1040b3dbeb8865c575d0891c7bc`; all six hosted Quality Gate jobs
-passed on that merge SHA. The live web release manifest is still absent; no
-matching Edge production deploy and no linked database migration apply has been
-performed. The HR tenant-boundary repair below remains an unmerged candidate.
+**Status:** PR #167 and the HR tenant-boundary PR #168 were merged to `main`; the
+current merge SHA is `48ea20755821082ed57fff7bf39a39c9db814bf0`, and all seven
+hosted Quality Gate jobs passed on that SHA. The live web release manifest is
+still absent; no matching Edge production deploy and no linked database
+migration apply has been performed.
 
 ### Release identity and deployment evidence
 
@@ -54,6 +54,14 @@ performed. The HR tenant-boundary repair below remains an unmerged candidate.
 - Reviews the HR error/a11y runtime cost against the bundle ratchet: 3,385 raw
   and 1,118 gzip ceiling bytes (+0.09%). Only the affected JavaScript ceilings move;
   the largest-gzip and CSS ceilings remain unchanged.
+- Prevents HR task responses from an older request or previous workspace from
+  overwriting the current task list, error or loading state. Pending reads are
+  deduplicated per instance, and workspace/unmount cleanup invalidates late
+  responses without emitting a stale error toast. Four deterministic component
+  tests cover reopen deduplication, reversed successful responses, stale errors
+  and unmount cleanup. The clean release artifact adds 305 raw JavaScript bytes
+  (+0.0069%); gzip,
+  largest-chunk and CSS ceilings do not increase.
 
 ### Android/iOS common-data foundation
 
