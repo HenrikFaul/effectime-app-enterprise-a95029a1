@@ -40,6 +40,7 @@ export function ApprovalInbox({ workspaceId, userId, canApprove = false, refresh
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [memberInfo, setMemberInfo] = useState<Record<string, { team: string | null; role: string | null }>>({});
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [statusFilter, setStatusFilter] = useState('pending');
   const [typeFilter, setTypeFilter] = useState('all');
   const [teamFilter, setTeamFilter] = useState('all');
@@ -74,6 +75,7 @@ export function ApprovalInbox({ workspaceId, userId, canApprove = false, refresh
     const requestId = ++requestSequenceRef.current;
     const queryScopeSnapshot = queryScope;
     setLoading(true);
+    setLoadError(false);
     try {
       let query = supabase
         .from('leave_requests')
@@ -127,6 +129,7 @@ export function ApprovalInbox({ workspaceId, userId, canApprove = false, refresh
       setTeams(Array.from(tSet).sort());
       setRoles(Array.from(rSet).sort());
       setSelectedIds(new Set());
+      setLoadError(false);
       setCommittedQueryScope(queryScopeSnapshot);
     } catch (err) {
       if (requestId !== requestSequenceRef.current) return;
@@ -140,6 +143,7 @@ export function ApprovalInbox({ workspaceId, userId, canApprove = false, refresh
       setTeams([]);
       setRoles([]);
       setSelectedIds(new Set());
+      setLoadError(true);
       setCommittedQueryScope(queryScopeSnapshot);
     } finally {
       if (requestId === requestSequenceRef.current) setLoading(false);
@@ -248,7 +252,17 @@ export function ApprovalInbox({ workspaceId, userId, canApprove = false, refresh
   const uniqueRequesters = [...new Set(requests.map(r => r.user_id))];
 
   if (loading || committedQueryScope !== queryScope) {
-    return <div className="flex justify-center py-8"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+        aria-label={t('common.loading')}
+        className="flex justify-center py-8"
+      >
+        <div aria-hidden="true" className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
   }
 
   return (
@@ -369,9 +383,18 @@ export function ApprovalInbox({ workspaceId, userId, canApprove = false, refresh
         </div>
       )}
 
-      {requests.length === 0 ? (
+      {loadError ? (
+        <Card role="alert">
+          <CardContent className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground">
+            <p>{t('approval_inbox.load_error')}</p>
+            <Button type="button" variant="outline" size="sm" onClick={() => setRefreshRevision(current => current + 1)}>
+              {t('approval_inbox.retry')}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : requests.length === 0 ? (
         <Card>
-          <CardContent className="text-center py-8 text-muted-foreground">
+          <CardContent role="status" className="text-center py-8 text-muted-foreground">
             {t('approval_inbox.no_requests', { status: statusFilter !== 'all' ? t(`approval_inbox.filter_${statusFilter}` as any).toLowerCase() : '' })}
           </CardContent>
         </Card>

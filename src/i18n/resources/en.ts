@@ -1020,6 +1020,8 @@ const en = {
     half_day_afternoon: 'Afternoon',
   },
   approval_inbox: {
+    load_error: 'Could not load requests.',
+    retry: 'Retry',
     decision_failed: 'Error saving decision',
     approved: 'Request approved',
     rejected: 'Request rejected',

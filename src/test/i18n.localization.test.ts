@@ -13,10 +13,26 @@ import { flatten } from '@/lib/i18n/csv';
 import { bundleStats } from '@/lib/i18n/csv';
 import enBundle from '@/i18n/resources/en';
 import huBundle from '@/i18n/resources/hu';
+import csBundle from '@/i18n/resources/cs';
+import skBundle from '@/i18n/resources/sk';
+import plBundle from '@/i18n/resources/pl';
+import deBundle from '@/i18n/resources/de';
+import atBundle from '@/i18n/resources/at';
+import roBundle from '@/i18n/resources/ro';
 
 const en = flatten(enBundle);
 const hu = flatten(huBundle);
 const allKeys = new Set<string>([...en.keys(), ...hu.keys()]);
+const supportedBundles = [
+  ['EN', en],
+  ['HU', hu],
+  ['CS', flatten(csBundle)],
+  ['SK', flatten(skBundle)],
+  ['PL', flatten(plBundle)],
+  ['DE', flatten(deBundle)],
+  ['AT', flatten(atBundle)],
+  ['RO', flatten(roBundle)],
+] as const;
 
 // Minimum expected key count — raised intentionally as the product grows.
 // If this test fails because key count dropped, it signals an accidental deletion.
@@ -101,6 +117,15 @@ describe('i18n key parity — EN and HU bundles', () => {
     for (const key of orgKeys) {
       expect(en.has(key), `EN missing: ${key}`).toBe(true);
       expect(hu.has(key), `HU missing: ${key}`).toBe(true);
+    }
+  });
+
+  it('approval inbox load recovery keys are non-empty in every supported locale', () => {
+    const criticalKeys = ['approval_inbox.load_error', 'approval_inbox.retry'];
+    for (const [locale, bundle] of supportedBundles) {
+      for (const key of criticalKeys) {
+        expect(bundle.get(key)?.trim(), `${locale} missing or empty: ${key}`).toBeTruthy();
+      }
     }
   });
 });

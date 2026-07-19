@@ -1137,6 +1137,8 @@ const pl = {
     },
   },
   approval_inbox: {
+    load_error: 'Nie udało się wczytać wniosków.',
+    retry: 'Spróbuj ponownie',
     decision_failed: 'Błąd podczas zapisywania decyzji',
     approved: 'Wniosek zatwierdzony',
     rejected: 'Wniosek odrzucony',

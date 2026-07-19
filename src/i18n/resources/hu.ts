@@ -1008,6 +1008,8 @@ const hu = {
     half_day_afternoon: 'Délután',
   },
   approval_inbox: {
+    load_error: 'A kérelmek betöltése nem sikerült.',
+    retry: 'Újrapróbálás',
     decision_failed: 'Hiba a döntés mentésekor',
     approved: 'Kérelem jóváhagyva',
     rejected: 'Kérelem elutasítva',

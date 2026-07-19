@@ -34,6 +34,7 @@ export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = t
   const dateFnsLocale = useDateLocale();
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [showCreate, setShowCreate] = useState(false);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [refreshRevision, setRefreshRevision] = useState(0);
@@ -55,6 +56,7 @@ export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = t
     const requestId = ++requestSequenceRef.current;
     const queryScopeSnapshot = queryScope;
     setLoading(true);
+    setLoadError(false);
     try {
       let query = supabase
         .from('leave_requests')
@@ -87,6 +89,7 @@ export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = t
 
       setRequests(items);
       setProfiles(profileMap);
+      setLoadError(false);
       setCommittedQueryScope(queryScopeSnapshot);
     } catch (err) {
       if (requestId !== requestSequenceRef.current) return;
@@ -96,6 +99,7 @@ export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = t
       );
       setRequests([]);
       setProfiles({});
+      setLoadError(true);
       setCommittedQueryScope(queryScopeSnapshot);
     } finally {
       if (requestId === requestSequenceRef.current) setLoading(false);
@@ -155,7 +159,17 @@ export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = t
   };
 
   if (loading || committedQueryScope !== queryScope) {
-    return <div className="flex justify-center py-8"><div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" /></div>;
+    return (
+      <div
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+        aria-label={t('common.loading')}
+        className="flex justify-center py-8"
+      >
+        <div aria-hidden="true" className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+      </div>
+    );
   }
 
   return (
@@ -166,9 +180,18 @@ export function LeaveRequestList({ workspaceId, userId, userRole, canViewOwn = t
         </Button>
       </div>
 
-      {requests.length === 0 ? (
+      {loadError ? (
+        <Card role="alert">
+          <CardContent className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground">
+            <p>{t('approval_inbox.load_error')}</p>
+            <Button type="button" variant="outline" size="sm" onClick={() => setRefreshRevision(current => current + 1)}>
+              {t('approval_inbox.retry')}
+            </Button>
+          </CardContent>
+        </Card>
+      ) : requests.length === 0 ? (
         <Card>
-          <CardContent className="text-center py-8 text-muted-foreground">
+          <CardContent role="status" className="text-center py-8 text-muted-foreground">
             {showAllRequests
               ? t('approval_inbox.no_workspace_requests')
               : t('approval_inbox.no_own_requests')}
