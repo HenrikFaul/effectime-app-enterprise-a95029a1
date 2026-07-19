@@ -9,6 +9,11 @@ import { Label } from '@/components/ui/label';
 import { Loader2, Gauge, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import {
+  createUniqueCapacityFitAssigneeMatcher,
+  parseCapacityFitIssueSearchResponse,
+  type CapacityFitIssueRow,
+} from '@/lib/capacityFitAssignee';
 
 interface IntegrationMini {
   id: string;
@@ -16,22 +21,10 @@ interface IntegrationMini {
   project_key: string | null;
 }
 
-interface IssueRow {
-  assignee_email: string | null;
-  assignee_name: string | null;
-  story_points: number | null;
-  original_estimate_hours: number | null;
-  remaining_hours: number | null;
-  sprint_name: string | null;
-  iteration_path: string | null;
-  status: string | null;
-}
-
 interface CapacityRow {
   risk_level: 'Low' | 'Medium' | 'High';
   fit_score: number;
   display_name: string;
-  email: string | null;
   capacity_hours: number;
   planned_hours: number;
   variance: number;
@@ -43,35 +36,62 @@ export function CapacityFit({ integration, workspaceId }: { integration: Integra
   const [sprintHours, setSprintHours] = useState(80); // default 2-week sprint
   const [vacationImpactDays, setVacationImpactDays] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [issues, setIssues] = useState<IssueRow[]>([]);
-  const [members, setMembers] = useState<{ email: string | null; display_name: string }[]>([]);
+  const [issues, setIssues] = useState<CapacityFitIssueRow[]>([]);
+  const [members, setMembers] = useState<{ display_name: string | null }[]>([]);
+  const [memberDirectoryStatus, setMemberDirectoryStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [memberDirectoryRetry, setMemberDirectoryRetry] = useState(0);
 
   useEffect(() => {
-    (async () => {
-      // Two-step load: memberships first, then profiles by user_id
-      // (no FK between enterprise_memberships and profiles → joined select fails with PGRST200)
-      const { data: memData } = await (supabase as any)
-        .from('enterprise_memberships')
-        .select('id, user_id')
-        .eq('workspace_id', workspaceId)
-        .eq('status', 'active');
-      const memRows = (memData ?? []) as { id: string; user_id: string }[];
-      if (memRows.length === 0) { setMembers([]); return; }
-      const userIds = memRows.map(r => r.user_id);
-      const { data: profs } = await (supabase as any)
-        .from('profiles')
-        .select('user_id, display_name, email')
-        .in('user_id', userIds);
-      const profMap: Record<string, { display_name: string; email: string | null }> = {};
-      ((profs ?? []) as any[]).forEach((p: any) => {
-        profMap[p.user_id] = { display_name: p.display_name || '—', email: p.email ?? null };
-      });
-      setMembers(memRows.map(r => ({
-        email: profMap[r.user_id]?.email ?? null,
-        display_name: profMap[r.user_id]?.display_name ?? '—',
-      })));
+    let cancelled = false;
+    setMemberDirectoryStatus('loading');
+    setMembers([]);
+    void (async () => {
+      try {
+        // Two-step load: memberships first, then safe profile directory fields.
+        const { data: memData, error: membershipError } = await supabase
+          .from('enterprise_memberships')
+          .select('id, user_id')
+          .eq('workspace_id', workspaceId)
+          .eq('status', 'active');
+        if (cancelled) return;
+        if (membershipError) {
+          console.warn('[CapacityFit] member directory load failed');
+          setMembers([]);
+          setMemberDirectoryStatus('error');
+          return;
+        }
+        const memRows = memData ?? [];
+        if (memRows.length === 0) {
+          setMembers([]);
+          setMemberDirectoryStatus('ready');
+          return;
+        }
+        const userIds = memRows.map(r => r.user_id);
+        const { data: profs, error: profileError } = await supabase
+          .from('profiles')
+          .select('user_id, display_name')
+          .in('user_id', userIds);
+        if (cancelled) return;
+        if (profileError) {
+          console.warn('[CapacityFit] member directory load failed');
+          setMembers([]);
+          setMemberDirectoryStatus('error');
+          return;
+        }
+        const profMap = new Map<string, string | null>(
+          (profs ?? []).map((profile) => [profile.user_id, profile.display_name?.trim() || null]),
+        );
+        setMembers(memRows.map(r => ({ display_name: profMap.get(r.user_id) ?? null })));
+        setMemberDirectoryStatus('ready');
+      } catch {
+        if (cancelled) return;
+        console.warn('[CapacityFit] member directory load failed');
+        setMembers([]);
+        setMemberDirectoryStatus('error');
+      }
     })();
-  }, [workspaceId]);
+    return () => { cancelled = true; };
+  }, [workspaceId, memberDirectoryRetry]);
 
   const loadIssues = async () => {
     setLoading(true);
@@ -89,11 +109,13 @@ export function CapacityFit({ integration, workspaceId }: { integration: Integra
         body: { action: 'search_issues', integration_id: integration.id, params: { query, max: 200 } },
       });
       if (error) throw error;
-      if (!(data as any)?.ok) throw new Error((data as any)?.error ?? t('capacity_fit.bad_response'));
-      setIssues((data as any).issues ?? []);
-      toast.success(t('capacity_fit.active_tickets', { count: (data as any).count }));
-    } catch (e: any) {
-      toast.error(t('capacity_fit.load_error') + (e?.message ?? String(e)));
+      const response = parseCapacityFitIssueSearchResponse(data);
+      if (!response) throw new Error('capacity_fit_response_rejected');
+      setIssues(response.issues);
+      toast.success(t('capacity_fit.active_tickets', { count: response.count }));
+    } catch {
+      console.warn('[CapacityFit] provider issue load failed');
+      toast.error(t('capacity_fit.load_error'));
     } finally {
       setLoading(false);
     }
@@ -102,29 +124,39 @@ export function CapacityFit({ integration, workspaceId }: { integration: Integra
   // Aggregate planned hours per assignee. SP = 4 hours fallback (configurable later).
   const SP_TO_HOURS = 4;
   const rows: CapacityRow[] = useMemo(() => {
-    const planned = new Map<string, number>();
+    const matchAssignee = createUniqueCapacityFitAssigneeMatcher(members);
+    const plannedByMemberIndex = new Map<number, number>();
+    let unmatchedHours = 0;
+
     for (const i of issues) {
-      const key = (i.assignee_email ?? i.assignee_name ?? '—').toLowerCase();
       const hours =
         (i.original_estimate_hours ?? null) !== null
           ? Number(i.original_estimate_hours)
           : (i.story_points ?? null) !== null
             ? Number(i.story_points) * SP_TO_HOURS
             : 0;
-      planned.set(key, (planned.get(key) ?? 0) + hours);
+
+      const memberIndex = matchAssignee(i);
+      if (memberIndex === null) {
+        unmatchedHours += hours;
+      } else {
+        plannedByMemberIndex.set(
+          memberIndex,
+          (plannedByMemberIndex.get(memberIndex) ?? 0) + hours,
+        );
+      }
     }
+
     // Build per-member rows
-    const out: CapacityRow[] = members.map((m) => {
-      const k = (m.email ?? m.display_name).toLowerCase();
-      const ph = planned.get(k) ?? 0;
+    const out: CapacityRow[] = members.map((m, memberIndex) => {
+      const ph = plannedByMemberIndex.get(memberIndex) ?? 0;
       const adjustedCapacity = Math.max(0, sprintHours - vacationImpactDays * 8);
       const variance = adjustedCapacity - ph;
       const loadRatio = adjustedCapacity > 0 ? ph / adjustedCapacity : (ph > 0 ? 2 : 1);
       const risk_level = loadRatio > 1.15 ? 'High' : loadRatio > 0.9 ? 'Medium' : 'Low';
       const fit_score = Math.max(0, Math.min(100, Math.round((1 - Math.abs(loadRatio - 0.85)) * 100)));
       return {
-        display_name: m.display_name,
-        email: m.email,
+        display_name: m.display_name ?? '—',
         capacity_hours: adjustedCapacity,
         planned_hours: ph,
         variance,
@@ -132,17 +164,12 @@ export function CapacityFit({ integration, workspaceId }: { integration: Integra
         fit_score,
       };
     });
-    // Add "Nincs hozzárendelve" bucket
-    let unassigned = 0;
-    for (const [k, v] of planned.entries()) {
-      const matched = members.some((m) => (m.email ?? m.display_name).toLowerCase() === k);
-      if (!matched) unassigned += v;
-    }
-    if (unassigned > 0) {
-      out.push({ display_name: t('capacity_fit.no_match_label'), email: null, capacity_hours: 0, planned_hours: unassigned, variance: -unassigned, risk_level: 'High', fit_score: 0 });
+
+    if (unmatchedHours > 0) {
+      out.push({ display_name: t('capacity_fit.no_match_label'), capacity_hours: 0, planned_hours: unmatchedHours, variance: -unmatchedHours, risk_level: 'High', fit_score: 0 });
     }
     return out.sort((a, b) => a.variance - b.variance);
-  }, [issues, members, sprintHours, vacationImpactDays]);
+  }, [issues, members, sprintHours, vacationImpactDays, t]);
 
   const totals = useMemo(() => {
     const cap = rows.reduce((s, r) => s + r.capacity_hours, 0);
@@ -158,6 +185,26 @@ export function CapacityFit({ integration, workspaceId }: { integration: Integra
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
+        {memberDirectoryStatus === 'loading' && (
+          <div className="flex items-center gap-2 text-xs text-muted-foreground" role="status">
+            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+            {t('common.loading')}
+          </div>
+        )}
+        {memberDirectoryStatus === 'error' && (
+          <div className="flex items-center justify-between gap-3 rounded-md border border-destructive/40 bg-destructive/5 p-2" role="alert">
+            <span className="text-xs text-destructive">{t('capacity_fit.member_directory_error')}</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 shrink-0"
+              onClick={() => setMemberDirectoryRetry((generation) => generation + 1)}
+            >
+              {t('capacity_fit.retry_member_directory')}
+            </Button>
+          </div>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
           <div>
             <Label className="text-xs">{t('capacity_fit.sprint_name_label')}</Label>
@@ -172,7 +219,12 @@ export function CapacityFit({ integration, workspaceId }: { integration: Integra
             <Input className="h-8 text-xs" type="number" value={vacationImpactDays} onChange={(e) => setVacationImpactDays(Number(e.target.value) || 0)} />
           </div>
           <div className="flex items-end">
-            <Button size="sm" onClick={loadIssues} disabled={loading} className="gap-1 w-full">
+            <Button
+              size="sm"
+              onClick={loadIssues}
+              disabled={loading || memberDirectoryStatus !== 'ready'}
+              className="gap-1 w-full"
+            >
               {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
               {t('capacity_fit.fetch_btn')}
             </Button>

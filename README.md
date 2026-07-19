@@ -196,7 +196,7 @@ The generated public schema currently contains 30 tables, one view, 46
 functions and two enums whose defining migrations cannot be proven locally.
 `npm run schema:provenance` prevents this reviewed debt from changing silently;
 it does not make a clean install reproducible. A read-only live schema export,
-transitively complete recovery migration, 126/126 clean replay, regenerated-type
+transitively complete recovery migration, 127/127 clean replay, regenerated-type
 comparison, schema fingerprint and RLS/adversarial tests are required before a
 backend release.
 
@@ -207,11 +207,15 @@ jobs passed in run `29678100165`, with schema-2 artifact `8439647584`. It remain
 not been migrated, and no matching Edge Function artifact has been deployed to
 production.
 
-The v3.51.4 I-26 candidate adds a backward-compatible admin-override v2 RPC,
-private hash-only idempotency ledger and a common web/Android/iOS retry adapter/
-outbox. Its pinned PostgreSQL 18.4 contract is local-only evidence. Rollout must
-be DB-first and client-second; do not deploy the v2 client until restored staging
-and the target PostgREST schema cache prove the exact v1/v2 signatures and ACLs.
+The v3.51.4 I-26 source is merged through PR #175 as
+`f52671880748c58802d94e0705204d846f4b5928`. Quality Gate run `29682829301`
+passed 8/8 jobs, including Android and locked iOS compilation; release evidence
+artifact `8441138073` and Android artifact `8441127446` prove the merged source
+and unsigned native candidates. The release adds a backward-compatible admin-
+override v2 RPC, private hash-only idempotency ledger and a common web/Android/
+iOS retry adapter/outbox. Rollout must be DB-first and client-second; do not
+deploy the v2 client until restored staging and the target PostgREST schema cache
+prove the exact v1/v2 signatures and ACLs.
 The outbox's seven-day value is a retry/reconciliation horizon, not an automatic
 deletion TTL. Uncertain, expired or corrupt evidence is retained: one unresolved
 operation is allowed per actor/workspace scope, an unchanged payload reuses its
@@ -227,8 +231,71 @@ unavailable rather than weakening cross-context idempotency.
 Production/backend remains **NO-GO**
 while the linked migration-history/schema drift is unresolved.
 
+The v3.51.5 candidate closes the global profile/privacy path used by the legacy
+birthday widget. A restrictive RLS guard limits profile rows to self, platform
+administrators or an active viewer resolving a current or historical member of
+the same workspace. Authenticated direct `SELECT` is limited to `user_id`,
+`display_name` and `avatar_url`; this safe coworker identity projection supports
+existing name/avatar resolution and intentionally does not require members
+administration permission. `preferred_locale` is not directory-readable: the
+signed-in user hydrates it through the self-only `get_my_profile_locale_v1()` RPC
+and may update only their own row. A catalog-driven revoke also removes browser
+ACLs from an unexpected drift-only profile column, while a restrictive update
+guard prevents another permissive policy from broadening self-service writes.
+
+Team birthdays and anniversaries are exposed only by
+`get_workspace_member_milestones_v1`, which rechecks active membership,
+calendar/member read permission and both `birthday_widget` and `members_list`
+entitlements. It returns exactly `membership_id`, `display_name`,
+`milestone_type`, `milestone_month` and `milestone_day`; `user_id`, birth year,
+raw preferences, email and authentication material never enter the response.
+The workspace member-sheet display-name path uses
+`update_my_workspace_profile_display_name_v1`, which accepts only the signed-in
+user's own active membership in the supplied workspace. Tenant administrators
+cannot rename a coworker's global identity; a future administrator-managed name
+would require separate workspace-owned membership metadata. The personal Profile
+page's existing own-row update remains bounded by the same restrictive RLS and
+`display_name` column grant.
+
+Web, Android and iOS call that same versioned Supabase RPC through
+`src/lib/workspaceMilestonesApi.ts`; there is no separate mobile database, mobile
+API or raw-profile fallback. Run `npm run db:profiles-tenant:test` for the pinned
+PostgreSQL 18.4 two-tenant/ACL contract. Rollout is forward-only and DB-first:
+an older binary's direct `profiles.preferences` request will fail closed until
+the shared client is updated, and rollback must not restore sensitive column
+grants. This is confidentiality-safe but functionally incompatible, so the single
+hardening migration requires a controlled maintenance window: restored-staging
+old/new-client acceptance, DB/schema-cache apply, then immediate attestable
+web/mobile client rollout. A TypeScript-AST contract inventories reachable
+browser profile callers,
+allows only the three safe read columns and three own-update columns, and rejects
+direct browser insert/upsert/delete. `CapacityFit` accepts only a unique normalized
+`display_name` match from the safe directory. Duplicate, empty and email-only
+identities remain unmatched, planned hours are counted once, and browser profile
+email is not read. The three new public RPCs are
+intentionally isolated behind exact local interfaces because generated-type
+regeneration against the drifted linked schema could import unrelated remote-only
+objects. Regenerate and review Supabase types only after migration-history
+reconciliation and a verified schema snapshot.
+
+The milestone widget uses the workspace timezone on server and client, refreshes
+its calendar clock after mobile focus/visibility resume, and exposes explicit
+loading, error, retry, empty and accessible status states. Locale hydration and
+workspace translation overrides use generation guards, clear prior-tenant data
+immediately and reject stale auth, tenant or slower persistence responses.
+
+Current local v3.51.5 evidence is: profiles runner 10/10; all four pinned
+PostgreSQL contracts PASS; ten focused browser/client files 77/77; typecheck,
+production build, reviewed bundle, `npm audit` with zero known vulnerabilities
+and built-web smoke 7/7 PASS; mobile source 183/183, artifact 345/345, bridge
+smoke 2/2 and native drift 0. The reviewed bundle is 4,484,406 bytes raw /
+1,282,043 gzip JavaScript (largest chunk 1,747,206 / 554,696) and 180,862 /
+29,600 CSS. Current-tree full coverage passes 66 files and 727/727 tests
+(48.64% statements/lines, 69.8% branches, 41.03% functions). These are local candidate results,
+not hosted v3.51.5, linked-database or production-deployment evidence.
+
 The linked production history currently has 59 migration IDs in common with the
-repository, 65 local-only IDs and 84 remote-only IDs. Three local-only HR/office/
+repository, 68 local-only IDs and 84 remote-only IDs. Three local-only HR/office/
 analytics migrations are proven duplicate-content variants of remote migrations
 under different IDs; bulk `migration repair --status reverted` would therefore
 be unsafe. A forward-only HR workflow candidate now adds fail-closed tenant

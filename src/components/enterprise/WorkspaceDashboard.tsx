@@ -174,6 +174,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   );
   const canUseAdminOverride = canEdit('admin_override') && !featuresLoading && !featuresError && isFeatureEnabled('admin_override');
   const canUseIcalFeed = !featuresLoading && !featuresError && isFeatureEnabled('ical_feed');
+  const canUseBirthdayWidget = canView('members') && !featuresLoading && !featuresError && isFeatureEnabled('birthday_widget') && isFeatureEnabled('members_list');
 
   // Map active tab → help anchor
   const helpAnchorId =
@@ -429,7 +430,12 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                       showConflicts={canView('calendar_conflicts')}
                     />
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <BirthdayAnniversaryWidget workspaceId={workspace.id} />
+                      {canUseBirthdayWidget && (
+                        <BirthdayAnniversaryWidget
+                          workspaceId={workspace.id}
+                          workspaceTimeZone={workspace.timezone}
+                        />
+                      )}
                       <AnnualTrendChart workspaceId={workspace.id} />
                     </div>
                   </TabsContent>
@@ -618,8 +624,9 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
           onOpenChange={setShowMyProfile}
           member={myMembership}
           workspaceId={workspace.id}
+          currentUserId={userId}
           allMembers={allMembers}
-          isAdmin={true}
+          isAdmin={isAdmin}
           showEmail={true}
         />
       )}

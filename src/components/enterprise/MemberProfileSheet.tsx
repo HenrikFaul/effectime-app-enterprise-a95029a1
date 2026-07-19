@@ -18,6 +18,7 @@ import { MemberExtendedDetails } from './MemberExtendedDetails';
 import { cn } from '@/lib/utils';
 import { useT } from '@/i18n/I18nProvider';
 import { AlertCircle } from 'lucide-react';
+import { updateMyWorkspaceProfileDisplayName } from '@/lib/workspaceMemberProfileApi';
 
 interface Member {
   id: string;
@@ -44,6 +45,7 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   member: Member | null;
   workspaceId: string;
+  currentUserId?: string;
   allMembers: Member[];
   isAdmin?: boolean;
   onMemberUpdated?: () => void;
@@ -62,7 +64,7 @@ interface PeerAllocation {
   is_priority: boolean;
 }
 
-export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, allMembers, isAdmin = false, onMemberUpdated, showEmail = false, onNavigateTab }: Props) {
+export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, currentUserId, allMembers, isAdmin = false, onMemberUpdated, showEmail = false, onNavigateTab }: Props) {
   const t = useT();
   const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -91,6 +93,10 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
   const priorityRole = useMemo(() => {
     return allocations.find(a => a.is_priority)?.business_role || allocations[0]?.business_role || null;
   }, [allocations]);
+
+  const canEditDisplayName = Boolean(
+    currentUserId && member?.user_id === currentUserId,
+  );
 
   // Sorted allocations: priority first, then by percentage desc
   const sortedAllocations = useMemo(() => {
@@ -237,13 +243,20 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
       return;
     }
 
-    if (normalizedDisplayName) {
-      const { error: profileError } = await (supabase as any)
-        .from('profiles')
-        .upsert({ user_id: member.user_id, display_name: normalizedDisplayName }, { onConflict: 'user_id' });
-
-      if (profileError) {
+    if (
+      canEditDisplayName
+      && normalizedDisplayName
+      && normalizedDisplayName !== (member.display_name || '').trim()
+    ) {
+      try {
+        await updateMyWorkspaceProfileDisplayName(
+          workspaceId,
+          member.id,
+          normalizedDisplayName,
+        );
+      } catch {
         toast.error(t('member_profile.save_name_error'));
+        return;
       }
     }
 
@@ -377,7 +390,19 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, al
                   <div className="space-y-3">
                     <div>
                       <Label className="text-xs">{t('common.name')}</Label>
-                      <Input value={editForm.display_name} onChange={e => setEditForm(f => ({ ...f, display_name: e.target.value }))} placeholder={t('member_profile.name_placeholder')} className="h-8 text-sm" />
+                      <Input
+                        value={editForm.display_name}
+                        onChange={e => setEditForm(f => ({ ...f, display_name: e.target.value }))}
+                        placeholder={t('member_profile.name_placeholder')}
+                        disabled={!canEditDisplayName}
+                        aria-describedby={!canEditDisplayName ? 'member-profile-name-scope' : undefined}
+                        className="h-8 text-sm"
+                      />
+                      {!canEditDisplayName && (
+                        <p id="member-profile-name-scope" className="mt-1 text-xs text-muted-foreground">
+                          {t('member_profile.name_self_only_hint')}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <Label className="text-xs">{t('member_profile.roles_label')}</Label>

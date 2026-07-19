@@ -1,189 +1,254 @@
-import { useEffect, useMemo, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Cake, PartyPopper, ChevronDown } from 'lucide-react';
-import { format, getMonth, getDate } from 'date-fns';
-import { cn } from '@/lib/utils';
-import { useI18n } from '@/i18n/I18nProvider';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Cake, PartyPopper, ChevronDown, RefreshCw } from "lucide-react";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
+import { useDateLocale, useI18n } from "@/i18n/I18nProvider";
+import {
+  loadWorkspaceMemberMilestones,
+  WorkspaceMilestonesError,
+  type WorkspaceMemberMilestone,
+} from "@/lib/workspaceMilestonesApi";
+import { getUpcomingMilestones, type CalendarMilestone } from "@/lib/workspaceMilestoneCalendar";
 
 interface Props {
   workspaceId: string;
+  workspaceTimeZone: string;
 }
 
-interface Milestone {
-  id: string;
-  name: string;
-  type: 'birthday' | 'anniversary';
-  date: Date;
+type LoadState =
+  | { status: "loading"; records: [] }
+  | { status: "ready"; records: WorkspaceMemberMilestone[] }
+  | { status: "error"; records: [] };
+
+const RELATIVE_TIME_LOCALE: Record<string, string> = {
+  at: "de-AT",
+};
+
+function buildMilestones(
+  records: WorkspaceMemberMilestone[],
+  unknownMember: string,
+): CalendarMilestone[] {
+  return records.map((record) => ({
+    id: `${record.type === "birthday" ? "bday" : "ann"}-${record.membershipId}`,
+    name: record.displayName ?? unknownMember,
+    type: record.type,
+    month: record.month,
+    day: record.day,
+  }));
 }
 
-/** Returns count of milestones falling within the next `days` calendar days from now. */
-function checkUpcomingEvents(milestones: Milestone[], days = 7): number {
-  const now = new Date();
-  // Strip time to midnight for stable day-boundary comparisons
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const cutoff = new Date(today.getTime() + days * 24 * 60 * 60 * 1000);
-
-  return milestones.filter(item => {
-    // Project this year's occurrence
-    let next = new Date(today.getFullYear(), getMonth(item.date), getDate(item.date));
-    // If already passed this year, move to next year (handles leap-year birthday on Feb 29 gracefully)
-    if (next < today) {
-      next = new Date(today.getFullYear() + 1, getMonth(item.date), getDate(item.date));
-    }
-    return next >= today && next <= cutoff;
-  }).length;
+function relativeDayLabel(daysUntil: number, locale: string): string {
+  const localeTag = RELATIVE_TIME_LOCALE[locale] ?? locale;
+  try {
+    return new Intl.RelativeTimeFormat(localeTag, { numeric: "auto" }).format(daysUntil, "day");
+  } catch {
+    return new Intl.RelativeTimeFormat("en", { numeric: "auto" }).format(daysUntil, "day");
+  }
 }
 
-/** Returns true if the milestone falls within the next `days` calendar days. */
-function isWithinWindow(item: Milestone, days = 7): boolean {
-  const now = new Date();
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const cutoff = new Date(today.getTime() + days * 24 * 60 * 60 * 1000);
-  let next = new Date(today.getFullYear(), getMonth(item.date), getDate(item.date));
-  if (next < today) next = new Date(today.getFullYear() + 1, getMonth(item.date), getDate(item.date));
-  return next >= today && next <= cutoff;
+function reportMilestoneLoadFailure(error: unknown): void {
+  const code = error instanceof WorkspaceMilestonesError ? error.code : "request-failed";
+  // Only the bounded adapter code is observable; backend messages and response
+  // payloads must never enter browser/native logs.
+  console.warn("[BirthdayAnniversaryWidget] milestone request failed", { code });
 }
 
-export function BirthdayAnniversaryWidget({ workspaceId }: Props) {
-  const { t } = useI18n();
-  const [rows, setRows] = useState<Milestone[]>([]);
-  const [loading, setLoading] = useState(true);
+export function BirthdayAnniversaryWidget({ workspaceId, workspaceTimeZone }: Props) {
+  const { locale, t } = useI18n();
+  const dateLocale = useDateLocale();
+  const requestGeneration = useRef(0);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [loadState, setLoadState] = useState<LoadState>({ status: "loading", records: [] });
+  const [retryGeneration, setRetryGeneration] = useState(0);
   const [isOpen, setIsOpen] = useState(false);
+  const [calendarNow, setCalendarNow] = useState(() => new Date());
 
   useEffect(() => {
-    const load = async () => {
-      setLoading(true);
-      const [{ data: memberships }, { data: profiles }] = await Promise.all([
-        (supabase as any)
-          .from('enterprise_memberships')
-          .select('id,user_id,joined_at')
-          .eq('workspace_id', workspaceId)
-          .eq('status', 'active'),
-        (supabase as any)
-          .from('profiles')
-          .select('user_id,display_name,preferences'),
-      ]);
+    const generation = ++requestGeneration.current;
+    const abortController = new AbortController();
+    setLoadState({ status: "loading", records: [] });
 
-      const profileMap = new Map<string, any>(
-        (profiles || []).map((p: any) => [p.user_id, p]),
-      );
-      const built: Milestone[] = [];
-
-      (memberships || []).forEach((m: any) => {
-        const profile = profileMap.get(m.user_id);
-        const displayName = profile?.display_name || 'Ismeretlen';
-
-        if (m.joined_at) {
-          built.push({
-            id: `ann-${m.id}`,
-            name: displayName,
-            type: 'anniversary',
-            date: new Date(m.joined_at),
-          });
+    void loadWorkspaceMemberMilestones(workspaceId, { signal: abortController.signal })
+      .then((records) => {
+        if (generation === requestGeneration.current && !abortController.signal.aborted) {
+          setLoadState({ status: "ready", records });
         }
-
-        const birthdayRaw = profile?.preferences?.birthday;
-        if (birthdayRaw) {
-          built.push({
-            id: `bday-${m.id}`,
-            name: displayName,
-            type: 'birthday',
-            date: new Date(birthdayRaw),
-          });
+      })
+      .catch((error: unknown) => {
+        const wasCancelled = error instanceof WorkspaceMilestonesError && error.code === "aborted";
+        if (!wasCancelled && generation === requestGeneration.current) {
+          reportMilestoneLoadFailure(error);
+          setLoadState({ status: "error", records: [] });
         }
       });
 
-      setRows(built);
-      setLoading(false);
+    return () => {
+      requestGeneration.current += 1;
+      abortController.abort();
+    };
+  }, [workspaceId, workspaceTimeZone, retryGeneration]);
+
+  useEffect(() => {
+    const refreshCalendarClock = () => setCalendarNow(new Date());
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refreshCalendarClock();
     };
 
-    load();
-  }, [workspaceId]);
+    refreshCalendarClock();
+    const intervalId = globalThis.setInterval(refreshCalendarClock, 60_000);
+    window.addEventListener("focus", refreshCalendarClock);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      globalThis.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshCalendarClock);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [workspaceTimeZone]);
 
-  const upcoming = useMemo(() => {
-    const now = new Date();
-    const withDistance = rows.map(item => {
-      const d = new Date(now.getFullYear(), getMonth(item.date), getDate(item.date));
-      if (d < now) d.setFullYear(d.getFullYear() + 1);
-      const diff = Math.ceil((d.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-      return { ...item, nextDate: d, diff };
-    });
-    return withDistance.sort((a, b) => a.diff - b.diff).slice(0, 6);
-  }, [rows]);
-
-  const soonCount = useMemo(() => checkUpcomingEvents(rows, 7), [rows]);
+  const milestones = useMemo(
+    () => buildMilestones(loadState.records, t("birthday_widget.unknown_member")),
+    [loadState.records, t],
+  );
+  const upcoming = useMemo(
+    () => getUpcomingMilestones(milestones, calendarNow, 6, workspaceTimeZone),
+    [calendarNow, milestones, workspaceTimeZone],
+  );
+  const soonCount = useMemo(
+    () =>
+      getUpcomingMilestones(
+        milestones,
+        calendarNow,
+        Number.POSITIVE_INFINITY,
+        workspaceTimeZone,
+      ).filter((item) => item.daysUntil <= 7).length,
+    [calendarNow, milestones, workspaceTimeZone],
+  );
+  const loading = loadState.status === "loading";
 
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
       <Card>
         <CollapsibleTrigger asChild>
-          <button className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors rounded-t-lg">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Cake className="h-4 w-4 text-primary" />
-              {t('birthday_widget.card_title')}
-              {soonCount > 0 && !loading && (
-                <span className="bg-red-500 text-white rounded-full text-xs font-bold px-2 py-0.5 ml-1 leading-none">
-                  {soonCount}
-                </span>
+          <button
+            ref={triggerRef}
+            type="button"
+            className="w-full flex items-center justify-between px-4 py-3 rounded-t-lg transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            <span className="text-sm font-semibold leading-none tracking-tight flex items-center gap-2">
+              <Cake className="h-4 w-4 text-primary" aria-hidden="true" />
+              {t("birthday_widget.card_title")}
+              {soonCount > 0 && loadState.status === "ready" && (
+                <>
+                  <span
+                    className="bg-red-700 text-white rounded-full text-xs font-bold px-2 py-0.5 ml-1 leading-none"
+                    aria-hidden="true"
+                  >
+                    {soonCount}
+                  </span>
+                  <span className="sr-only">
+                    {t("birthday_widget.upcoming_count", { count: soonCount })}
+                  </span>
+                </>
               )}
-            </CardTitle>
+            </span>
             <ChevronDown
+              aria-hidden="true"
               className={cn(
-                'h-4 w-4 text-muted-foreground transition-transform',
-                isOpen && 'rotate-180',
+                "h-4 w-4 text-muted-foreground transition-transform",
+                isOpen && "rotate-180",
               )}
             />
           </button>
         </CollapsibleTrigger>
         <CollapsibleContent>
-          <CardContent className="pt-1 border-t">
+          <CardContent className="pt-1 border-t" aria-busy={loading}>
             {loading ? (
-              <div className="flex justify-center py-6">
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <div
+                className="flex items-center justify-center gap-2 py-6 text-xs text-muted-foreground"
+                role="status"
+                aria-live="polite"
+              >
+                <span
+                  className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent"
+                  aria-hidden="true"
+                />
+                <span className="sr-only">{t("birthday_widget.loading")}</span>
+              </div>
+            ) : loadState.status === "error" ? (
+              <div className="flex flex-col items-start gap-2 py-3">
+                <p className="text-xs text-destructive" role="alert">
+                  {t("birthday_widget.load_error")}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5"
+                  onClick={() => {
+                    triggerRef.current?.focus();
+                    setRetryGeneration((generation) => generation + 1);
+                  }}
+                >
+                  <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
+                  {t("birthday_widget.retry")}
+                </Button>
               </div>
             ) : upcoming.length === 0 ? (
-              <p className="text-xs text-muted-foreground py-2">
-                {t('birthday_widget.empty')}
+              <p className="text-xs text-muted-foreground py-2" role="status">
+                {t("birthday_widget.empty")}
               </p>
             ) : (
-              <div className="space-y-2 pt-2">
-                {upcoming.map(item => {
-                  const soon = isWithinWindow(item, 7);
+              <ul className="space-y-2 pt-2" aria-label={t("birthday_widget.card_title")}>
+                {upcoming.map((item) => {
+                  const soon = item.daysUntil <= 7;
                   return (
-                    <div
+                    <li
                       key={item.id}
                       className={cn(
-                        'flex items-center justify-between border rounded-md p-2 transition-colors',
-                        soon && 'bg-red-50 dark:bg-red-950/20 border-red-100 dark:border-red-900/40',
+                        "flex items-center justify-between gap-3 border rounded-md p-2 transition-colors",
+                        soon &&
+                          "bg-red-50 dark:bg-red-950/20 border-red-100 dark:border-red-900/40",
                       )}
                     >
-                      <div className="flex items-center gap-2">
-                        {item.type === 'birthday' ? (
-                          <Cake className="h-3.5 w-3.5 text-pink-500" />
+                      <div className="flex min-w-0 items-center gap-2">
+                        {item.type === "birthday" ? (
+                          <Cake className="h-3.5 w-3.5 shrink-0 text-pink-500" aria-hidden="true" />
                         ) : (
-                          <PartyPopper className="h-3.5 w-3.5 text-amber-500" />
+                          <PartyPopper
+                            className="h-3.5 w-3.5 shrink-0 text-amber-500"
+                            aria-hidden="true"
+                          />
                         )}
-                        <div>
-                          <p className="text-sm font-medium leading-none">{item.name}</p>
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-medium leading-none">{item.name}</p>
                           <p className="text-[11px] text-muted-foreground mt-1">
-                            {item.type === 'birthday' ? t('birthday_widget.type_birthday') : t('birthday_widget.type_anniversary')} ·{' '}
-                            {format(item.nextDate, 'yyyy.MM.dd')}
+                            {item.type === "birthday"
+                              ? t("birthday_widget.type_birthday")
+                              : t("birthday_widget.type_anniversary")}
+                            {" · "}
+                            <time dateTime={format(item.nextDate, "yyyy-MM-dd")}>
+                              {format(item.nextDate, "PP", { locale: dateLocale })}
+                            </time>
                           </p>
                         </div>
                       </div>
                       <Badge
                         variant="outline"
-                        className={cn('text-[10px]', soon && 'border-red-300 text-red-600 dark:text-red-400')}
+                        className={cn(
+                          "shrink-0 text-[10px]",
+                          soon && "border-red-300 text-red-600 dark:text-red-400",
+                        )}
                       >
-                        {item.diff <= 0 ? 'Ma' : `${item.diff} nap`}
+                        {relativeDayLabel(item.daysUntil, locale)}
                       </Badge>
-                    </div>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
             )}
           </CardContent>
         </CollapsibleContent>

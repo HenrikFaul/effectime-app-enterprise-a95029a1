@@ -1,15 +1,90 @@
+## 2026-07-19 — v3.51.5 Profiles tenant privacy and shared milestone adapter (unreleased)
+
+**Status:** P0 privacy hardening source candidate. Current local evidence includes
+the isolated runner at 10/10, the pinned PostgreSQL 18.4 profiles contract and all
+four database contracts PASS, ten focused browser/client files at 77/77,
+typecheck, production build, reviewed bundle ceiling, `npm audit` with zero known
+vulnerabilities, web smoke 7/7, mobile source 183/183, synced artifact 345/345,
+mobile bridge smoke 2/2 and zero native drift. Current-tree full coverage passes
+66 files and 727/727 tests; hosted v3.51.5 validation is still pending. No linked
+database migration or web/mobile
+production deployment has been performed. Production is
+**NO-GO**: the linked history is 59 shared / 68 local-only / 84 remote-only,
+the candidate contains 127 local migrations, and the live web artifact still has
+no Git-SHA release attestation.
+
+- Replaces globally readable profile rows with matching permissive and
+  restrictive self/platform-admin/shared-workspace policies. An active viewer
+  retains same-workspace historical name/avatar resolution, while unrelated
+  tenants and inactive viewers are denied. This three-column coworker directory
+  (`user_id`, `display_name`, `avatar_url`) intentionally does not require member-
+  administration permission; the milestone path applies its own stricter checks.
+- Revokes browser table-wide and catalog-discovered column ACLs from `anon` and
+  `authenticated`, including an unknown drift-only column, before granting only
+  the exact directory projection. Authenticated self-update is restricted twice
+  by RLS and column ACL to `display_name`, `avatar_url` and `preferred_locale`;
+  browser insert/delete and sensitive profile fields remain denied.
+- Adds authenticated-only `get_my_profile_locale_v1()` so locale hydration never
+  exposes `preferred_locale` as a coworker directory field. Locale persistence is
+  serialized per signed-in account, uses `profiles.user_id`, and stale auth or
+  tenant responses cannot overwrite a newer local choice or workspace override.
+- Adds authenticated-only `update_my_workspace_profile_display_name_v1(
+  p_workspace_id uuid, p_membership_id uuid, p_display_name text)`. It validates
+  and normalizes the name, requires the supplied active
+  membership to belong to both the workspace and `auth.uid()`, and therefore
+  cannot let one tenant administrator mutate a coworker's global identity.
+  `MemberProfileSheet` makes the global name self-only and uses the bounded shared
+  adapter instead of a direct browser profile upsert.
+- Adds the versioned, data-minimised
+  `get_workspace_member_milestones_v1(uuid)` RPC. It returns exactly
+  `membership_id`, `display_name`, `milestone_type`, `milestone_month` and
+  `milestone_day`—never `user_id`—after active-
+  membership, calendar/member permission and `birthday_widget`/`members_list`
+  entitlement checks. Birth year, raw JSON, email and token material never
+  enter the response.
+- Routes web, Android and iOS through one strict Supabase RPC adapter with no raw-
+  table fallback. UUID/shape/date validation, a 15-second timeout, cancellation,
+  bounded non-PII errors and duplicate-response rejection make malformed or
+  stale data fail closed.
+- Adds a TypeScript-AST caller contract over reachable browser source. It rejects
+  non-literal or over-broad `profiles` projections, unsafe update keys and direct
+  insert/upsert/delete calls; the unreferenced legacy `CsvImportPanel` is
+  explicitly quarantined and must remain unreachable. `CapacityFit` accepts an
+  issue assignee only when its normalized name has exactly one safe
+  `display_name` match. Duplicate, empty and email-only identities stay in the
+  localized unmatched bucket, planned hours are counted once, and browser profile
+  email is neither requested nor displayed.
+- Rebuilds the birthday/anniversary widget with explicit loading, retryable
+  error and empty states, tenant-switch request invalidation, semantic list/time
+  markup, keyboard focus, accessible count/status announcements and all eight
+  locales. Server and client use the workspace timezone; focus/visibility resume
+  refresh prevents stale mobile dates. Calendar arithmetic is DST-safe across
+  year boundaries and preserves February 29 as the next exact leap-year date.
+- Adds an independent SHA-pinned Quality Gate job and isolated PostgreSQL 18.4
+  contract covering repeat apply, catalog-driven drift-column revocation,
+  restrictive select/update guards, owner/search-path/ACL invariants, two tenants,
+  self-profile and locale RPCs, milestone timezone behavior, permissions, entitlements
+  and anonymous/service-role denial.
+- Compatibility/rollout: the single privacy migration is forward-only and needs
+  a controlled maintenance window. Older cached/native clients that directly
+  read `profiles.preferences` fail closed and lose the legacy milestone list;
+  after restored-staging old/new-client acceptance, apply DB/schema-cache first
+  and release the attestable shared client immediately. Rollback must hide/revert
+  the client capability without re-granting sensitive columns. The three new public
+  RPCs are intentionally absent from generated Supabase types until verified
+  schema-history reconciliation; exact local interfaces and the PostgreSQL
+  contract are the interim candidate boundary.
+
 ## 2026-07-19 — v3.51.4 Admin override exactly-once foundation (unreleased)
 
-**Status:** I-26 is a broadly validated local candidate. The pinned PostgreSQL
-18.4 contract and 12/12 isolated Docker-runner tests pass; the focused outbox/
-API/UI/Dialog set passes 82/82, the complete Vitest coverage run passes 666/666,
-and typecheck, lint ratchet, build/bundle, web/mobile smoke, Edge, audit, secret
-and schema-provenance gates pass. The local Android compile stops before source
-compilation because this workstation has not accepted the Android SDK 35/36
-licenses; hosted Android/iOS validation, restored-production-like staging,
-linked database apply and web/mobile deployment have not happened. Production/
-backend remains **NO-GO** while the documented migration-history/schema drift is
-unresolved.
+**Status:** PR #175 is merged to `main` as
+`f52671880748c58802d94e0705204d846f4b5928`. Hosted Quality Gate run
+`29682829301` passed all 8/8 jobs, including Android and locked iOS compilation;
+release evidence artifact `8441138073` and Android artifact `8441127446` are
+available. This proves the merged source and unsigned native candidates, not a
+production release: restored-production-like staging, linked database apply and
+web/mobile deployment have not happened. Production/backend remains **NO-GO**
+while the documented migration-history/schema drift is unresolved.
 
 - Adds the backward-compatible `create_admin_leave_override_v2` RPC while
   preserving the shipped ten-argument v1 OID, definition, owner, ACL and runtime

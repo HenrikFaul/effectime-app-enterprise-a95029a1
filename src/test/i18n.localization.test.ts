@@ -142,4 +142,31 @@ describe('i18n key parity — EN and HU bundles', () => {
       }
     }
   });
+
+  it('birthday milestone recovery keys are non-empty in every supported locale', () => {
+    const criticalKeys = [
+      'birthday_widget.loading',
+      'birthday_widget.load_error',
+      'birthday_widget.retry',
+      'birthday_widget.unknown_member',
+      'birthday_widget.upcoming_count',
+    ];
+    for (const [locale, bundle] of supportedBundles) {
+      for (const key of criticalKeys) {
+        expect(bundle.get(key)?.trim(), `${locale} missing or empty: ${key}`).toBeTruthy();
+      }
+    }
+  });
+
+  it('capacity member-directory recovery keys are non-empty in every supported locale', () => {
+    const criticalKeys = [
+      'capacity_fit.member_directory_error',
+      'capacity_fit.retry_member_directory',
+    ];
+    for (const [locale, bundle] of supportedBundles) {
+      for (const key of criticalKeys) {
+        expect(bundle.get(key)?.trim(), `${locale} missing or empty: ${key}`).toBeTruthy();
+      }
+    }
+  });
 });

@@ -3,8 +3,8 @@
   "purpose": "Existing ESLint diagnostic fingerprint ceiling. CI fails on new findings and requires baseline reduction when findings are fixed.",
   "command": "eslint . --format json",
   "totals": {
-    "errors": 1209,
-    "warnings": 104
+    "errors": 1189,
+    "warnings": 102
   },
   "counts": {
     "@next/next/no-img-element": {
@@ -20,7 +20,7 @@
       "warnings": 0
     },
     "@typescript-eslint/no-explicit-any": {
-      "errors": 1180,
+      "errors": 1160,
       "warnings": 0
     },
     "@typescript-eslint/no-require-imports": {
@@ -33,7 +33,7 @@
     },
     "<fatal-or-config>": {
       "errors": 0,
-      "warnings": 12
+      "warnings": 11
     },
     "no-empty": {
       "errors": 3,
@@ -45,7 +45,7 @@
     },
     "react-hooks/exhaustive-deps": {
       "errors": 0,
-      "warnings": 71
+      "warnings": 70
     },
     "react-refresh/only-export-components": {
       "errors": 0,
@@ -161,16 +161,6 @@
         "warnings": 0
       }
     },
-    "src/components/enterprise/agile/CapacityFit.tsx": {
-      "@typescript-eslint/no-explicit-any": {
-        "errors": 9,
-        "warnings": 0
-      },
-      "react-hooks/exhaustive-deps": {
-        "errors": 0,
-        "warnings": 1
-      }
-    },
     "src/components/enterprise/agile/FieldDiscovery.tsx": {
       "@typescript-eslint/no-explicit-any": {
         "errors": 8,
@@ -252,12 +242,6 @@
       },
       "@typescript-eslint/no-unused-expressions": {
         "errors": 1,
-        "warnings": 0
-      }
-    },
-    "src/components/enterprise/BirthdayAnniversaryWidget.tsx": {
-      "@typescript-eslint/no-explicit-any": {
-        "errors": 5,
         "warnings": 0
       }
     },
@@ -563,7 +547,7 @@
     },
     "src/components/enterprise/MemberProfileSheet.tsx": {
       "@typescript-eslint/no-explicit-any": {
-        "errors": 25,
+        "errors": 24,
         "warnings": 0
       },
       "react-hooks/exhaustive-deps": {
@@ -1215,12 +1199,8 @@
     },
     "src/i18n/I18nProvider.tsx": {
       "@typescript-eslint/no-explicit-any": {
-        "errors": 6,
+        "errors": 1,
         "warnings": 0
-      },
-      "<fatal-or-config>": {
-        "errors": 0,
-        "warnings": 1
       },
       "react-refresh/only-export-components": {
         "errors": 0,
@@ -1781,64 +1761,6 @@
         "count": 1
       }
     },
-    "src/components/enterprise/agile/CapacityFit.tsx": {
-      "0cf720f21148ce356362": {
-        "ruleId": "react-hooks/exhaustive-deps",
-        "severity": "warnings",
-        "message": "React Hook useMemo has a missing dependency: 't'. Either include it or remove the dependency array.",
-        "source": "}, [issues, members, sprintHours, vacationImpactDays]);",
-        "count": 1
-      },
-      "5c15bb1a33956e0cbd5b": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "setIssues((data as any).issues ?? []);",
-        "count": 1
-      },
-      "7581a85ddad8e5f99922": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const { data: memData } = await (supabase as any)",
-        "count": 1
-      },
-      "c07b3d743a631da58d05": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "if (!(data as any)?.ok) throw new Error((data as any)?.error ?? t('capacity_fit.bad_response'));",
-        "count": 2
-      },
-      "c67c46d94880b3a2d8d0": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "toast.success(t('capacity_fit.active_tickets', { count: (data as any).count }));",
-        "count": 1
-      },
-      "da0a3835699bb6326964": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const { data: profs } = await (supabase as any)",
-        "count": 1
-      },
-      "e3764b52317b23810ae0": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "((profs ?? []) as any[]).forEach((p: any) => {",
-        "count": 2
-      },
-      "f9aee9e796c5001d1d4f": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "} catch (e: any) {",
-        "count": 1
-      }
-    },
     "src/components/enterprise/agile/FieldDiscovery.tsx": {
       "07bbdd0824618ff835f9": {
         "ruleId": "react-hooks/exhaustive-deps",
@@ -2388,36 +2310,6 @@
         "severity": "errors",
         "message": "Unexpected any. Specify a different type.",
         "source": "const { error: decisionError } = await (supabase as any).rpc('decide_leave_request', {",
-        "count": 1
-      }
-    },
-    "src/components/enterprise/BirthdayAnniversaryWidget.tsx": {
-      "43d7dc12bd68e9450315": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "(supabase as any)",
-        "count": 2
-      },
-      "7ab493556736bc59773b": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "(memberships || []).forEach((m: any) => {",
-        "count": 1
-      },
-      "ac11aee023fa3b208707": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "(profiles || []).map((p: any) => [p.user_id, p]),",
-        "count": 1
-      },
-      "ac9c6402ee289e52cbc3": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const profileMap = new Map<string, any>(",
         "count": 1
       }
     },
@@ -4312,13 +4204,6 @@
         "severity": "errors",
         "message": "Unexpected any. Specify a different type.",
         "source": "const { error } = await (supabase as any)",
-        "count": 1
-      },
-      "219c6b0e37ee856ac67d": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const { error: profileError } = await (supabase as any)",
         "count": 1
       },
       "23c3864888d46dd4acb6": {
@@ -7726,13 +7611,6 @@
       }
     },
     "src/i18n/I18nProvider.tsx": {
-      "10b232dceb42cf1a12b2": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const { data } = await (supabase as any)",
-        "count": 2
-      },
       "40f6d1e70ff23558df46": {
         "ruleId": "react-refresh/only-export-components",
         "severity": "warnings",
@@ -7747,33 +7625,12 @@
         "source": "export function useDateLocale(): DateFnsLocale {",
         "count": 1
       },
-      "9f8a02adc8ab982fa344": {
-        "ruleId": "<fatal-or-config>",
-        "severity": "warnings",
-        "message": "Unused eslint-disable directive (no problems were reported from 'no-console').",
-        "source": "// eslint-disable-next-line no-console",
-        "count": 1
-      },
-      "b997bfe7f6074a063370": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "await (supabase as any)",
-        "count": 1
-      },
       "babe82de354f11414929": {
         "ruleId": "@typescript-eslint/no-explicit-any",
         "severity": "errors",
         "message": "Unexpected any. Specify a different type.",
         "source": "let cur: any = bundle;",
         "count": 1
-      },
-      "d3871bd608bb5d593c8b": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "((data as any[]) || []).forEach((row: any) => {",
-        "count": 2
       },
       "dfc2f1dc07893578d512": {
         "ruleId": "react-refresh/only-export-components",
