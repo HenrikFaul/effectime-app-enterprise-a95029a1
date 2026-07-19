@@ -88,10 +88,12 @@ migration apply has been performed.
   entire fail-closed tab shell, including the revoke UI, until lookup recovery;
   a dedicated core-shell/error recovery surface remains P2. No database, Edge
   API or dependency changed in this frontend package.
-- Reviews the package's bundle cost: 1,448 raw JavaScript bytes and 121 gzip
-  bytes (+0.033% raw). The exact reviewed ceilings are 4,447,803 raw and
-  1,269,751 gzip bytes; largest raw increases by 468 bytes to 1,738,375, while
-  largest-gzip and CSS ceilings remain unchanged.
+- Reviews the clean, committed package's bundle cost: 1,559 raw JavaScript
+  bytes and 192 gzip bytes (+0.035% raw). The artifact measures 4,447,914 raw
+  and 1,269,822 gzip bytes; the reviewed ceilings are 4,447,914 raw and
+  1,269,950 gzip to retain a narrow build-SHA compression tolerance. Largest
+  raw increases by 468 bytes to 1,738,375, while largest-gzip and CSS ceilings
+  remain unchanged.
 
 ### Android/iOS common-data foundation
 
