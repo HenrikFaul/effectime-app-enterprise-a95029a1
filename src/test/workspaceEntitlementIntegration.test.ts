@@ -41,4 +41,31 @@ describe('workspace navigation/content entitlement integration', () => {
       /<FeatureGate workspaceId=\{workspace\.id\} feature="ms365_calendar_sync">[\s\S]*?<M365IntegrationPanel workspaceId=\{workspace\.id\} \/>[\s\S]*?<\/FeatureGate>/,
     );
   });
+
+  it('fails closed before exposing the paid admin override action', () => {
+    expect(dashboard).toMatch(
+      /const canUseAdminOverride = canEdit\('admin_override'\)\s*&&\s*!featuresLoading\s*&&\s*!featuresError\s*&&\s*isFeatureEnabled\('admin_override'\);/,
+    );
+    expect(dashboard).toContain('canOverride={canUseAdminOverride}');
+    expect(dashboard).toMatch(
+      /const hasRequestsAccess =[\s\S]*?isAdmin[\s\S]*?canView\('approvals'\)[\s\S]*?canEdit\('approvals'\)[\s\S]*?canUseAdminOverride/,
+    );
+  });
+
+  it('fails closed for iCal use while keeping token revocation mounted', () => {
+    expect(dashboard).toMatch(
+      /const canUseIcalFeed = !featuresLoading\s*&&\s*!featuresError\s*&&\s*isFeatureEnabled\('ical_feed'\);/,
+    );
+    expect(dashboard).toContain('canUseIcalFeed={canUseIcalFeed}');
+    expect(dashboard).toContain('canCreateTeamFeed={isAdmin}');
+    expect(dashboard).toContain('key={`${workspace.id}:${userId}`}');
+    expect(dashboard).toContain("const canViewWorkspaceSettings = canView('settings');");
+    expect(dashboard).toMatch(
+      /<TabsContent value="my-portal"[\s\S]*?!canViewWorkspaceSettings[\s\S]*?<ICalSubscription[\s\S]*?<\/TabsContent>/,
+    );
+    expect(dashboard).toMatch(
+      /canViewWorkspaceSettings && hasTabEntitlement\('settings'\)[\s\S]*?<WorkspaceSettings/,
+    );
+    expect(dashboard).not.toMatch(/<FeatureGate[^>]+feature="ical_feed"/);
+  });
 });
