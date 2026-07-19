@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -14,6 +14,11 @@ import { CheckCircle2, Circle, ChevronDown, Plus, XCircle, AlertTriangle, Calend
 import { toast } from 'sonner';
 import { format, isPast, isWithinInterval, addDays } from 'date-fns';
 import { useT, useDateLocale } from '@/i18n/I18nProvider';
+import {
+  fetchHRWorkflowInstances,
+  fetchHRWorkflowTasks,
+  type WorkflowDataClient,
+} from './hrWorkflowInboxData';
 
 interface Props {
   workspaceId: string;
@@ -99,7 +104,11 @@ export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState('open');
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [taskLoadingByInstance, setTaskLoadingByInstance] = useState<Record<string, boolean>>({});
+  const [taskErrorsByInstance, setTaskErrorsByInstance] = useState<Record<string, boolean>>({});
   const [showStartDialog, setShowStartDialog] = useState(false);
+  const loadRequestId = useRef(0);
 
   // Start-workflow form
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -113,36 +122,73 @@ export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
   const [busy, setBusy] = useState(false);
 
   const loadInstances = useCallback(async () => {
+    const requestId = ++loadRequestId.current;
     setLoading(true);
-    const { data, error } = await (supabase as any).rpc('hr_workflow_list_instances', {
-      p_workspace_id: workspaceId,
-      p_status: statusFilter === 'all' ? null : statusFilter,
-    });
-    if (error) {
-      // Non-admin: fall back to member view
-      const { data: memberInstances } = await (supabase as any)
-        .from('enterprise_hr_workflow_instances')
-        .select('*')
-        .eq('workspace_id', workspaceId)
-        .eq('status', statusFilter === 'all' ? undefined : statusFilter)
-        .order('due_date', { ascending: true, nullsFirst: false });
-      setInstances((memberInstances || []).map((i: any) => ({ ...i, member_name: t('hr_workflow.self_member'), total_tasks: 0, done_tasks: 0 })));
-    } else {
-      setInstances((data as InstanceRow[]) || []);
+    setLoadError(false);
+    try {
+      const { data, error } = await fetchHRWorkflowInstances(
+        supabase as unknown as WorkflowDataClient,
+        workspaceId,
+        isAdmin,
+        statusFilter,
+      );
+      if (requestId !== loadRequestId.current) return;
+      if (error) {
+        setInstances([]);
+        setLoadError(true);
+        toast.error(t('hr_workflow.load_error'));
+        return;
+      }
+
+      if (isAdmin) {
+        setInstances((data as InstanceRow[]) || []);
+      } else {
+        const memberInstances = (data || []) as Array<
+          Omit<InstanceRow, 'member_name' | 'total_tasks' | 'done_tasks'>
+        >;
+        setInstances(memberInstances.map((instance) => ({
+          ...instance,
+          member_name: t('hr_workflow.self_member'),
+          total_tasks: 0,
+          done_tasks: 0,
+        })));
+      }
+    } catch {
+      if (requestId !== loadRequestId.current) return;
+      setInstances([]);
+      setLoadError(true);
+      toast.error(t('hr_workflow.load_error'));
+    } finally {
+      if (requestId === loadRequestId.current) setLoading(false);
     }
-    setLoading(false);
-  }, [workspaceId, statusFilter]);
+  }, [workspaceId, isAdmin, statusFilter, t]);
 
-  useEffect(() => { loadInstances(); }, [loadInstances]);
+  useEffect(() => {
+    loadInstances();
+    return () => { loadRequestId.current += 1; };
+  }, [loadInstances]);
 
-  const loadTasks = async (instanceId: string) => {
-    if (tasksByInstance[instanceId]) return;
-    const { data } = await (supabase as any)
-      .from('enterprise_hr_workflow_tasks')
-      .select('*')
-      .eq('instance_id', instanceId)
-      .order('sort_order');
-    setTasksByInstance(prev => ({ ...prev, [instanceId]: (data as Task[]) || [] }));
+  const loadTasks = async (instanceId: string, force = false) => {
+    if (!force && tasksByInstance[instanceId] && !taskErrorsByInstance[instanceId]) return;
+    setTaskLoadingByInstance(prev => ({ ...prev, [instanceId]: true }));
+    setTaskErrorsByInstance(prev => ({ ...prev, [instanceId]: false }));
+    try {
+      const { data, error } = await fetchHRWorkflowTasks(
+        supabase as unknown as WorkflowDataClient,
+        instanceId,
+      );
+      if (error) {
+        setTaskErrorsByInstance(prev => ({ ...prev, [instanceId]: true }));
+        toast.error(t('hr_workflow.task_load_error'));
+        return;
+      }
+      setTasksByInstance(prev => ({ ...prev, [instanceId]: (data as Task[]) || [] }));
+    } catch {
+      setTaskErrorsByInstance(prev => ({ ...prev, [instanceId]: true }));
+      toast.error(t('hr_workflow.task_load_error'));
+    } finally {
+      setTaskLoadingByInstance(prev => ({ ...prev, [instanceId]: false }));
+    }
   };
 
   const handleOpen = (id: string) => {
@@ -255,7 +301,17 @@ export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
       </div>
 
       {loading && <p className="text-sm text-muted-foreground py-4">{t('hr_workflow.loading')}</p>}
-      {!loading && instances.length === 0 && (
+      {!loading && loadError && (
+        <Card role="alert">
+          <CardContent className="py-6 text-center text-sm text-destructive space-y-3">
+            <p>{t('hr_workflow.load_error')}</p>
+            <Button size="sm" variant="outline" onClick={loadInstances}>
+              {t('hr_workflow.retry')}
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+      {!loading && !loadError && instances.length === 0 && (
         <Card>
           <CardContent className="py-8 text-center text-sm text-muted-foreground">
             {t('hr_workflow.empty_filter')}
@@ -318,7 +374,18 @@ export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
                     )}
 
                     {/* Tasks */}
-                    {(tasksByInstance[inst.id] || []).length > 0 ? (
+                    {taskLoadingByInstance[inst.id] ? (
+                      <p className="text-xs text-muted-foreground" aria-live="polite">
+                        {t('hr_workflow.loading')}
+                      </p>
+                    ) : taskErrorsByInstance[inst.id] ? (
+                      <div role="alert" className="text-xs text-destructive flex items-center gap-2">
+                        <span>{t('hr_workflow.task_load_error')}</span>
+                        <Button size="sm" variant="outline" onClick={() => loadTasks(inst.id, true)}>
+                          {t('hr_workflow.retry')}
+                        </Button>
+                      </div>
+                    ) : (tasksByInstance[inst.id] || []).length > 0 ? (
                       <ul className="space-y-1.5">
                         {(tasksByInstance[inst.id] || []).map(task => (
                           <li key={task.id} className="flex items-start gap-2">
@@ -326,6 +393,10 @@ export function HRWorkflowInbox({ workspaceId, isAdmin, userId }: Props) {
                               className="mt-0.5 shrink-0 text-muted-foreground hover:text-primary transition-colors"
                               onClick={() => toggleTask(task, inst.id)}
                               disabled={!isAdmin && inst.status === 'completed'}
+                              aria-label={task.status === 'done'
+                                ? t('hr_workflow.task_mark_pending', { title: task.title })
+                                : t('hr_workflow.task_mark_done', { title: task.title })}
+                              aria-pressed={task.status === 'done'}
                             >
                               {task.status === 'done'
                                 ? <CheckCircle2 className="h-4 w-4 text-green-600" />

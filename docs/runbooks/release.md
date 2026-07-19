@@ -32,7 +32,15 @@ frontend build alone is not release approval.
   extension membership, digest, fixed search path, trigger/rollback, runtime
   TRUNCATE denial, normalized reason boundaries, exact audit state, deterministic
   lock/reopen races and actor-demotion serialization. It is a targeted fixture
-  and never substitutes for the clean 124-migration replay.
+  and never substitutes for the clean 125-migration replay.
+- `node --test scripts/ci/hr-workflow-tenant-db-contract.test.mjs` and
+  `npm run db:hr-workflow:test` for the HR workflow tenant-boundary migration.
+  The pinned PostgreSQL 18.4 fixture must pass cross-workspace template,
+  membership, instance, task and assignee denials; active-membership RLS; list
+  PII isolation; exact RPC ACL/signatures; repeat apply; legacy-row preservation;
+  cross-tenant parent-cascade denial; and four deterministic reassignment,
+  suspension, direct-assignment and template-deactivation races. This targeted
+  contract never substitutes for restored-staging inventory and a clean replay.
 - Verified backup plus an isolated restore drill within the agreed RPO/RTO.
 - Critical-path staging smoke for at least two tenants and affected roles.
 - Payroll staging smoke must cover open calculation → lock → repeat calculation →
@@ -121,13 +129,15 @@ frontend build alone is not release approval.
 ## Immediate NO-GO conditions
 
 - Migration history or schema differs from the approved staging result.
-- Clean migration replay is not 124/124, or the 30-table / 1-view / 46-function /
+- Clean migration replay is not 125/125, or the 30-table / 1-view / 46-function /
   2-enum provenance debt has not been replaced by transitively complete reviewed
   DDL with regenerated-types and schema-fingerprint comparison.
 - Backup/restore evidence is absent or stale.
 - Tenant/RBAC negative tests fail.
 - The HR workflow forward repair is absent or cross-workspace membership,
-  assignee, instance/task join, inactive-assignee and race tests are not green.
+  assignee, instance/task join, inactive-assignee and race tests are not green;
+  or restored-staging aggregate inventory is non-zero without a reviewed,
+  data-preserving remediation decision.
 - A new critical/high dependency vulnerability or unreviewed Edge compile failure exists.
 - The Edge diagnostic ratchet reports a new entrypoint, diagnostic or unpinned import.
 - The release manifest is dirty, names a different SHA, or its distribution,

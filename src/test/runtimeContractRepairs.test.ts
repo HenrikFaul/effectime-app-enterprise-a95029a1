@@ -3,38 +3,22 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const root = join(__dirname, '..', '..');
-const migration = readFileSync(
-  join(root, 'supabase/migrations/20260717132000_v3_51_3_reproducibility_and_atomic_settings.sql'),
-  'utf8',
+const readContract = (...path: string[]) =>
+  readFileSync(join(root, ...path), 'utf8').replace(/\r\n?/g, '\n');
+const migration = readContract(
+  'supabase/migrations/20260717132000_v3_51_3_reproducibility_and_atomic_settings.sql',
 );
-const dashboard = readFileSync(
-  join(root, 'src/components/enterprise/WorkspaceDashboard.tsx'),
-  'utf8',
+const dashboard = readContract('src/components/enterprise/WorkspaceDashboard.tsx');
+const featureHook = readContract('src/hooks/useFeature.ts');
+const importer = readContract('supabase/functions/import-entity-data/index.ts');
+const importerSecurity = readContract('supabase/functions/import-entity-data/security.ts');
+const emailWorker = readContract('supabase/functions/process-email-queue/index.ts');
+const approvalInbox = readContract('src/components/enterprise/ApprovalInbox.tsx');
+const workflowsModule = readContract(
+  'src/components/enterprise/workflows/WorkflowsModule.tsx',
 );
-const featureHook = readFileSync(join(root, 'src/hooks/useFeature.ts'), 'utf8');
-const importer = readFileSync(
-  join(root, 'supabase/functions/import-entity-data/index.ts'),
-  'utf8',
-);
-const importerSecurity = readFileSync(
-  join(root, 'supabase/functions/import-entity-data/security.ts'),
-  'utf8',
-);
-const emailWorker = readFileSync(
-  join(root, 'supabase/functions/process-email-queue/index.ts'),
-  'utf8',
-);
-const approvalInbox = readFileSync(
-  join(root, 'src/components/enterprise/ApprovalInbox.tsx'),
-  'utf8',
-);
-const workflowsModule = readFileSync(
-  join(root, 'src/components/enterprise/workflows/WorkflowsModule.tsx'),
-  'utf8',
-);
-const accessInbox = readFileSync(
-  join(root, 'src/components/enterprise/workflows/AccessInbox.tsx'),
-  'utf8',
+const accessInbox = readContract(
+  'src/components/enterprise/workflows/AccessInbox.tsx',
 );
 
 describe('restored and hardened runtime contracts', () => {

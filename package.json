@@ -43,6 +43,7 @@
     "schema:provenance": "node scripts/ci/check-schema-provenance.mjs",
     "schema:provenance:test": "node --test scripts/ci/schema-provenance.test.mjs",
     "db:payroll:test": "node scripts/ci/payroll-snapshot-db-contract.mjs",
+    "db:hr-workflow:test": "node scripts/ci/hr-workflow-tenant-db-contract.mjs",
     "security:secrets": "node scripts/ci/secret-scan.mjs",
     "release:sbom": "npm run release:sbom:web && npm run release:sbom:edge",
     "release:sbom:web": "node scripts/release/create-sbom.mjs",

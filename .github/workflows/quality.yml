@@ -40,6 +40,28 @@ jobs:
       - name: Run PostgreSQL 18.4 payroll snapshot contract
         run: npm run db:payroll:test
 
+  hr-workflow-database-contract:
+    name: PostgreSQL HR workflow tenant contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 22
+
+      - name: Prove Docker runner isolation and cleanup contract
+        run: node --test scripts/ci/hr-workflow-tenant-db-contract.test.mjs
+
+      - name: Run PostgreSQL 18.4 HR workflow tenant contract
+        run: npm run db:hr-workflow:test
+
   verify:
     name: Frontend, tests and provenance
     runs-on: ubuntu-24.04

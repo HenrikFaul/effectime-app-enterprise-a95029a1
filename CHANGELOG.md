@@ -1,8 +1,10 @@
 ## 2026-07-17 — v3.51.3 Project audit and release-boundary hardening (unreleased)
 
-**Status:** PR #166 was merged to `main` as `a132f179c024428f9cfd8ff6779d1c02c9d4c6d4`;
-all six hosted Quality Gate jobs passed on that merge SHA. No frontend/Edge
-production deploy and no linked database migration apply has been performed.
+**Status:** PR #167 was merged to `main` as
+`9e2911b30b84f1040b3dbeb8865c575d0891c7bc`; all six hosted Quality Gate jobs
+passed on that merge SHA. The live web release manifest is still absent; no
+matching Edge production deploy and no linked database migration apply has been
+performed. The HR tenant-boundary repair below remains an unmerged candidate.
 
 ### Release identity and deployment evidence
 
@@ -28,10 +30,30 @@ production deploy and no linked database migration apply has been performed.
   not the stale Vercel project. The repository's Lovable webhook returns HTTP
   405 and cannot be treated as a deploy signal; publishing requires the
   authenticated Lovable project and post-publish live verification.
-- Records a new P0-candidate tenant-boundary finding in the existing HR workflow
-  policies/RPCs. Cross-workspace membership/assignee references and inactive
-  assignees require a forward-only repair migration and adversarial RLS/RPC
-  tests before any backend release.
+- Adds a forward-only HR workflow tenant-boundary candidate that preserves legacy
+  rows while rejecting new cross-workspace template, membership, instance, task
+  and inactive-assignee references. It correlates member/admin RLS by workspace,
+  locks and validates RPC references, makes same-state retries idempotent, uses a
+  trusted `SECURITY DEFINER` search path and grants execution only to
+  `authenticated`.
+- Prevents historical global UUID foreign keys from cascading or nulling an HR
+  workflow row in another workspace, while preserving valid same-workspace FK
+  behavior. Direct trigger validation locks referenced rows against concurrent
+  suspension/deactivation.
+- Routes admin and member inbox reads explicitly, omits the `status` predicate
+  for the `all` filter, and exposes retryable instance/task errors instead of
+  treating backend failures as empty results.
+- Adds a pinned PostgreSQL 18.4 contract with two isolated tenants, authenticated
+  RLS/RPC denial, PII-list-leak prevention, malformed legacy-row preservation,
+  exact public RPC/FK catalogs, repeat-apply coverage and four deterministic
+  reassignment/suspension/direct-write races. Production apply remains NO-GO
+  until aggregate inventory, restored
+  staging and migration-history reconciliation are approved.
+- Normalizes CRLF/LF before source-text contract assertions, so the invitation
+  and runtime security invariants run identically on Windows and Linux.
+- Reviews the HR error/a11y runtime cost against the bundle ratchet: 3,385 raw
+  and 1,118 gzip ceiling bytes (+0.09%). Only the affected JavaScript ceilings move;
+  the largest-gzip and CSS ceilings remain unchanged.
 
 ### Android/iOS common-data foundation
 
@@ -202,19 +224,19 @@ production deploy and no linked database migration apply has been performed.
 ### Verification
 
 - `npm ci` PASS; `npm run typecheck` PASS.
-- `npm run test:coverage` PASS: 47 files, 543 tests; 46.44% statements/lines
-  (39,319/84,655), 63.10% branches (703/1,114) and 29.95% functions (133/444)
+- `npm run test:coverage` PASS: 49 files, 549 tests; 46.80% statements/lines
+  (39,681/84,779), 63.06% branches (746/1,183) and 30.65% functions (141/460)
   against floors of 28% / 47% / 13%.
 - Production `dist` Playwright smoke PASS: 7/7 public Chromium
   smoke tests covering production asset MIME/runtime health, manifest, favicon,
   PWA registration, auth, anonymous redirect, 404, accessible names and
   320/390/768 px clipping, all against the same generated `dist` artifact.
-- `npm run build` PASS: 4,079 transformed modules. The clean, attestable
-  distribution is 4,442,665 raw JavaScript bytes within the reviewed 1,268,512
-  gzip ceiling; its largest chunk is 1,736,128 raw bytes within the 558,421 gzip
-  ceiling. CSS is 180,798 raw / 29,589 gzip bytes within the reviewed 180,798 raw
-  / 29,849 gzip ceilings. Gzip observations vary slightly with the embedded
-  release SHA, while the exact raw-byte ratchets remain deterministic.
+- `npm run build` PASS: 4,080 transformed modules. The clean candidate is
+  4,446,050 raw JavaScript bytes and its largest chunk is 1,737,907 raw bytes.
+  Gzip varies narrowly with the embedded commit SHA; the reviewed ceilings are
+  4,446,050 total raw, 1,269,630 total gzip, 1,737,907 largest raw and 558,421
+  largest gzip. CSS remains 180,798 raw / 29,589 gzip within the unchanged
+  180,798 / 29,849 ceilings.
 - `npm audit` PASS: 0 known vulnerabilities.
 - Structured logger Deno test PASS: 2/2; the two hardened email functions check.
 - Edge raw check and diagnostic ratchet PASS: 30/30 entrypoints, zero
@@ -223,7 +245,7 @@ production deploy and no linked database migration apply has been performed.
   25/25, including four endpoint body/header/CORS release contracts, and the targeted PII
   safety job is mandatory and green.
 - Payroll Deno contract 15/15, targeted Vitest 20/20, AuditLog allowlist 2/2 and
-  current full unit 543/543 PASS.
+  current full unit 549/549 PASS.
 - Payroll snapshot DB contract PASS: runner unit 12/12 and actual migration on
   digest-pinned PostgreSQL 18.4, covering DB digest, ACL/search path, immutable
   trigger, invalid payload/member drift, atomic audit rollback, audited
@@ -240,21 +262,22 @@ production deploy and no linked database migration apply has been performed.
   still aggregate different currencies into one `total_gross`; the existing
   contract test demonstrates EUR+USD acceptance. Release requires either
   fail-closed single-currency v1 or a reviewed per-currency v2 model.
-- Generated-schema provenance parser 7/7 and current 124-migration gate PASS:
+- Generated-schema provenance parser 7/7 and current 125-migration gate PASS:
   generated/backed/unproven counts are tables 165/135/30, views 4/3/1,
   functions 99/53/46 and enums 11/9/2.
-- Current-tree secret scan PASS: 1,424 tracked and non-ignored untracked text
+- Current-tree secret scan PASS: 1,432 tracked and non-ignored untracked text
   files; git-history scanning remains open.
-- ESLint fingerprint ratchet PASS; the reduced baseline is 1,222 errors and 109
+- ESLint fingerprint ratchet PASS; the reduced baseline is 1,218 errors and 108
   warnings across 179 files. New or moved findings fail, and fixed debt must
   be removed from the baseline before it can return.
 - CycloneDX generation PASS: 707 web/package-lock components and 464 Edge/Deno
   components; the schema-2 manifest hashes both SBOMs and the tested `dist`
   (72 files / 6,828,468 bytes / `1c3736bd…`) and `dist-mobile`
-  (54 files / 4,961,960 bytes / `5bdf107e…`) trees, 124 migrations / 831,837
+  (54 files / 4,961,960 bytes / `5bdf107e…`) trees. The prior merge evidence
+  covered 124 migrations / 831,837
   bytes and 30 Edge entrypoints / 67 source files / 705,335 bytes. The local manifest is
   `dirty=true`; it is evidence for this worktree, not a production attestation.
-- Isolated clean migration replay applies 104/124 migrations, then stops at
+- Isolated clean migration replay applies 104/125 migrations, then stops at
   `20260517230000_v3_41_5_rls_index_coverage.sql` because
   `public.plugin_webhook_events` has no local CREATE TABLE.
 - Git history confirms the provenance gap: six attendance tables first appear in
