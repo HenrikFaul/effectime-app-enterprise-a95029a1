@@ -171,6 +171,8 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   const hasTabEntitlement = (tab: WorkspaceTab) => (
     !featuresLoading && !featuresError && isWorkspaceTabEntitled(tab, isFeatureEnabled)
   );
+  const canUseAdminOverride = canEdit('admin_override') && !featuresLoading && !featuresError && isFeatureEnabled('admin_override');
+  const canUseIcalFeed = !featuresLoading && !featuresError && isFeatureEnabled('ical_feed');
 
   // Map active tab → help anchor
   const helpAnchorId =
@@ -242,8 +244,12 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
 
   // Check if any calendar sub-permission is available
   const hasCalendarAccess = canView('calendar');
+  const canViewWorkspaceSettings = canView('settings');
   // Check if any requests permission is available
-  const hasRequestsAccess = canView('requests_own') || canView('requests_team') || canEdit('leave_requests_submit');
+  const hasRequestsAccess = canView('requests_own')
+    || canView('requests_team')
+    || canEdit('leave_requests_submit')
+    || (isAdmin && (canView('approvals') || canEdit('approvals') || canUseAdminOverride));
   const visibleTopNavItems = WORKSPACE_TOP_NAV_ITEMS.filter((item) => {
     const visible =
       item.value === 'my-portal' ? true :
@@ -258,7 +264,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
       item.value === 'analytics' ? isAdmin :
       item.value === 'developer' ? isAdmin :
       item.value === 'security' ? isAdmin :
-      item.value === 'settings' ? canView('settings') :
+      item.value === 'settings' ? canViewWorkspaceSettings :
       false;
     return visible && hasTabEntitlement(item.value);
   });
@@ -370,6 +376,9 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                 onNavigateTab={setActiveTab}
               />
               <WellbeingScoreCard workspaceId={workspace.id} userId={userId} />
+              {!canViewWorkspaceSettings && (
+                <ICalSubscription key={`${workspace.id}:${userId}`} workspaceId={workspace.id} userId={userId} canUseIcalFeed={canUseIcalFeed} canCreateTeamFeed={isAdmin} />
+              )}
             </TabsContent>}
 
             {canView('members') && hasTabEntitlement('members') && (
@@ -483,7 +492,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                   isAdmin={isAdmin}
                   canViewApprovals={canView('approvals')}
                   canApprove={canEdit('approvals')}
-                  canOverride={canEdit('admin_override')}
+                  canOverride={canUseAdminOverride}
                   canSubmit={canEdit('leave_requests_submit')}
                   canViewOwn={canView('requests_own')}
                   canViewTeam={canView('requests_team')}
@@ -572,9 +581,9 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               </TabsContent>
             )}
 
-            {canView('settings') && hasTabEntitlement('settings') && (
+            {canViewWorkspaceSettings && hasTabEntitlement('settings') && (
               <TabsContent value="settings" data-help-region="workspace.settings">
-                <WorkspaceSettings workspace={workspace} userRole={userRole} userId={userId} onRefresh={onRefresh} canViewPermissionConfig={userRole === 'owner' || canView('permission_config')} canViewLayoutSetting={userRole === 'owner' || canView('layout_setting')} />
+                <WorkspaceSettings workspace={workspace} userRole={userRole} userId={userId} onRefresh={onRefresh} canUseIcalFeed={canUseIcalFeed} canViewPermissionConfig={userRole === 'owner' || canView('permission_config')} canViewLayoutSetting={userRole === 'owner' || canView('layout_setting')} />
                 {/* Plugin marketplace (Top-20 Rank 19, v3.30.0). Workspace
                     owner only; RPCs enforce. Enterprise tier required via
                     FeatureGate. */}
@@ -937,7 +946,7 @@ function InvitationList({ workspaceId, isAdmin }: { workspaceId: string; isAdmin
 }
 
 // ===== Workspace Settings =====
-function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPermissionConfig = true, canViewLayoutSetting = false }: { workspace: Workspace; userRole?: string; userId: string; onRefresh: () => void; canViewPermissionConfig?: boolean; canViewLayoutSetting?: boolean }) {
+function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canUseIcalFeed, canViewPermissionConfig = true, canViewLayoutSetting = false }: { workspace: Workspace; userRole?: string; userId: string; onRefresh: () => void; canUseIcalFeed: boolean; canViewPermissionConfig?: boolean; canViewLayoutSetting?: boolean }) {
   const { t } = useI18n();
   const persistedSettings = workspace.settings && typeof workspace.settings === 'object'
     ? workspace.settings
@@ -1057,7 +1066,7 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canViewPerm
       )}
 
       <SettingsSection workspaceId={workspace.id} sectionKey="settings.ical" icon={<Rss className="h-4 w-4" />} title={t('settings_sections.ical')}>
-        <ICalSubscription workspaceId={workspace.id} userId={userId} />
+        <ICalSubscription key={`${workspace.id}:${userId}`} workspaceId={workspace.id} userId={userId} canUseIcalFeed={canUseIcalFeed} canCreateTeamFeed={isAdmin} />
       </SettingsSection>
 
       <SettingsSection workspaceId={workspace.id} sectionKey="settings.localization" icon={<Settings className="h-4 w-4" />} title={t('settings_sections.localization')}>

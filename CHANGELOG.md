@@ -1,7 +1,8 @@
 ## 2026-07-17 — v3.51.3 Project audit and release-boundary hardening (unreleased)
 
-**Status:** PR #167 and the HR tenant-boundary PR #168 were merged to `main`; the
-current merge SHA is `48ea20755821082ed57fff7bf39a39c9db814bf0`, and all seven
+**Status:** PR #167, the HR tenant-boundary PR #168 and the HR request-lifecycle
+PR #169 were merged to `main`; the current merge SHA is
+`a5a79136dcd003bf73b208f20febc470960ee173`, and all seven
 hosted Quality Gate jobs passed on that SHA. The live web release manifest is
 still absent; no matching Edge production deploy and no linked database
 migration apply has been performed.
@@ -62,6 +63,35 @@ migration apply has been performed.
   and unmount cleanup. The clean release artifact adds 305 raw JavaScript bytes
   (+0.0069%); gzip,
   largest-chunk and CSS ceilings do not increase.
+- Makes the paid `admin_override` control fail closed on permission,
+  entitlement loading/error and the resolved feature set, while keeping the
+  Requests tab reachable for administrators whose configured profile grants
+  only approvals or override access.
+- Aligns iCal creation with the Pro+ entitlement and role contract: every active
+  entitled member can create a personal feed, while team feed creation remains
+  owner/resource-assistant only. Users without workspace-settings permission
+  receive the same feed card on their always-reachable personal portal; users
+  with that permission retain the existing Settings location. A resolved tier
+  downgrade or disabled entitlement hides creation, bearer URLs and copy
+  controls but preserves the authenticated owner's delete/revoke path for
+  dormant tokens.
+- Invalidates iCal token reads across workspace/user changes and unmounts,
+  clears old bearer data immediately and ignores stale responses/errors. Copy
+  and revoke icon actions now have localized accessible names. Eight component
+  tests cover role/entitlement behavior, exact insert/query scope, same-instance
+  downgrade cleanup, reversed workspace/user responses, state clearing and
+  unmount cleanup.
+- Records the remaining iCal credential-lifecycle debt: role/tier disablement is
+  enforced dynamically by Edge with 403, but does not rotate/delete the stored
+  token; automatic revocation and owner-managed team-token inventory require a
+  forward database design. A feature-entitlement lookup outage still hides the
+  entire fail-closed tab shell, including the revoke UI, until lookup recovery;
+  a dedicated core-shell/error recovery surface remains P2. No database, Edge
+  API or dependency changed in this frontend package.
+- Reviews the package's bundle cost: 1,448 raw JavaScript bytes and 121 gzip
+  bytes (+0.033% raw). The exact reviewed ceilings are 4,447,803 raw and
+  1,269,751 gzip bytes; largest raw increases by 468 bytes to 1,738,375, while
+  largest-gzip and CSS ceilings remain unchanged.
 
 ### Android/iOS common-data foundation
 

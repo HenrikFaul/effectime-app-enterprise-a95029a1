@@ -236,7 +236,9 @@ A naptár modul a csapat szabadságainak vizuális megjelenítését, kapacitás
 ### iCal integráció
 - `leave-ical` edge function: iCal feed jóváhagyott szabadságokhoz
 - Outlook/Google Calendar kompatibilis
-- `ICalSubscription` beállítás a Settings-ben
+- `ICalSubscription` a Settings-ben; `settings=none` profilnál ugyanaz a kártya
+  a mindig elérhető Saját portálon jelenik meg, a workspace-beállítások
+  jogosultságának kiszélesítése nélkül
 
 ### Szűrők
 - `CalendarFilterSettings`: csapat, tag, szabadságtípus szűrők

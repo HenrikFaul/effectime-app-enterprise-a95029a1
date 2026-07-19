@@ -3,8 +3,8 @@
 Audit dátuma: 2026-07-17–19
 Repository: `C:\Work\Github\effectime-app-enterprise-a95029a1`
 Remote: `HenrikFaul/effectime-app-enterprise-a95029a1`
-Auditált main HEAD: `48ea20755821082ed57fff7bf39a39c9db814bf0`
-Munkabranch: `codex/hr-task-loading-race`
+Auditált main HEAD: `a5a79136dcd003bf73b208f20febc470960ee173`
+Munkabranch: `codex/ical-entitlement-parity`
 
 ## 1. Átvételi összkép
 
@@ -91,7 +91,7 @@ kötelező release-kapu.
   audit, typecheck, Vitest, production build és ESLint-baseline.
 - A felhasználó által adott hat, az élő teljes alkalmazást mutató képernyőkép; az
   in-app interaktív browser smoke webview-csatlakozási hiba miatt nem futott le.
-- Current-tree secret scan 1 432 követett és nem ignorált untracked szövegfájlon,
+- Current-tree secret scan 1 435 követett és nem ignorált untracked szövegfájlon,
   plusz tracked mobil signing-key fájlnév tiltással.
   Követett service-role kulcsot vagy privát
   provider secretet nem találtunk; teljes historikus secret scan még nyitott CI-tétel.
@@ -132,7 +132,8 @@ adatbázis-objektumot nem töröltünk.
 | R-026 | Import és data migration              | UI/Edge registry                  | BIZONYÍTOTT                         | import Edge Functionök                          | igen                  | security contract   | részben      | auth javítva, tranzakciósság nyitott    | resumable design         |
 | R-027 | Közvetlen tenant user creation        | CHANGELOG v3.33, paid feature     | BIZONYÍTOTT                         | `create-workspace-user`                         | fail-closed           | 6 kontraktteszt     | most igen    | biztonságosan letiltva, funkcióhiány P1 | provisioning döntés      |
 | R-028 | Reprodukálható DB/CI/release          | repo konvenció, migration history | BIZONYÍTOTT                         | migrations, lock, provenance CI                 | frontend igen; DB nem | ratchet+replay      | igen         | no-new-debt kapu kész; DB release blokkolt | history/schema reconcile |
-| R-029 | HR task-kérés sorrend és lifecycle    | runtime call path + reprodukált komponens-race | BIZONYÍTOTT              | `HRWorkflowInbox.tsx`                           | igen                  | 4 concurrency teszt | igen         | candidate javítás kész                     | hosted Quality Gate      |
+| R-029 | HR task-kérés sorrend és lifecycle    | runtime call path + reprodukált komponens-race | BIZONYÍTOTT              | `HRWorkflowInbox.tsx`                           | igen                  | 4 concurrency teszt | igen         | PR #169-ben mainre merge-elve             | production publish       |
+| R-030 | iCal/admin override frontend paritás  | tier/permission docs + UI/DB/Edge call path    | BIZONYÍTOTT              | `WorkspaceDashboard`, `ICalSubscription`        | candidate-ben igen    | 8 komponens + 28 contract | igen      | fail-closed használat, resolved downgrade revokáció megmarad | hosted Quality + publish |
 
 ## 4. Megtalált és kijavított hiányok
 
@@ -219,6 +220,18 @@ státuszoszlopai jelzik:
 - A macOS CI lock nélküli első PR-futásnál review-artifactként bootstrapolta a
   `Package.resolved` fájlt, majd fail-closed leállt; fordítás csak commitolt lockkal,
   release-ellenőrzés után és `-onlyUsePackageVersionsFromResolvedFile` módban indul.
+- A HR task request lifecycle javítás PR #169-ben mainre került; a main merge
+  SHA mind a hét hosted Quality jobja zöld.
+- Az iCal/admin-override candidate az entitlement lookup loading/error állapotát
+  fail-closed kezeli, a szűkített approval/override admin profil Requests fülét
+  megtartja, és role szerint választja szét a személyes/team feed létrehozást.
+  A `settings=none` alap member/resourceAssistant profil a mindig elérhető saját
+  portálon kapja meg ugyanazt az iCal kártyát; settings-jogosultsággal a korábbi
+  Beállítások hely marad meg, így a workspace-konfiguráció nem szélesedik ki.
+  Downgrade esetén a bearer URL/copy rejtett, a saját dormant token revoke-ja
+  elérhető marad. Workspace/user váltás azonnal törli a token state-et; stale
+  válasz/error és unmount utáni toast tiltott; az ikonműveletek lokalizált
+  accessible nevet kaptak.
 
 ## 5. Hiányok és kockázatok
 
@@ -249,7 +262,7 @@ státuszoszlopai jelzik:
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ----- | ------------------------------------------------------------------- |
 | ESLint-adósság                      | 1 218 error + 108 warning 179 fájlban; az AuditLog és HR inbox 7 `any` hibája, valamint 2 hooks warningja kikerült; a csökkentett fingerprint-baseline védi a javítást | XL    | modulonkénti csökkentés, baseline-frissítés, végül 0                |
 | E2E/coverage                        | nincs teljes auth/workspace/RBAC/leave/payroll/integration böngészős release gate                                                    | L     | Playwright staging suite, fixture, coverage baseline                |
-| Bundle-méret                        | Tiszta task-lifecycle candidate build: JS 4 446 355 raw / 1 269 306 gzip byte; legnagyobb chunk 1 737 907 raw / 551 439 gzip; CSS 180 798 raw / 29 589 gzip. A megelőző merge 4 446 050 raw JS plafonjához képest +305 byte az exact reviewed emelés; gzip-, largest-chunk- és CSS-plafon nem nőtt. | M | további route split és regressziós mérés |
+| Bundle-méret                        | iCal/override candidate build: JS 4 447 803 raw / 1 269 751 gzip byte; legnagyobb chunk 1 738 375 raw / 551 571 gzip; CSS 180 798 raw / 29 589 gzip. A task-lifecycle merge plafonjához képest +1 448 raw / +121 gzip byte (+0,033%) és +468 largest-raw az exact reviewed emelés; largest-gzip és CSS plafon nem nőtt. | M | további route split és regressziós mérés |
 | Payroll provider config             | Nincs explicit default/unique aktív konfiguráció; több aktív sor esetén a `.maybeSingle()` hibázik                                    | M     | default mező vagy partial unique index; migration+concurrency teszt |
 | Public function privilege inventory | linked baselineban 114 public function, 94 SECURITY DEFINER, mind anon executable volt; az új revoke-ok nem fednek teljes inventoryt | L     | funkciónként owner/search_path/ACL audit, negatív auth teszt        |
 | M365 inbound ígéret                 | kimenő sync bizonyított, teljes tartós inbound OOF integráció nem                                                                    | M     | scope döntés, implementáció vagy marketingkorrekció                 |
@@ -258,8 +271,9 @@ státuszoszlopai jelzik:
 | Dokumentum-AI adatkezelés           | technikai PII/authz javult, provider régió/DPA/retention termékjogi döntés                                                           | M     | DPA, régió, retention, user disclosure                              |
 | Demo seed                           | nem minden paid modulhoz teljes/konzisztens fixture; tier-választás részben környezeti                                               | M     | verziózott seed manifest, deterministic fixture, teardown           |
 | Chain config RBAC drift             | docs RA konfigurációt sejtet, a chain RLS owner-only; runtime chain amúgy is nyitott P1                                              | S/M   | approval-chain tervezésben egységes permission contract             |
-| iCal/admin override UX              | DB fail-closed; bizonyos tierkombinációban vezérlő megjelenhet és csak mentéskor tilt                                                | S     | exact UI FeatureGate + browser teszt                                |
-| HR task-betöltési request race      | Gyors bezárás/újranyitás vagy workspace-váltás után egy régi task-válasz felülírhatta az új adat/error/loading állapotot; determinisztikusan reprodukálva | S | instance-dedupe, last-request-wins, lifecycle invalidáció + komponens concurrency teszt; candidate-ben kész |
+| iCal credential lifecycle           | Demotion/inaktiválás/tier downgrade esetén az Edge 403-at ad, de a bearer token nem rotálódik vagy törlődik; későbbi reenable újraaktiválja. Owner más RA team tokenjét nem tudja inventoryzni/revokálni. | M | forward revoke/expiry modell, role/tier transition teszt, owner admin inventory |
+| Feature-entitlement outage UX       | A feature RPC hibája minden top-level tab entitlementet fail-closed hamisra állít; paid akció nem szivárog ki, de a core shell és a dormant iCal token revoke UI is eltűnik a lookup helyreállásáig. | M | külön core/error recovery surface, revoke-only runtime teszt, retry/hibaállapot |
+| Admin-override role szerződés       | backend bármely explicit `admin_override=edit` active role-t elfogad, a UI továbbra is admin szerepre szűkít; default member permission none | S | termékdöntés: hard admin role vagy teljesen konfigurálható permission |
 | OG/native/observability             | hiányzó OG asset; natív M365 Connect már fail-closed tiltott, de az OAuth-paritás, export/GPS/safe-area teljes device UX, secure telemetry és release marker/SLO nincs igazolva | M | asset/device smoke; platform adapterek; structured telemetry/release marker |
 
 ### P3
@@ -289,10 +303,11 @@ státuszoszlopai jelzik:
 | I-14   | Generated-schema provenance ratchet        | `scripts/ci/schema-provenance*`, exact baseline, package script és workflow                              | parser unit+current gate       | ratchet only; a 30/1/46/2 hiányzó provenance továbbra is release blocker                                      | kész lokálisan             |
 | I-15   | Immutable payroll snapshot és DB contract  | `20260717134000_payroll_immutable_snapshots.sql`, snapshot helper, generated types, pinned PG18 fixture   | Deno+Vitest+PG18+concurrency   | trusted pgcrypto, TRUNCATE denial, exact audited `reopen_payroll_period_break_glass`, lock/reopen/demotion races; legacy locked/exported snapshot nélkül 409; rollout: payroll write pause, DB → Edge azonnal → web; régi Edge rollbackje az új DB-n nem biztonságos | kész lokálisan; staging/legacy inventory nyitott |
 | I-16   | Android/iOS közös adatforrás foundation    | Capacitor config/package/lock, `android/`, `ios/`, mobile platform+bridge, auth/link/PWA/cache hardening, CI contract, mobil docs | typecheck+source/artifact/release contract+build+2x sync; hosted Android compile/lint/assemble és locked Xcode 26.5 simulator build zöld | web/API/DB kompatibilis; platform source git reverttel visszaállítható; app ID store-foglalás előtt módosítható | development foundation és unsigned native CI kész; signed store release NO-GO |
-| I-17   | Natív session storage és CSP hardening     | secure-store adapter/envelope/migráció/recovery, verified reset tombstone, logout fallback, raw-token link tiltás, explicit project/storage key, `dist-mobile`, CSP transform, mobile E2E és CI allowlist | 93/93 mobile target, 183/183 source, 345/345 current artifact és 363/363 prior release contract, 2/2 mobile E2E, 553/553 current full suite, web 7/7, hosted Android+iOS | web login/callback/storage és SEO/PWA kompatibilis; a közös logout hibakezelése szándékosan fail-closed módon erősödött; nincs DB/API shape; package/config/source normál reverttel visszaállítható, local purge explicit | kód, emulált regresszió, exact Swift provenance és unsigned native CI kész; fizikai evidence nyitott |
+| I-17   | Natív session storage és CSP hardening     | secure-store adapter/envelope/migráció/recovery, verified reset tombstone, logout fallback, raw-token link tiltás, explicit project/storage key, `dist-mobile`, CSP transform, mobile E2E és CI allowlist | 93/93 mobile target, 183/183 source, 345/345 current artifact és 363/363 prior release contract, 2/2 mobile E2E, 563/563 current full suite, web 7/7, hosted Android+iOS | web login/callback/storage és SEO/PWA kompatibilis; a közös logout hibakezelése szándékosan fail-closed módon erősödött; nincs DB/API shape; package/config/source normál reverttel visszaállítható, local purge explicit | kód, emulált regresszió, exact Swift provenance és unsigned native CI kész; fizikai evidence nyitott |
 | I-18   | Release Identity + Same-SHA attestation | determinisztikus web/mobile manifest, Vite client SHA, Edge health/platform-version body+header, Superadmin match UI, deploy verifier, CI/runbook | Node/Vitest/Deno/E2E/type/build | additív API mező/header; env hiányakor fail-visible unknown; normál git revert; production kész csak live verifierrel | PR #167-ben `main`-re merge-elve; live manifest/publish nyitott |
 | I-19   | HR workflow tenant-boundary forward repair | `20260719000000...` migration locked trigger/RLS/RPC/ACL/private-helper/parent-guard korrekcióval; explicit admin/member inbox és fail-visible UX; történeti fájlok és legacy sorok változatlanok | két-tenant authenticated RLS/RPC + PG18 reapply/delete/catalog + négy determinisztikus concurrency race + UI data contract | meglévő hibás adat nem törölhető automatikusan; inventory és forward repair/rollback owner kell | PR #168-ban `main`-re merge-elve; restored staging/production nyitott P0 |
-| I-20   | HR task request lifecycle hardening | per-instance in-flight dedupe, monoton request-generation, workspace/unmount invalidáció; nincs API/DB shape változás | 4 determinisztikus komponens-race + teljes unit/type/lint/build/bundle/smoke | régi válasz és hiba nem írhatja felül az aktuális tenant UI-state-et; egy frontend commit reverttel visszaállítható | candidate kész; hosted Quality Gate nyitott |
+| I-20   | HR task request lifecycle hardening | per-instance in-flight dedupe, monoton request-generation, workspace/unmount invalidáció; nincs API/DB shape változás | 4 determinisztikus komponens-race + teljes unit/type/lint/build/bundle/smoke | régi válasz és hiba nem írhatja felül az aktuális tenant UI-state-et; egy frontend commit reverttel visszaállítható | PR #169-ben mainre merge-elve; run 29667441811 7/7 PASS |
+| I-21   | iCal/admin override UI és token-state hardening | fail-closed permission/entitlement, approval-only Requests elérés, role-gated create, revoke-only downgrade UX, bearer request-generation, lokalizált accessible kontrollok | 8 komponens + 28 DB/Edge/static contract; teljes unit/type/lint/build/bundle/web+mobile smoke | nincs DB/API/dependency változás; saját dormant token törölhető; frontend commit reverttel visszaállítható; automatikus token-revocation külön P2 | candidate lokálisan kész; hosted Quality/publish nyitott |
 
 ## 7. Ellenőrzések és eredmények
 
@@ -306,16 +321,16 @@ státuszoszlopai jelzik:
 | `mobile:check:source` / `mobile:check`  | PASS                    | 183/183 source és 345/345 build/sync assertion: exact dependency integrity/kétplatformos plugin allowlist, release identity, teljes artifact-fájdfa és négy üres Capacitor shim SHA-256, CSP, identity/deep link/minimumok, auth/data-source/CI, iOS lock-bootstrap és natív build-artifact lint-ignore contract |
 | `npm run mobile:check:release`          | PASS                    | Clean, commitolt candidate forráson 363/363: a hosted-Xcode lock kizárólag Capacitor 8.3.1 és KeychainSwift 21.0.0 exact upstream URL/tagrevízióit engedi. |
 | `npm run test:e2e:mobile:built`         | PASS                    | 2/2 landing/auth Android bridge-emuláció a friss `dist-mobile` artifacton: secure store meghívás, nulla recovery/CSP/console/page/lokális-asset hiba; külső font/kép availability nem része a bizonyítéknak |
-| `npm run mobile:sync` / `npx cap sync`  | PASS                    | 4 077 modul mobile build; ugyanaz a `dist-mobile` és publikus config Android/iOS projektbe másolva; SecureStorage 8.0.0, App és Browser plugin mindkét platformon felismerve, Keyboard nincs regisztrálva |
+| `npm run mobile:sync` / `npx cap sync`  | PASS                    | 4 080 modul mobile build; ugyanaz a `dist-mobile` és publikus config Android/iOS projektbe másolva; SecureStorage 8.0.0, App és Browser plugin mindkét platformon felismerve, Keyboard nincs regisztrálva; tracked native drift 0 |
 | Android unit/lint/assemble              | PASS KORLÁTTAL          | A tényleges Android Studio SDK-val `testDebugUnitTest lintDebug assembleDebug --no-daemon --stacktrace`: 3m42s, 276/276 task, `BUILD SUCCESSFUL`, nincs új lint finding, 6 049 206 byte debug APK (`EFA61256…`). Az app és plugin unit taskok `NO-SOURCE`; ez compile/lint/assemble bizonyíték, nem natív unit lefedettség. |
 | iOS Xcode build                         | PASS                    | GitHub `macos-26-arm64`, image `20260715.0248.1`, Xcode 26.5: commitolt lock felismerve; 363/363 gate, `-onlyUsePackageVersionsFromResolvedFile`, drift check és `CODE_SIGNING_ALLOWED=NO` generic simulator build PASS (`BUILD SUCCEEDED`). |
-| `npm test`                              | PASS                    | A teljes coverage-futtatás 50/50 fájl, 553/553 tesztet futtatott zölden. |
-| `npm run test:coverage`                 | PASS                    | 50/50 fájl, 553/553 teszt; statements/lines 46,81% (39 699/84 798), branches 63,51% (759/1 195), functions 30,80% (142/461) |
+| `npm test`                              | PASS                    | A teljes coverage-futtatás 52/52 fájl, 563/563 tesztet futtatott zölden. |
+| `npm run test:coverage`                 | PASS                    | 52/52 fájl, 563/563 teszt; statements/lines 46,92% (39 817/84 861), branches 64,06% (788/1 230), functions 31,62% (148/468) |
 | `npm run test:e2e:built`                | PASS                    | 7/7 Chromium public smoke ugyanazon végső `dist` artifacton: asset MIME/runtime, manifest/favicon/PWA, auth, anonymous redirect, 404, accessible names és 320/390/768 px; végső szekvenciális futás 13,8 másodperc. |
-| `npm run build`                         | PASS                    | Vite 6.4.3, 4 080 modul; nagy chunk warning; 73 fájl / 6 852 860 byte clean, attestálható candidate artifact |
-| `npm run bundle:check`                  | PASS                    | A HR fail-visible/a11y candidate explicit review-val +3 385 raw / +1 118 gzip ceiling byte költséget ad (+0,09%); az új plafon 4 446 050 raw, 1 269 630 gzip és 1 737 907 largest raw. A largest-gzip és CSS plafon változatlan. |
+| `npm run build`                         | PASS                    | Vite 6.4.3, 4 080 modul; nagy chunk warning; ugyanaz a forrás web és mobile artifactba épült |
+| `npm run bundle:check`                  | PASS                    | JS 4 447 803 raw / 1 269 751 gzip; largest 1 738 375 raw / 551 571 gzip; CSS 180 798 / 29 589. Az iCal/override hardening +1 448 raw / +121 gzip (+0,033%), +468 largest-raw exact reviewed emelés; largest-gzip és CSS plafon változatlan. |
 | `npm audit --audit-level=high`          | PASS                    | 0 ismert vulnerability |
-| `npm run security:secrets`              | PASS                    | 1 432 tracked és nem ignorált untracked text file magas bizonyosságú current-tree scan + tracked mobil signing-key fájlnév tiltás; history scan még nyitott |
+| `npm run security:secrets`              | PASS                    | 1 435 tracked és nem ignorált untracked text file magas bizonyosságú current-tree scan + tracked mobil signing-key fájlnév tiltás; history scan még nyitott |
 | `npm run lint:ratchet`                  | PASS                    | fingerprint-baseline: új vagy áthelyezett finding hibát okoz, csökkentéskor baseline-frissítés kötelező; a teljes lint 1 218 error / 108 warning 179 fájlban         |
 | Strukturált logger Deno teszt/check     | PASS                    | 2/2 redaction teszt; `auth-email-hook` és `send-transactional-email` check PASS                                                                                    |
 | `npm run edge:check` / ratchet / test    | PASS                    | 30/30 entrypoint és config, 0 Deno diagnostic; 64/64 remote import exact, 0 unpinned; Deno 2.9.3, `node_modules=none`; runner/ratchet unit 14/14 és automatikusan felderített Edge teszt 25/25 PASS, ebből 4 endpoint release body/header/CORS contract; immutable source gate 73 fájl |
@@ -324,7 +339,7 @@ státuszoszlopai jelzik:
 | HR workflow tenant DB/UI contract       | PASS                    | runner unit 8/8; pinned PostgreSQL 18.4 static contract, repeat apply és legacy-row preservation PASS; cross-workspace template/membership/instance/task/assignee, inactive membership, member/admin RLS, list PII, parent cascade és exact RPC/FK catalog fail-closed. Négy determinisztikus reassignment/suspension/direct-write lock-race PASS. UI data+a11y+request-ordering 10/10; nincs `eq.undefined`, backend/task hiba fail-visible, pending instance-read deduplikált, workspace-váltás és unmount utáni válasz invalidált. Nincs hálózat/host port; exact ownership cleanup és bounded child termination. Célzott fixture, nem teljes migration replay vagy restored-staging bizonyíték. |
 | Schema provenance gate                  | PASS                    | parser unit 7/7; 125 migráció; generated/backed/unproven: table 165/135/30, view 4/3/1, function 99/53/46, enum 11/9/2                                             |
 | SBOM és release manifest                | PASS (lokális + hosted evidence) | Shared web/mobile package-lock CycloneDX 707 + Edge/Deno 464 komponens. A release-identity merge artifactja hash-eli a web/mobile outputot, 124 akkori migrációt, 30 Edge entrypointot, exact Capacitor integritásokat és a `3bf37e13…` iOS lockot; a candidate új, 125. migrationjéhez friss evidence csak a candidate commiton fogadható el. |
-| GitHub-hosted quality workflow          | PASS                    | Main run `29666648214`: mind a hét hosted job PASS a `48ea20755821082ed57fff7bf39a39c9db814bf0` merge SHA-n, beleértve a HR PostgreSQL 18.4, Android és iOS kaput. |
+| GitHub-hosted quality workflow          | PASS                    | Main run `29667441811`: mind a hét hosted job PASS az `a5a79136dcd003bf73b208f20febc470960ee173` merge SHA-n, beleértve a HR PostgreSQL 18.4, Android és iOS kaput. Az I-21 candidate hosted futása commit után kötelező. |
 | Új v3.51.3 migration PG18 compile/apply | PASS                    | Access submit/döntés/ledger/rollback szemantika PASS; candidate dual-feature compile PASS, candidate runtime smoke megszakadt; production/linked apply nem történt |
 | Clean lokális migration replay          | FAIL                    | 104/125 után `20260517230000...`: `plugin_webhook_events` helyi CREATE TABLE hiányzik                                                                              |
 | Linked `db lint --level warning`        | FAIL                    | 7 error, 6 warning; read-only ellenőrzés                                                                                                                           |
