@@ -1,11 +1,14 @@
 ## 2026-07-17 — v3.51.3 Project audit and release-boundary hardening (unreleased)
 
-**Status:** PR #167–#172 were merged to `main`; the current merge SHA is
-`5b502e12ca4f9169a366347e1d9d9079f7b1517e`, and all seven hosted Quality Gate
-jobs passed in run `29673606633`. The clean schema-2 release evidence is
-available as artifact `8438122116` with web fingerprint
-`1c23ca292286620013c5840696d4d206d49206ebc3651fab0e0c143a641582d7`. The live
-web release manifest is still absent; no matching Edge production deploy and no
+**Status:** PR #167–#173 were merged to `main`; the current merge SHA is
+`b0d129c41c56920c432d97eae3c93d63cb6dbd9a`, and all seven hosted Quality Gate
+jobs passed in run `29675611155`. The clean schema-2 release evidence is
+available as artifact `8438782050` with web fingerprint
+`ff55afd37bca750ed33ef0246ea8a10509bc25cbd29a634c58717db149a4c219`. The I-25
+admin-override accessibility/focus/async-race candidate has completed its local
+gate and is local-GO; hosted validation and the PR are still in progress. The
+live web release manifest is still absent, and publishing is blocked by the
+required authenticated Lovable login; no matching Edge production deploy and no
 linked database migration apply has been performed.
 
 ### Release identity and deployment evidence
@@ -161,9 +164,12 @@ linked database migration apply has been performed.
   1,439-file secret scan and 183/183 mobile source contract. The reviewed bundle
   is 4,454,848 raw / 1,271,801 gzip JavaScript bytes; largest is
   1,740,007 / 551,960 and CSS is 180,862 / 29,599. The clean committed I-24
-  source passes all 365 release assertions; hosted I-24 validation remains
-  pending. Mobile sync, the 345/345 artifact check and 2/2 bridge-emulated E2E
-  are PASS with zero tracked native drift.
+  source passes all 365 release assertions. PR #173 is merged to `main` at
+  `b0d129c41c56920c432d97eae3c93d63cb6dbd9a`; hosted run `29675611155` passed
+  all 7/7 jobs, and schema-2 artifact `8438782050` has web fingerprint
+  `ff55afd37bca750ed33ef0246ea8a10509bc25cbd29a634c58717db149a4c219`. Mobile
+  sync, the 345/345 artifact check and 2/2 bridge-emulated E2E are PASS with zero
+  tracked native drift.
 - Records the non-product test transients instead of hiding them. The first full
   coverage run had one timing-only failure; the isolated assertion and full retry
   both passed. The first two full browser-smoke attempts were 6/7 because of a
@@ -172,6 +178,53 @@ linked database migration apply has been performed.
   environment failures. After tightening the recovered-image filter and requiring
   a decoded logo assertion, the complete web smoke passed 7/7 and the focused
   `/auth` plus legacy-route rerun passed 2/2.
+- Adds the I-25 admin-override accessibility candidate with unique programmatic
+  labels and required semantics for member, leave-type, date, half-day, comment
+  and justification controls; localized live validation/submission status;
+  fail-visible generic error and empty/retry states; and deterministic focus
+  movement after directory retry.
+- Makes the override opener expose its dialog relationship, restores focus to
+  that connected opener on close, localizes the close control and natively
+  disables it during submission. Escape, outside interaction and all mutable form
+  controls are locked while the RPC is in flight. A synchronous submission guard,
+  immutable payload snapshot and scope-generation check prevent re-entrant calls
+  and suppress stale success/error UI effects after workspace change or unmount.
+- Extends the shared Radix `DialogContent` with backward-compatible optional
+  `closeLabel` and `closeDisabled` props; existing callers keep the English
+  `Close` label and enabled behavior by default. No custom prop is forwarded to
+  the DOM, and no API, database, Edge Function or dependency contract changes.
+- Passes 28/28 admin-override component tests and 4/4 real Radix Dialog tests;
+  with 11 i18n and 20 runtime contracts, the I-25 targeted set is 63/63 PASS.
+  Full coverage is 56/56 files and 616/616 tests, with 47.82% statements/lines,
+  66.57% branches and 32.48% functions.
+- Completes the I-25 local frontend gate: typecheck PASS; the ESLint ratchet is
+  unchanged at 1,209 errors / 104 warnings / 178 files; the 4,081-module
+  production build and 7/7 built-web E2E pass; npm audit reports zero known
+  vulnerabilities; and the current-tree secret scan passes across 1,440 files.
+- Passes the narrowly reviewed I-25 bundle ratchet: two clean, commit-SHA-attributed
+  rebuilds measured 4,459,891 raw and 1,273,439–1,273,445 gzip JavaScript bytes;
+  the largest chunk measured 1,741,005 raw and 552,245–552,257 gzip, while CSS
+  stayed 180,862 / 29,599. The reviewed total ceilings are
+  4,460,019 raw / 1,273,724 gzip, preserving the prior 128/279-byte
+  cross-platform and commit-SHA allowances; largest raw stays exact and the
+  largest-gzip/CSS ceilings do not move. This bounded ratchet update is recorded
+  in `scripts/ci/bundle-baseline.json`, not as a broad allowance.
+- Passes the I-25 mobile gate with 183/183 source assertions, 345/345 full
+  synced-artifact assertions, 365/365 clean release assertions, Android/iOS
+  Capacitor sync, zero tracked native drift and 2/2 bridge-emulated E2E tests.
+- Revalidates the platform safety gates: schema-provenance parser 7/7 with all
+  125 migrations and the exact known-debt fingerprint; release-identity 55/55
+  and Edge SBOM 2/2; structured Edge log safety, 14/14 ratchet tests, 25/25 Deno
+  tests, 30/30 entrypoint checks and zero diagnostic drift; plus the pinned PG18
+  payroll and HR-workflow dynamic contracts. I-25 is therefore local-GO, while
+  hosted validation and its PR remain in progress. Production web attestation
+  remains FAIL, and database/Edge deployment remains NO-GO.
+- Keeps the complete APR-004 server boundary explicitly open: a committed RPC
+  followed by a lost response can still be retried across clients without an
+  idempotency key/unique ledger. The globally broad authenticated `profiles`
+  SELECT policy also remains a separate P1 tenant/PII review; this client change
+  narrows its query to active workspace member IDs and `user_id, display_name`
+  only, but does not repair the policy.
 
 ### Android/iOS common-data foundation
 
