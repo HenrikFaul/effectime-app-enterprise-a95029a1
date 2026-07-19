@@ -1,5 +1,6 @@
 import type {
   ButtonHTMLAttributes,
+  ComponentProps,
   HTMLAttributes,
   InputHTMLAttributes,
   LabelHTMLAttributes,
@@ -8,23 +9,61 @@ import type {
 } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { AdminLeaveOverride } from '@/components/enterprise/AdminLeaveOverride';
+import { AdminLeaveOverride as ProductionAdminLeaveOverride } from '@/components/enterprise/AdminLeaveOverride';
 
-const { calendarDates, from, i18nState, rpc, toastError, toastSuccess, validateLeaveRequest } = vi.hoisted(() => ({
+const {
+  calendarDates,
+  from,
+  i18nState,
+  outboxComplete,
+  outboxEntries,
+  outboxGetOrCreate,
+  rpc,
+  toastError,
+  toastSuccess,
+  validateLeaveRequest,
+} = vi.hoisted(() => ({
   calendarDates: {
     start: new Date(2026, 6, 21),
     end: new Date(2026, 6, 23),
   },
   from: vi.fn(),
   i18nState: { t: (key: string) => key },
+  outboxComplete: vi.fn(),
+  outboxEntries: new Map<string, {
+    version: 1;
+    scope: { workspaceId: string; actorId: string };
+    payloadDigest: string;
+    key: string;
+    createdAt: number;
+  }>(),
+  outboxGetOrCreate: vi.fn(),
   rpc: vi.fn(),
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
   validateLeaveRequest: vi.fn(),
 }));
 
+const successfulOverrideResponse = {
+  ok: true,
+  request_id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  status: 'approved',
+} as const;
+
+type PendingRpcResponse = {
+  data: typeof successfulOverrideResponse;
+  error: null;
+};
+
 vi.mock('@/integrations/supabase/client', () => ({
   supabase: { from, rpc },
+}));
+
+vi.mock('@/lib/adminLeaveOverrideOutbox', () => ({
+  createAdminLeaveOverrideOutbox: () => ({
+    getOrCreate: outboxGetOrCreate,
+    complete: outboxComplete,
+  }),
 }));
 
 vi.mock('@/lib/conflictEngine', () => ({ validateLeaveRequest }));
@@ -159,6 +198,19 @@ vi.mock('@/components/ui/checkbox', () => ({
   ),
 }));
 
+const defaultActorId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+type TestAdminLeaveOverrideProps = Omit<
+  ComponentProps<typeof ProductionAdminLeaveOverride>,
+  'actorId'
+> & { actorId?: string };
+
+function AdminLeaveOverride({
+  actorId = defaultActorId,
+  ...props
+}: TestAdminLeaveOverrideProps) {
+  return <ProductionAdminLeaveOverride actorId={actorId} {...props} />;
+}
+
 function installMemberQueries() {
   from.mockImplementation((table: string) => {
     if (table === 'enterprise_memberships') {
@@ -248,12 +300,55 @@ async function prepareValidatedHalfDay() {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  outboxEntries.clear();
+  outboxGetOrCreate.mockImplementation(async (
+    scope: { workspaceId: string; actorId: string },
+    payload: string,
+  ) => {
+    const storageKey = JSON.stringify([scope.workspaceId, scope.actorId, payload]);
+    const existing = outboxEntries.get(storageKey);
+    if (existing) return existing;
+    const unresolvedInScope = Array.from(outboxEntries.values()).some(entry => (
+      entry.scope.workspaceId === scope.workspaceId
+      && entry.scope.actorId === scope.actorId
+    ));
+    if (unresolvedInScope) {
+      const error = new Error('The scope has an unresolved admin leave override') as Error & {
+        code: 'unresolved-operation';
+      };
+      error.name = 'AdminLeaveOverrideOutboxError';
+      error.code = 'unresolved-operation';
+      throw error;
+    }
+    const entry = {
+      version: 1 as const,
+      scope,
+      payloadDigest: 'a'.repeat(64),
+      key: crypto.randomUUID(),
+      createdAt: Date.now(),
+    };
+    outboxEntries.set(storageKey, entry);
+    return entry;
+  });
+  outboxComplete.mockImplementation(async (entry: { key: string; scope: {
+    workspaceId: string;
+    actorId: string;
+  } }) => {
+    const match = Array.from(outboxEntries.entries()).find(([, persisted]) => (
+      persisted.key === entry.key
+      && persisted.scope.workspaceId === entry.scope.workspaceId
+      && persisted.scope.actorId === entry.scope.actorId
+    ));
+    if (!match) return false;
+    outboxEntries.delete(match[0]);
+    return true;
+  });
   calendarDates.start = new Date(2026, 6, 21);
   calendarDates.end = new Date(2026, 6, 23);
   i18nState.t = (key: string) => key;
   installMemberQueries();
   validateLeaveRequest.mockResolvedValue([]);
-  rpc.mockResolvedValue({ data: { ok: true }, error: null });
+  rpc.mockResolvedValue({ data: successfulOverrideResponse, error: null });
 });
 
 describe('admin leave override half-day and validation contract', () => {
@@ -275,14 +370,19 @@ describe('admin leave override half-day and validation contract', () => {
     enterJustification();
     fireEvent.click(await screen.findByRole('button', { name: 'admin_leave_override.btn_create' }));
 
-    await waitFor(() => expect(rpc).toHaveBeenCalledWith('create_admin_leave_override', expect.objectContaining({
+    await waitFor(() => expect(rpc).toHaveBeenCalledWith('create_admin_leave_override_v2', expect.objectContaining({
       _workspace_id: 'workspace-a',
       _user_id: 'member-a',
       _start_date: '2026-07-21',
       _end_date: '2026-07-21',
       _is_half_day: true,
       _half_day_period: 'morning',
+      _idempotency_key: expect.stringMatching(/^[0-9a-f-]{36}$/i),
     })));
+    expect(outboxGetOrCreate).toHaveBeenCalledWith(
+      { workspaceId: 'workspace-a', actorId: defaultActorId },
+      expect.any(String),
+    );
     expect(onOpenChange).toHaveBeenCalledWith(false);
     expect(onCreated).toHaveBeenCalledOnce();
   }, 10_000);
@@ -437,33 +537,118 @@ describe('admin leave override half-day and validation contract', () => {
     expect(screen.getByRole('button', { name: 'admin_leave_override.btn_create' })).toBeInTheDocument();
   });
 
-  it('recovers from an RPC rejection and permits a safe retry', async () => {
+  it('keeps an uncertain transport outcome fail-closed when the payload changes', async () => {
     const { onCreated } = await prepareValidatedHalfDay();
-    rpc
-      .mockRejectedValueOnce(new Error('internal endpoint details'))
-      .mockResolvedValueOnce({ data: { ok: true }, error: null });
+    rpc.mockRejectedValueOnce(new Error('internal endpoint details'));
 
     fireEvent.click(screen.getByRole('button', { name: 'admin_leave_override.btn_create' }));
-    await waitFor(() => expect(toastError).toHaveBeenCalledWith('admin_leave_override.create_failed'));
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith(
+      'admin_leave_override.outcome_uncertain',
+    ));
     expect(onCreated).not.toHaveBeenCalled();
     expect(screen.queryByText('internal endpoint details')).not.toBeInTheDocument();
-    expect(screen.getByRole('alert')).toHaveTextContent('admin_leave_override.create_failed');
+    expect(screen.getByRole('alert')).toHaveTextContent('admin_leave_override.outcome_uncertain');
 
     fireEvent.change(screen.getByRole('textbox', {
       name: 'admin_leave_override.label_justification',
     }), { target: { value: 'Updated documented exception' } });
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('admin_leave_override.outcome_uncertain');
 
     const retryButton = screen.getByRole('button', { name: 'admin_leave_override.btn_create' });
-    expect(retryButton).toBeEnabled();
     fireEvent.click(retryButton);
+
+    await waitFor(() => expect(toastError).toHaveBeenCalledTimes(2));
+    expect(toastError).toHaveBeenLastCalledWith('admin_leave_override.outcome_uncertain');
+    expect(onCreated).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledOnce();
+    expect(outboxEntries.size).toBe(1);
+  }, 10_000);
+
+  it('retains a rejected key and blocks a changed payload until an exact retry succeeds', async () => {
+    const { onCreated } = await prepareValidatedHalfDay();
+    rpc
+      .mockResolvedValueOnce({
+        data: null,
+        error: { message: 'sensitive tenant policy details' },
+        status: 400,
+      })
+      .mockResolvedValueOnce({ data: successfulOverrideResponse, error: null });
+
+    fireEvent.click(screen.getByRole('button', { name: 'admin_leave_override.btn_create' }));
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith(
+      'admin_leave_override.create_failed',
+    ));
+    const rejectedKey = rpc.mock.calls[0][1]._idempotency_key;
+    expect(screen.queryByText('sensitive tenant policy details')).not.toBeInTheDocument();
+    expect(screen.getByRole('alert')).toHaveTextContent('admin_leave_override.create_failed');
+    expect(outboxEntries.size).toBe(1);
+
+    const justification = screen.getByRole('textbox', {
+      name: 'admin_leave_override.label_justification',
+    });
+    fireEvent.change(justification, { target: { value: 'Updated documented exception' } });
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'admin_leave_override.btn_create' }));
+
+    await waitFor(() => expect(toastError).toHaveBeenLastCalledWith(
+      'admin_leave_override.outcome_uncertain',
+    ));
+    expect(onCreated).not.toHaveBeenCalled();
+    expect(rpc).toHaveBeenCalledOnce();
+    expect(outboxEntries.size).toBe(1);
+
+    fireEvent.change(justification, { target: { value: 'Documented operational exception' } });
+    fireEvent.click(screen.getByRole('button', { name: 'admin_leave_override.btn_create' }));
+
     await waitFor(() => expect(onCreated).toHaveBeenCalledOnce());
     expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpc.mock.calls[1][1]._idempotency_key).toBe(rejectedKey);
+    expect(outboxEntries.size).toBe(0);
+  }, 10_000);
+
+  it('reuses the same idempotency key for an unchanged RPC retry', async () => {
+    const { onCreated } = await prepareValidatedHalfDay();
+    rpc
+      .mockRejectedValueOnce(new Error('response lost after commit'))
+      .mockResolvedValueOnce({ data: successfulOverrideResponse, error: null });
+
+    const createButton = screen.getByRole('button', { name: 'admin_leave_override.btn_create' });
+    fireEvent.click(createButton);
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith(
+      'admin_leave_override.outcome_uncertain',
+    ));
+    fireEvent.click(createButton);
+
+    await waitFor(() => expect(onCreated).toHaveBeenCalledOnce());
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpc.mock.calls[1][1]._idempotency_key).toBe(
+      rpc.mock.calls[0][1]._idempotency_key,
+    );
+  }, 10_000);
+
+  it('restores the same durable key after an uncertain response and component restart', async () => {
+    const first = await prepareValidatedHalfDay();
+    rpc.mockRejectedValueOnce(new Error('transport ended after an unknown commit state'));
+
+    fireEvent.click(screen.getByRole('button', { name: 'admin_leave_override.btn_create' }));
+    await waitFor(() => expect(toastError).toHaveBeenCalledWith(
+      'admin_leave_override.outcome_uncertain',
+    ));
+    const firstKey = rpc.mock.calls[0][1]._idempotency_key;
+    first.view.unmount();
+
+    const second = await prepareValidatedHalfDay();
+    fireEvent.click(screen.getByRole('button', { name: 'admin_leave_override.btn_create' }));
+    await waitFor(() => expect(second.onCreated).toHaveBeenCalledOnce());
+
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpc.mock.calls[1][1]._idempotency_key).toBe(firstKey);
+    expect(outboxEntries.size).toBe(0);
   }, 10_000);
 
   it('uses a synchronous guard against re-entrant duplicate RPC submissions', async () => {
     const { onCreated } = await prepareValidatedHalfDay();
-    const pendingRpc = deferred<{ data: { ok: boolean }; error: null }>();
+    const pendingRpc = deferred<PendingRpcResponse>();
     const createButton = screen.getByRole('button', { name: 'admin_leave_override.btn_create' });
     rpc.mockImplementationOnce(() => {
       createButton.click();
@@ -471,19 +656,19 @@ describe('admin leave override half-day and validation contract', () => {
     });
 
     fireEvent.click(createButton);
-    expect(rpc).toHaveBeenCalledOnce();
+    await waitFor(() => expect(rpc).toHaveBeenCalledOnce());
 
-    pendingRpc.resolve({ data: { ok: true }, error: null });
+    pendingRpc.resolve({ data: successfulOverrideResponse, error: null });
     await waitFor(() => expect(onCreated).toHaveBeenCalledOnce());
     expect(rpc).toHaveBeenCalledOnce();
   });
 
   it('ignores an obsolete successful RPC response after the workspace scope changes', async () => {
     const { onCreated, onOpenChange, view } = await prepareValidatedHalfDay();
-    const pendingRpc = deferred<{ data: { ok: boolean }; error: null }>();
+    const pendingRpc = deferred<PendingRpcResponse>();
     rpc.mockReturnValueOnce(pendingRpc.promise);
     fireEvent.click(screen.getByRole('button', { name: 'admin_leave_override.btn_create' }));
-    expect(rpc).toHaveBeenCalledOnce();
+    await waitFor(() => expect(rpc).toHaveBeenCalledOnce());
 
     view.rerender(
       <AdminLeaveOverride
@@ -494,7 +679,7 @@ describe('admin leave override half-day and validation contract', () => {
       />,
     );
     await act(async () => {
-      pendingRpc.resolve({ data: { ok: true }, error: null });
+      pendingRpc.resolve({ data: successfulOverrideResponse, error: null });
       await pendingRpc.promise;
     });
 
@@ -505,14 +690,14 @@ describe('admin leave override half-day and validation contract', () => {
 
   it('does not publish stale RPC side effects after unmount', async () => {
     const { onCreated, onOpenChange, view } = await prepareValidatedHalfDay();
-    const pendingRpc = deferred<{ data: { ok: boolean }; error: null }>();
+    const pendingRpc = deferred<PendingRpcResponse>();
     rpc.mockReturnValueOnce(pendingRpc.promise);
     fireEvent.click(screen.getByRole('button', { name: 'admin_leave_override.btn_create' }));
-    expect(rpc).toHaveBeenCalledOnce();
+    await waitFor(() => expect(rpc).toHaveBeenCalledOnce());
 
     view.unmount();
     await act(async () => {
-      pendingRpc.resolve({ data: { ok: true }, error: null });
+      pendingRpc.resolve({ data: successfulOverrideResponse, error: null });
       await pendingRpc.promise;
     });
 
@@ -582,6 +767,33 @@ describe('admin leave override half-day and validation contract', () => {
       screen.getByRole('button', { name: 'admin_leave_override.btn_validate' }),
     ).toBeDisabled());
     expect(screen.queryByRole('button', { name: 'admin_leave_override.btn_create' })).not.toBeInTheDocument();
+  });
+
+  it('reloads the member directory and clears validated state when the actor changes', async () => {
+    const callbacks = { onCreated: vi.fn(), onOpenChange: vi.fn() };
+    const view = render(
+      <AdminLeaveOverride open workspaceId="workspace-a" {...callbacks} />,
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Member A' }));
+    enableHalfDay();
+    pickStartDate();
+    fireEvent.click(screen.getByRole('button', { name: 'admin_leave_override.btn_validate' }));
+    expect(await screen.findByRole('button', { name: 'admin_leave_override.btn_create' })).toBeInTheDocument();
+
+    view.rerender(
+      <AdminLeaveOverride
+        open
+        workspaceId="workspace-a"
+        actorId="bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+        {...callbacks}
+      />,
+    );
+
+    await waitFor(() => expect(
+      screen.getByRole('button', { name: 'admin_leave_override.btn_validate' }),
+    ).toBeDisabled());
+    expect(screen.queryByRole('button', { name: 'admin_leave_override.btn_create' })).not.toBeInTheDocument();
+    expect(from.mock.calls.filter(([table]) => table === 'enterprise_memberships')).toHaveLength(2);
   });
 
   it('surfaces member-directory failures without rendering backend details', async () => {
@@ -858,7 +1070,7 @@ describe('admin leave override half-day and validation contract', () => {
 
   it('locks visible dismissal actions and mutable controls while creation is in flight', async () => {
     await prepareValidatedHalfDay();
-    const pendingRpc = deferred<{ data: { ok: boolean }; error: null }>();
+    const pendingRpc = deferred<PendingRpcResponse>();
     rpc.mockReturnValueOnce(pendingRpc.promise);
 
     fireEvent.click(screen.getByRole('button', {
@@ -892,7 +1104,7 @@ describe('admin leave override half-day and validation contract', () => {
       name: 'admin_leave_override.auto_approve_label',
     })).toBeDisabled();
 
-    pendingRpc.resolve({ data: { ok: true }, error: null });
+    pendingRpc.resolve({ data: successfulOverrideResponse, error: null });
     await waitFor(() => expect(busyRegion).toHaveAttribute('aria-busy', 'false'));
   });
 

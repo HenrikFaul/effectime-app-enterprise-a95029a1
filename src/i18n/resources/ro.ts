@@ -1168,6 +1168,7 @@ const ro = {
     fill_all_fields: 'Please fill in all required fields',
     justification_required: 'Admin justification is required',
     create_failed: 'Error creating request',
+    outcome_uncertain: 'Rezultatul trimiterii anterioare este incert. Reîncercați fără modificări sau contactați un administrator înainte de o altă cerere.',
     created_approved: 'Request created and approved',
     created: 'Request created',
   },

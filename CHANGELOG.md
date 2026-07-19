@@ -1,15 +1,77 @@
+## 2026-07-19 — v3.51.4 Admin override exactly-once foundation (unreleased)
+
+**Status:** I-26 is a broadly validated local candidate. The pinned PostgreSQL
+18.4 contract and 12/12 isolated Docker-runner tests pass; the focused outbox/
+API/UI/Dialog set passes 82/82, the complete Vitest coverage run passes 666/666,
+and typecheck, lint ratchet, build/bundle, web/mobile smoke, Edge, audit, secret
+and schema-provenance gates pass. The local Android compile stops before source
+compilation because this workstation has not accepted the Android SDK 35/36
+licenses; hosted Android/iOS validation, restored-production-like staging,
+linked database apply and web/mobile deployment have not happened. Production/
+backend remains **NO-GO** while the documented migration-history/schema drift is
+unresolved.
+
+- Adds the backward-compatible `create_admin_leave_override_v2` RPC while
+  preserving the shipped ten-argument v1 OID, definition, owner, ACL and runtime
+  behavior for existing web and Capacitor binaries.
+- Adds a private, RLS-enabled and runtime-inaccessible idempotency ledger keyed
+  by workspace, authenticated actor and UUID. It stores a canonical SHA-256
+  request fingerprint and the exact successful response, never raw justification
+  or comment text. Same-key/same-payload retries replay; key reuse with another
+  payload fails closed.
+- Serializes actor/target membership and non-owner permission checks and rechecks
+  tenant membership/permission/entitlement for every new operation. A completed
+  exact actor/workspace/key/payload replay returns its stored receipt before
+  mutable control state can misclassify the earlier commit. The migration reserves the
+  `leave_request.admin_override` audit action for the trusted atomic workflow.
+  Request, approval, quota, audit and ledger writes roll back together.
+- Adds a PostgreSQL 18.4 two-tenant contract for owner/assistant, pending/
+  approved/half-day behavior, legacy v1 compatibility, ACL/owner/catalog
+  invariants, malformed-ledger rejection, authorization/input/key conflicts,
+  audit/quota rollback and deterministic duplicate/demotion serialization.
+- Routes web, Android and iOS through one typed client adapter and the same
+  Supabase RPC/data source. UUID generation uses Web Crypto only, the RPC is
+  bounded to 30 seconds, and errors or malformed receipts fail closed without
+  logging payloads or keys.
+- Adds an actor/workspace-scoped retry outbox with a seven-day retry/
+  reconciliation horizon. Only version, UUID scope, SHA-256 payload digest,
+  UUID key and creation time are persisted; justification/comment remain
+  memory-only. Verified writes, strict decoding, Web Locks plus an in-process
+  mutex and exact-key completion protect the key across dialog close, component
+  restart and native WebView process restart. If origin-wide Web Locks are not
+  available, creation fails before storage access or RPC dispatch; the former
+  realm-only fallback is not used for this security-sensitive operation.
+- One unresolved operation is allowed per actor/workspace scope. An unchanged
+  payload reuses its key; a different payload is blocked until the earlier
+  operation is reconciled. Uncertain, expired or corrupt client evidence is
+  never pruned automatically. Exact-key cleanup is allowed only after a valid
+  server receipt. Every error response retains the evidence: known 4xx failures
+  remain exact-key retryable, while HTTP 408/499, 5xx, transport ambiguity,
+  status `0` and malformed responses surface the localized `outcome_uncertain`
+  state.
+- Exactly-once is proven only for calls that carry the same v2 key. Legacy v1
+  and another device that generated a different key are not claimed as globally
+  exactly-once; Web Locks-less runtimes fail closed instead of minting a key.
+  Restored-staging/device acceptance remains mandatory.
+- Raises all iOS deployment targets from 15.0 to 15.4, the first WebKit release
+  with Web Locks, and makes the mobile source/release contract reject older
+  targets. Lockdown Mode remains an explicit fail-closed limitation for this
+  privileged operation; no weaker coordination fallback is introduced.
+- Rollout is DB-first and client-second. Rollback is client-first to v1 while
+  the additive v2 function/ledger remains installed. Deploying the v2-only
+  client before PostgREST exposes the verified v2 schema is forbidden; the
+  documented migration-history/schema drift keeps production/backend **NO-GO**.
+
 ## 2026-07-17 — v3.51.3 Project audit and release-boundary hardening (unreleased)
 
-**Status:** PR #167–#173 were merged to `main`; the current merge SHA is
-`b0d129c41c56920c432d97eae3c93d63cb6dbd9a`, and all seven hosted Quality Gate
-jobs passed in run `29675611155`. The clean schema-2 release evidence is
-available as artifact `8438782050` with web fingerprint
-`ff55afd37bca750ed33ef0246ea8a10509bc25cbd29a634c58717db149a4c219`. The I-25
-admin-override accessibility/focus/async-race candidate has completed its local
-gate and is local-GO; hosted validation and the PR are still in progress. The
-live web release manifest is still absent, and publishing is blocked by the
-required authenticated Lovable login; no matching Edge production deploy and no
-linked database migration apply has been performed.
+**Status:** PR #167–#174 were merged to `main`; the current v3.51.3 merge SHA is
+`0a33e8cd0309d35e820fb1df9e8194dfbcce7242`, and all seven hosted Quality Gate
+jobs passed in run `29678100165`. The clean schema-2 release evidence is
+available as artifact `8439647584` with web fingerprint
+`9988195e7e900cf7657456e6db1a7406df147866c2adc6444fc5763687f62093`. The live
+web release manifest is still absent, and publishing is blocked by the required
+authenticated Lovable login; no matching Edge production deploy and no linked
+database migration apply has been performed.
 
 ### Release identity and deployment evidence
 
@@ -216,10 +278,10 @@ linked database migration apply has been performed.
   125 migrations and the exact known-debt fingerprint; release-identity 55/55
   and Edge SBOM 2/2; structured Edge log safety, 14/14 ratchet tests, 25/25 Deno
   tests, 30/30 entrypoint checks and zero diagnostic drift; plus the pinned PG18
-  payroll and HR-workflow dynamic contracts. I-25 is therefore local-GO, while
-  hosted validation and its PR remain in progress. Production web attestation
+  payroll and HR-workflow dynamic contracts. I-25 is merged in PR #174 and all
+  seven main-branch jobs in run `29678100165` pass. Production web attestation
   remains FAIL, and database/Edge deployment remains NO-GO.
-- Keeps the complete APR-004 server boundary explicitly open: a committed RPC
+- At the I-25 boundary, the complete APR-004 server boundary remained open: a committed RPC
   followed by a lost response can still be retried across clients without an
   idempotency key/unique ledger. The globally broad authenticated `profiles`
   SELECT policy also remains a separate P1 tenant/PII review; this client change

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { createArtifactFingerprint, createPublicReleaseManifest } from "./release-identity.mjs";
 import { verifyDeployment } from "./verify-deployment.mjs";
@@ -13,12 +14,15 @@ const WEB_ARTIFACT = createArtifactFingerprint([
   { path: "index.html", content: WEB_INDEX_CONTENT },
 ]);
 const OTHER_WEB_ARTIFACT_SHA256 = "c".repeat(64);
+const PACKAGE_VERSION = JSON.parse(
+  readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+).version;
 
 function webManifest({
   sha = SHA,
   dirty = false,
   application = "effectime-app-enterprise",
-  version = "3.51.3",
+  version = PACKAGE_VERSION,
   artifact = WEB_ARTIFACT,
 } = {}) {
   return createPublicReleaseManifest({ application, version, sha, dirty, artifact });

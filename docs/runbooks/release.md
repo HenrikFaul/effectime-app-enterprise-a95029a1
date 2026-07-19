@@ -17,7 +17,7 @@ frontend build alone is not release approval.
 - Mandatory Edge diagnostic-ratchet evidence for all 30 entrypoints, plus the raw
   compile result and an explicit record of any known baseline debt. A new module,
   diagnostic or unpinned import is not advisory and fails the release gate.
-- For v3.51.3, both Edge checks must report zero diagnostics, all 64 remote
+- For v3.51.3 and v3.51.4, both Edge checks must report zero diagnostics, all 64 remote
   imports exact and zero unpinned imports. `npm run edge:ratchet:test` must prove
   the discovery runner, and `npm run edge:test` must execute every recursively
   discovered `supabase/functions/**/*.test.ts` file; zero discovered tests fails.
@@ -32,7 +32,7 @@ frontend build alone is not release approval.
   extension membership, digest, fixed search path, trigger/rollback, runtime
   TRUNCATE denial, normalized reason boundaries, exact audit state, deterministic
   lock/reopen races and actor-demotion serialization. It is a targeted fixture
-  and never substitutes for the clean 125-migration replay.
+  and never substitutes for the clean 126-migration replay.
 - `node --test scripts/ci/hr-workflow-tenant-db-contract.test.mjs` and
   `npm run db:hr-workflow:test` for the HR workflow tenant-boundary migration.
   The pinned PostgreSQL 18.4 fixture must pass cross-workspace template,
@@ -41,6 +41,12 @@ frontend build alone is not release approval.
   cross-tenant parent-cascade denial; and four deterministic reassignment,
   suspension, direct-assignment and template-deactivation races. This targeted
   contract never substitutes for restored-staging inventory and a clean replay.
+- `node --test scripts/ci/admin-leave-override-db-contract.test.mjs` and
+  `npm run db:admin-override:test` for v3.51.4. The PostgreSQL 18.4 fixture must
+  prove the exact legacy v1 OID/owner/ACL/body, trusted v2 owner/ACL, private
+  ledger/RLS, same-key replay, payload mismatch, malformed response rejection,
+  two-tenant authz/entitlement/input denial, audit/quota rollback and duplicate/
+  demotion serialization. It is not restored-staging or live-schema evidence.
 - Verified backup plus an isolated restore drill within the agreed RPO/RTO.
 - Critical-path staging smoke for at least two tenants and affected roles.
 - Payroll staging smoke must cover open calculation → lock → repeat calculation →
@@ -99,7 +105,9 @@ frontend build alone is not release approval.
    before applying the snapshot migration.
 5. Deploy additive database migrations to staging and validate schema/RLS/RPC
    contracts, trusted pgcrypto/schema ACLs, runtime TRUNCATE denial and the
-   audited break-glass smoke before accepting payroll writes.
+   audited break-glass smoke before accepting payroll writes. For v3.51.4,
+   verify both admin-override RPC signatures/ACLs, force a PostgREST schema-cache
+   reload, run legacy v1 and same-key v2 smoke, and only then admit a v2 client.
 6. Deploy Edge Functions from the same SHA immediately after the database change;
    set the Edge `EFFECTIME_RELEASE_SHA` runtime value under the same release
    authority and verify auth, timeout, retry and redaction paths. Do not leave
@@ -129,7 +137,7 @@ frontend build alone is not release approval.
 ## Immediate NO-GO conditions
 
 - Migration history or schema differs from the approved staging result.
-- Clean migration replay is not 125/125, or the 30-table / 1-view / 46-function /
+- Clean migration replay is not 126/126, or the 30-table / 1-view / 46-function /
   2-enum provenance debt has not been replaced by transitively complete reviewed
   DDL with regenerated-types and schema-fingerprint comparison.
 - Backup/restore evidence is absent or stale.
@@ -138,6 +146,9 @@ frontend build alone is not release approval.
   assignee, instance/task join, inactive-assignee and race tests are not green;
   or restored-staging aggregate inventory is non-zero without a reviewed,
   data-preserving remediation decision.
+- The admin-override PG18 contract is not green, restored staging does not expose
+  both exact v1/v2 contracts, PostgREST has not reloaded the v2 signature, or a
+  v2 web/mobile client would be deployed before the verified DB boundary.
 - A new critical/high dependency vulnerability or unreviewed Edge compile failure exists.
 - The Edge diagnostic ratchet reports a new entrypoint, diagnostic or unpinned import.
 - The release manifest is dirty, names a different SHA, or its distribution,
@@ -176,3 +187,28 @@ A direct `service_role` reset is not a rollback mechanism. Reopen one period onl
 through `reopen_payroll_period_break_glass`, tied to an approved incident reason
 and its returned audit event. Any bulk recovery needs a separately reviewed,
 forward-only repair and release-authority approval.
+
+For an admin-override v2 rollback, stop/revert the new client first so no active
+artifact depends on v2. Keep the additive function and idempotency ledger in the
+database while any supported web/mobile build can still send v2 keys. Do not
+fall back from an uncertain v2 response to v1 within the same operation: that
+would bypass the ledger and may create a duplicate request.
+
+The outbox's seven-day value is a retry/reconciliation horizon, not an automatic
+deletion TTL. Never prune uncertain, expired or corrupt client evidence. Permit
+only one unresolved operation per actor/workspace scope: retrying the unchanged
+payload must reuse its key, while a different payload remains blocked until the
+earlier operation is reconciled. Exact-key cleanup is allowed only after a valid
+server receipt; every error response retains the evidence. A known 4xx remains
+exact-key retryable. HTTP 408/499, 5xx, timeout, abort, status `0`, transport
+failure or malformed response must show the localized `outcome_uncertain` state.
+The operation requires origin-wide Web Locks and must fail before RPC dispatch
+when that API is missing or disabled. The iOS deployment target and mobile
+source/release gate must remain at least 15.4. Lockdown Mode is an explicit
+fail-closed limitation for admin override and must be covered by device
+acceptance messaging; do not replace it with realm-only coordination.
+
+The admin-override rollout remains DB-first and client-second. The documented
+migration-history/schema drift is an immediate production/backend **NO-GO**;
+do not apply the v2 migration or publish a v2 client until restored staging and
+the target PostgREST schema cache prove the exact approved contracts.

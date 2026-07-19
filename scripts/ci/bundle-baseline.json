@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
-  "purpose": "Current production bundle debt ceiling. The clean, commit-SHA-attributed I-25 admin-override accessibility and stale-response artifact adds 5,043 raw / 1,644 gzip JavaScript bytes and 998 raw bytes to the largest chunk versus the I-24 Windows artifact. The total ceilings move by those measured deltas so the existing 128-byte raw and 279-byte gzip cross-platform/SHA allowances remain unchanged. Largest JavaScript raw stays exact; largest JavaScript gzip and both CSS ceilings retain their existing values. Further increases require an explicit reviewed baseline update.",
+  "purpose": "Current production bundle debt ceiling. The measured I-26 fail-closed admin-override v2 adapter, bounded transport, localized reconciliation state and crash-safe hash-only retry outbox produce 4,470,814 raw / 1,277,201 gzip JavaScript bytes: +10,923 raw / +3,756–3,762 gzip (+0.245% raw) versus the two clean I-25 Windows artifacts. The total ceilings retain only the existing 128-byte raw and 279-byte gzip cross-platform/SHA allowances. Largest JavaScript raw rises by the measured 1,292-byte security-contract delta and remains exact; largest JavaScript gzip and both CSS ceilings retain their prior values. Further increases require an explicit reviewed baseline update.",
   "ceilings": {
     "javascript": {
-      "totalRawBytes": 4460019,
-      "totalGzipBytes": 1273724,
-      "largestRawBytes": 1741005,
+      "totalRawBytes": 4470942,
+      "totalGzipBytes": 1277480,
+      "largestRawBytes": 1742297,
       "largestGzipBytes": 558421
     },
     "css": {

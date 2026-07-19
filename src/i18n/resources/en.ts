@@ -1189,6 +1189,7 @@ const en = {
     fill_all_fields: 'Please fill in all required fields',
     justification_required: 'Admin justification is required',
     create_failed: 'Error creating request',
+    outcome_uncertain: 'The previous submission has an uncertain outcome. Retry it unchanged or contact an administrator before creating another request.',
     created_approved: 'Request created and approved',
     created: 'Request created',
   },

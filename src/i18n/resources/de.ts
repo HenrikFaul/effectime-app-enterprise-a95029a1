@@ -1168,6 +1168,7 @@ const de = {
     fill_all_fields: 'Please fill in all required fields',
     justification_required: 'Admin justification is required',
     create_failed: 'Error creating request',
+    outcome_uncertain: 'Das Ergebnis der vorherigen Übermittlung ist ungewiss. Versuchen Sie es unverändert erneut oder wenden Sie sich vor einem weiteren Antrag an einen Administrator.',
     created_approved: 'Request created and approved',
     created: 'Request created',
   },

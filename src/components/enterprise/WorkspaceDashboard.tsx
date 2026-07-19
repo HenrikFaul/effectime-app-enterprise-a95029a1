@@ -704,6 +704,7 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canVi
                 open={showOverride}
                 onOpenChange={setShowOverride}
                 workspaceId={workspaceId}
+                actorId={userId}
                 onCreated={() => setLeaveRefreshKey(current => current + 1)}
                 dialogContentId={overrideDialogContentId}
                 returnFocusRef={overrideTriggerRef}

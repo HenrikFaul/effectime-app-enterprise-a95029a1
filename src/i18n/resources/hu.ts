@@ -1177,6 +1177,7 @@ const hu = {
     fill_all_fields: 'Töltsd ki az összes mezőt',
     justification_required: 'Admin indoklás kötelező',
     create_failed: 'Hiba a kérelem létrehozásakor',
+    outcome_uncertain: 'Az előző beküldés eredménye bizonytalan. Változtatás nélkül próbáld újra, vagy új kérelem előtt egyeztess egy adminisztrátorral.',
     created_approved: 'Kérelem létrehozva és jóváhagyva',
     created: 'Kérelem létrehozva',
   },

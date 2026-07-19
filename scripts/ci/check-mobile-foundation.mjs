@@ -23,7 +23,10 @@ const EXPECTED_NODE_ENGINE = ">=22.9.0";
 const MIN_ANDROID_SDK = 24;
 const MIN_ANDROID_COMPILE_SDK = 36;
 const MIN_ANDROID_TARGET_SDK = 36;
-const MIN_IOS_DEPLOYMENT_TARGET = 15;
+// Web Locks is a security boundary for the crash-safe admin leave override
+// outbox. WebKit shipped it in iOS 15.4, so an older deployment target would
+// advertise a runtime where this critical operation must always fail closed.
+const MIN_IOS_DEPLOYMENT_TARGET = 15.4;
 const REQUIRED_ENV_KEYS = [
   "VITE_PUBLIC_APP_ORIGIN",
   "VITE_SUPABASE_PROJECT_ID",
@@ -503,7 +506,7 @@ function checkIosFoundation() {
   assert(
     deploymentTargets.length > 0 &&
       deploymentTargets.every((target) => target >= MIN_IOS_DEPLOYMENT_TARGET),
-    `Every iOS deployment target must be at least ${MIN_IOS_DEPLOYMENT_TARGET}.0.`,
+    `Every iOS deployment target must be at least ${MIN_IOS_DEPLOYMENT_TARGET}.`,
   );
   assert(
     plistString(info, "CFBundleDisplayName") === EXPECTED_APP_NAME,
