@@ -114,12 +114,13 @@ been performed.
   1,269,950 gzip to retain a narrow build-SHA compression tolerance. Largest
   raw increases by 468 bytes to 1,738,375, while largest-gzip and CSS ceilings
   remain unchanged.
-- Reviews the I-22 candidate's additional bundle cost against that clean main
-  artifact: +4,999 raw / +1,360 gzip JavaScript bytes (+0.112% raw). The final
-  local artifact is 4,452,913 raw / 1,271,182 gzip; largest raw is 1,739,506 and
-  largest gzip 551,842 bytes; CSS remains 180,798 / 29,589. Only the exact raw
-  ceilings and the prior 128-byte total-gzip tolerance move; the largest-gzip
-  and CSS ceilings remain unchanged.
+- Reviews the I-22 hosted Linux candidate's additional bundle cost against that
+  clean main artifact: +5,092 raw / +1,511 gzip JavaScript bytes (+0.114% raw).
+  The hosted artifact is 4,453,006 raw / 1,271,333 gzip; largest raw is
+  1,739,506 and largest gzip 551,837 bytes; CSS remains 180,798 / 29,589. The
+  exact hosted raw ceiling and the prior 128-byte total-gzip tolerance move;
+  largest-gzip and CSS ceilings remain unchanged. The Windows candidate remains
+  below these reviewed ceilings at 4,452,913 raw / 1,271,182 gzip.
 - Passes the complete local candidate gate: 54 files and 586/586 coverage tests,
   typecheck, reduced ESLint fingerprint, production build, bundle ratchet, 7/7
   web smoke, 183/183 mobile source, 345/345 synced artifact, 2/2 mobile bridge
