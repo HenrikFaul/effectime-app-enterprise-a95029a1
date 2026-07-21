@@ -37,4 +37,10 @@ describe("AuditLog client-side data minimization contract", () => {
     expect(allowedAuditEventColumns).not.toContain("ip_address");
     expect(allowedAuditEventColumns).not.toContain("user_agent");
   });
+
+  it("renders atomic member-profile changes as membership audit events", () => {
+    expect(auditLogSource).toContain(
+      "'membership.profile_updated': t('audit_log.action_membership_profile_updated')",
+    );
+  });
 });

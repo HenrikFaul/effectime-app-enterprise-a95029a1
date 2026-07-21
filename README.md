@@ -68,6 +68,9 @@ npm run schema:provenance:test
 npm run schema:provenance
 npm run db:payroll:test
 npm run db:hr-workflow:test
+npm run db:admin-override:test
+npm run db:profiles-tenant:test
+npm run db:member-profile-save:test
 npm run edge:check
 npm run edge:log-safety
 npm run edge:ratchet:test
@@ -120,7 +123,7 @@ pull-request run uploaded that lock and deliberately failed as designed. A
 subsequent hosted run compiled exclusively from the committed graph and passed.
 
 The repository currently has historical lint debt; see `PROJECT_AUDIT.md` for the
-measured baseline: 1,218 errors and 108 warnings across 179 files. `npm run lint`
+measured baseline: 1,161 errors and 99 warnings across 175 files. `npm run lint`
 still reports the complete debt, while `npm run lint:ratchet` rejects new or
 moved diagnostic fingerprints and requires the baseline to be reduced when debt
 is removed. Do not weaken lint rules, coverage floors or bundle ceilings to hide
@@ -196,7 +199,7 @@ The generated public schema currently contains 30 tables, one view, 46
 functions and two enums whose defining migrations cannot be proven locally.
 `npm run schema:provenance` prevents this reviewed debt from changing silently;
 it does not make a clean install reproducible. A read-only live schema export,
-transitively complete recovery migration, 127/127 clean replay, regenerated-type
+transitively complete recovery migration, 128/128 clean replay, regenerated-type
 comparison, schema fingerprint and RLS/adversarial tests are required before a
 backend release.
 
@@ -284,18 +287,49 @@ loading, error, retry, empty and accessible status states. Locale hydration and
 workspace translation overrides use generation guards, clear prior-tenant data
 immediately and reject stale auth, tenant or slower persistence responses.
 
-Current local v3.51.5 evidence is: profiles runner 10/10; all four pinned
+The v3.51.5 draft PR #176 is backed by hosted run `29687248014`, which passed
+all 9/9 jobs. Release evidence artifact `8442491749`, diagnostics artifact
+`8442490776` and Android artifact `8442475433` prove that source candidate and
+its unsigned native build, not a production deployment. Its final local evidence
+was: profiles runner 10/10; all four pinned
 PostgreSQL contracts PASS; ten focused browser/client files 77/77; typecheck,
 production build, reviewed bundle, `npm audit` with zero known vulnerabilities
 and built-web smoke 7/7 PASS; mobile source 183/183, artifact 345/345, bridge
 smoke 2/2 and native drift 0. The reviewed bundle is 4,484,406 bytes raw /
 1,282,043 gzip JavaScript (largest chunk 1,747,206 / 554,696) and 180,862 /
 29,600 CSS. Current-tree full coverage passes 66 files and 727/727 tests
-(48.64% statements/lines, 69.8% branches, 41.03% functions). These are local candidate results,
-not hosted v3.51.5, linked-database or production-deployment evidence.
+(48.64% statements/lines, 69.8% branches, 41.03% functions). Neither the hosted
+candidate nor these local results are linked-database or production-deployment
+evidence.
 
-The linked production history currently has 59 migration IDs in common with the
-repository, 68 local-only IDs and 84 remote-only IDs. Three local-only HR/office/
+The stacked v3.51.6 candidate makes workspace-member profile editing atomic.
+`get_workspace_member_profile_edit_snapshot_v1` reads membership metadata,
+office, allocations, self-only display name and `profile_revision` from one
+PostgreSQL statement. `save_workspace_member_profile_v1` locks and validates the
+same tenant snapshot, requires active `members:edit` plus `members_list`, checks
+the optimistic revision and exact self-name baseline, and commits membership,
+complete allocations, optional own display name and a single data-minimised audit
+receipt together. Cross-tenant offices, allocation tenant mismatches, weak same-
+name constraints, malformed text, more than 20 roles, non-100-percent new
+snapshots and missing/multiple priority roles fail closed. Web, Android and iOS
+use the same strict TypeScript adapter and Supabase RPCs; there is no mobile-only
+data source or direct-table fallback. Run `npm run db:member-profile-save:test`
+for the pinned PostgreSQL 18.4 inventory, catalog, RBAC, rollback, lock,
+mixed-writer and MVCC contract. The legacy direct `BusinessRoleManager` path
+still needs a separate P1 transaction to enforce exact total/priority semantics.
+The current local candidate passes the 15/15 isolated runner, all five pinned
+PostgreSQL contracts, 208/208 focused UI/client/Edge-writer tests and 896/896
+full-coverage tests. Typecheck, production build, the reviewed 4,509,150 raw /
+1,290,450 gzip JavaScript bundle, Edge/release identity, 1,485-file secret scan,
+128-migration schema provenance and dependency audit with zero known
+vulnerabilities are also green. These results prove source behavior, not a
+linked database apply, signed native release or production deployment.
+The same candidate passes mobile source 183/183, synced artifact 345/345,
+Capacitor bridge E2E 2/2 and tracked Android/iOS drift 0.
+
+The locally derivable production-history state has 59 migration IDs in common
+with the repository, 69 local-only IDs and 84 remote-only IDs (128 local, 143
+remote). Three local-only HR/office/
 analytics migrations are proven duplicate-content variants of remote migrations
 under different IDs; bulk `migration repair --status reverted` would therefore
 be unsafe. A forward-only HR workflow candidate now adds fail-closed tenant

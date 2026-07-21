@@ -1,3 +1,75 @@
+## 2026-07-21 — v3.51.6 Atomic workspace-member profile save (unreleased)
+
+**Status:** stacked source candidate on v3.51.5. The isolated runner is 15/15,
+the pinned PostgreSQL 18.4 atomic contract and all four affected legacy database
+contracts PASS, the focused UI/client/Edge-writer suite is 208/208, full coverage
+is 70 files and 896/896 tests, typecheck and production build/bundle PASS, and
+the dependency audit reports zero known vulnerabilities. Production database
+and web/mobile deployment have not been performed. Production remains **NO-GO**:
+a 2026-07-21 read-only linked query confirms 59 shared / 69 local-only / 84
+remote-only migrations (128 local, 143 remote), `db push --dry-run` refuses to
+plan against that ledger, linked lint has 7 errors, clean replay and restored-
+staging inventory are not green, and the live artifact has no Git-SHA release
+attestation.
+
+- Replaces four independently committed member-profile mutations with one
+  tenant-authorized `save_workspace_member_profile_v1` transaction. Membership
+  metadata, office, complete role allocation snapshot, self-only global display
+  name and one data-minimised `membership.profile_updated` audit receipt now
+  commit or roll back together.
+- Adds `get_workspace_member_profile_edit_snapshot_v1`, which returns the
+  editable membership and allocation state from one PostgreSQL statement. There
+  is no multi-request or direct-table fallback, so permission/RPC failures cannot
+  be misrendered as an empty editable profile.
+- Adds a server-managed `profile_revision` optimistic-concurrency token and an
+  exact self-display-name baseline. Stale, concurrent, lock-timeout and mixed
+  legacy/RPC writers fail closed; the shared client maps retryable SQL states to
+  an explicit reload-required conflict instead of overwriting newer data.
+- Enforces active tenant membership, `members:edit` permission and
+  `members_list` entitlement on the server. Cross-tenant office assignments and
+  allocation workspace mismatches are rejected by composite foreign keys and
+  restrictive write policies. Allocation roles, member metadata and display
+  names receive bounded lexical contracts without silently rewriting historical
+  rows; an incompatible inventory aborts rollout for operator remediation.
+- Preserves legacy readable allocation snapshots, while new atomic saves require
+  at most 20 canonical roles, exactly 100 percent allocation and exactly one
+  priority role. The remaining direct `BusinessRoleManager` writer does not yet
+  guarantee the last two invariants transactionally and is the next P1 package.
+- Routes the existing web, Android and iOS shells through the same strict
+  TypeScript read/save adapter and Supabase RPC/data source. UUIDs, response
+  shapes, text, decimal precision, timeouts and cancellation are bounded; no
+  mobile-only database, privileged key or raw-table fallback is introduced.
+- Makes the member sheet and own-profile page fail closed on load failure,
+  suppress stale/unmounted/double-submit callbacks, detect zero-row optimistic
+  updates, and provide localized retry/conflict/validation states in all eight
+  locales. All runtime mounts now refresh the authoritative member projection
+  after a successful save.
+- Applies the same 1–200 Unicode-code-point display-name boundary to registration,
+  profile editing and every inventoried `join-event` writer. JavaScript/Edge and
+  PostgreSQL now agree on ECMAScript edge whitespace, C0/DEL/C1 rejection and
+  astral length; explicit malformed names fail before auth/profile mutation.
+- Makes `profiles.display_name` the single pre-finalization authority for
+  temporary users. Rename and Google-prepare use exact-state CAS, freeze while
+  an upgrade nonce exists and never perform a second browser/Auth metadata write;
+  finalize validates the frozen profile name, checks the Auth Admin result and
+  performs retryable auth-first cleanup without deleting DB rows when Auth state
+  is uncertain.
+- Hardens the auth bootstrap function and exact `AFTER INSERT FOR EACH ROW`
+  trigger. Repeat-apply fixtures prove an incompatible disabled trigger and a
+  leaked `service_role` EXECUTE grant are repaired; a differently named extra
+  binding fails closed without silent deletion, while malformed metadata rolls
+  back the auth row and profile together.
+- Adds a network-isolated, SHA-pinned PostgreSQL 18.4 contract for drift
+  inventories, exact catalog definitions, repeat apply, RBAC/tenant/audit/cascade
+  behavior, full rollback, bounded locks, mixed writers and one-statement MVCC.
+  Same-name weak lexical constraints are explicitly rejected before migration;
+  owner/service workspace cascades remove only the selected tenant while an
+  isolated control tenant remains exact.
+- Rollout is forward-only and DB/schema-cache first, followed immediately by the
+  matching shared client. Generated Supabase types remain stale until migration-
+  history reconciliation and verified schema regeneration; exact local RPC
+  interfaces are the temporary fail-closed candidate boundary.
+
 ## 2026-07-19 — v3.51.5 Profiles tenant privacy and shared milestone adapter (unreleased)
 
 **Status:** P0 privacy hardening source candidate. Current local evidence includes
@@ -6,11 +78,14 @@ four database contracts PASS, ten focused browser/client files at 77/77,
 typecheck, production build, reviewed bundle ceiling, `npm audit` with zero known
 vulnerabilities, web smoke 7/7, mobile source 183/183, synced artifact 345/345,
 mobile bridge smoke 2/2 and zero native drift. Current-tree full coverage passes
-66 files and 727/727 tests; hosted v3.51.5 validation is still pending. No linked
+66 files and 727/727 tests. Draft PR #176 and hosted run `29687248014` passed
+all 9/9 jobs; release evidence artifact `8442491749`, diagnostics artifact
+`8442490776` and Android artifact `8442475433` were retained. No linked
 database migration or web/mobile
 production deployment has been performed. Production is
-**NO-GO**: the linked history is 59 shared / 68 local-only / 84 remote-only,
-the candidate contains 127 local migrations, and the live web artifact still has
+**NO-GO**: with the stacked v3.51.6 migration the locally derivable history is
+59 shared / 69 local-only / 84 remote-only, the repository contains 128 local
+migrations, and the live web artifact still has
 no Git-SHA release attestation.
 
 - Replaces globally readable profile rows with matching permissive and

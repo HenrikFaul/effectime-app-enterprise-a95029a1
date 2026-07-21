@@ -1,6 +1,16 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.98.0";
 import { corsHeaders } from "../_shared/cors.ts";
 import { normalizeAppPath, safeAppOrigin } from "../_shared/request-security.ts";
+import {
+  canonicalizeDisplayName,
+  resolveDisplayNameCandidates,
+  resolveOptionalCallerDisplayName,
+  resolveRequiredCallerDisplayName,
+} from "./display-name.ts";
+import {
+  cleanupTemporaryUserAuthFirst,
+  verifyAuthAdminUpdate,
+} from "./auth-profile-sync.ts";
 
 function jsonRes(data: any, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -261,9 +271,11 @@ Deno.serve(async (req) => {
 
     if (action === 'anonymous-join') {
       const { token, display_name } = body;
-      if (!token || !display_name?.trim()) {
+      const displayNameResult = resolveRequiredCallerDisplayName(display_name);
+      if (!token || !displayNameResult.ok) {
         return jsonRes({ error: "Token és név szükséges." }, 400);
       }
+      const canonicalDisplayName = displayNameResult.value;
 
       const { data: shareToken } = await admin
         .from('event_share_tokens')
@@ -300,7 +312,7 @@ Deno.serve(async (req) => {
         email: tempEmail,
         password: tempPassword,
         email_confirm: true,
-        user_metadata: { display_name: display_name.trim(), is_temporary: true },
+        user_metadata: { display_name: canonicalDisplayName, is_temporary: true },
       });
 
       if (createError || !newUser?.user) {
@@ -310,7 +322,7 @@ Deno.serve(async (req) => {
 
       const { error: profileError } = await admin.from('profiles').upsert({
         user_id: newUser.user.id,
-        display_name: display_name.trim(),
+        display_name: canonicalDisplayName,
         is_temporary: true,
         linked_event_id: shareToken.event_id,
         temp_access_token: tempToken,
@@ -847,51 +859,97 @@ Deno.serve(async (req) => {
 
     if (action === 'update-temp-name') {
       const { display_name } = body;
-      const normalizedDisplayName = typeof display_name === 'string' ? display_name.trim() : '';
-      if (!normalizedDisplayName) return jsonRes({ error: "Név szükséges." }, 400);
+      const displayNameResult = resolveRequiredCallerDisplayName(display_name);
+      if (!displayNameResult.ok) return jsonRes({ error: "Érvénytelen név." }, 400);
+      const normalizedDisplayName = displayNameResult.value;
 
-      const { data: tempProfile } = await admin
+      const { data: tempProfile, error: tempProfileError } = await admin
         .from('profiles')
-        .select('is_temporary')
+        .select('is_temporary, display_name, preferences')
         .eq('user_id', user.id)
         .maybeSingle();
+
+      if (tempProfileError) {
+        console.error('Temp profile lookup failed before name update.');
+        return jsonRes({ error: 'Nem sikerült betölteni a profilt.' }, 500);
+      }
 
       if (!tempProfile?.is_temporary) {
         return jsonRes({ error: 'Csak temporary felhasználó módosíthatja ezt a nevet.' }, 403);
       }
 
-      const { error: profileUpdateError } = await admin
+      const previousProfile = {
+        display_name: tempProfile.display_name,
+        preferences: tempProfile.preferences,
+      };
+
+      if (Object.hasOwn(parseProfilePreferences(tempProfile.preferences), 'temp_upgrade')) {
+        return jsonRes({
+          error: 'A Google-regisztráció előkészítése közben a név már nem módosítható.',
+          error_code: 'temp_upgrade_in_progress',
+        }, 409);
+      }
+
+      let profileMutation = admin
         .from('profiles')
         .update({ display_name: normalizedDisplayName })
         .eq('user_id', user.id);
+      profileMutation = previousProfile.display_name === null
+        ? profileMutation.is('display_name', null)
+        : profileMutation.eq('display_name', previousProfile.display_name);
+      if (previousProfile.preferences === null) {
+        profileMutation = profileMutation.is('preferences', null);
+      } else {
+        profileMutation = profileMutation.eq(
+          'preferences',
+          JSON.stringify(previousProfile.preferences),
+        );
+      }
+      const { data: updatedProfile, error: profileUpdateError } =
+        await profileMutation.select('user_id').maybeSingle();
 
       if (profileUpdateError) {
         console.error('Temp profile name update error:', profileUpdateError);
         return jsonRes({ error: 'Nem sikerült menteni a nevet.' }, 500);
       }
-
-      await admin.auth.admin.updateUserById(user.id, {
-        user_metadata: { ...user.user_metadata, display_name: normalizedDisplayName },
-      });
+      if (updatedProfile?.user_id !== user.id) {
+        return jsonRes({
+          error: 'A profil időközben megváltozott. Próbáld újra.',
+          error_code: 'profile_conflict',
+        }, 409);
+      }
 
       return jsonRes({ success: true, display_name: normalizedDisplayName });
     }
 
     if (action === 'prepare-temp-google-upgrade') {
       const { display_name } = body;
-      const normalizedName = display_name?.trim();
-      if (!normalizedName) {
+      const displayNameResult = resolveRequiredCallerDisplayName(display_name);
+      if (!displayNameResult.ok) {
         return jsonRes({ error: 'Add meg a megjelenített nevedet.' }, 400);
       }
+      const normalizedName = displayNameResult.value;
 
       const { data: tempProfile, error: tempProfileError } = await admin
         .from('profiles')
-        .select('is_temporary, preferences')
+        .select('is_temporary, display_name, preferences')
         .eq('user_id', user.id)
         .maybeSingle();
 
       if (tempProfileError || !tempProfile || !tempProfile.is_temporary) {
         return jsonRes({ error: 'Csak temporary felhasználó készíthet ilyen regisztrációt.' }, 400);
+      }
+
+      const previousProfile = {
+        display_name: tempProfile.display_name,
+        preferences: tempProfile.preferences,
+      };
+
+      if (Object.hasOwn(parseProfilePreferences(tempProfile.preferences), 'temp_upgrade')) {
+        return jsonRes({
+          error: 'A Google-regisztráció előkészítése már folyamatban van.',
+          error_code: 'temp_upgrade_in_progress',
+        }, 409);
       }
 
       const upgradeNonce = crypto.randomUUID().replace(/-/g, '');
@@ -904,26 +962,37 @@ Deno.serve(async (req) => {
         },
       };
 
-      const { error: profileUpdateError } = await admin
+      let profileMutation = admin
         .from('profiles')
         .update({
           display_name: normalizedName,
           preferences: mergedPreferences,
         })
         .eq('user_id', user.id);
+      profileMutation = previousProfile.display_name === null
+        ? profileMutation.is('display_name', null)
+        : profileMutation.eq('display_name', previousProfile.display_name);
+      if (previousProfile.preferences === null) {
+        profileMutation = profileMutation.is('preferences', null);
+      } else {
+        profileMutation = profileMutation.eq(
+          'preferences',
+          JSON.stringify(previousProfile.preferences),
+        );
+      }
+      const { data: updatedProfile, error: profileUpdateError } =
+        await profileMutation.select('user_id').maybeSingle();
 
       if (profileUpdateError) {
         console.error('Prepare Google upgrade profile update error:', profileUpdateError);
         return jsonRes({ error: 'Nem sikerült előkészíteni a Google-regisztrációt.' }, 500);
       }
-
-      await admin.auth.admin.updateUserById(user.id, {
-        user_metadata: {
-          ...user.user_metadata,
-          display_name: normalizedName,
-          is_temporary: true,
-        },
-      });
+      if (updatedProfile?.user_id !== user.id) {
+        return jsonRes({
+          error: 'A profil időközben megváltozott. Indítsd újra a Google-regisztrációt.',
+          error_code: 'profile_conflict',
+        }, 409);
+      }
 
       return jsonRes({
         success: true,
@@ -957,6 +1026,15 @@ Deno.serve(async (req) => {
       if (!upgradePayload || upgradePayload.nonce !== upgrade_nonce) {
         return jsonRes({ error: 'Lejárt vagy érvénytelen Google-regisztrációs folyamat.' }, 400);
       }
+
+      const displayNameResult = canonicalizeDisplayName(tempProfile.display_name);
+      if (!displayNameResult.ok) {
+        return jsonRes({
+          error: 'A regisztrációhoz tartozó megjelenített név érvénytelen.',
+          error_code: 'invalid_display_name_state',
+        }, 409);
+      }
+      const finalizedDisplayName = displayNameResult.value;
 
       if (upgradePayload.createdAt) {
         const preparedAt = new Date(upgradePayload.createdAt);
@@ -1093,7 +1171,7 @@ Deno.serve(async (req) => {
         .from('profiles')
         .upsert({
           user_id: user.id,
-          display_name: tempProfile.display_name || user.user_metadata?.display_name || null,
+          display_name: finalizedDisplayName,
           is_temporary: false,
           linked_event_id: null,
           temp_access_token: null,
@@ -1110,15 +1188,63 @@ Deno.serve(async (req) => {
         return jsonRes({ error: 'Nem sikerült előkészíteni az e-mail aktivációt.' }, 500);
       }
 
-      await admin.auth.admin.updateUserById(user.id, {
-        user_metadata: {
-          ...user.user_metadata,
-          display_name: tempProfile.display_name || user.user_metadata?.display_name,
-          is_temporary: false,
-        },
-      });
+      const authUpdated = await verifyAuthAdminUpdate(
+        user.id,
+        () => admin.auth.admin.updateUserById(user.id, {
+          user_metadata: {
+            ...user.user_metadata,
+            display_name: finalizedDisplayName,
+            is_temporary: false,
+          },
+        }),
+      );
+      if (!authUpdated) {
+        console.error('Finalize Google upgrade auth metadata update failed.');
+        return jsonRes({
+          error: 'Nem sikerült véglegesíteni a fiókadatokat.',
+          error_code: 'auth_update_failed',
+        }, 500);
+      }
 
-      await cleanupTemporaryUser(tempProfile.user_id);
+      const temporaryUserCleanup = await cleanupTemporaryUserAuthFirst({
+        expectedUserId: tempProfile.user_id,
+        getAuthUser: () => admin.auth.admin.getUserById(tempProfile.user_id),
+        deleteAuthUser: () => admin.auth.admin.deleteUser(tempProfile.user_id),
+        deleteDatabaseRows: [
+          async () => {
+            const { error } = await admin
+              .from('votes')
+              .delete()
+              .eq('user_id', tempProfile.user_id);
+            return !error;
+          },
+          async () => {
+            const { error } = await admin
+              .from('event_participants')
+              .delete()
+              .eq('user_id', tempProfile.user_id);
+            return !error;
+          },
+          async () => {
+            const { error } = await admin
+              .from('profiles')
+              .delete()
+              .eq('user_id', tempProfile.user_id);
+            return !error;
+          },
+        ],
+      });
+      if (!temporaryUserCleanup.ok) {
+        console.error(
+          temporaryUserCleanup.reason === 'database_cleanup_failed'
+            ? 'Finalize Google upgrade temporary database cleanup failed after auth cleanup.'
+            : 'Finalize Google upgrade temporary auth cleanup state is not authoritative; database cleanup skipped.',
+        );
+        return jsonRes({
+          error: 'Nem sikerült lezárni az ideiglenes fiók átvitelét.',
+          error_code: temporaryUserCleanup.reason,
+        }, 500);
+      }
 
       const siteOrigin = appOrigin;
       const activationRedirectUrl = buildActivationRedirectUrl(siteOrigin, pendingActivation.token, '/');
@@ -1189,14 +1315,18 @@ Deno.serve(async (req) => {
     }
 
     if (action === 'upgrade-temp-user') {
-      const { email, password, display_name, keep_data } = body;
+      const { email, password, keep_data } = body;
       if (!email || !password) return jsonRes({ error: "Email és jelszó szükséges." }, 400);
 
+      // This field is optional for backward compatibility. Absence may use the
+      // authoritative stored candidates below; an explicitly invalid value is
+      // rejected before any auth or profile mutation and never falls back.
+      const callerDisplayName = resolveOptionalCallerDisplayName(body);
+      if (!callerDisplayName.ok) {
+        return jsonRes({ error: 'Érvénytelen megjelenített név.' }, 400);
+      }
+
       const normalizedEmail = String(email).trim().toLowerCase();
-      const normalizedDisplayName =
-        (typeof display_name === 'string' && display_name.trim().length > 0
-          ? display_name.trim()
-          : user.user_metadata?.display_name) || null;
 
       const { data: profile, error: profileError } = await admin
         .from('profiles')
@@ -1211,6 +1341,21 @@ Deno.serve(async (req) => {
       if (!keep_data) {
         return jsonRes({ success: true, proceed_normal_registration: true });
       }
+
+      const displayNameResult = callerDisplayName.provided
+        ? canonicalizeDisplayName(callerDisplayName.value)
+        : resolveDisplayNameCandidates([
+          profile.display_name,
+          user.user_metadata?.display_name,
+          normalizedEmail,
+        ]);
+      if (!displayNameResult.ok || displayNameResult.value === null) {
+        return jsonRes({
+          error: 'A regisztrációhoz tartozó megjelenített név érvénytelen.',
+          error_code: 'invalid_display_name_state',
+        }, 409);
+      }
+      const normalizedDisplayName = displayNameResult.value;
 
       try {
         const existingUserByEmail = await findAuthUserByEmail(normalizedEmail);
@@ -1243,7 +1388,7 @@ Deno.serve(async (req) => {
         password,
         email_confirm: false,
         user_metadata: {
-          display_name: normalizedDisplayName || profile.display_name || normalizedEmail,
+          display_name: normalizedDisplayName,
           is_temporary: false,
         },
       });
@@ -1336,7 +1481,7 @@ Deno.serve(async (req) => {
           .from('profiles')
           .upsert({
             user_id: permanentUser.id,
-            display_name: normalizedDisplayName || profile.display_name || normalizedEmail,
+            display_name: normalizedDisplayName,
             is_temporary: false,
             linked_event_id: null,
             temp_access_token: null,

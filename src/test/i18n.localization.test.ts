@@ -169,4 +169,18 @@ describe('i18n key parity — EN and HU bundles', () => {
       }
     }
   });
+
+  it('profile load and optimistic-conflict recovery keys are non-empty in every supported locale', () => {
+    const criticalKeys = [
+      'profile.load_error',
+      'profile.retry_load',
+      'profile.save_conflict',
+      'profile.reload_after_conflict',
+    ];
+    for (const [locale, bundle] of supportedBundles) {
+      for (const key of criticalKeys) {
+        expect(bundle.get(key)?.trim(), `${locale} missing or empty: ${key}`).toBeTruthy();
+      }
+    }
+  });
 });

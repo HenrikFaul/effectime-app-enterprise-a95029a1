@@ -103,12 +103,6 @@ export function ProfileMenu({ showLabel = false }: { showLabel?: boolean } = {})
     }
 
     setTempDisplayName(data?.display_name || normalizedName);
-    await supabase.auth.updateUser({
-      data: {
-        ...((user.user_metadata as Record<string, unknown> | undefined) || {}),
-        display_name: data?.display_name || normalizedName,
-      },
-    });
 
     toast.success(t('profile_menu.name_updated'));
     setEditingName(false);

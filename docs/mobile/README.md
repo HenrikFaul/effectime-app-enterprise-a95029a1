@@ -172,6 +172,45 @@ flowchart LR
   generated-type provenance és staging bizonyíték miatt a production rollout
   **NO-GO**.
 
+### Atomi workspace-member profil adapter (v3.51.6 candidate)
+
+- **BIZONYÍTOTT a candidate forrásban:** web, Android és iOS ugyanazt a
+  [`workspaceMemberProfileApi.ts`](../../src/lib/workspaceMemberProfileApi.ts)
+  read/save adaptert és ugyanazt a publikus Supabase klienst használja. Nincs
+  külön mobil adatbázis, privileged key, platformfüggő üzleti API vagy nyers
+  táblás fallback.
+- **BIZONYÍTOTT a candidate migrációban:**
+  `get_workspace_member_profile_edit_snapshot_v1` egy PostgreSQL statementből
+  adja az editable membership, office, role allocation, revision és self-only
+  display-name állapotot. `save_workspace_member_profile_v1` ugyanazt a teljes
+  snapshotot egy tranzakcióban menti és egy minimalizált audit receiptet ír.
+- **BIZONYÍTOTT konkurenciavédelem:** a server-managed `profile_revision`, exact
+  self-name baseline, advisory/sorzárak és permission/entitlement recheck a késői
+  vagy párhuzamos mobil/web írást reload-required conflictként állítja meg. Az
+  abort csak kliensoldali várakozást szakít meg; a szervertranzakció biztonságát a
+  revision és az atomi commit/rollback adja.
+- **BIZONYÍTOTT tenant- és inputhatár:** cross-tenant office/allocation,
+  inaktív target/actor, hiányzó `members:edit` vagy `members_list`, több mint 20
+  szerep, malformed text/decimal és új snapshotnál a nem 100 százalék vagy nem
+  pontosan egy priority fail-closed. A régi, hibásan részleges allocation
+  snapshot olvasható marad javításhoz, de nem menthető vissza érvényesítés nélkül.
+- **BIZONYÍTOTT UI-lifecycle:** load hiba nem válik üres írható profillá; timeout,
+  abort, tenantváltás, unmount, double submit, zero-row CAS és lock conflict
+  lokalizált, adatmegőrző állapotot ad mind a nyolc locale-ban. Siker után minden
+  mount authoritative member-refetch-et végez.
+- **BIZONYÍTOTT helyi regresszió:** runner 15/15, pinned PG18 atomic contract és
+  négy legacy DB suite PASS; focused UI/client/Edge-writer 208/208, teljes
+  coverage 70 fájl és 896/896 teszt, typecheck, production build/bundle, Edge,
+  secret/schema/dependency kapuk PASS; mobile source 183/183, synced artifact
+  345/345, bridge E2E 2/2 és tracked native drift 0. Ez nem production vagy
+  fizikai-device bizonyíték.
+- **BIZONYÍTOTT rollout-korlát:** a DB-migráció, PostgREST schema-cache és exact
+  RPC/ACL/constraint inventory kerül ki először, utána azonos commitból a web,
+  Android és iOS kliens. A history driftből levezetett 59 shared / 69 local-only /
+  84 remote-only állapot, a hiányzó hiteles generated types és a restored-staging
+  adat-inventory miatt production **NO-GO**. A direct `BusinessRoleManager`
+  total/priority tranzakciós invariantjai külön következő P1 csomag.
+
 ## Alkalmazásidentitás és platform ownership
 
 - **VALÓSZÍNŰ:** a javasolt Android Application ID és iOS Bundle ID
@@ -560,7 +599,7 @@ npm run test:e2e:mobile:built
 | --------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------- |
 | Biztonságos session storage       | **BIZONYÍTOTT kódban:** Keychain/AndroidKeyStore adapter, crash-safe migráció, reset latch, verified üres secure tombstone, logout fallback és fail-closed recovery kész; 17 storage + 4 auth/recovery teszt zöld. A reviewed iOS dependency lock commitolt. **BIZONYTALAN készüléken.** | Valódi Android/iOS session migrate/restart/uninstall/logout, OS-lock és reprezentatív tokenméret teszt. |
 | Candidate provenance             | **BIZONYÍTOTT v3.51.4 / I-26:** PR #175, main SHA `f52671880748c58802d94e0705204d846f4b5928`, run `29682829301` 8/8; release evidence artifact `8441138073`, Android artifact `8441127446`. **BIZONYÍTOTT korlát:** ez nem production deploy vagy aláírt store release. | A kapuk required-checkként fenntartva; signed/store artifactnál SHA és signing provenance. |
-| Backend schema/API kompatibilitás | **BIZONYÍTOTT kódban:** az I-26 v2 additív és a v1-et változatlanul tartja; lokális PG18 v1/v2 smoke zöld. **v3.51.5 CANDIDATE:** a 127. lokális migráció restrictive profile RLS/update guardot, catalog-driven column revokot, self-locale/self-profile/milestone RPC-t ad, közös adapterekkel. A három RPC generated-type hiánya, az 59/68/84 migration drift és a régi raw-preferences kliens funkcionális törése miatt nincs restored-staging vagy production bizonyíték. | Controlled DB-first restored-staging; exact három-RPC/RLS/column-ACL catalog; AST caller kapu; régi kliens fail-closed smoke; új web/Android/iOS kliens smoke; hiteles típusregenerálás; immediate client rollout és privacy-preserving rollback. |
+| Backend schema/API kompatibilitás | **BIZONYÍTOTT kódban:** az I-26 v2 additív és a v1-et változatlanul tartja; lokális PG18 v1/v2 smoke zöld. **v3.51.5–3.51.6 CANDIDATE:** a 127–128. lokális migráció restrictive profile RLS/update guardot, catalog-driven column revokot, self-locale/self-profile/milestone és atomi member-profile read/save RPC-ket ad, közös adapterekkel. A candidate RPC-k/generated `profile_revision` hiánya, az 59/69/84 migration drift és a régi raw-preferences kliens funkcionális törése miatt nincs restored-staging vagy production bizonyíték. | Controlled DB-first restored-staging; exact RPC/RLS/column-ACL/FK/CHECK catalog; AST caller kapu; régi kliens fail-closed smoke; új web/Android/iOS kliens smoke; hiteles típusregenerálás; immediate client rollout és privacy-preserving rollback. |
 | App ID és store reservation       | **VALÓSZÍNŰ:** `app.effectime` a cél; **BIZONYTALAN:** nincs bizonyított foglalás.                                       | App Store Connect és Play Console reservation a jóváhagyott jogi accountban.                                                        |
 | Signing ownership                 | **BIZONYÍTOTT:** nincs review-zott production Android signing config vagy iOS Team ID/provisioning.                      | CI secret ownership, Play App Signing, Apple Team/certificate/profile, rotációs és recovery runbook.                                |
 | Supabase redirect/provider config | **BIZONYÍTOTT a kódban, BIZONYTALAN külső állapotban.**                                                                  | Az exact host/path-prefixet engedő `app.effectime://auth/callback**`, production Site URL és Google/Supabase provider callback staging+production E2E bizonyítéka. |
@@ -666,18 +705,22 @@ konkrét store-, CI-, konfiguráció- vagy készülékteszt-bizonyíték szüks�
   válasz pontosan membership ID, display name, típus, hónap és nap, user ID
   nélkül. A self-locale és self-only global-name RPC, AST caller contract és
   fail-closed profiles privacy határ ugyanebben a candidate-ben van.
-- **BIZONYÍTOTT v3.51.5 lokális candidate:** a tízfájlos focused suite 77/77,
+- **BIZONYÍTOTT v3.51.5 candidate:** a tízfájlos focused suite 77/77,
   typecheck, build, reviewed bundle, `npm audit` és web smoke 7/7 PASS. A közös
   mobil forráskapu 183/183, az artifact contract 345/345, a bridge smoke 2/2 és
-  a natív drift 0. A current-tree full coverage 66 fájl és 727/727 teszt PASS;
-  külön hosted v3.51.5
-  Android/iOS bizonyíték nincs. **NO-GO
+  a natív drift 0. A v3.51.5-tree full coverage 66 fájl és 727/727 teszt PASS;
+  draft PR #176 run `29687248014` 9/9 hosted jobbal — Android és locked iOS
+  compile-lal együtt — zöld. **NO-GO
   production deployra**, amíg a migration-history/schema drift nincs
   helyreállítva, a generált Supabase típus provenance nincs újra igazolva, a
   live release marker hiányzik, és a DB-first restored-staging régi/új kliens
   acceptance nem zöld.
-- **BIZONYÍTOTT:** a v3.51.4-en commitolt platformforrás, a lokális v3.51.5
-  candidate implementáció és a review-zott Swift dependency lock fejlesztési
+- **BIZONYÍTOTT v3.51.6 lokális candidate:** az atomi member-profile read/save
+  adapter és RPC ugyanazt a tenant- és konkurenciavédett adatforrást adja minden
+  kliensnek; runner 15/15, PG18 + négy legacy DB, focused 208/208 és teljes
+  coverage 896/896, mobile 183/345/2 és drift 0 PASS.
+- **BIZONYÍTOTT:** a v3.51.4-en commitolt platformforrás, a v3.51.5–3.51.6
+  candidate implementációk és a review-zott Swift dependency lock fejlesztési
   foundationként **GO**, de a
   store release **NO-GO** a signing/store és device kapuk nélkül.
   A következő legkisebb biztonságos csomag: signing/store ownership + verified

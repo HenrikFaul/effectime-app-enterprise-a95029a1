@@ -83,10 +83,19 @@ describe("browser profiles caller contract", () => {
   it("keeps every reachable call inside the reviewed column and mutation boundary", () => {
     const violations: string[] = [];
     let profileSources = 0;
+    const sources = sourceFiles(SOURCE_ROOT)
+      .filter((filePath) => !QUARANTINED_DEAD_CALLERS.has(repoPath(filePath)))
+      .map((filePath) => ({
+        filePath,
+        file: repoPath(filePath),
+        sourceText: readFileSync(filePath, "utf8"),
+      }));
 
-    for (const filePath of sourceFiles(SOURCE_ROOT)) {
-      const file = repoPath(filePath);
-      const sourceText = readFileSync(filePath, "utf8");
+    for (const { filePath, file, sourceText } of sources) {
+      // Every reviewed call contains the literal table name. Avoid constructing
+      // a full TypeScript AST for unrelated modules so this security inventory
+      // remains deterministic under the parallel coverage runner on Windows.
+      if (!sourceText.includes("profiles")) continue;
       const sourceFile = ts.createSourceFile(
         filePath,
         sourceText,
@@ -135,13 +144,11 @@ describe("browser profiles caller contract", () => {
         }
         ts.forEachChild(node, visit);
       };
-
-      if (!QUARANTINED_DEAD_CALLERS.has(file)) visit(sourceFile);
+      visit(sourceFile);
     }
 
-    const allSource = sourceFiles(SOURCE_ROOT)
-      .filter((file) => !QUARANTINED_DEAD_CALLERS.has(repoPath(file)))
-      .map((file) => readFileSync(file, "utf8"))
+    const allSource = sources
+      .map(({ sourceText }) => sourceText)
       .join("\n");
     expect(allSource).not.toMatch(/(?:import|require)[^\n]*CsvImportPanel/);
     expect(profileSources).toBeGreaterThanOrEqual(35);

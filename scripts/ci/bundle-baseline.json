@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "purpose": "Current production bundle debt ceiling. The measured v3.51.5 tenant-safe profile, milestone, timezone, race-handling and Capacity Fit validation changes produce 4,484,406 raw / 1,282,043 gzip JavaScript bytes: +13,592 raw / +4,842 gzip (+0.304% raw) versus the reviewed I-26 artifact. The total ceilings retain only the existing 128-byte raw and 279-byte gzip cross-platform/SHA allowances. Largest JavaScript raw rises by the measured 4,909-byte product-contract delta and remains exact; largest JavaScript gzip and both CSS ceilings do not increase. Further increases require an explicit reviewed baseline update.",
+  "purpose": "Current production bundle debt ceiling. The measured v3.51.6 atomic member-profile read/save contract, conflict handling, cross-runtime display-name validation, signup protection and eight-locale UX produce 4,509,150 raw / 1,290,450 gzip JavaScript bytes: +24,744 raw / +8,407 gzip (+0.552% raw) versus the reviewed v3.51.5 artifact. The total ceilings retain only the existing 128-byte raw and 279-byte gzip cross-platform/SHA allowances. Largest JavaScript raw rises by the measured 9,673-byte product-contract delta and remains exact; largest gzip retains a 128-byte cross-platform allowance. CSS ceilings do not increase. Further increases require an explicit reviewed baseline update.",
   "ceilings": {
     "javascript": {
-      "totalRawBytes": 4484534,
-      "totalGzipBytes": 1282322,
-      "largestRawBytes": 1747206,
-      "largestGzipBytes": 558421
+      "totalRawBytes": 4509278,
+      "totalGzipBytes": 1290729,
+      "largestRawBytes": 1756879,
+      "largestGzipBytes": 558779
     },
     "css": {
       "totalRawBytes": 180862,

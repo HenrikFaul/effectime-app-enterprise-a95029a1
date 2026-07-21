@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { logAuditEvent } from '@/lib/auditLog';
 import { Card, CardContent } from '@/components/ui/card';
@@ -34,6 +34,7 @@ interface Props {
   workspaceId: string;
   userId: string;
   userRole: string;
+  canEditMemberProfiles?: boolean;
   /** Forwarded to MemberProfileSheet so its "Bővebb adatok" deep-links can switch top-level workspace tabs. */
   onNavigateTab?: (tab: string) => void;
 }
@@ -57,7 +58,7 @@ interface OfficeRef {
   name: string;
 }
 
-export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Props) {
+export function MemberList({ workspaceId, userId, userRole, canEditMemberProfiles = false, onNavigateTab }: Props) {
   const { t } = useI18n();
   const [members, setMembers] = useState<Member[]>([]);
   const [offices, setOffices] = useState<OfficeRef[]>([]);
@@ -67,6 +68,7 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
   const [showInvite, setShowInvite] = useState(false);
   const [creatingInstantUser, setCreatingInstantUser] = useState(false);
   const [open, setOpen] = useState(false);
+  const fetchGenerationRef = useRef(0);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -76,7 +78,10 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
 
   const isAdmin = userRole === 'owner' || userRole === 'resourceAssistant';
 
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
+    const generation = fetchGenerationRef.current + 1;
+    fetchGenerationRef.current = generation;
+    const isCurrent = () => fetchGenerationRef.current === generation;
     setLoading(true);
     const [{ data: memberData }, { data: officeData }] = await Promise.all([
       supabase
@@ -91,7 +96,6 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
     ]);
 
     const membersList = (memberData as any[]) || [];
-    setOffices((officeData as any[]) || []);
 
     if (membersList.length > 0) {
       const userIds = membersList.map((m: any) => m.user_id);
@@ -106,11 +110,18 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
       });
     }
 
+    if (!isCurrent()) return;
+    setOffices((officeData as any[]) || []);
     setMembers(membersList);
     setLoading(false);
-  };
+  }, [workspaceId, t]);
 
-  useEffect(() => { fetchMembers(); }, [workspaceId]);
+  useEffect(() => {
+    void fetchMembers();
+    return () => {
+      fetchGenerationRef.current += 1;
+    };
+  }, [fetchMembers]);
 
   const handleRoleChange = async (memberId: string, newRole: string) => {
     const { error } = await supabase
@@ -130,7 +141,7 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
         metadata: { prev_role: member?.role, new_role: newRole },
       });
       toast.success(t('members.role_changed'));
-      fetchMembers();
+      void fetchMembers();
     }
   };
 
@@ -151,7 +162,7 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
         affected_user_id: member?.user_id,
       });
       toast.success(t('members.removed'));
-      fetchMembers();
+      void fetchMembers();
     }
     setRemovingId(null);
   };
@@ -175,7 +186,7 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
         metadata: { prev_status: currentStatus, new_status: newStatus },
       });
       toast.success(newStatus === 'suspended' ? t('members.status_changed_suspended') : t('members.status_changed_active'));
-      fetchMembers();
+      void fetchMembers();
     }
   };
 
@@ -276,7 +287,7 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
           membership_id: data?.membership_id,
         },
       });
-      fetchMembers();
+      void fetchMembers();
     } catch (e: any) {
       toast.error(t('members.instant_user_failed', { message: e?.message || '?' }));
     } finally {
@@ -505,6 +516,7 @@ export function MemberList({ workspaceId, userId, userRole, onNavigateTab }: Pro
         currentUserId={userId}
         allMembers={members}
         isAdmin={isAdmin}
+        canEditMember={canEditMemberProfiles}
         onMemberUpdated={fetchMembers}
         onNavigateTab={(tab) => {
           if (onNavigateTab) {
