@@ -326,6 +326,12 @@ vulnerabilities are also green. These results prove source behavior, not a
 linked database apply, signed native release or production deployment.
 The same candidate passes mobile source 183/183, synced artifact 345/345,
 Capacitor bridge E2E 2/2 and tracked Android/iOS drift 0.
+Draft PR #177 freezes source commit
+`cce3fcade3c0a191166a57034e31b89832eafbe8`; hosted Quality Gate run
+`29868355151` passes all 10/10 jobs, including Android and locked iOS simulator
+compilation plus the five PostgreSQL contracts. Release evidence artifact
+`8510171690`, diagnostics artifact `8510168237` and unsigned Android artifact
+`8510141514` prove this source candidate, not a production deployment.
 
 The locally derivable production-history state has 59 migration IDs in common
 with the repository, 69 local-only IDs and 84 remote-only IDs (128 local, 143

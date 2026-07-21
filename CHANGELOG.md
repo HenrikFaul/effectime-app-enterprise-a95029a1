@@ -1,6 +1,9 @@
 ## 2026-07-21 — v3.51.6 Atomic workspace-member profile save (unreleased)
 
-**Status:** stacked source candidate on v3.51.5. The isolated runner is 15/15,
+**Status:** stacked draft PR
+[#177](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/pull/177)
+at source commit `cce3fcade3c0a191166a57034e31b89832eafbe8`. Hosted Quality
+Gate run `29868355151` passed all 10/10 jobs. The isolated runner is 15/15,
 the pinned PostgreSQL 18.4 atomic contract and all four affected legacy database
 contracts PASS, the focused UI/client/Edge-writer suite is 208/208, full coverage
 is 70 files and 896/896 tests, typecheck and production build/bundle PASS, and
