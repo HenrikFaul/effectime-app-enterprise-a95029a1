@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => {
     subscribe: vi.fn(),
     onAuthStateChange: vi.fn(),
     getSession: vi.fn(),
+    signUp: vi.fn(),
     signOut: vi.fn(),
     toastWarning: vi.fn(),
     toastError: vi.fn(),
@@ -47,6 +48,7 @@ vi.mock("@/integrations/supabase/client", () => ({
     auth: {
       onAuthStateChange: mocks.onAuthStateChange,
       getSession: mocks.getSession,
+      signUp: mocks.signUp,
       signOut: mocks.signOut,
     },
   },
@@ -61,6 +63,15 @@ function SignOutProbe() {
   return <button onClick={() => void signOut()}>Sign out probe</button>;
 }
 
+function SignUpProbe({ displayName }: { displayName: string }) {
+  const { signUp } = useAuth();
+  return (
+    <button onClick={() => void signUp("ada@example.test", "secure-password", displayName)}>
+      Signup probe
+    </button>
+  );
+}
+
 describe("AuthProvider native storage recovery", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -68,6 +79,7 @@ describe("AuthProvider native storage recovery", () => {
     mocks.clearLocalSession.mockResolvedValue(undefined);
     mocks.reset.mockResolvedValue(undefined);
     mocks.signOut.mockResolvedValue({ error: null });
+    mocks.signUp.mockResolvedValue({ error: null });
   });
 
   it("blocks auth without an insecure fallback and requires reset confirmation", async () => {
@@ -156,5 +168,52 @@ describe("AuthProvider native storage recovery", () => {
 
     await waitFor(() => expect(mocks.toastError).toHaveBeenCalledTimes(1));
     expect(mocks.toastWarning).not.toHaveBeenCalled();
+  });
+
+  it("canonicalizes a registration display name at the auth provider boundary", async () => {
+    mocks.ensureReady.mockResolvedValue(undefined);
+    mocks.onAuthStateChange.mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    });
+    mocks.getSession.mockResolvedValue({ data: { session: null } });
+
+    render(
+      <AuthProvider>
+        <SignUpProbe displayName="  Ada Lovelace  " />
+      </AuthProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Signup probe" }));
+
+    await waitFor(() => expect(mocks.signUp).toHaveBeenCalledWith({
+      email: "ada@example.test",
+      password: "secure-password",
+      options: {
+        data: { display_name: "Ada Lovelace" },
+        emailRedirectTo: "https://effectime.app/auth/callback",
+      },
+    }));
+  });
+
+  it.each([
+    ["blank", "   "],
+    ["control-character", `Ada${String.fromCodePoint(127)}Lovelace`],
+    ["C1-control-character", `Ada${String.fromCodePoint(0x85)}Lovelace`],
+    ["unpaired-surrogate", "Ada\ud800Lovelace"],
+    ["overlong", "x".repeat(201)],
+  ])("rejects an invalid %s registration display name before Supabase", async (_caseName, displayName) => {
+    mocks.ensureReady.mockResolvedValue(undefined);
+    mocks.onAuthStateChange.mockReturnValue({
+      data: { subscription: { unsubscribe: vi.fn() } },
+    });
+    mocks.getSession.mockResolvedValue({ data: { session: null } });
+
+    render(
+      <AuthProvider>
+        <SignUpProbe displayName={displayName} />
+      </AuthProvider>,
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "Signup probe" }));
+
+    await waitFor(() => expect(mocks.signUp).not.toHaveBeenCalled());
   });
 });

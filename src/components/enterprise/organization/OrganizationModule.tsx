@@ -18,11 +18,12 @@ import { SkillsManager } from '../resources/SkillsManager';
 interface Props {
   workspaceId: string;
   isAdmin: boolean;
+  canEditMemberProfiles?: boolean;
   onNavigateTab?: (tab: string) => void;
   userId?: string;
 }
 
-export function OrganizationModule({ workspaceId, isAdmin, onNavigateTab, userId }: Props) {
+export function OrganizationModule({ workspaceId, isAdmin, canEditMemberProfiles = false, onNavigateTab, userId }: Props) {
   const t = useT();
   return (
     <div className="space-y-3">
@@ -91,6 +92,7 @@ export function OrganizationModule({ workspaceId, isAdmin, onNavigateTab, userId
           <OrgChart
             workspaceId={workspaceId}
             isAdmin={isAdmin}
+            canEditMemberProfiles={canEditMemberProfiles}
             onNavigateTab={onNavigateTab}
             userId={userId}
           />

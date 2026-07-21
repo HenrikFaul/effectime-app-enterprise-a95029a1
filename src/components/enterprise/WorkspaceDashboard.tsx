@@ -142,6 +142,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   const [showMyProfile, setShowMyProfile] = useState(false);
   const [myMembership, setMyMembership] = useState<any>(null);
   const [allMembers, setAllMembers] = useState<any[]>([]);
+  const membershipLoadGenerationRef = useRef(0);
   const [timelineReport, setTimelineReport] = useState<{ userIds: string[]; range: { from: Date; to: Date } } | null>(null);
   // Stable callback reference — prevents infinite re-render loop in TimelineView
   const handleFilteredUsersChange = useCallback(
@@ -162,7 +163,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
     setPlannerOfficeDialogOpen(true);
   }, []);
   const isAdmin = userRole === 'owner' || userRole === 'resourceAssistant';
-  const { canView, canEdit } = useEnterprisePermissions(workspace.id, userRole);
+  const { canView, canEdit, loading: permissionsLoading } = useEnterprisePermissions(workspace.id, userRole);
   const { layout } = useWorkspaceNavLayout(workspace.id);
   const {
     isEnabled: isFeatureEnabled,
@@ -175,6 +176,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   const canUseAdminOverride = canEdit('admin_override') && !featuresLoading && !featuresError && isFeatureEnabled('admin_override');
   const canUseIcalFeed = !featuresLoading && !featuresError && isFeatureEnabled('ical_feed');
   const canUseBirthdayWidget = canView('members') && !featuresLoading && !featuresError && isFeatureEnabled('birthday_widget') && isFeatureEnabled('members_list');
+  const canEditMemberProfiles = !permissionsLoading && canEdit('members') && !featuresLoading && !featuresError && isFeatureEnabled('members_list');
 
   // Map active tab → help anchor
   const helpAnchorId =
@@ -190,34 +192,49 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
     'workspace.members';
   useHelpAnchor({ id: helpAnchorId, crumbs: [workspace.name, activeTab] });
 
-  // Fetch current user's membership + profile for "Profilom"
+  // Fetch current user's membership + profile for "Profilom".
+  const fetchMyMembership = useCallback(async () => {
+    const generation = membershipLoadGenerationRef.current + 1;
+    membershipLoadGenerationRef.current = generation;
+    const isCurrent = () => membershipLoadGenerationRef.current === generation;
+    const [membershipRes, profileRes, membersRes] = await Promise.all([
+      supabase.from('enterprise_memberships').select('*').eq('workspace_id', workspace.id).eq('user_id', userId).eq('status', 'active').maybeSingle(),
+      supabase.from('profiles').select('display_name').eq('user_id', userId).maybeSingle(),
+      supabase.from('enterprise_memberships').select('id, user_id, role, status, team, location, business_role, joined_at, city, office_id, base_working_hours').eq('workspace_id', workspace.id).eq('status', 'active'),
+    ]);
+    if (!isCurrent()) return;
+    if (membershipRes.error) console.error('[WorkspaceDashboard] membership fetch failed:', membershipRes.error.message);
+    if (profileRes.error) console.error('[WorkspaceDashboard] profile fetch failed:', profileRes.error.message);
+    if (membersRes.error) console.error('[WorkspaceDashboard] members fetch failed:', membersRes.error.message);
+    const membership = membershipRes.data;
+    const profile = profileRes.data;
+    const members = membersRes.data;
+    const nextMyMembership = membership
+      ? { ...membership, display_name: profile?.display_name || t('ws_nav.unknown_user') }
+      : null;
+    let nextAllMembers: Array<Record<string, unknown> & { user_id: string; display_name: string }> = [];
+    // Enrich members with display names
+    if (members && members.length > 0) {
+      const userIds = members.map(membershipRow => membershipRow.user_id);
+      const { data: profiles, error: profilesErr } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);
+      if (profilesErr) console.error('[WorkspaceDashboard] profiles enrichment failed:', profilesErr.message);
+      const nameMap = new Map((profiles || []).map(profileRow => [profileRow.user_id, profileRow.display_name || t('ws_nav.unknown_user')]));
+      nextAllMembers = members.map(membershipRow => ({
+        ...membershipRow,
+        display_name: nameMap.get(membershipRow.user_id) || t('ws_nav.unknown_user'),
+      }));
+    }
+    if (!isCurrent()) return;
+    setMyMembership(nextMyMembership);
+    setAllMembers(nextAllMembers);
+  }, [workspace.id, userId, t]);
+
   useEffect(() => {
-    const fetchMyMembership = async () => {
-      const [membershipRes, profileRes, membersRes] = await Promise.all([
-        supabase.from('enterprise_memberships').select('*').eq('workspace_id', workspace.id).eq('user_id', userId).eq('status', 'active').maybeSingle(),
-        supabase.from('profiles').select('display_name').eq('user_id', userId).maybeSingle(),
-        (supabase as any).from('enterprise_memberships').select('id, user_id, role, status, team, location, business_role, joined_at, city, office_id, base_working_hours').eq('workspace_id', workspace.id).eq('status', 'active'),
-      ]);
-      if (membershipRes.error) console.error('[WorkspaceDashboard] membership fetch failed:', membershipRes.error.message);
-      if (profileRes.error) console.error('[WorkspaceDashboard] profile fetch failed:', profileRes.error.message);
-      if (membersRes.error) console.error('[WorkspaceDashboard] members fetch failed:', membersRes.error.message);
-      const membership = membershipRes.data;
-      const profile = profileRes.data;
-      const members = membersRes.data;
-      if (membership) {
-        setMyMembership({ ...membership, display_name: profile?.display_name || t('ws_nav.unknown_user') });
-      }
-      // Enrich members with display names
-      if (members && members.length > 0) {
-        const userIds = members.map((m: any) => m.user_id);
-        const { data: profiles, error: profilesErr } = await supabase.from('profiles').select('user_id, display_name').in('user_id', userIds);
-        if (profilesErr) console.error('[WorkspaceDashboard] profiles enrichment failed:', profilesErr.message);
-        const nameMap = new Map((profiles || []).map((p: any) => [p.user_id, p.display_name || t('ws_nav.unknown_user')]));
-        setAllMembers(members.map((m: any) => ({ ...m, display_name: nameMap.get(m.user_id) || t('ws_nav.unknown_user') })));
-      }
+    void fetchMyMembership();
+    return () => {
+      membershipLoadGenerationRef.current += 1;
     };
-    fetchMyMembership();
-  }, [workspace.id, userId]);
+  }, [fetchMyMembership]);
 
   // Load workspace-scoped translation overrides (Phase 8 — admin-managed CSV).
   useEffect(() => {
@@ -388,7 +405,13 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                 {canView('invitations') && (
                   <InvitationsPanel workspaceId={workspace.id} isAdmin={canEdit('invitations')} />
                 )}
-                <MemberList workspaceId={workspace.id} userId={userId} userRole={userRole} onNavigateTab={setActiveTab} />
+                <MemberList
+                  workspaceId={workspace.id}
+                  userId={userId}
+                  userRole={userRole}
+                  canEditMemberProfiles={canEditMemberProfiles}
+                  onNavigateTab={setActiveTab}
+                />
               </TabsContent>
             )}
 
@@ -397,6 +420,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                 <OrganizationModule
                   workspaceId={workspace.id}
                   isAdmin={isAdmin}
+                  canEditMemberProfiles={canEditMemberProfiles}
                   onNavigateTab={setActiveTab}
                   userId={userId}
                 />
@@ -627,7 +651,11 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
           currentUserId={userId}
           allMembers={allMembers}
           isAdmin={isAdmin}
+          canEditMember={canEditMemberProfiles}
           showEmail={true}
+          onMemberUpdated={() => {
+            void fetchMyMembership();
+          }}
         />
       )}
 

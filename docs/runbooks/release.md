@@ -32,7 +32,7 @@ frontend build alone is not release approval.
   extension membership, digest, fixed search path, trigger/rollback, runtime
   TRUNCATE denial, normalized reason boundaries, exact audit state, deterministic
   lock/reopen races and actor-demotion serialization. It is a targeted fixture
-  and never substitutes for the clean 127-migration replay.
+  and never substitutes for the clean 128-migration replay.
 - `node --test scripts/ci/hr-workflow-tenant-db-contract.test.mjs` and
   `npm run db:hr-workflow:test` for the HR workflow tenant-boundary migration.
   The pinned PostgreSQL 18.4 fixture must pass cross-workspace template,
@@ -47,6 +47,18 @@ frontend build alone is not release approval.
   ledger/RLS, same-key replay, payload mismatch, malformed response rejection,
   two-tenant authz/entitlement/input denial, audit/quota rollback and duplicate/
   demotion serialization. It is not restored-staging or live-schema evidence.
+- `node --test scripts/ci/profiles-tenant-db-contract.test.mjs` and
+  `npm run db:profiles-tenant:test` for v3.51.5. Require exact profile row/column
+  ACLs, restrictive self/shared-tenant policy, self locale/name and minimal
+  milestone RPC owner/search-path/ACL, two-tenant denials and repeat apply.
+- `node --test scripts/ci/member-profile-save-db-contract.test.mjs` and
+  `npm run db:member-profile-save:test` for v3.51.6. Require the network-isolated
+  pinned PostgreSQL 18.4 runner, all drift inventories, three weak same-name
+  constraint rejection cases, repeat apply, exact FK/index/CHECK/trigger/RLS/RPC
+  catalog, tenant/RBAC/entitlement/audit/cascade/rollback assertions, revision and
+  display-name conflicts, bounded lock retry, mixed legacy/RPC whole-transaction
+  abort and one-statement MVCC read. Rerun all four earlier DB contracts because
+  this migration recreates shared audit/payroll lifecycle guards.
 - Verified backup plus an isolated restore drill within the agreed RPO/RTO.
 - Critical-path staging smoke for at least two tenants and affected roles.
 - Payroll staging smoke must cover open calculation → lock → repeat calculation →
@@ -137,7 +149,7 @@ frontend build alone is not release approval.
 ## Immediate NO-GO conditions
 
 - Migration history or schema differs from the approved staging result.
-- Clean migration replay is not 127/127, or the 30-table / 1-view / 46-function /
+- Clean migration replay is not 128/128, or the 30-table / 1-view / 46-function /
   2-enum provenance debt has not been replaced by transitively complete reviewed
   DDL with regenerated-types and schema-fingerprint comparison.
 - Backup/restore evidence is absent or stale.
@@ -146,6 +158,10 @@ frontend build alone is not release approval.
   assignee, instance/task join, inactive-assignee and race tests are not green;
   or restored-staging aggregate inventory is non-zero without a reviewed,
   data-preserving remediation decision.
+- The v3.51.6 allocation tenant/lexical/canonical/cardinality, membership metadata,
+  office tenant or display-name restored-staging inventory is non-zero without
+  an approved data-preserving remediation, or the exact atomic read/save RPC and
+  schema-cache contract is absent.
 - The admin-override PG18 contract is not green, restored staging does not expose
   both exact v1/v2 contracts, PostgREST has not reloaded the v2 signature, or a
   v2 web/mobile client would be deployed before the verified DB boundary.
@@ -219,5 +235,18 @@ RPCs exist and schema-cache smoke is green. After the database ACL hardening,
 older cached clients that read `profiles.preferences` fail closed, so the tested
 client must follow immediately. Never restore that broad column access as a
 rollback; roll the client forward or use a separately reviewed privacy-preserving
-recovery. The current linked history is 59 shared / 68 local-only / 84
-remote-only and therefore remains production **NO-GO**.
+  recovery. The locally derivable history is 59 shared / 69 local-only / 84
+  remote-only and therefore remains production **NO-GO**.
+
+The v3.51.6 atomic member-profile rollout is also database/schema-cache first and
+shared-client second. Before apply, run every fail-closed inventory on a restored
+production-like snapshot and review each non-zero row; the migration deliberately
+does not trim, normalize, reassign or delete business data. Verify the exact
+`profile_revision`, composite office/allocation tenant keys, lexical constraints,
+restrictive allocation policies and both RPC ACLs after PostgREST reload. Smoke
+owner, editable assistant, readonly member, self-name, cross-tenant office,
+legacy invalid allocation, concurrent web/native writer and reload-after-conflict
+paths. Then publish the same attestable React adapter to web, Android and iOS.
+Client rollback may hide the new editor, but must not relax tenant, audit or
+lexical constraints. Generated Supabase types are regenerated only after the
+migration history and verified target schema agree.

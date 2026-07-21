@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef, useCallback, useLayoutEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +18,15 @@ import { MemberExtendedDetails } from './MemberExtendedDetails';
 import { cn } from '@/lib/utils';
 import { useT } from '@/i18n/I18nProvider';
 import { AlertCircle } from 'lucide-react';
-import { updateMyWorkspaceProfileDisplayName } from '@/lib/workspaceMemberProfileApi';
+import {
+  canonicalizeWorkspaceProfileDisplayName,
+  isWorkspaceMemberBaseWorkingHoursValid,
+  isWorkspaceMemberRoleAllocationSnapshotValid,
+  loadWorkspaceMemberProfileEditSnapshot,
+  saveWorkspaceMemberProfile,
+  WorkspaceMemberProfileError,
+  type WorkspaceMemberRoleAllocationInput,
+} from '@/lib/workspaceMemberProfileApi';
 
 interface Member {
   id: string;
@@ -32,6 +40,11 @@ interface Member {
   display_name?: string;
   city?: string | null;
   office_id?: string | null;
+  base_working_hours?: number | null;
+  org_unit_id?: string | null;
+  manager_id?: string | null;
+  contract_type_id?: string | null;
+  leadership_level_id?: string | null;
 }
 
 interface Office {
@@ -48,6 +61,8 @@ interface Props {
   currentUserId?: string;
   allMembers: Member[];
   isAdmin?: boolean;
+  /** Fail-closed profile edit gate: members edit permission plus members_list entitlement. */
+  canEditMember?: boolean;
   onMemberUpdated?: () => void;
   showEmail?: boolean;
   /** Optional callback to switch the workspace top-level tab from the "Bővebb adatok" deep links. */
@@ -64,10 +79,79 @@ interface PeerAllocation {
   is_priority: boolean;
 }
 
-export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, currentUserId, allMembers, isAdmin = false, onMemberUpdated, showEmail = false, onNavigateTab }: Props) {
+interface LeaveRequest {
+  id: string;
+  status: string;
+  start_date: string;
+  end_date: string;
+  leave_type: string;
+}
+
+interface BusinessRoleReference {
+  business_role: string | null;
+}
+
+interface TeamReference {
+  id: string;
+  name: string;
+}
+
+interface TeamRoleReference {
+  team_id: string;
+  business_role: string;
+}
+
+interface EditFormState {
+  display_name: string;
+  location: string;
+  city: string;
+  office_id: string;
+  base_working_hours: number;
+}
+
+interface AuthoritativeDraftSnapshot {
+  scope: string;
+  editForm: EditFormState;
+  expectedDisplayName: string | null;
+  allocations: readonly Allocation[];
+}
+
+interface ProfileQueryResult<T> {
+  data: T[] | null;
+  error: unknown;
+}
+
+interface ProfileQuery<T> extends PromiseLike<ProfileQueryResult<T>> {
+  select(columns: string): ProfileQuery<T>;
+  eq(column: string, value: unknown): ProfileQuery<T>;
+  not(column: string, operator: string, value: unknown): ProfileQuery<T>;
+  order(column: string, options?: { ascending?: boolean }): ProfileQuery<T>;
+  abortSignal(signal: AbortSignal): ProfileQuery<T>;
+}
+
+interface MemberProfileReadClient {
+  from<T>(table: string): ProfileQuery<T>;
+}
+
+const memberProfileReadClient = supabase as unknown as MemberProfileReadClient;
+
+export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, currentUserId, allMembers, canEditMember = false, onMemberUpdated, showEmail = false, onNavigateTab }: Props) {
   const t = useT();
-  const [leaveRequests, setLeaveRequests] = useState<any[]>([]);
+  const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [readyProfileScope, setReadyProfileScope] = useState<string | null>(null);
+  const [failedProfileScope, setFailedProfileScope] = useState<string | null>(null);
+  const [failedPeerScope, setFailedPeerScope] = useState<string | null>(null);
+  const loadGenerationRef = useRef(0);
+  const [loadedProfileRevision, setLoadedProfileRevision] = useState<number | null>(null);
+  const authoritativeDraftRef = useRef<AuthoritativeDraftSnapshot | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [conflictProfileScope, setConflictProfileScope] = useState<string | null>(null);
+  const saveInFlightRef = useRef(false);
+  const saveGenerationRef = useRef(0);
+  const saveAbortControllerRef = useRef<AbortController | null>(null);
   const [editing, setEditing] = useState(false);
   const [view, setView] = useState<ProfileView>('basic');
   const [offices, setOffices] = useState<Office[]>([]);
@@ -76,7 +160,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, cu
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [allWorkspaceAllocations, setAllWorkspaceAllocations] = useState<PeerAllocation[]>([]);
   const [teamsData, setTeamsData] = useState<{ id: string; name: string; roles: string[] }[]>([]);
-  const [editForm, setEditForm] = useState({
+  const [editForm, setEditForm] = useState<EditFormState>({
     display_name: '',
     location: '',
     city: '',
@@ -97,6 +181,50 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, cu
   const canEditDisplayName = Boolean(
     currentUserId && member?.user_id === currentUserId,
   );
+  const profileLoadScope = member && open
+    ? `${workspaceId}:${member.id}:${loadAttempt}`
+    : null;
+  const profileDataReady = profileLoadScope !== null
+    && readyProfileScope === profileLoadScope
+    && loadedProfileRevision !== null;
+  const loadError = profileLoadScope !== null && failedProfileScope === profileLoadScope;
+  const peerLoadError = profileLoadScope !== null && failedPeerScope === profileLoadScope;
+  const saveConflict = profileLoadScope !== null && conflictProfileScope === profileLoadScope;
+
+  const invalidateSaveScope = useCallback((resetUi: boolean) => {
+    saveGenerationRef.current += 1;
+    saveAbortControllerRef.current?.abort();
+    saveAbortControllerRef.current = null;
+    saveInFlightRef.current = false;
+    if (resetUi) {
+      setSaving(false);
+      setSaveError(null);
+      setConflictProfileScope(null);
+    }
+  }, []);
+
+  const roleAllocationSnapshot = useMemo<readonly WorkspaceMemberRoleAllocationInput[]>(
+    () => Object.freeze(allocations.map(allocation => Object.freeze({
+      businessRole: allocation.business_role,
+      percentage: allocation.percentage,
+      isPriority: Boolean(allocation.is_priority),
+    }))),
+    [allocations],
+  );
+  const isAllocationSnapshotValid = isWorkspaceMemberRoleAllocationSnapshotValid(
+    roleAllocationSnapshot,
+  );
+  const isBaseWorkingHoursValid = isWorkspaceMemberBaseWorkingHoursValid(
+    editForm.base_working_hours,
+  );
+  const normalizedDisplayName = canonicalizeWorkspaceProfileDisplayName(editForm.display_name);
+  const expectedDisplayName = authoritativeDraftRef.current?.scope === profileLoadScope
+    ? authoritativeDraftRef.current.expectedDisplayName ?? ''
+    : '';
+  const hasDisplayNameEdit = canEditDisplayName
+    && profileDataReady
+    && editForm.display_name !== expectedDisplayName;
+  const isDisplayNameValid = !hasDisplayNameEdit || normalizedDisplayName !== undefined;
 
   // Sorted allocations: priority first, then by percentage desc
   const sortedAllocations = useMemo(() => {
@@ -125,7 +253,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, cu
       result[a.business_role] = peers;
     });
     return result;
-  }, [sortedAllocations, allWorkspaceAllocations, allMembers, member]);
+  }, [sortedAllocations, allWorkspaceAllocations, allMembers, member, t]);
 
   const approvedLeaves = useMemo(() => leaveRequests.filter(r => r.status === 'approved'), [leaveRequests]);
   const pendingLeaves = useMemo(() => leaveRequests.filter(r => r.status === 'pending' || r.status === 'draft'), [leaveRequests]);
@@ -151,135 +279,276 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, cu
       }, 0);
   }, [leaveRequests]);
 
+  useLayoutEffect(() => {
+    invalidateSaveScope(true);
+    if (!open) {
+      loadGenerationRef.current += 1;
+      setReadyProfileScope(null);
+      setLoadedProfileRevision(null);
+      authoritativeDraftRef.current = null;
+    }
+    return () => invalidateSaveScope(false);
+  }, [open, workspaceId, member?.id, invalidateSaveScope]);
+
+  useLayoutEffect(() => {
+    if (!canEditMember) {
+      invalidateSaveScope(true);
+      setEditing(false);
+    }
+  }, [canEditMember, invalidateSaveScope]);
+
   useEffect(() => {
-    if (!member || !open) return;
+    const generation = loadGenerationRef.current + 1;
+    loadGenerationRef.current = generation;
+    const controller = new AbortController();
+    const isCurrent = () => (
+      !controller.signal.aborted
+      && loadGenerationRef.current === generation
+    );
+
     setEditing(false);
+    setSaveError(null);
     setView('basic');
-    setLoading(true);
+    setReadyProfileScope(null);
+    setFailedProfileScope(null);
+    setFailedPeerScope(null);
+    setLoadedProfileRevision(null);
+    setConflictProfileScope(null);
+    authoritativeDraftRef.current = null;
+    setLeaveRequests([]);
+    setOffices([]);
+    setBusinessRoles([]);
+    setAllocations([]);
+    setAllWorkspaceAllocations([]);
+    setTeamsData([]);
+    setUserEmail(null);
 
-    Promise.all([
-      supabase.from('leave_requests').select('*').eq('workspace_id', workspaceId).eq('user_id', member.user_id).order('start_date', { ascending: false }),
-      supabase.from('enterprise_offices').select('id, name, city').eq('workspace_id', workspaceId).order('name'),
-      (supabase as any).from('enterprise_member_role_allocations').select('membership_id, business_role, percentage, is_priority').eq('workspace_id', workspaceId),
-      supabase.from('enterprise_memberships').select('business_role').eq('workspace_id', workspaceId).not('business_role', 'is', null),
-      (supabase as any).from('enterprise_teams').select('id, name').eq('workspace_id', workspaceId),
-      (supabase as any).from('enterprise_team_roles').select('team_id, business_role').eq('workspace_id', workspaceId),
-    ]).then(([leaveRes, officeRes, allAllocRes, rolesRes, teamsRes, teamRolesRes]) => {
-      setLeaveRequests((leaveRes.data as any[]) || []);
-      setOffices((officeRes.data as Office[]) || []);
-
-      const allAllocs = ((allAllocRes.data as any[]) || []).map((a: any) => ({
-        membership_id: a.membership_id,
-        business_role: a.business_role,
-        percentage: Number(a.percentage),
-        is_priority: !!a.is_priority,
-      }));
-      setAllWorkspaceAllocations(allAllocs);
-
-      // Filter to current member's allocations
-      const myAllocs: Allocation[] = allAllocs
-        .filter(a => a.membership_id === member.id)
-        .map(a => ({ business_role: a.business_role, percentage: a.percentage, is_priority: a.is_priority }));
-
-      if (myAllocs.length === 0 && member.business_role) {
-        myAllocs.push({ business_role: member.business_role, percentage: 100, is_priority: true });
-      } else if (myAllocs.length > 0 && !myAllocs.some(a => a.is_priority)) {
-        myAllocs[0].is_priority = true;
-      }
-      setAllocations(myAllocs);
-
-      const roleSet = new Set<string>();
-      ((rolesRes.data as any[]) || []).forEach((m: any) => { if (m.business_role) roleSet.add(m.business_role); });
-      myAllocs.forEach(a => roleSet.add(a.business_role));
-      allAllocs.forEach(a => roleSet.add(a.business_role));
-      setBusinessRoles(Array.from(roleSet).sort());
-
-      const teamRows = (teamsRes.data as any[]) || [];
-      const teamRoleRows = (teamRolesRes.data as any[]) || [];
-      const rolesByTeam = new Map<string, string[]>();
-      teamRoleRows.forEach((tr: any) => {
-        const arr = rolesByTeam.get(tr.team_id) || [];
-        arr.push(tr.business_role);
-        rolesByTeam.set(tr.team_id, arr);
-      });
-      setTeamsData(teamRows.map((t: any) => ({ id: t.id, name: t.name, roles: rolesByTeam.get(t.id) || [] })));
+    if (!member || !open || profileLoadScope === null) {
       setLoading(false);
-    });
-
-    if (showEmail) {
-      supabase.auth.getUser().then(({ data }) => {
-        setUserEmail(data?.user?.email || null);
-      });
-    } else {
-      setUserEmail(null);
+      return () => controller.abort();
     }
 
+    setLoading(true);
     setEditForm({
-      location: member.location || '',
-      city: (member as any).city || '',
-      office_id: (member as any).office_id || '',
+      location: '',
+      city: '',
+      office_id: '',
       display_name: member.display_name || '',
-      base_working_hours: Number((member as any).base_working_hours ?? 8),
+      base_working_hours: 8,
     });
-  }, [member, open, workspaceId, showEmail]);
+
+    const loadProfileData = async () => {
+      try {
+        const [leaveRes, officeRes, editSnapshot, peerAllocRes, rolesRes, teamsRes, teamRolesRes, authRes] = await Promise.all([
+          memberProfileReadClient.from<LeaveRequest>('leave_requests').select('*').eq('workspace_id', workspaceId).eq('user_id', member.user_id).order('start_date', { ascending: false }).abortSignal(controller.signal),
+          memberProfileReadClient.from<Office>('enterprise_offices').select('id, name, city').eq('workspace_id', workspaceId).order('name').abortSignal(controller.signal),
+          loadWorkspaceMemberProfileEditSnapshot(workspaceId, member.id, { signal: controller.signal }),
+          memberProfileReadClient.from<PeerAllocation>('enterprise_member_role_allocations').select('membership_id, business_role, percentage, is_priority').eq('workspace_id', workspaceId).abortSignal(controller.signal),
+          memberProfileReadClient.from<BusinessRoleReference>('enterprise_memberships').select('business_role').eq('workspace_id', workspaceId).not('business_role', 'is', null).abortSignal(controller.signal),
+          memberProfileReadClient.from<TeamReference>('enterprise_teams').select('id, name').eq('workspace_id', workspaceId).abortSignal(controller.signal),
+          memberProfileReadClient.from<TeamRoleReference>('enterprise_team_roles').select('team_id, business_role').eq('workspace_id', workspaceId).abortSignal(controller.signal),
+          showEmail
+            ? supabase.auth.getUser()
+            : Promise.resolve({ data: { user: null }, error: null }),
+        ]);
+
+        if (!isCurrent()) return;
+        if (
+          leaveRes.error
+          || officeRes.error
+          || rolesRes.error
+          || teamsRes.error
+          || teamRolesRes.error
+          || authRes.error
+        ) {
+          throw new Error('member-profile-load-failed');
+        }
+
+        const allAllocs = peerAllocRes.error
+          ? []
+          : (peerAllocRes.data || []).map(allocation => ({
+            membership_id: allocation.membership_id,
+            business_role: allocation.business_role,
+            percentage: Number(allocation.percentage),
+            is_priority: !!allocation.is_priority,
+          }));
+        const myAllocs: Allocation[] = editSnapshot.roleAllocations.map(allocation => ({
+          business_role: allocation.businessRole,
+          percentage: allocation.percentage,
+          is_priority: allocation.isPriority,
+        }));
+
+        if (myAllocs.length === 0 && editSnapshot.businessRole) {
+          myAllocs.push({ business_role: editSnapshot.businessRole, percentage: 100, is_priority: true });
+        } else if (myAllocs.length > 0 && !myAllocs.some(allocation => allocation.is_priority)) {
+          const legacyPrimaryMatches = editSnapshot.businessRole
+            ? myAllocs.filter(allocation => allocation.business_role === editSnapshot.businessRole)
+            : [];
+          if (legacyPrimaryMatches.length === 1) {
+            legacyPrimaryMatches[0].is_priority = true;
+          }
+        }
+
+        const roleSet = new Set<string>();
+        (rolesRes.data || []).forEach(membership => {
+          if (membership.business_role) roleSet.add(membership.business_role);
+        });
+        myAllocs.forEach(allocation => roleSet.add(allocation.business_role));
+        allAllocs.forEach(allocation => roleSet.add(allocation.business_role));
+
+        const teamRows = teamsRes.data || [];
+        const teamRoleRows = teamRolesRes.data || [];
+        const rolesByTeam = new Map<string, string[]>();
+        teamRoleRows.forEach(teamRole => {
+          const roles = rolesByTeam.get(teamRole.team_id) || [];
+          roles.push(teamRole.business_role);
+          rolesByTeam.set(teamRole.team_id, roles);
+        });
+        const authoritativeEditForm: EditFormState = {
+          location: editSnapshot.location || '',
+          city: editSnapshot.city || '',
+          office_id: editSnapshot.officeId || '',
+          display_name: canEditDisplayName
+            ? editSnapshot.displayName || ''
+            : member.display_name || '',
+          base_working_hours: editSnapshot.baseWorkingHours,
+        };
+        const authoritativeAllocations = myAllocs.map(allocation => ({ ...allocation }));
+
+        if (!isCurrent()) return;
+        setLeaveRequests(leaveRes.data || []);
+        setOffices(officeRes.data || []);
+        setAllWorkspaceAllocations(allAllocs);
+        setAllocations(myAllocs);
+        setEditForm(authoritativeEditForm);
+        setLoadedProfileRevision(editSnapshot.profileRevision);
+        authoritativeDraftRef.current = {
+          scope: profileLoadScope,
+          editForm: { ...authoritativeEditForm },
+          expectedDisplayName: canEditDisplayName ? editSnapshot.displayName : null,
+          allocations: authoritativeAllocations,
+        };
+        setBusinessRoles(Array.from(roleSet).sort());
+        setTeamsData(teamRows.map(team => ({
+          id: team.id,
+          name: team.name,
+          roles: rolesByTeam.get(team.id) || [],
+        })));
+        setUserEmail(showEmail ? authRes.data?.user?.email || null : null);
+        setFailedPeerScope(peerAllocRes.error ? profileLoadScope : null);
+        setReadyProfileScope(profileLoadScope);
+      } catch {
+        if (!isCurrent()) return;
+        setLoadedProfileRevision(null);
+        authoritativeDraftRef.current = null;
+        setFailedProfileScope(profileLoadScope);
+      } finally {
+        if (isCurrent()) setLoading(false);
+      }
+    };
+
+    void loadProfileData();
+    return () => controller.abort();
+  }, [member, open, workspaceId, showEmail, profileLoadScope, canEditDisplayName]);
+
+  const reloadProfileSnapshot = useCallback(() => {
+    invalidateSaveScope(true);
+    loadGenerationRef.current += 1;
+    setEditing(false);
+    setReadyProfileScope(null);
+    setLoadedProfileRevision(null);
+    authoritativeDraftRef.current = null;
+    setLoadAttempt(attempt => attempt + 1);
+  }, [invalidateSaveScope]);
+
+  const handleCancelEdit = () => {
+    const authoritativeDraft = authoritativeDraftRef.current;
+    if (authoritativeDraft && authoritativeDraft.scope === profileLoadScope) {
+      setEditForm({ ...authoritativeDraft.editForm });
+      setAllocations(authoritativeDraft.allocations.map(allocation => ({ ...allocation })));
+      setSaveError(null);
+      setConflictProfileScope(null);
+      setEditing(false);
+      return;
+    }
+    reloadProfileSnapshot();
+  };
 
   const handleSave = async () => {
-    if (!member) return;
-    const normalizedDisplayName = editForm.display_name.trim();
-    const primaryRole = allocations.find(a => a.is_priority)?.business_role || allocations[0]?.business_role || null;
-    const { error } = await (supabase as any)
-      .from('enterprise_memberships')
-      .update({
-        business_role: primaryRole,
-        location: editForm.location || null,
-        city: editForm.city || null,
-        office_id: editForm.office_id || null,
-        base_working_hours: editForm.base_working_hours,
-      })
-      .eq('id', member.id);
-
-    if (error) {
-      toast.error(t('member_profile.save_error'));
+    if (
+      !member
+      || !open
+      || !canEditMember
+      || loading
+      || !profileDataReady
+      || loadError
+      || saveConflict
+      || loadedProfileRevision === null
+      || saveInFlightRef.current
+    ) return;
+    const authoritativeDraft = authoritativeDraftRef.current;
+    if (!authoritativeDraft || authoritativeDraft.scope !== profileLoadScope) return;
+    if (!isBaseWorkingHoursValid) return;
+    const hasCurrentDisplayNameEdit = canEditDisplayName
+      && editForm.display_name !== (authoritativeDraft.expectedDisplayName ?? '');
+    if (hasCurrentDisplayNameEdit && normalizedDisplayName === undefined) return;
+    if (!isAllocationSnapshotValid) {
+      setSaveError(t('member_profile.allocation_validation_error'));
       return;
     }
 
-    if (
-      canEditDisplayName
-      && normalizedDisplayName
-      && normalizedDisplayName !== (member.display_name || '').trim()
-    ) {
-      try {
-        await updateMyWorkspaceProfileDisplayName(
-          workspaceId,
-          member.id,
-          normalizedDisplayName,
-        );
-      } catch {
-        toast.error(t('member_profile.save_name_error'));
-        return;
+    const displayName = hasCurrentDisplayNameEdit
+      ? normalizedDisplayName
+      : null;
+    const payload = Object.freeze({
+      workspaceId,
+      membershipId: member.id,
+      expectedProfileRevision: loadedProfileRevision,
+      location: editForm.location.trim() || null,
+      city: editForm.city.trim() || null,
+      officeId: editForm.office_id || null,
+      baseWorkingHours: editForm.base_working_hours,
+      roleAllocations: roleAllocationSnapshot,
+      displayName,
+      expectedDisplayName: displayName === null
+        ? null
+        : authoritativeDraft.expectedDisplayName,
+    });
+
+    saveInFlightRef.current = true;
+    const generation = saveGenerationRef.current;
+    const controller = new AbortController();
+    saveAbortControllerRef.current = controller;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await saveWorkspaceMemberProfile(payload, { signal: controller.signal });
+      if (controller.signal.aborted || generation !== saveGenerationRef.current) return;
+      toast.success(t('member_profile.save_success'));
+      setEditing(false);
+      onMemberUpdated?.();
+      onOpenChange(false);
+    } catch (error) {
+      if (controller.signal.aborted || generation !== saveGenerationRef.current) return;
+      const conflict = error instanceof WorkspaceMemberProfileError && error.code === 'conflict';
+      const message = conflict
+        ? t('member_profile.save_conflict')
+        : t('member_profile.save_error');
+      setConflictProfileScope(conflict ? profileLoadScope : null);
+      setSaveError(message);
+      toast.error(message);
+    } finally {
+      if (generation === saveGenerationRef.current && saveAbortControllerRef.current === controller) {
+        saveAbortControllerRef.current = null;
+        saveInFlightRef.current = false;
+        setSaving(false);
       }
     }
+  };
 
-    await supabase.from('enterprise_member_role_allocations').delete().eq('membership_id', member.id);
-    if (allocations.length > 0) {
-      const rows = allocations.map(a => ({
-        workspace_id: workspaceId,
-        membership_id: member.id,
-        business_role: a.business_role,
-        percentage: a.percentage,
-        is_priority: !!a.is_priority,
-      }));
-      const { error: allocErr } = await (supabase as any).from('enterprise_member_role_allocations').insert(rows);
-      if (allocErr) {
-        console.error('Allocation save error:', allocErr);
-        toast.error(t('member_profile.save_role_error'));
-        return;
-      }
-    }
-
-    toast.success(t('member_profile.save_success'));
-    setEditing(false);
-    onMemberUpdated?.();
+  const handleSheetOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) invalidateSaveScope(true);
+    onOpenChange(nextOpen);
   };
 
   if (!member) return null;
@@ -310,10 +579,15 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, cu
     }
   };
 
-  const officeName = offices.find(o => o.id === (member as any).office_id)?.name;
+  const officeName = offices.find(o => o.id === editForm.office_id)?.name;
+  const authoritativeDisplayName = canEditDisplayName
+    && profileDataReady
+    && authoritativeDraftRef.current?.scope === profileLoadScope
+    ? authoritativeDraftRef.current.editForm.display_name
+    : member.display_name || '';
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={handleSheetOpenChange}>
       <SheetContent className="w-full sm:max-w-xl p-0 overflow-x-hidden">
         <SheetHeader className="p-6 pb-4 border-b">
           <SheetTitle className="flex items-center gap-3">
@@ -321,7 +595,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, cu
               <User className="h-5 w-5 text-primary" />
             </div>
             <div className="flex-1">
-              <p className="text-base font-semibold">{member.display_name || t('member_profile.unknown')}</p>
+              <p className="text-base font-semibold">{authoritativeDisplayName || t('member_profile.unknown')}</p>
               <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                 <Badge variant="outline" className="text-[10px]">{getRoleLabel(member.role)}</Badge>
                 {priorityRole && (
@@ -331,8 +605,17 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, cu
                 )}
               </div>
             </div>
-            {isAdmin && !editing && (
-              <Button size="sm" variant="outline" onClick={() => setEditing(true)}>
+            {canEditMember && !editing && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setSaveError(null);
+                  setEditing(true);
+                }}
+                disabled={loading || !profileDataReady || loadError}
+                aria-describedby={loadError ? 'member-profile-load-error' : undefined}
+              >
                 <Edit2 className="h-3.5 w-3.5 mr-1" /> {t('member_profile.edit_btn')}
               </Button>
             )}
@@ -379,7 +662,32 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, cu
 
         <ScrollArea className="h-[calc(100vh-170px)] overflow-x-hidden">
           <div className="p-4 space-y-4" hidden={view !== 'basic'}>
-            <OrganizationCompletionBanner member={member as any} />
+            {loading && (
+              <p role="status" className="sr-only">{t('common.loading')}</p>
+            )}
+            {loadError && (
+              <div
+                id="member-profile-load-error"
+                role="alert"
+                className="flex items-center justify-between gap-3 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2"
+              >
+                <p className="text-xs text-destructive">{t('member_profile.load_error')}</p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={reloadProfileSnapshot}
+                >
+                  {t('member_profile.retry_load')}
+                </Button>
+              </div>
+            )}
+            {peerLoadError && !loadError && (
+              <p role="status" className="rounded-md border border-amber-300/60 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+                {t('member_profile.peers_load_error')}
+              </p>
+            )}
+            <OrganizationCompletionBanner member={member} />
             {/* Basic Info / Edit */}
             <Card>
               <CardHeader className="py-3 px-4">
@@ -395,12 +703,22 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, cu
                         onChange={e => setEditForm(f => ({ ...f, display_name: e.target.value }))}
                         placeholder={t('member_profile.name_placeholder')}
                         disabled={!canEditDisplayName}
-                        aria-describedby={!canEditDisplayName ? 'member-profile-name-scope' : undefined}
+                        aria-invalid={canEditDisplayName && !isDisplayNameValid}
+                        aria-describedby={!canEditDisplayName
+                          ? 'member-profile-name-scope'
+                          : !isDisplayNameValid
+                            ? 'member-profile-name-error'
+                            : undefined}
                         className="h-8 text-sm"
                       />
                       {!canEditDisplayName && (
                         <p id="member-profile-name-scope" className="mt-1 text-xs text-muted-foreground">
                           {t('member_profile.name_self_only_hint')}
+                        </p>
+                      )}
+                      {canEditDisplayName && !isDisplayNameValid && (
+                        <p id="member-profile-name-error" role="alert" className="mt-1 text-xs text-destructive">
+                          {t('profile.display_name_validation_error')}
                         </p>
                       )}
                     </div>
@@ -441,23 +759,79 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, cu
                       <Input value={editForm.location} onChange={e => setEditForm(f => ({ ...f, location: e.target.value }))} placeholder={t('member_profile.location_note_placeholder')} className="h-8 text-sm" />
                     </div>
                     <div>
-                      <Label className="text-xs">{t('member_profile.base_hours_label')}</Label>
+                      <Label htmlFor="member-profile-base-working-hours" className="text-xs">{t('member_profile.base_hours_label')}</Label>
                       <div className="flex items-center gap-2 mt-1">
                         <Input
+                          id="member-profile-base-working-hours"
                           type="number"
                           min={0}
                           max={24}
-                          step={0.5}
+                          step={0.01}
                           value={editForm.base_working_hours}
                           onChange={e => setEditForm(f => ({ ...f, base_working_hours: Math.max(0, Math.min(24, Number(e.target.value) || 0)) }))}
+                          aria-invalid={!isBaseWorkingHoursValid}
+                          aria-describedby={!isBaseWorkingHoursValid ? 'member-profile-base-working-hours-error' : undefined}
                           className="h-8 text-sm w-24"
                         />
                         <span className="text-xs text-muted-foreground">{t('member_profile.base_hours_helper')}</span>
                       </div>
+                      {!isBaseWorkingHoursValid && (
+                        <p
+                          id="member-profile-base-working-hours-error"
+                          role="alert"
+                          className="mt-1 text-xs text-destructive"
+                        >
+                          {t('member_profile.base_hours_validation_error')}
+                        </p>
+                      )}
                     </div>
+                    {!isAllocationSnapshotValid && (
+                      <p role="alert" className="text-xs text-destructive">
+                        {t('member_profile.allocation_validation_error')}
+                      </p>
+                    )}
+                    {saveConflict && saveError && isAllocationSnapshotValid && (
+                      <div
+                        id="member-profile-save-error"
+                        role="alert"
+                        aria-live="assertive"
+                        className="flex items-center justify-between gap-3 rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2"
+                      >
+                        <p className="text-xs text-destructive">{saveError}</p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={reloadProfileSnapshot}
+                        >
+                          {t('member_profile.reload_after_conflict')}
+                        </Button>
+                      </div>
+                    )}
+                    {saveError && !saveConflict && isAllocationSnapshotValid && (
+                      <p id="member-profile-save-error" role="alert" aria-live="assertive" className="text-xs text-destructive">
+                        {saveError}
+                      </p>
+                    )}
                     <div className="flex gap-2 justify-end pt-1">
-                      <Button size="sm" variant="ghost" onClick={() => setEditing(false)}>{t('common.cancel')}</Button>
-                      <Button size="sm" onClick={handleSave}><Save className="h-3.5 w-3.5 mr-1" /> {t('common.save')}</Button>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={handleCancelEdit}
+                        disabled={saving}
+                      >
+                        {t('common.cancel')}
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={handleSave}
+                        disabled={loading || saving || !profileDataReady || loadError || saveConflict || !isDisplayNameValid || !isBaseWorkingHoursValid || !isAllocationSnapshotValid}
+                        aria-busy={saving}
+                        aria-describedby={saveError ? 'member-profile-save-error' : undefined}
+                      >
+                        <Save className="h-3.5 w-3.5 mr-1" aria-hidden="true" />
+                        {saving ? t('member_profile.save_in_progress') : t('common.save')}
+                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -485,11 +859,11 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, cu
                     </div>
                     <div className="flex justify-between"><span className="text-muted-foreground">{t('member_profile.display_city_label')}</span>
                       <span className="flex items-center gap-1">
-                        {(member as any).city ? <><MapPin className="h-3 w-3" />{(member as any).city}</> : '–'}
+                        {editForm.city ? <><MapPin className="h-3 w-3" />{editForm.city}</> : '–'}
                       </span>
                     </div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">{t('member_profile.display_location_label')}</span><span>{member.location || '–'}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">{t('member_profile.display_base_hours_label')}</span><span className="font-medium">{Number((member as any).base_working_hours ?? 8)} {t('member_profile.display_hours_unit')}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t('member_profile.display_location_label')}</span><span>{editForm.location || '–'}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t('member_profile.display_base_hours_label')}</span><span className="font-medium">{editForm.base_working_hours} {t('member_profile.display_hours_unit')}</span></div>
                     {userEmail && (
                       <div className="flex justify-between"><span className="text-muted-foreground">{t('member_profile.display_email_label')}</span><span className="text-sm">{userEmail}</span></div>
                     )}
@@ -503,7 +877,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, cu
             <MemberSitePriorityEditor
               workspaceId={workspaceId}
               membershipId={member.id}
-              isAdmin={isAdmin}
+              isAdmin={canEditMember}
             />
 
             {/* KPI Cards */}
@@ -677,8 +1051,8 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, cu
           <div className="p-4" hidden={view !== 'extended'}>
             <MemberExtendedDetails
               workspaceId={workspaceId}
-              member={{ id: member.id, user_id: member.user_id, display_name: member.display_name }}
-              isAdmin={isAdmin}
+              member={{ id: member.id, user_id: member.user_id, display_name: authoritativeDisplayName }}
+              isAdmin={canEditMember}
               onNavigateTab={onNavigateTab}
             />
           </div>
@@ -691,7 +1065,7 @@ export function MemberProfileSheet({ open, onOpenChange, member, workspaceId, cu
 // v3.0.0 — Organization metadata completion banner. Visible when one or more
 // of the new soft-required fields (manager, org_unit, contract_type,
 // leadership_level) are missing on the membership row. Non-blocking, advisory.
-function OrganizationCompletionBanner({ member }: { member: Record<string, any> }) {
+function OrganizationCompletionBanner({ member }: { member: Member }) {
   const t = useT();
   const missing: string[] = [];
   if (!member?.org_unit_id) missing.push(t("member.org_unit"));

@@ -1464,3 +1464,49 @@ const load = useCallback((opts?: { silent?: boolean }) => {
 **Problem**: A naive name loop can attach one issue to multiple members with the same display name and double-count its hours. Falling back to email would widen the privacy boundary and still would not prove tenant identity.
 **Fix**: Normalize once and accept a display-name match only when it is unique. Keep duplicate, empty and email-only identities in an explicit unmatched bucket, count their planned hours once, and never request profile email for convenience matching.
 **Prevention**: Cover unique, duplicate, empty and email-only cases with focused tests. If exact cross-system attribution becomes a requirement, introduce an explicit immutable provider-to-member mapping rather than weakening browser profile projection.
+
+---
+
+## ➕ APPEND — 2026-07-21 Atomic member profile save (v3.51.6)
+
+### [LESSON-ATOMIC-001]: Sequential awaited mutations are not a transaction
+**Context**: `MemberProfileSheet` updated membership metadata, deleted all role allocations, inserted replacements and optionally updated a global display name through separate Supabase requests.
+**Problem**: `await` controls client order only. Every PostgREST request commits independently; a failed delete/insert or a dismissed error can leave partially updated metadata, no allocations, a stale UI and no trustworthy audit receipt. Compensating client requests cannot make this atomic under timeout, process death or concurrency.
+**Fix**: Move the complete business mutation into one versioned PostgreSQL RPC. Lock and recheck actor/target, tenant, permission, entitlement and optimistic baselines inside the same transaction; write membership, full allocation snapshot, self-only name and one minimal audit event; return a strictly validated receipt. Do not provide a direct-table fallback.
+**Prevention**: Whenever a UI save spans multiple tables or requires an audit record, treat more than one network mutation as a pseudo-transaction smell. Add a rollback assertion that forces every intermediate write to fail and proves all protected rows remain byte-for-byte unchanged.
+
+### [LESSON-CONCURRENCY-002]: Atomic writes need an atomic read snapshot and an opaque revision
+**Context**: Membership metadata and role allocations can change through both the profile sheet and legacy allocation tools.
+**Problem**: Reading related tables in separate requests can combine values from different commits. Client abort does not cancel a database transaction reliably, and checking only UI state cannot prevent an older request from overwriting a newer committed change.
+**Fix**: Return every editable field and the server-managed `profile_revision` from one SQL statement. Save the complete immutable draft with the expected revision and any independently owned exact baseline (here the self display name). Lock deterministically, compare after authorization, and return SQLSTATE `40001`, `40P01` or `55P03` as a bounded reload-required conflict. Use request generations only to suppress stale UI callbacks; never mistake them for server concurrency control.
+**Prevention**: Contract-test one-statement MVCC consistency, two simultaneous saves, mixed old/new writers, lock timeout plus fresh retry, zero-row optimistic updates, unmount/tenant switch and double submit.
+
+### [LESSON-CASCADE-002]: Immutability guards must distinguish a real parent cascade from a forged child delete
+**Context**: Reserved audit and locked-payroll triggers prohibit direct update/delete, while deleting a workspace legitimately cascades to those protected rows.
+**Problem**: An unconditional immutability trigger blocks parent lifecycle deletion. A broad `pg_trigger_depth()` or session flag exception can instead let a direct caller forge a cascade context and delete protected history.
+**Fix**: Permit the protected child operation only when the exact parent workspace row no longer exists in the current cascading statement context; keep direct deletes, updates, TRUNCATE and reserved-action writes denied. Recreate shared guards only with backward-compatible semantics and rerun every migration contract that depends on them.
+**Prevention**: Test both directions in real PostgreSQL: workspace parent delete succeeds and removes dependent rows, while direct child delete/update, reserved audit forge and unrelated-parent operations fail with the expected SQLSTATE and leave state unchanged.
+
+### [LESSON-DB-CATALOG-004]: Same object name and object type do not prove schema compatibility
+**Context**: Idempotent migrations use `IF NOT EXISTS` for named indexes and constraints.
+**Problem**: A pre-existing `CHECK (true)` with the expected name and `contype='c'` bypasses the intended validation. Conversely, brittle `pg_get_indexdef` string matching rejected the migration's own correct PostgreSQL 18 index because the catalog emitted `"normalize"` with quotes.
+**Fix**: Validate structural catalog fields and the exact canonical expression via `pg_get_expr`; normalize only the proven version-specific quoting variation, never arbitrary whitespace or operators. Stage deliberately weaker same-name objects and require the migration to fail closed before any mutation, then clean only the exact fixture object.
+**Prevention**: Every idempotent security constraint/index migration needs repeat-apply plus adversarial same-name/wrong-definition fixtures on the production PostgreSQL major version. `IF NOT EXISTS` is creation convenience, not compatibility evidence.
+
+### [LESSON-BOUNDARY-003]: Unicode validation must be one explicit cross-runtime contract
+**Context**: Profile display names enter through browser signup, workspace editors, Supabase Auth metadata and Edge join/upgrade flows, while PostgreSQL ultimately enforces the stored value.
+**Problem**: JavaScript `trim()` and PostgreSQL's default `btrim()` do not trim the same Unicode whitespace, and PostgreSQL's POSIX control class rejects C1 controls that a C0/DEL-only client check accepts. The same submitted value can therefore pass one writer and fail another, or be stored differently depending on the route.
+**Fix**: Define one browser/Edge canonicalizer and mirror ECMAScript's exact edge-whitespace code-point set in an immutable PostgreSQL helper. Bound length by Unicode code points, reject C0, DEL and C1 controls everywhere, reject unpaired UTF-16 surrogates before JSON transport, and perform no silent normalization. Route every known display-name writer through that contract; inventory writers so a new path requires an explicit review.
+**Prevention**: Keep a shared parity table covering ASCII and Unicode padding, 200/201 astral characters, blank values, DEL, C1 controls, malformed type and lone surrogate input. Exercise the table at UI, hook, Edge, Auth-trigger and table-CHECK boundaries.
+
+### [LESSON-MIGRATION-005]: `CREATE OR REPLACE FUNCTION` does not repair ACL or trigger drift
+**Context**: A migration hardened the `handle_new_user` auth bootstrap function and expected a specific `AFTER INSERT FOR EACH ROW` trigger with no callable API roles.
+**Problem**: Replacing a function preserves explicit grants, and it neither rebinds nor enables a trigger. A historical `service_role` EXECUTE grant, disabled trigger or same-name `BEFORE INSERT` trigger can survive otherwise successful repeat apply.
+**Fix**: Revoke every prohibited role explicitly, drop and recreate the exact trigger binding, and assert function owner/security/search path plus trigger relation/function/type/enabled state from `pg_catalog`. Inventory differently named bindings to the same function before mutation and fail closed instead of deleting an unknown trigger. Stage ACL, incompatible expected-name trigger and extra-name trigger drift in the PostgreSQL contract; reapply only the repairable cases and verify exact state.
+**Prevention**: Treat owner, ACL, trigger binding and enabled state as versioned schema, not incidental metadata. Every security-definer migration needs a hostile pre-state fixture as well as a clean install and repeat-apply test.
+
+### [LESSON-CONSISTENCY-003]: Best-effort dual writes cannot create one authoritative name
+**Context**: A temporary-user rename updated `profiles.display_name`, then separately updated Supabase Auth metadata from both Edge and browser code.
+**Problem**: Checking both responses and adding compensating rollback still does not serialize two concurrent requests. A/B can interleave so both return success while the database contains B and Auth metadata contains A; a rollback can also overwrite a newer committed profile value.
+**Fix**: Choose one pre-finalization authority. Temporary rename and upgrade preparation now write only the profile through exact-state CAS, reject stale calls and freeze changes while an upgrade nonce exists. Finalization validates that frozen value, performs the one required Auth transition with an exact returned-user check, and only then starts idempotently retryable auth-first cleanup. An uncertain Auth result never authorizes database deletion.
+**Prevention**: For every cross-service write, document the authority and recovery state machine. Test a concrete A/B interleaving, stale CAS, active-upgrade freeze, Auth error/exception/wrong-user result, already-absent Auth user, DB cleanup failure and retry. Do not call sequential awaits, unchecked callbacks or compensation an atomic transaction.

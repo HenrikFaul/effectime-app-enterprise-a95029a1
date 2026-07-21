@@ -3,8 +3,8 @@
   "purpose": "Existing ESLint diagnostic fingerprint ceiling. CI fails on new findings and requires baseline reduction when findings are fixed.",
   "command": "eslint . --format json",
   "totals": {
-    "errors": 1189,
-    "warnings": 102
+    "errors": 1161,
+    "warnings": 99
   },
   "counts": {
     "@next/next/no-img-element": {
@@ -20,7 +20,7 @@
       "warnings": 0
     },
     "@typescript-eslint/no-explicit-any": {
-      "errors": 1160,
+      "errors": 1132,
       "warnings": 0
     },
     "@typescript-eslint/no-require-imports": {
@@ -45,7 +45,7 @@
     },
     "react-hooks/exhaustive-deps": {
       "errors": 0,
-      "warnings": 70
+      "warnings": 67
     },
     "react-refresh/only-export-components": {
       "errors": 0,
@@ -539,20 +539,6 @@
       "@typescript-eslint/no-explicit-any": {
         "errors": 10,
         "warnings": 0
-      },
-      "react-hooks/exhaustive-deps": {
-        "errors": 0,
-        "warnings": 1
-      }
-    },
-    "src/components/enterprise/MemberProfileSheet.tsx": {
-      "@typescript-eslint/no-explicit-any": {
-        "errors": 24,
-        "warnings": 0
-      },
-      "react-hooks/exhaustive-deps": {
-        "errors": 0,
-        "warnings": 1
       }
     },
     "src/components/enterprise/MemberSitePriorityEditor.tsx": {
@@ -1035,12 +1021,12 @@
     },
     "src/components/enterprise/WorkspaceDashboard.tsx": {
       "@typescript-eslint/no-explicit-any": {
-        "errors": 14,
+        "errors": 10,
         "warnings": 0
       },
       "react-hooks/exhaustive-deps": {
         "errors": 0,
-        "warnings": 3
+        "warnings": 2
       }
     },
     "src/components/enterprise/WorkspaceGeneralSettings.tsx": {
@@ -4148,13 +4134,6 @@
         "source": ".update({ status: newStatus as any })",
         "count": 1
       },
-      "7822a6d821a60c5f40ed": {
-        "ruleId": "react-hooks/exhaustive-deps",
-        "severity": "warnings",
-        "message": "React Hook useEffect has a missing dependency: 'fetchMembers'. Either include it or remove the dependency array.",
-        "source": "useEffect(() => { fetchMembers(); }, [workspaceId]);",
-        "count": 1
-      },
       "81c0848728da15c17f98": {
         "ruleId": "@typescript-eslint/no-explicit-any",
         "severity": "errors",
@@ -4181,162 +4160,6 @@
         "severity": "errors",
         "message": "Unexpected any. Specify a different type.",
         "source": "} catch (e: any) {",
-        "count": 1
-      }
-    },
-    "src/components/enterprise/MemberProfileSheet.tsx": {
-      "1386bbb4658a00f2bc91": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const [leaveRequests, setLeaveRequests] = useState<any[]>([]);",
-        "count": 1
-      },
-      "1a5cf67b3214c74b77d2": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const allAllocs = ((allAllocRes.data as any[]) || []).map((a: any) => ({",
-        "count": 2
-      },
-      "20a79305bb0475153dba": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const { error } = await (supabase as any)",
-        "count": 1
-      },
-      "23c3864888d46dd4acb6": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "base_working_hours: Number((member as any).base_working_hours ?? 8),",
-        "count": 1
-      },
-      "3bb2e7420c8fd8895ca5": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "office_id: (member as any).office_id || '',",
-        "count": 1
-      },
-      "621d694761ef256356e6": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "city: (member as any).city || '',",
-        "count": 1
-      },
-      "6339125ff51b7029543b": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "(supabase as any).from('enterprise_team_roles').select('team_id, business_role').eq('workspace_id', workspaceId),",
-        "count": 1
-      },
-      "67e2bf05af35fc3ce1e2": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "function OrganizationCompletionBanner({ member }: { member: Record<string, any> }) {",
-        "count": 1
-      },
-      "76a364660fd0aca74e50": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "(supabase as any).from('enterprise_member_role_allocations').select('membership_id, business_role, percentage, is_priority').eq('workspace_id', workspaceId),",
-        "count": 1
-      },
-      "77cec658b2e708b16c57": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const teamRows = (teamsRes.data as any[]) || [];",
-        "count": 1
-      },
-      "865f586b1dab7048b885": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "((rolesRes.data as any[]) || []).forEach((m: any) => { if (m.business_role) roleSet.add(m.business_role); });",
-        "count": 2
-      },
-      "9ac76d22d84a960809a5": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "setTeamsData(teamRows.map((t: any) => ({ id: t.id, name: t.name, roles: rolesByTeam.get(t.id) || [] })));",
-        "count": 1
-      },
-      "a9d25f740bb16b477157": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "setLeaveRequests((leaveRes.data as any[]) || []);",
-        "count": 1
-      },
-      "b33a22cb9fa755e46e8b": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const officeName = offices.find(o => o.id === (member as any).office_id)?.name;",
-        "count": 1
-      },
-      "b56c7296d36cfd77ec19": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "(supabase as any).from('enterprise_teams').select('id, name').eq('workspace_id', workspaceId),",
-        "count": 1
-      },
-      "bb36b0eaa2703c80f991": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "<div className=\"flex justify-between\"><span className=\"text-muted-foreground\">{t('member_profile.display_base_hours_label')}</span><span className=\"font-medium\">{Number((member as any).base_working_hours ?? 8)} {t('member_profile.display_hours_unit')}</span></div>",
-        "count": 1
-      },
-      "bee564faa2541c4b5651": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "{(member as any).city ? <><MapPin className=\"h-3 w-3\" />{(member as any).city}</> : '–'}",
-        "count": 2
-      },
-      "c5d6b03a0c6845026468": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "<OrganizationCompletionBanner member={member as any} />",
-        "count": 1
-      },
-      "cf9cb915f7b44aa935ac": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const { error: allocErr } = await (supabase as any).from('enterprise_member_role_allocations').insert(rows);",
-        "count": 1
-      },
-      "dc4a6498bda9bf946363": {
-        "ruleId": "react-hooks/exhaustive-deps",
-        "severity": "warnings",
-        "message": "React Hook useMemo has a missing dependency: 't'. Either include it or remove the dependency array.",
-        "source": "}, [sortedAllocations, allWorkspaceAllocations, allMembers, member]);",
-        "count": 1
-      },
-      "e7a8750890557e4d3d2e": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const teamRoleRows = (teamRolesRes.data as any[]) || [];",
-        "count": 1
-      },
-      "f579762fc78f0ee56102": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "teamRoleRows.forEach((tr: any) => {",
         "count": 1
       }
     },
@@ -6947,13 +6770,6 @@
         "source": "const [invitations, setInvitations] = useState<any[]>([]);",
         "count": 1
       },
-      "0aaa046ae283b365beab": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const userIds = members.map((m: any) => m.user_id);",
-        "count": 1
-      },
       "14fefa56735c9a8fd90c": {
         "ruleId": "@typescript-eslint/no-explicit-any",
         "severity": "errors",
@@ -6982,20 +6798,6 @@
         "source": "setInvitations((data as any[]) || []);",
         "count": 1
       },
-      "628d95ce3cfae004902d": {
-        "ruleId": "react-hooks/exhaustive-deps",
-        "severity": "warnings",
-        "message": "React Hook useEffect has a missing dependency: 't'. Either include it or remove the dependency array.",
-        "source": "}, [workspace.id, userId]);",
-        "count": 1
-      },
-      "688f71b4273337554ff8": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "(supabase as any).from('enterprise_memberships').select('id, user_id, role, status, team, location, business_role, joined_at, city, office_id, base_working_hours').eq('workspace_id', workspace.id).eq('status', 'active'),",
-        "count": 1
-      },
       "83970ded8b46b9038b20": {
         "ruleId": "@typescript-eslint/no-explicit-any",
         "severity": "errors",
@@ -7010,13 +6812,6 @@
         "source": "const [myMembership, setMyMembership] = useState<any>(null);",
         "count": 1
       },
-      "a57bcc9773e83407bb1b": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const nameMap = new Map((profiles || []).map((p: any) => [p.user_id, p.display_name || t('ws_nav.unknown_user')]));",
-        "count": 1
-      },
       "c005f7d7735ee679d099": {
         "ruleId": "react-hooks/exhaustive-deps",
         "severity": "warnings",
@@ -7029,13 +6824,6 @@
         "severity": "warnings",
         "message": "React Hook useEffect has a missing dependency: 'fetchInvitations'. Either include it or remove the dependency array.",
         "source": "useEffect(() => { fetchInvitations(); }, [workspaceId]);",
-        "count": 1
-      },
-      "cab693d8abf5f278b733": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "setAllMembers(members.map((m: any) => ({ ...m, display_name: nameMap.get(m.user_id) || t('ws_nav.unknown_user') })));",
         "count": 1
       },
       "d03a6229dbc0480385ea": {

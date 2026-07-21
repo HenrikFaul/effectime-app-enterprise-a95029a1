@@ -27,6 +27,7 @@ import {
 } from '@/lib/platform/mobile';
 import { getNativeBrowserPlugin } from '@/lib/platform/nativeBridge';
 import { SUPABASE_URL } from '@/config/publicRuntime';
+import { canonicalizeWorkspaceProfileDisplayName } from '@/lib/profileDisplayName';
 
 type AuthView = "login" | "register" | "verify" | "forgot";
 
@@ -192,6 +193,7 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [displayNameTouched, setDisplayNameTouched] = useState(false);
   const [loading, setLoading] = useState(false);
   const [otpCode, setOtpCode] = useState("");
   const [verifying, setVerifying] = useState(false);
@@ -203,6 +205,10 @@ const Auth = () => {
   const oauthProvider = searchParams.get(GOOGLE_OAUTH_QUERY_PARAM);
   const emailActivationToken = searchParams.get(EMAIL_ACTIVATION_QUERY_PARAM);
   const isVerifyMode = searchParams.get("verify") === "1";
+  const normalizedDisplayName = canonicalizeWorkspaceProfileDisplayName(displayName);
+  const displayNameInvalid = view === "register"
+    && displayNameTouched
+    && normalizedDisplayName === undefined;
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -276,6 +282,10 @@ const Auth = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (view === "register" && normalizedDisplayName === undefined) {
+      setDisplayNameTouched(true);
+      return;
+    }
     setLoading(true);
 
     if (view === "login") {
@@ -290,7 +300,7 @@ const Auth = () => {
         navigate(redirectTo);
       }
     } else if (view === "register") {
-      const { error } = await signUp(email, password, displayName, redirectTo);
+      const { error } = await signUp(email, password, normalizedDisplayName, redirectTo);
       if (error) {
         toast.error(error.message);
       } else {
@@ -591,10 +601,18 @@ const Auth = () => {
                     id="displayName"
                     value={displayName}
                     onChange={(e) => setDisplayName(e.target.value)}
+                    onBlur={() => setDisplayNameTouched(true)}
                     placeholder={t('auth_page.placeholder_display_name')}
                     required
+                    aria-invalid={displayNameInvalid}
+                    aria-describedby={displayNameInvalid ? 'registration-display-name-error' : undefined}
                     className="h-12 rounded-2xl focus-visible:ring-primary"
                   />
+                  {displayNameInvalid && (
+                    <p id="registration-display-name-error" role="alert" className="text-xs text-destructive">
+                      {t('profile.display_name_validation_error')}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -637,7 +655,7 @@ const Auth = () => {
               <Button
                 type="submit"
                 className="h-13 w-full rounded-2xl gradient-primary font-semibold text-primary-foreground shadow-glow transition-all hover:-translate-y-0.5 hover:shadow-[0_8px_24px_-8px_rgba(16,185,129,0.5)]"
-                disabled={loading}
+                disabled={loading || displayNameInvalid}
               >
                 {loading
                   ? t('auth_page.btn_loading')

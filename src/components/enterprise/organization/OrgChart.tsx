@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,7 @@ const VIEW_STYLE_KEY = 'org_chart_view_style';
 interface Props {
   workspaceId: string;
   isAdmin: boolean;
+  canEditMemberProfiles?: boolean;
   /** When provided, the MemberProfileSheet's "Bővebb adatok" deep-links can switch top-level workspace tabs. */
   onNavigateTab?: (tab: string) => void;
   /** Current authenticated user id (used by MemberProfileSheet for self-only sections such as notification prefs). */
@@ -51,6 +52,7 @@ interface Membership {
   team: string | null;
   joined_at: string | null;
   office_id?: string | null;
+  base_working_hours?: number | null;
 }
 
 interface ProfileMap {
@@ -93,7 +95,7 @@ function initials(name: string): string {
   );
 }
 
-export function OrgChart({ workspaceId, isAdmin, onNavigateTab, userId }: Props) {
+export function OrgChart({ workspaceId, isAdmin, canEditMemberProfiles = false, onNavigateTab, userId }: Props) {
   const t = useT();
   const [members, setMembers] = useState<Membership[]>([]);
   const [profiles, setProfiles] = useState<ProfileMap>({});
@@ -103,6 +105,7 @@ export function OrgChart({ workspaceId, isAdmin, onNavigateTab, userId }: Props)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [fullscreenOpen, setFullscreenOpen] = useState(false);
   const [profileMember, setProfileMember] = useState<any | null>(null);
+  const loadGenerationRef = useRef(0);
   const [view, setView] = useState<ViewStyle>(() => {
     try {
       const saved = localStorage.getItem(VIEW_STYLE_KEY);
@@ -120,36 +123,37 @@ export function OrgChart({ workspaceId, isAdmin, onNavigateTab, userId }: Props)
   };
 
   const load = useCallback(async () => {
+    const generation = loadGenerationRef.current + 1;
+    loadGenerationRef.current = generation;
+    const isCurrent = () => loadGenerationRef.current === generation;
     setLoading(true);
 
     const { data: memberships, error } = await (supabase as any)
       .from('enterprise_memberships')
-      .select('id, user_id, manager_id, org_unit_id, role, status, business_role, location, city, team, joined_at, office_id')
+      .select('id, user_id, manager_id, org_unit_id, role, status, business_role, location, city, team, joined_at, office_id, base_working_hours')
       .eq('workspace_id', workspaceId)
       .eq('status', 'active');
 
+    if (!isCurrent()) return;
+    const nextMembers = error ? [] : ((memberships as Membership[]) || []);
     if (error) {
       // eslint-disable-next-line no-console
       console.warn('[org_chart] load error', error.message);
-      setMembers([]);
-    } else {
-      setMembers((memberships as Membership[]) || []);
     }
 
-    const ids = ((memberships as Membership[]) || []).map((m) => m.user_id);
+    const ids = nextMembers.map((member) => member.user_id);
+    const nextProfiles: ProfileMap = {};
     if (ids.length > 0) {
       const { data: prof } = await supabase
         .from('profiles')
         .select('user_id, display_name, avatar_url')
         .in('user_id', ids);
-      const map: ProfileMap = {};
       (prof || []).forEach((p: any) => {
-        map[p.user_id] = {
+        nextProfiles[p.user_id] = {
           display_name: p.display_name || 'Unknown',
           avatar_url: p.avatar_url,
         };
       });
-      setProfiles(map);
     }
 
     const { data: snap } = await (supabase as any)
@@ -158,13 +162,19 @@ export function OrgChart({ workspaceId, isAdmin, onNavigateTab, userId }: Props)
       .eq('workspace_id', workspaceId)
       .order('generated_at', { ascending: false })
       .limit(1);
-    if (snap && snap[0]) setSnapshotAt(snap[0].generated_at);
+    if (!isCurrent()) return;
+    setMembers(nextMembers);
+    setProfiles(nextProfiles);
+    setSnapshotAt(snap && snap[0] ? snap[0].generated_at : null);
 
     setLoading(false);
   }, [workspaceId]);
 
   useEffect(() => {
-    load();
+    void load();
+    return () => {
+      loadGenerationRef.current += 1;
+    };
   }, [load]);
 
   const tree = useMemo<Node[]>(() => {
@@ -227,6 +237,7 @@ export function OrgChart({ workspaceId, isAdmin, onNavigateTab, userId }: Props)
       display_name: n.display_name,
       city: n.city,
       office_id: officeById.get(n.id) ?? null,
+      base_working_hours: n.base_working_hours ?? null,
     }));
   }, [allNodes, members]);
 
@@ -416,7 +427,11 @@ export function OrgChart({ workspaceId, isAdmin, onNavigateTab, userId }: Props)
         currentUserId={userId}
         allMembers={allMembersForProfile as any}
         isAdmin={isAdmin}
+        canEditMember={canEditMemberProfiles}
         showEmail={!!userId && profileMember?.user_id === userId}
+        onMemberUpdated={() => {
+          void load();
+        }}
         onNavigateTab={(tab) => {
           if (onNavigateTab) {
             setProfileMember(null);

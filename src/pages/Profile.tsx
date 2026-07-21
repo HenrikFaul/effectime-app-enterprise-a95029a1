@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,41 +13,175 @@ import { DeleteAccountCard } from '@/components/DeleteAccountCard';
 import { toast } from 'sonner';
 import { motion } from 'framer-motion';
 import { useI18n } from '@/i18n/I18nProvider';
+import { canonicalizeWorkspaceProfileDisplayName } from '@/lib/profileDisplayName';
 
 const Profile = () => {
   const { t } = useI18n();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const userId = user?.id;
   const [displayName, setDisplayName] = useState('');
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveConflict, setSaveConflict] = useState(false);
+  const mountedRef = useRef(true);
+  const savingRef = useRef(false);
+  const saveGenerationRef = useRef(0);
+  const currentUserIdRef = useRef(userId);
+  const authoritativeDisplayNameRef = useRef<{
+    userId: string;
+    displayName: string | null;
+  } | null>(null);
+  currentUserIdRef.current = userId;
+
+  const normalizedDisplayName = canonicalizeWorkspaceProfileDisplayName(displayName);
+  const displayNameInvalid = profileLoaded && normalizedDisplayName === undefined;
 
   useEffect(() => {
-    if (!user) return;
-    const fetchProfile = async () => {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('display_name')
-        .eq('user_id', user.id)
-        .single();
-      if (profile) setDisplayName(profile.display_name || '');
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      saveGenerationRef.current += 1;
+      savingRef.current = false;
     };
-    fetchProfile();
-  }, [user]);
+  }, []);
+
+  useEffect(() => {
+    saveGenerationRef.current += 1;
+    savingRef.current = false;
+    setSaving(false);
+    setSaveError(null);
+    setSaveConflict(false);
+  }, [userId]);
+
+  useEffect(() => {
+    let active = true;
+    setProfileLoaded(false);
+    setLoadError(false);
+    setSaveError(null);
+    setSaveConflict(false);
+    authoritativeDisplayNameRef.current = null;
+    if (!userId) {
+      setDisplayName('');
+      return () => {
+        active = false;
+      };
+    }
+    const fetchProfile = async () => {
+      try {
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('display_name')
+          .eq('user_id', userId)
+          .single();
+        if (!active) return;
+        const rawDisplayName = profile?.display_name;
+        if (
+          error
+          || !profile
+          || (rawDisplayName !== null && typeof rawDisplayName !== 'string')
+        ) {
+          setLoadError(true);
+          return;
+        }
+        authoritativeDisplayNameRef.current = { userId, displayName: rawDisplayName };
+        setDisplayName(rawDisplayName || '');
+        setProfileLoaded(true);
+      } catch {
+        if (active) setLoadError(true);
+      }
+    };
+    void fetchProfile();
+    return () => {
+      active = false;
+    };
+  }, [userId, loadAttempt]);
+
+  const reloadProfile = () => {
+    saveGenerationRef.current += 1;
+    savingRef.current = false;
+    setSaving(false);
+    setSaveError(null);
+    setSaveConflict(false);
+    setLoadAttempt(attempt => attempt + 1);
+  };
 
   const handleSave = async () => {
-    if (!user) return;
+    const authoritativeProfile = authoritativeDisplayNameRef.current;
+    if (
+      !userId
+      || !profileLoaded
+      || loadError
+      || saveConflict
+      || normalizedDisplayName === undefined
+      || savingRef.current
+      || !authoritativeProfile
+      || authoritativeProfile.userId !== userId
+    ) return;
+    savingRef.current = true;
+    const generation = ++saveGenerationRef.current;
     setSaving(true);
-    const { error } = await supabase
-      .from('profiles')
-      .update({ display_name: displayName })
-      .eq('user_id', user.id);
+    setSaveError(null);
+    try {
+      const updateRequest = supabase
+        .from('profiles')
+        .update({ display_name: normalizedDisplayName })
+        .eq('user_id', userId);
+      const guardedUpdate = authoritativeProfile.displayName === null
+        ? updateRequest.is('display_name', null)
+        : updateRequest.eq('display_name', authoritativeProfile.displayName);
+      const { data, error } = await guardedUpdate.select('display_name');
 
-    if (error) {
-      toast.error(t('profile.save_error'));
-    } else {
-      toast.success(t('profile.save_success'));
+      if (
+        !mountedRef.current
+        || generation !== saveGenerationRef.current
+        || currentUserIdRef.current !== userId
+      ) return;
+      if (error) {
+        const message = t('profile.save_error');
+        setSaveError(message);
+        toast.error(message);
+      } else if (Array.isArray(data) && data.length === 0) {
+        const message = t('profile.save_conflict');
+        setSaveConflict(true);
+        setSaveError(message);
+        toast.error(message);
+      } else if (
+        !Array.isArray(data)
+        || data.length !== 1
+        || data[0]?.display_name !== normalizedDisplayName
+      ) {
+        const message = t('profile.save_error');
+        setSaveError(message);
+        toast.error(message);
+      } else {
+        authoritativeDisplayNameRef.current = {
+          userId,
+          displayName: normalizedDisplayName,
+        };
+        setDisplayName(normalizedDisplayName);
+        setSaveError(null);
+        toast.success(t('profile.save_success'));
+      }
+    } catch {
+      if (
+        mountedRef.current
+        && generation === saveGenerationRef.current
+        && currentUserIdRef.current === userId
+      ) {
+        const message = t('profile.save_error');
+        setSaveError(message);
+        toast.error(message);
+      }
+    } finally {
+      if (mountedRef.current && generation === saveGenerationRef.current) {
+        savingRef.current = false;
+        setSaving(false);
+      }
     }
-    setSaving(false);
   };
 
   return (
@@ -80,14 +214,48 @@ const Profile = () => {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {loadError && (
+                <div id="profile-load-error" role="alert" className="space-y-2 rounded-xl border border-destructive/40 bg-destructive/5 p-3">
+                  <p className="text-sm text-destructive">{t('profile.load_error')}</p>
+                  <Button type="button" size="sm" variant="outline" onClick={reloadProfile}>
+                    {t('profile.retry_load')}
+                  </Button>
+                </div>
+              )}
+              {saveConflict && saveError && (
+                <div id="profile-save-conflict" role="alert" className="space-y-2 rounded-xl border border-destructive/40 bg-destructive/5 p-3">
+                  <p className="text-sm text-destructive">{saveError}</p>
+                  <Button type="button" size="sm" variant="outline" onClick={reloadProfile}>
+                    {t('profile.reload_after_conflict')}
+                  </Button>
+                </div>
+              )}
+              {saveError && !saveConflict && (
+                <p id="profile-save-error" role="alert" className="text-sm text-destructive">
+                  {saveError}
+                </p>
+              )}
               <div className="flex justify-center">
                 <div className="flex h-20 w-20 items-center justify-center rounded-2xl gradient-primary text-2xl font-bold text-primary-foreground shadow-glow">
                   {displayName ? displayName.slice(0, 2).toUpperCase() : 'U'}
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('profile.display_name_label')}</Label>
-                <Input value={displayName} onChange={e => setDisplayName(e.target.value)} className="rounded-xl h-11" />
+                <Label htmlFor="profile-display-name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('profile.display_name_label')}</Label>
+                <Input
+                  id="profile-display-name"
+                  value={displayName}
+                  onChange={e => setDisplayName(e.target.value)}
+                  disabled={!profileLoaded || loadError || saving || saveConflict}
+                  aria-invalid={displayNameInvalid}
+                  aria-describedby={displayNameInvalid ? 'profile-display-name-error' : undefined}
+                  className="rounded-xl h-11"
+                />
+                {displayNameInvalid && (
+                  <p id="profile-display-name-error" role="alert" className="text-xs text-destructive">
+                    {t('profile.display_name_validation_error')}
+                  </p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t('profile.email_label')}</Label>
@@ -96,7 +264,17 @@ const Profile = () => {
               <Button
                 onClick={handleSave}
                 className="w-full rounded-xl h-11 gradient-primary text-primary-foreground shadow-glow hover:opacity-90 transition-opacity font-semibold"
-                disabled={saving}
+                disabled={saving || !userId || !profileLoaded || loadError || saveConflict || normalizedDisplayName === undefined}
+                aria-busy={saving}
+                aria-describedby={
+                  saveConflict
+                    ? 'profile-save-conflict'
+                    : saveError
+                      ? 'profile-save-error'
+                      : displayNameInvalid
+                        ? 'profile-display-name-error'
+                        : undefined
+                }
               >
                 <Save className="mr-2 h-4 w-4" />
                 {saving ? t('profile.saving') : t('profile.save')}

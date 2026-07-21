@@ -61,6 +61,15 @@ describe('workspace navigation/content entitlement integration', () => {
     );
   });
 
+  it('fails closed while member profile permissions or entitlements are loading', () => {
+    expect(dashboard).toContain('loading: permissionsLoading');
+    expect(dashboard).toMatch(
+      /const canEditMemberProfiles = !permissionsLoading\s*&&\s*canEdit\('members'\)\s*&&\s*!featuresLoading\s*&&\s*!featuresError\s*&&\s*isFeatureEnabled\('members_list'\);/,
+    );
+    expect(dashboard).toContain('canEditMemberProfiles={canEditMemberProfiles}');
+    expect(dashboard).toContain('canEditMember={canEditMemberProfiles}');
+  });
+
   it('fails closed for iCal use while keeping token revocation mounted', () => {
     expect(dashboard).toMatch(
       /const canUseIcalFeed = !featuresLoading\s*&&\s*!featuresError\s*&&\s*isFeatureEnabled\('ical_feed'\);/,

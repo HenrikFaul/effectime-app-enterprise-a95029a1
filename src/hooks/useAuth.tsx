@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { resolveInternalPath } from '@/lib/internalPath';
 import { buildAuthCallbackUrl, isNativeRuntime } from '@/lib/platform/mobile';
+import { canonicalizeWorkspaceProfileDisplayName } from '@/lib/profileDisplayName';
 import {
   NativeAuthStorageError,
   type NativeAuthStorageErrorCode,
@@ -191,12 +192,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = async (email: string, password: string, displayName: string, redirectTo = '/app') => {
+    const normalizedDisplayName = canonicalizeWorkspaceProfileDisplayName(displayName);
+    if (normalizedDisplayName === undefined) {
+      return { error: new Error('Invalid display name') };
+    }
     const safeRedirectTo = resolveInternalPath(redirectTo, '/app');
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { display_name: displayName },
+        data: { display_name: normalizedDisplayName },
         emailRedirectTo: buildAuthCallbackUrl('signup', safeRedirectTo),
       },
     });
