@@ -47,8 +47,9 @@ ceiling (4,578,450 raw / 1,313,642 gzip JavaScript bytes; largest 1,785,150 /
 E2E 2/2 with zero tracked native drift; Edge 109/109 plus 31/31 entrypoint and
 0/0 diagnostic ratchet; 0 dependency vulnerabilities; current/history secret,
 migration/schema provenance and Edge source-identity gates PASS. The clean
-release assertion and hosted Quality Gate are recorded only after a clean
-commit and pushed exact SHA.
+worktree native release assertion is 410/410 PASS on implementation commit
+`c7e2caa…`. The hosted Quality Gate is recorded only after pushing the exact
+source SHA.
 
 Known P1 server blockers remain unchanged: browser RLS is not the authoritative
 exact export permission/entitlement boundary, audit actors are caller-supplied,
