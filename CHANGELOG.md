@@ -1,6 +1,7 @@
 ## 2026-07-22 — v3.51.23 export permission and client-integrity boundary (unreleased)
 
-**Status:** source candidate on `codex/export-permission-integrity`.
+**Status:** source + hosted candidate on `codex/export-permission-integrity`;
+draft PR #194.
 Production deployment has not been performed. No database migration, Edge wire
 contract or new dependency is introduced.
 
@@ -42,13 +43,16 @@ branches, 40.45% functions); TypeScript; the reduced 1,108-error/98-warning
 lint fingerprint; production build and reviewed bundle ceiling; web E2E 7/7;
 mobile source 228/228, deterministic Android/iOS sync and mobile E2E 2/2. The
 clean-worktree-only native release assertion is also 410/410 PASS. The hosted
-Quality Gate will be recorded after the branch push.
+Quality Gate run `29961698732` passed all 12/12 jobs with zero annotations on
+exact source head `52a8f72…` and potential merge `6a9b7fc…`.
 
 The first hosted potential-merge build measured 4,573,875 raw / 1,312,277 gzip
 JavaScript bytes, 93 / 91 bytes above the local release-SHA variant. Eleven of
 twelve jobs passed; only the raw ceiling was 74 bytes too narrow. The reviewed
 baseline now records both artifacts and retains only 128 raw bytes above the
-hosted measurement; the complete hosted gate is being rerun.
+hosted measurement. The replacement hosted artifact is 4,573,875 raw /
+1,312,283 gzip JavaScript bytes, largest 1,784,589 / 567,743; release evidence
+`8546300258`, diagnostics `8546297683` and Android `8546246028` were retained.
 
 Rollback is the source/test/i18n/version/documentation commit revert. It does
 not undo an already downloaded file or audit row. Production remains **NO-GO**
