@@ -30,6 +30,26 @@ BEGIN
       USING ERRCODE = '55000';
   END IF;
 
+  -- Browser roles are selected by the API gateway. Any cluster-level
+  -- privilege or direct login capability would bypass the intended RLS/ACL
+  -- boundary even when the object grants below are otherwise exact.
+  IF EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_roles AS browser_role
+    WHERE browser_role.oid = ANY(ARRAY[v_anon_oid, v_authenticated_oid])
+      AND (
+        browser_role.rolsuper
+        OR browser_role.rolcreaterole
+        OR browser_role.rolcreatedb
+        OR browser_role.rolcanlogin
+        OR browser_role.rolreplication
+        OR browser_role.rolbypassrls
+      )
+  ) THEN
+    RAISE EXCEPTION 'Recovered surface browser roles have unsafe role capabilities'
+      USING ERRCODE = '55000';
+  END IF;
+
   -- REVOKE can remove only PUBLIC/direct browser grants. Reject parent-role
   -- inheritance up front so an inherited table/column/function ACL cannot
   -- survive until a late postcondition (or a non-transactional runner).
@@ -463,7 +483,7 @@ ALTER FUNCTION public.haversine_km(numeric, numeric, numeric, numeric)
 
 -- Forward-replace only the QR routine whose recovered body used an unqualified
 -- pgcrypto call. The signature, owner, OID, ACL and business behavior remain;
--- the only body change is the exact extension qualification.
+-- body changes are limited to explicit pgcrypto and pg_catalog qualification.
 CREATE OR REPLACE FUNCTION public.clock_generate_qr(
   _office_id uuid,
   _ttl_seconds integer DEFAULT 60

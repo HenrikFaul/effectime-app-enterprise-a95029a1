@@ -66,6 +66,16 @@ export const TAMPER_CASES = Object.freeze([
     expectedFailure: /Recovered surface browser roles must not inherit parent roles/i,
   }),
   Object.freeze({
+    label: "authenticated BYPASSRLS capability drift",
+    sql: "ALTER ROLE authenticated BYPASSRLS;",
+    expectedFailure: /Recovered surface browser roles have unsafe role capabilities/i,
+  }),
+  Object.freeze({
+    label: "anonymous SUPERUSER capability drift",
+    sql: "ALTER ROLE anon SUPERUSER;",
+    expectedFailure: /Recovered surface browser roles have unsafe role capabilities/i,
+  }),
+  Object.freeze({
     label: "pgcrypto schema owner drift",
     sql: "ALTER SCHEMA extensions OWNER TO contract_untrusted_owner;",
     expectedFailure: /(?:extensions|pgcrypto).*schema.*owner|schema owner.*trusted/i,

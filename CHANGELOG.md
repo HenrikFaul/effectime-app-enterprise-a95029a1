@@ -22,11 +22,15 @@ source pushed, linked database and production not deployed.
   Postconditions also reject inherited/effective browser column privileges.
 - Adds three read-only linked-inventory scripts and a pinned
   `postgres:17.6@sha256:00bc8661…02929` adversarial database contract to CI.
-  The contract proves 13 transactional tamper cases, zero partial mutation,
+  The contract proves 15 transactional tamper cases, zero partial mutation,
   data/policy/OID/source stability, service-role preservation, ACL repair,
   idempotent reapply, tenant RLS and clock/marketplace RPC smoke.
+- Makes Edge CycloneDX generation resilient to transient remote-module graph
+  resolution: only unresolved HTTP(S) graph nodes receive at most three bounded
+  attempts; local or persistent graph errors still fail closed. Seven focused
+  tests cover success, bounded retry and both fail-closed paths.
 
-Local validation: DB runner 11/11 and PostgreSQL 17.6 contract PASS; 13/13
+Local validation: DB runner 11/11 and PostgreSQL 17.6 contract PASS; 15/15
 fail-closed tamper cases; migration invariants 34/34; byte provenance 9/9 plus
 2 exact files; schema parser 7/7 and unchanged 134-migration debt gate; full
 coverage 76 files / 995 tests; typecheck, lint ratchet, production build, exact

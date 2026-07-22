@@ -15,11 +15,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import {
-  buildDenoInvocation,
-  DENO_VERSION,
-  parseDenoVersion,
-} from "../ci/deno-runtime.mjs";
+import { buildDenoInvocation, DENO_VERSION, parseDenoVersion } from "../ci/deno-runtime.mjs";
 
 export const DENO_INFO_FLAGS = Object.freeze([
   "--quiet",
@@ -30,6 +26,7 @@ export const DENO_INFO_FLAGS = Object.freeze([
 ]);
 
 export const DEFAULT_EXPECTED_EDGE_ENTRYPOINTS = 31;
+export const DEFAULT_DENO_GRAPH_ATTEMPTS = 3;
 const repositoryRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 
 function sha256(value) {
@@ -128,8 +125,9 @@ export function buildEdgeSbom(graph, options) {
     for (const dependency of module.dependencies ?? []) {
       for (const branch of [dependency.code, dependency.type]) {
         if (branch?.error) {
+          const target = branch.specifier ?? dependency.specifier ?? "<unknown>";
           throw new Error(
-            `Deno graph contains an unresolved dependency from ${module.specifier}: ${branch.error}`,
+            `Deno graph contains an unresolved dependency from ${module.specifier} to ${target}: ${branch.error}`,
           );
         }
       }
@@ -163,8 +161,7 @@ export function buildEdgeSbom(graph, options) {
 
   const httpModules = graph.modules
     .filter(
-      (module) =>
-        /^https?:\/\//.test(module.specifier) && !jsrPackageForUrl(module.specifier),
+      (module) => /^https?:\/\//.test(module.specifier) && !jsrPackageForUrl(module.specifier),
     )
     .sort((left, right) => left.specifier.localeCompare(right.specifier));
   const httpRefs = new Map(
@@ -289,9 +286,7 @@ export function buildEdgeSbom(graph, options) {
       purl: packageUrl("npm", canonicalPackageId),
       ...(packageInfo.registryUrl
         ? {
-            externalReferences: [
-              { type: "distribution", url: packageInfo.registryUrl },
-            ],
+            externalReferences: [{ type: "distribution", url: packageInfo.registryUrl }],
           }
         : {}),
       properties: sortProperties(properties),
@@ -334,7 +329,11 @@ export function buildEdgeSbom(graph, options) {
       ? cachedContent.subarray(0, module.size)
       : cachedContent;
     const properties = [];
-    addProperty(properties, "effectime:dependency-scope", dependencyScope(httpRefs.get(module.specifier)));
+    addProperty(
+      properties,
+      "effectime:dependency-scope",
+      dependencyScope(httpRefs.get(module.specifier)),
+    );
     addProperty(properties, "effectime:deno-media-type", module.mediaType ?? "unknown");
     addProperty(properties, "effectime:resolved-specifier", module.specifier);
     addProperty(properties, "effectime:source-kind", "http");
@@ -380,7 +379,11 @@ export function buildEdgeSbom(graph, options) {
   addProperty(metadataProperties, "effectime:component-count:jsr", jsrRefs.size);
   addProperty(metadataProperties, "effectime:component-count:npm", npmRefs.size);
   addProperty(metadataProperties, "effectime:dependency-count:direct", directCount);
-  addProperty(metadataProperties, "effectime:dependency-count:transitive", components.length - directCount);
+  addProperty(
+    metadataProperties,
+    "effectime:dependency-count:transitive",
+    components.length - directCount,
+  );
   addProperty(metadataProperties, "effectime:deno-info-flags", DENO_INFO_FLAGS.join(" "));
   addProperty(metadataProperties, "effectime:edge-entrypoint-count", entrypointUrls.length);
   addProperty(
@@ -411,6 +414,33 @@ export function buildEdgeSbom(graph, options) {
     components,
     dependencies,
   };
+}
+
+export function isRetryableRemoteGraphError(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  const moduleTarget = /^Deno graph contains an unresolved module: (\S+)/.exec(message)?.[1];
+  const dependencyTarget = /^Deno graph contains an unresolved dependency from \S+ to (\S+):/.exec(
+    message,
+  )?.[1];
+  return /^https?:\/\//i.test(moduleTarget ?? dependencyTarget ?? "");
+}
+
+export function buildEdgeSbomWithRemoteRetry(loadGraph, options, retryOptions = {}) {
+  const maxAttempts = retryOptions.maxAttempts ?? DEFAULT_DENO_GRAPH_ATTEMPTS;
+  if (!Number.isInteger(maxAttempts) || maxAttempts <= 0) {
+    throw new Error("Deno graph maxAttempts must be a positive integer");
+  }
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return buildEdgeSbom(loadGraph(attempt), options);
+    } catch (error) {
+      if (!isRetryableRemoteGraphError(error) || attempt === maxAttempts) throw error;
+      retryOptions.onRetry?.({ attempt, error, maxAttempts });
+    }
+  }
+
+  throw new Error("Deno graph retry loop exited without a result");
 }
 
 function run(command, args, options = {}) {
@@ -449,6 +479,28 @@ function assertDenoVersion(invocation) {
   }
 }
 
+function loadDenoGraph(invocation, aggregateEntrypoint) {
+  const graphResult = run(
+    invocation.command,
+    [...invocation.prefix, "info", ...DENO_INFO_FLAGS, pathToFileURL(aggregateEntrypoint).href],
+    { shell: invocation.shell },
+  );
+  if (graphResult.error) throw graphResult.error;
+  if (graphResult.status !== 0) {
+    throw new Error(graphResult.stderr || "deno info failed without diagnostics");
+  }
+
+  try {
+    return JSON.parse(graphResult.stdout);
+  } catch (error) {
+    throw new Error(`Deno returned malformed JSON: ${error.message}`);
+  }
+}
+
+function sleep(milliseconds) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
+}
+
 export function discoverEntrypoints(functionsDirectory) {
   return readdirSync(functionsDirectory, { withFileTypes: true })
     .filter(
@@ -471,8 +523,7 @@ async function main() {
     outputArgument?.slice("--output=".length) || "artifacts/edge-sbom.cdx.json",
   );
   const expectedEntrypoints = Number(
-    expectedArgument?.slice("--expected-entrypoints=".length) ||
-      DEFAULT_EXPECTED_EDGE_ENTRYPOINTS,
+    expectedArgument?.slice("--expected-entrypoints=".length) || DEFAULT_EXPECTED_EDGE_ENTRYPOINTS,
   );
   if (!Number.isInteger(expectedEntrypoints) || expectedEntrypoints <= 0) {
     throw new Error("--expected-entrypoints must be a positive integer");
@@ -499,33 +550,23 @@ async function main() {
 
     const invocation = resolveDenoInvocation();
     assertDenoVersion(invocation);
-    const graphResult = run(
-      invocation.command,
-      [
-        ...invocation.prefix,
-        "info",
-        ...DENO_INFO_FLAGS,
-        pathToFileURL(aggregateEntrypoint).href,
-      ],
-      { shell: invocation.shell },
+    const sbom = buildEdgeSbomWithRemoteRetry(
+      () => loadDenoGraph(invocation, aggregateEntrypoint),
+      {
+        applicationName: packageJson.name,
+        applicationVersion: packageJson.version,
+        entrypointUrls,
+      },
+      {
+        onRetry: ({ attempt, error, maxAttempts }) => {
+          const delayMilliseconds = attempt * 1_000;
+          console.warn(
+            `[release-edge-sbom] remote graph resolution failed on attempt ${attempt}/${maxAttempts}: ${error.message}; retrying in ${delayMilliseconds}ms`,
+          );
+          sleep(delayMilliseconds);
+        },
+      },
     );
-    if (graphResult.error) throw graphResult.error;
-    if (graphResult.status !== 0) {
-      throw new Error(graphResult.stderr || "deno info failed without diagnostics");
-    }
-
-    let graph;
-    try {
-      graph = JSON.parse(graphResult.stdout);
-    } catch (error) {
-      throw new Error(`Deno returned malformed JSON: ${error.message}`);
-    }
-
-    const sbom = buildEdgeSbom(graph, {
-      applicationName: packageJson.name,
-      applicationVersion: packageJson.version,
-      entrypointUrls,
-    });
 
     mkdirSync(dirname(outputPath), { recursive: true });
     const temporaryOutput = `${outputPath}.tmp-${process.pid}`;
