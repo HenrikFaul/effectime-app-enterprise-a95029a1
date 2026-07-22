@@ -4,6 +4,10 @@ import { describe, expect, it } from "vitest";
 
 const root = process.cwd();
 const importer = readFileSync(join(root, "supabase/functions/import-entity-data/index.ts"), "utf8");
+const handler = readFileSync(
+  join(root, "supabase/functions/import-entity-data/handler.ts"),
+  "utf8",
+);
 const entitlement = readFileSync(
   join(root, "supabase/functions/import-entity-data/entitlement.ts"),
   "utf8",
@@ -36,31 +40,43 @@ describe("CSV import Edge entitlement contract", () => {
   });
 
   it("preflights after authentication and RBAC but before audit, dry-run, or import reads and writes", () => {
-    const auth = importer.indexOf("await userClient.auth.getUser()");
-    const actorLookup = importer.indexOf(".from('enterprise_memberships')", auth);
-    const actorRole = importer.indexOf("const actorRole =", actorLookup);
-    const preflight = importer.indexOf(
-      "const csvImportEntitlement = await resolveCsvImportEntitlement(",
-      actorRole,
+    expect(importer).toContain("Deno.serve(createImportEntityDataHandler({");
+    expect(handler).toContain("logger: ImportEntityDataLogger;");
+    expect(handler).not.toContain("console.warn");
+    expect(handler).not.toContain("console.error");
+    expect(importer).toContain("executeAuthorizedImport: (command: AuthorizedImportCommand) =>");
+    expect(importer).toContain("executeAuthorizedImport(serviceClient, command)");
+
+    const auth = handler.indexOf("await dependencies.authenticate()");
+    const parse = handler.indexOf("parseImportRequest(rawBody)", auth);
+    const actorLookup = handler.indexOf(
+      "await dependencies.resolveActor(",
+      parse,
     );
-    const blocked = importer.indexOf("if (csvImportAccess.kind === 'blocked')", preflight);
-    const audit = importer.indexOf("action: 'import.started'", preflight);
-    const dryRunAuditBranch = importer.indexOf("if (!dry_run)", preflight);
-    const dispatch = importer.indexOf("switch (entity)", preflight);
+    const preflight = handler.indexOf(
+      "await dependencies.resolveCsvImportEntitlement(",
+      actorLookup,
+    );
+    const blocked = handler.indexOf('if (access.kind === "blocked")', preflight);
+    const dispatch = handler.indexOf(
+      "await dependencies.executeAuthorizedImport({",
+      preflight,
+    );
+    const audit = importer.indexOf("action: 'import.started'");
 
     expect(auth).toBeGreaterThan(-1);
-    expect(actorLookup).toBeGreaterThan(auth);
-    expect(actorRole).toBeGreaterThan(actorLookup);
-    expect(preflight).toBeGreaterThan(actorRole);
+    expect(parse).toBeGreaterThan(auth);
+    expect(actorLookup).toBeGreaterThan(parse);
+    expect(preflight).toBeGreaterThan(actorLookup);
     expect(blocked).toBeGreaterThan(preflight);
-    expect(dryRunAuditBranch).toBeGreaterThan(blocked);
-    expect(audit).toBeGreaterThan(dryRunAuditBranch);
-    expect(dispatch).toBeGreaterThan(audit);
+    expect(dispatch).toBeGreaterThan(blocked);
+    expect(audit).toBeGreaterThan(-1);
 
-    const guardedImportPath = importer.slice(preflight, dispatch);
-    expect(guardedImportPath).toContain("return jsonResponse(");
+    const guardedImportPath = handler.slice(preflight, dispatch);
+    expect(guardedImportPath).toContain("return errorResponse({");
     expect(guardedImportPath).not.toContain("summary.created++");
     expect(guardedImportPath).not.toContain("summary.updated++");
+    expect(guardedImportPath).not.toContain("enterprise_audit_events");
   });
 
   it("returns stable sanitized 403 and 503 responses", () => {
@@ -70,23 +86,25 @@ describe("CSV import Edge entitlement contract", () => {
     expect(entitlement).toContain("status: 503");
     expect(entitlement).toContain('code: "ENTITLEMENT_UNAVAILABLE"');
     expect(entitlement).toContain('message: "CSV import entitlement is temporarily unavailable"');
-    expect(importer).toContain(
-      "return jsonResponse({ error: csvImportAccess.message }, csvImportAccess.status)",
-    );
+    expect(handler).toContain("status: access.status");
+    expect(handler).toContain("error: access.message");
+    expect(handler).toContain("code: access.code");
   });
 
   it("logs only bounded entitlement context and never raw lookup details", () => {
-    const preflight = importer.indexOf(
-      "const csvImportEntitlement = await resolveCsvImportEntitlement(",
+    const preflight = handler.indexOf(
+      "await dependencies.resolveCsvImportEntitlement(",
     );
-    const audit = importer.indexOf("// Audit: import.started", preflight);
-    const gate = importer.slice(preflight, audit);
+    const executor = handler.indexOf(
+      "await dependencies.executeAuthorizedImport({",
+      preflight,
+    );
+    const gate = handler.slice(preflight, executor);
 
-    expect(gate).toContain("console.error('csv_import entitlement lookup failed', {");
-    expect(gate).toContain("workspaceId: workspace_id");
-    expect(gate).toContain("step: csvImportEntitlement.step");
-    expect(gate).toContain("features: CSV_IMPORT_REQUIRED_FEATURE_KEYS");
-    expect(gate).not.toContain("csvImportEntitlement.error");
+    expect(gate).toContain('logger.error("csv_import_entitlement_unavailable", {');
+    expect(gate).toContain("entitlement_step: entitlement.step");
+    expect(gate).toContain("required_features: CSV_IMPORT_REQUIRED_FEATURE_KEYS");
+    expect(gate).not.toContain("entitlement.error");
     expect(gate).not.toMatch(/console\.error\([^)]*,\s*(?:error|e)\s*\)/u);
     expect(gate).not.toContain("missingFeatureKeys");
   });

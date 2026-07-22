@@ -9,12 +9,28 @@ import {
   analyzeStructuredLoggerSource,
   cleanupLogContracts,
   loadTypeScriptParser,
+  piiSensitiveFunctions,
 } from "./check-edge-log-safety.mjs";
 
 const repositoryRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const [createdIdentityContract, temporaryUserContract] = cleanupLogContracts;
 const readRepositoryFile = (path) => readFileSync(resolve(repositoryRoot, path), "utf8");
 const reasons = (findings) => findings.map((finding) => finding.reason).join("\n");
+
+test("the bulk import boundary is permanently covered by structured log safety", () => {
+  assert.ok(
+    piiSensitiveFunctions.includes(
+      "supabase/functions/import-entity-data/index.ts",
+    ),
+  );
+  assert.deepEqual(
+    analyzeStructuredLoggerSource(
+      readRepositoryFile("supabase/functions/import-entity-data/index.ts"),
+      "supabase/functions/import-entity-data/index.ts",
+    ),
+    [],
+  );
+});
 
 test("current cleanup handlers satisfy their AST-enforced log contracts", () => {
   for (const contract of cleanupLogContracts) {

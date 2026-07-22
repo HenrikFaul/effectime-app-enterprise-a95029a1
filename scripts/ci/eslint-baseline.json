@@ -3,7 +3,7 @@
   "purpose": "Existing ESLint diagnostic fingerprint ceiling. CI fails on new findings and requires baseline reduction when findings are fixed.",
   "command": "eslint . --format json",
   "totals": {
-    "errors": 1148,
+    "errors": 1145,
     "warnings": 98
   },
   "counts": {
@@ -20,7 +20,7 @@
       "warnings": 0
     },
     "@typescript-eslint/no-explicit-any": {
-      "errors": 1119,
+      "errors": 1116,
       "warnings": 0
     },
     "@typescript-eslint/no-require-imports": {
@@ -1327,7 +1327,7 @@
         "warnings": 0
       },
       "@typescript-eslint/no-explicit-any": {
-        "errors": 30,
+        "errors": 27,
         "warnings": 0
       }
     },
@@ -8225,13 +8225,6 @@
         "source": "async function importLeave(client: any, workspaceId: string, mode: string, rows: any[], dryRun: boolean | undefined) {",
         "count": 2
       },
-      "9eb6b96b95fb88a6b140": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "function jsonResponse(body: any, status = 200) {",
-        "count": 1
-      },
       "a9ed32911e9512505b28": {
         "ruleId": "@typescript-eslint/no-explicit-any",
         "severity": "errors",
@@ -8281,13 +8274,6 @@
         "source": "async function importOffices(client: any, workspaceId: string, mode: string, rows: any[], dryRun: boolean | undefined) {",
         "count": 2
       },
-      "e0eec5d63255b9dda919": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "rows: Record<string, any>[];",
-        "count": 1
-      },
       "f0f1d22053ce6e07e93d": {
         "ruleId": "@typescript-eslint/no-explicit-any",
         "severity": "errors",
@@ -8301,13 +8287,6 @@
         "message": "Unexpected any. Specify a different type.",
         "source": "async function importSkills(client: any, workspaceId: string, mode: string, rows: any[], dryRun: boolean | undefined) {",
         "count": 2
-      },
-      "f9aee9e796c5001d1d4f": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "} catch (e: any) {",
-        "count": 1
       },
       "ffdd83fe3fc2e1791396": {
         "ruleId": "@typescript-eslint/no-explicit-any",

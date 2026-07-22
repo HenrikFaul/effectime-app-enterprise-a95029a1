@@ -148,10 +148,9 @@ export async function parseUploadedFile(file: File): Promise<ParsedFile> {
 // ===== File Generation =====
 
 function csvEscape(value: string): string {
-  if (value.includes('"') || value.includes(',') || value.includes('\n') || value.includes('\r')) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
+  // Neutralize spreadsheet formulas before RFC 4180 escaping.
+  if (/^(?:[\t\r]| *[=+@-])/u.test(value)) value = `'${value}`;
+  return /[",\r\n]/u.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
 }
 
 export function generateCSV(headers: string[], rows: string[][]): string {

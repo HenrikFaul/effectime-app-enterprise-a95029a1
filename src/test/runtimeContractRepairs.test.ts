@@ -11,6 +11,7 @@ const migration = readContract(
 const dashboard = readContract('src/components/enterprise/WorkspaceDashboard.tsx');
 const featureHook = readContract('src/hooks/useFeature.ts');
 const importer = readContract('supabase/functions/import-entity-data/index.ts');
+const importerHandler = readContract('supabase/functions/import-entity-data/handler.ts');
 const importerSecurity = readContract('supabase/functions/import-entity-data/security.ts');
 const emailWorker = readContract('supabase/functions/process-email-queue/index.ts');
 const approvalInbox = readContract('src/components/enterprise/ApprovalInbox.tsx');
@@ -32,7 +33,8 @@ describe('restored and hardened runtime contracts', () => {
       /GRANT EXECUTE ON FUNCTION public\.get_user_ids_by_emails\(text\[\]\) TO service_role/,
     );
     expect(importer.match(/await resolveAuthUsersByEmail\(client, emails\)/g)).toHaveLength(2);
-    expect(importer).toContain('return jsonResponse({ error: \'Import dependency is temporarily unavailable\' }, 503)');
+    expect(importerHandler).toContain('"Import dependency is temporarily unavailable"');
+    expect(importerHandler).toContain('"IMPORT_DEPENDENCY_UNAVAILABLE"');
   });
 
   it('prevents bulk member import from escalating access or bypassing invitations', () => {
@@ -50,7 +52,10 @@ describe('restored and hardened runtime contracts', () => {
   it('imports leave only for active members of the target workspace', () => {
     expect(importer).toContain('const activeWorkspaceUserIds = new Set(');
     expect(importer).toContain('.filter((authUser: any) => activeWorkspaceUserIds.has(authUser.user_id))');
-    expect(importer).toContain('Leave membership lookup failed:');
+    expect(importer).toContain(
+      "throw new ImportDependencyError('leave_memberships_lookup')",
+    );
+    expect(importer).not.toContain('Leave membership lookup failed:');
   });
 
   it('exposes feature metadata only through a membership-scoped frontend RPC', () => {

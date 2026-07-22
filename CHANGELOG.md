@@ -1,3 +1,58 @@
+## 2026-07-22 — v3.51.21 CSV import bounded failure boundary (unreleased)
+
+**Status:** source + hosted candidate on `codex/csv-import-error-boundary`;
+draft PR #192. Production deployment has not been performed. No database
+migration or new dependency is introduced.
+
+- **BIZONYÍTOTT:** the inherited `import-entity-data` handler could return the
+  fatal provider exception message, include ten raw database write messages in
+  otherwise successful row-error responses, treat seven failed prerequisite
+  reads as empty data, expose raw provider details on two other prerequisite
+  reads, and start writes even when the `import.started` audit insert failed.
+  The CSV generator also emitted formula-like cell values without spreadsheet
+  neutralization.
+- Extracts a dependency-injected handler factory exercised with real `Request`
+  objects. Authentication, active-role and exact `csv_import` + `members_list`
+  denial now stop the executor entirely. Non-POST requests return `405`, invalid
+  JSON returns a bounded `400`, and top-level failures use stable additive codes,
+  a correlation `request_id`, `Cache-Control: no-store` and CORS-exposed
+  `X-Request-Id` without exposing provider details.
+- Sanitizes fatal and all ten row-write provider failures while preserving the
+  legacy `code: DB_ERROR` machine contract and adding a bounded `reason_code`.
+  It caps every reflected row value at 256 Unicode code points, makes nine
+  prerequisite reads and the `import.started` audit fail closed, and records a
+  bounded warning if the post-write completion audit fails. The writes remain
+  sequential and therefore non-atomic; this package does not claim rollback
+  after a partial mutation or a guaranteed completion audit.
+- Neutralizes formula-leading spreadsheet cells in generated CSV exports and
+  extends the permanent AST Edge-log gate so required structured-logger wiring
+  cannot be replaced by raw console sinks at this entrypoint. Separate static
+  and Deno contracts prevent raw provider details from returning to logs or
+  client responses.
+
+Local validation is green: focused Vitest 52/52; complete coverage run 92 files
+/ 1116/1116 tests; full Edge 109/109; Edge entrypoint check 31/31; structured log
+safety for all three covered functions; and log-ratchet unit 24/24. Typecheck,
+the reduced 1,145-error/98-warning lint fingerprint, production build, reviewed
+bundle budget, web E2E 7/7, Capacitor sync, mobile foundation 390/390 and mobile
+E2E 2/2 pass. All seven isolated PostgreSQL contracts, migration/schema
+provenance, release identity 55/55 and Edge SBOM unit 7/7 pass. Dependency audit
+reports zero vulnerabilities; current-tree secret scan covers 1,581 files and
+the full fetched-history scan covers 891 commits / 3,730 blobs / 216,928,609
+bytes with zero findings. The exact Edge source identity is `060c81a…` (95 files
+/ 913,321 canonical bytes). Exact source head `4dfa4b1…` completed hosted run
+`29949758390` with all 12 jobs PASS and zero annotations; PR checkout potential
+merge SHA is `355e3c9…`. Retained artifacts are release evidence `8541710604`
+(30 days), diagnostics `8541708590` (14 days), and unsigned Android
+`8541666923` (7 days).
+
+Rollback is the source/test/version/documentation commit revert. Disabling only
+the sanitization or fail-closed dependency boundary would reintroduce a data-
+exposure or false-success path, so a partial rollback requires disabling the
+import endpoint. Production remains **NO-GO** for the inherited migration-
+history, restored-staging, Edge parity, same-SHA live-attestation and import
+transactionality blockers.
+
 ## 2026-07-22 — v3.51.20 CSV import entitlement parity (unreleased)
 
 **Status:** source + hosted candidate on `codex/csv-import-entitlement`; draft
