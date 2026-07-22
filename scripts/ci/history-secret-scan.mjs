@@ -117,6 +117,7 @@ function reachableObjectIds(repositoryRoot, objectIdPattern) {
       "--objects",
       "--no-object-names",
       "-z",
+      "HEAD",
       "--all",
       "--missing=error",
     ]),
@@ -136,6 +137,7 @@ function historicalPaths(repositoryRoot) {
       gitBuffer(repositoryRoot, [
         "--no-replace-objects",
         "log",
+        "HEAD",
         "--all",
         "--full-history",
         "--root",
@@ -351,7 +353,13 @@ async function scanRepositoryHistoryInternal(repositoryRoot) {
   });
 
   const reachableCommitCount = Number(
-    gitText(resolvedRoot, ["--no-replace-objects", "rev-list", "--count", "--all"]).trim(),
+    gitText(resolvedRoot, [
+      "--no-replace-objects",
+      "rev-list",
+      "--count",
+      "HEAD",
+      "--all",
+    ]).trim(),
   );
   if (!Number.isSafeInteger(reachableCommitCount) || reachableCommitCount < 1) {
     throw new HistorySecretScanError("Git returned an invalid reachable commit count.");

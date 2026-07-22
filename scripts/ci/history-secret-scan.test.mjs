@@ -218,6 +218,35 @@ test("history scan supports SHA-256 repositories", async () => {
   assert.equal(result.reachableCommitCount, 1);
 });
 
+test("history scan includes a detached HEAD that is absent from all refs", async () => {
+  const repositoryRoot = temporaryDirectory("history-detached-head");
+  initializeRepository(repositoryRoot);
+  writeFileSync(join(repositoryRoot, "base.txt"), "base\n", "utf8");
+  commitAll(repositoryRoot, "add referenced base");
+  git(repositoryRoot, ["switch", "--detach", "--quiet", "HEAD"]);
+
+  const detachedToken = "ghp_" + "Q".repeat(40);
+  writeFileSync(join(repositoryRoot, "detached-secret.txt"), `${detachedToken}\n`, "utf8");
+  commitAll(repositoryRoot, `add detached credential ${detachedToken}`);
+  unlinkSync(join(repositoryRoot, "detached-secret.txt"));
+  commitAll(repositoryRoot, "remove detached credential");
+
+  const referencedObjects = git(repositoryRoot, ["rev-parse", "--all"])
+    .trim()
+    .split(/\r?\n/)
+    .filter(Boolean);
+  assert.equal(referencedObjects.length, 1);
+  assert.notEqual(referencedObjects[0], git(repositoryRoot, ["rev-parse", "HEAD"]).trim());
+  const result = await scanRepositoryHistory(repositoryRoot);
+  assert.equal(result.reachableCommitCount, 3);
+  assert.equal(
+    result.findings.some((finding) => finding.detector === "github-token"),
+    true,
+  );
+  assert.equal(JSON.stringify(result.findings).includes(detachedToken), false);
+  assert.equal(historyFindingLines(result).join("\n").includes(detachedToken), false);
+});
+
 test("history scan fails closed for oversized reachable objects", async () => {
   const repositoryRoot = temporaryDirectory("history-oversized");
   initializeRepository(repositoryRoot);
