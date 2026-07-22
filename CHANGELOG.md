@@ -1,7 +1,9 @@
 ## 2026-07-22 — v3.51.12 Plugin installation policy boundary (unreleased)
 
-**Status:** locally validated source candidate; linked database and production
-not deployed.
+**Status:** stacked draft PR
+[#183](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/pull/183)
+at implementation head `1aa7bcd7e84efaf3268f100a9a2123bd91464edc`;
+source pushed, linked database and production not deployed.
 
 - Keeps the existing `marketplace_install_plugin(uuid, uuid, jsonb)` signature,
   default, return value, owner-only authorization, installation identity,
@@ -30,14 +32,17 @@ rollback, two-workspace concurrent install-count and explicit migration reapply
 PASS. Typecheck; full coverage 77 files / 996 tests; migration/schema
 provenance at 136 migrations; unchanged lint ratchet; dependency audit (0 known
 vulnerabilities); 1,542-file secret scan; production build and bundle budget;
-web smoke 7/7; mobile source/artifact/bridge 183/345/2; Edge inventory,
+web smoke 7/7; mobile source/artifact/bridge/release 183/345/2/365; Edge inventory,
 ratchet, log safety, release identity and SBOM contracts PASS. The first full
 Edge run exposed one existing timing-sensitive timeout test (85/86); its
 isolated run and the repeated full run passed 11/11 and 86/86, so this remains
 an explicit non-determinism risk rather than a hidden green claim.
 
-Hosted CI, linked apply and production deployment remain pending. Production
-is **NO-GO** until migration-history reconciliation, full replay,
+Hosted Quality Gate run `29901330094` passed all 11/11 jobs. Release evidence
+artifact `8522068999`, diagnostics `8522067209` and unsigned Android artifact
+`8522032542` prove the source/CI candidate, including locked iOS compilation;
+they do not prove a linked database apply or live production deployment.
+Production is **NO-GO** until migration-history reconciliation, full replay,
 restored-staging DB-first acceptance and an authenticated same-SHA production
 publish are complete.
 
