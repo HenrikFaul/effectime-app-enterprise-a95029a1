@@ -457,8 +457,10 @@ Deno.test("Auth timeouts are persisted and exposed as an incomplete 5xx run", as
     },
   });
   const result = await handlerWith(dependencies, {
-    operationTimeoutMs: 2,
-    totalRuntimeMs: 100,
+    // Keep the timeout well below production while leaving enough scheduler
+    // headroom for the immediate failure receipt on loaded Windows/Linux CI.
+    operationTimeoutMs: 20,
+    totalRuntimeMs: 500,
   })(schedulerRequest());
   const resultBody = await body(result);
   assertEquals(result.status, 503);

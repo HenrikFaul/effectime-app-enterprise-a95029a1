@@ -1,3 +1,68 @@
+## 2026-07-22 — v3.51.14 Bounded plugin install lock wait and safe retry (unreleased)
+
+**Status:** stacked draft PR
+[#185](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/pull/185)
+at implementation head `d75f269d73dc9c27be1949e3d1a2f009fc3134c6`;
+source pushed, linked database and production not deployed.
+
+- Adds a five-second function-scoped `lock_timeout` to the existing
+  `marketplace_install_plugin(uuid, uuid, jsonb)` RPC with `ALTER FUNCTION`
+  only. The routine body, signature/default, UUID return, OID, owner,
+  `SECURITY DEFINER`, ACL and `pg_catalog` search path remain exact. No global
+  statement deadline or automatic client retry is introduced.
+- Converts PostgreSQL `55P03`, `40P01` and `40001` install/uninstall failures to
+  a bounded client error contract. Raw database messages, details, hints,
+  tenant IDs and plugin IDs are no longer concatenated into browser or native
+  toasts; all other transport/server failures use a generic localized error.
+- Keeps the failed install visible and re-enables it with an explicit manual
+  retry action after a proven retryable conflict. Pending operations are
+  isolated per plugin, same-plugin double clicks are suppressed, and a late
+  result from a previous workspace cannot show a toast, refetch or retry state
+  in the current workspace. Web, PWA, Android and iOS share this React/Supabase
+  behavior.
+- Extends the isolated pinned PostgreSQL 17.6 contract with exact
+  barrier→row-holder→reinstall blocker relationships. The live RPC returns
+  `55P03` inside the 4.5–8 second acceptance window; its preceding public
+  installation/private-config upserts and timestamps are proven fully rolled
+  back, while the count remains exact and unchanged because the lock fails
+  before its update. After the holder is released, a fresh database retry
+  preserves the installation UUID and commits the new private config/count
+  atomically; a separate mocked UI contract proves that retry occurs only
+  after a fresh click.
+- Adds source/owner/ACL/proconfig attestation, three fail-closed tamper cases,
+  exact no-partial-mutation checks and two migration reapplications. Recovery
+  is forward-only: tune or reset the timeout in a reviewed later migration;
+  never rewrite the attested RPC body or retry an unknown transport outcome
+  automatically.
+
+Validation: runner unit 14/14; API + retry UI 21/21; full coverage 79 files and
+1,017/1,017 tests (51.45% statements/lines, 75.21% branches, 46.97%
+functions); TypeScript, targeted ESLint and unchanged 1,148/98 lint ratchet
+PASS. The final pinned PostgreSQL 17.6 contract passed in 76.5 seconds with the
+prior 43 tamper cases plus three new timeout cases, deterministic
+timeout/rollback/fresh database retry and double reapply; the owned container
+was removed exactly. Production build, reviewed pre-commit bundle measurement
+(4,529,639 raw / 1,297,427 gzip JS), web smoke 7/7, mobile 183/345/2 plus deterministic Android
+and iOS sync, Edge check/ratchet/log-safety and final 86/86 suite, release
+identity 55/55, Edge SBOM 7/7, migration/schema provenance, 1,550-file secret
+scan and zero-vulnerability dependency audit PASS. A two-millisecond Edge
+test-only timeout flaked once at 85/86 under parallel load; a 20 ms
+non-production bound then passed the isolated file three times and the full
+suite. Hosted Quality Gate run
+[`29913434706`](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/actions/runs/29913434706)
+passes all 11 jobs reported against the implementation head. GitHub's
+pull-request checkout validates potential merge commit
+`cb93c0998c6645e4b680f434fa308e8795b85ff3` (base `86c4d74…` plus head
+`d75f269…`): exact hosted bundle 4,529,732 raw / 1,297,498 gzip JS, release
+evidence `8526921475`, diagnostics `8526918713` and unsigned Android
+`8526878038`. Android and locked iOS compile both pass; these are candidate
+artifacts, not store or production releases.
+
+Production remains **NO-GO** until the 61 shared / 77 local-only / 82
+remote-only migration histories are reconciled, full replay and restored
+staging pass, and DB-first apply is followed by an authenticated same-SHA
+client deployment. This P2 change does not authorize a linked database write.
+
 ## 2026-07-22 — v3.51.13 Plugin install-count concurrency correctness (unreleased)
 
 **Status:** stacked draft PR

@@ -27,6 +27,12 @@ export const PLUGIN_INSTALL_COUNT_MIGRATION_SQL_PATH =
   "/contract/plugin-install-count-migration.sql";
 export const PLUGIN_INSTALL_COUNT_ASSERTIONS_SQL_PATH =
   "/contract/plugin-install-count-assertions.sql";
+export const PLUGIN_INSTALL_LOCK_TIMEOUT_SEED_SQL_PATH =
+  "/contract/plugin-install-lock-timeout-seed.sql";
+export const PLUGIN_INSTALL_LOCK_TIMEOUT_MIGRATION_SQL_PATH =
+  "/contract/plugin-install-lock-timeout-migration.sql";
+export const PLUGIN_INSTALL_LOCK_TIMEOUT_ASSERTIONS_SQL_PATH =
+  "/contract/plugin-install-lock-timeout-assertions.sql";
 export const OWNERSHIP_LABEL_KEY = "com.effectime.ci.recovered-surface-acl-contract";
 export const ASYNC_DOCKER_TIMEOUT_MILLISECONDS = 45_000;
 export const VERIFY_FAILED_PREFLIGHT_SQL =
@@ -37,6 +43,8 @@ export const VERIFY_PLUGIN_INSTALL_POLICY_FAILED_PREFLIGHT_SQL =
   "DO $verify$ BEGIN IF contract.plugin_install_policy_surface_state() IS DISTINCT FROM (SELECT surface_state FROM contract.plugin_install_policy_baseline WHERE singleton) OR (SELECT prosrc FROM pg_catalog.pg_proc WHERE oid = 'public.marketplace_install_plugin(uuid,uuid,jsonb)'::pg_catalog.regprocedure::oid) IS DISTINCT FROM (SELECT install_source FROM contract.plugin_install_policy_baseline WHERE singleton) OR contract.pgcrypto_trust_state() IS DISTINCT FROM (SELECT state_value FROM contract.state_baseline WHERE state_name = 'pgcrypto_trust') OR pg_catalog.has_schema_privilege('authenticated', 'public', 'CREATE') OR pg_catalog.has_schema_privilege('anon', 'public', 'CREATE') OR pg_catalog.has_schema_privilege('service_role', 'public', 'CREATE') THEN RAISE EXCEPTION 'Failed plugin install policy preflight left partial mutation'; END IF; END; $verify$;";
 export const VERIFY_PLUGIN_INSTALL_COUNT_FAILED_PREFLIGHT_SQL =
   "DO $verify$ BEGIN IF contract.plugin_install_count_surface_state() IS DISTINCT FROM (SELECT surface_state FROM contract.plugin_install_count_baseline WHERE singleton) OR (SELECT prosrc FROM pg_catalog.pg_proc WHERE oid = 'public.marketplace_uninstall_plugin(uuid)'::pg_catalog.regprocedure::oid) IS DISTINCT FROM (SELECT uninstall_source FROM contract.plugin_install_count_baseline WHERE singleton) THEN RAISE EXCEPTION 'Failed plugin install-count preflight left partial mutation'; END IF; END; $verify$;";
+export const VERIFY_PLUGIN_INSTALL_LOCK_TIMEOUT_FAILED_PREFLIGHT_SQL =
+  "DO $verify$ BEGIN IF contract.plugin_install_lock_timeout_surface_state() IS DISTINCT FROM (SELECT surface_state FROM contract.plugin_install_lock_timeout_baseline WHERE singleton) THEN RAISE EXCEPTION 'Failed plugin install lock-timeout preflight left partial mutation'; END IF; END; $verify$;";
 export const CAPTURE_HARDENED_STATE_SQL =
   "INSERT INTO contract.state_baseline (state_name, state_value) VALUES ('hardened_mutable', contract.mutable_surface_state()), ('hardened_qr_source', (SELECT pg_catalog.jsonb_build_object('prosrc', procedure.prosrc) FROM pg_catalog.pg_proc AS procedure WHERE procedure.oid = 'public.clock_generate_qr(uuid,integer)'::pg_catalog.regprocedure::oid)) ON CONFLICT (state_name) DO UPDATE SET state_value = EXCLUDED.state_value;";
 export const SEED_REAPPLY_DRIFT_SQL =
@@ -289,6 +297,62 @@ export const CAPTURE_PLUGIN_INSTALL_COUNT_REAPPLY_STATE_SQL =
 export const VERIFY_PLUGIN_INSTALL_COUNT_REAPPLY_STATE_SQL =
   "DO $verify$ BEGIN IF contract.plugin_install_count_reapply_state() IS DISTINCT FROM (SELECT state_value FROM contract.state_baseline WHERE state_name = 'plugin_install_count_reapply') THEN RAISE EXCEPTION 'Plugin install_count migration reapply changed catalog, API, ACL, data, or totality'; END IF; END; $verify$;";
 
+export const PLUGIN_INSTALL_LOCK_TIMEOUT_PLUGIN_ID =
+  "59000000-0000-4000-8000-000000000001";
+export const PLUGIN_INSTALL_LOCK_TIMEOUT_BARRIER_APPLICATION_NAME =
+  "effectime_plugin_install_lock_timeout_barrier";
+export const PLUGIN_INSTALL_LOCK_TIMEOUT_HOLDER_APPLICATION_NAME =
+  "effectime_plugin_install_lock_timeout_holder";
+export const PLUGIN_INSTALL_LOCK_TIMEOUT_CLIENT_APPLICATION_NAME =
+  "effectime_plugin_install_lock_timeout_client";
+const PLUGIN_INSTALL_LOCK_TIMEOUT_BARRIER_KEY = "35114, 1";
+export const PLUGIN_INSTALL_LOCK_TIMEOUT_BARRIER_SECONDS = 35;
+export const PLUGIN_INSTALL_LOCK_TIMEOUT_STATEMENT_TIMEOUT_SECONDS = 42;
+export const PLUGIN_INSTALL_LOCK_TIMEOUT_READINESS_ATTEMPTS = 131;
+export const PLUGIN_INSTALL_LOCK_TIMEOUT_READINESS_INTERVAL_MILLISECONDS = 100;
+export const PLUGIN_INSTALL_LOCK_TIMEOUT_BARRIER_SQL = [
+  `SET application_name = '${PLUGIN_INSTALL_LOCK_TIMEOUT_BARRIER_APPLICATION_NAME}'`,
+  `SET statement_timeout = '${PLUGIN_INSTALL_LOCK_TIMEOUT_STATEMENT_TIMEOUT_SECONDS}s'`,
+  `SELECT pg_catalog.pg_advisory_lock(${PLUGIN_INSTALL_LOCK_TIMEOUT_BARRIER_KEY})`,
+  `SELECT pg_catalog.pg_sleep(${PLUGIN_INSTALL_LOCK_TIMEOUT_BARRIER_SECONDS})`,
+].join("; ") + ";";
+export const PLUGIN_INSTALL_LOCK_TIMEOUT_HOLDER_SQL = [
+  `SET application_name = '${PLUGIN_INSTALL_LOCK_TIMEOUT_HOLDER_APPLICATION_NAME}'`,
+  `SET statement_timeout = '${PLUGIN_INSTALL_LOCK_TIMEOUT_STATEMENT_TIMEOUT_SECONDS}s'`,
+  "BEGIN",
+  `SELECT plugin.id FROM public.marketplace_plugins AS plugin WHERE plugin.id = '${PLUGIN_INSTALL_LOCK_TIMEOUT_PLUGIN_ID}'::uuid FOR NO KEY UPDATE`,
+  `SELECT pg_catalog.pg_advisory_lock(${PLUGIN_INSTALL_LOCK_TIMEOUT_BARRIER_KEY})`,
+  "COMMIT",
+].join("; ") + ";";
+export const PLUGIN_INSTALL_LOCK_TIMEOUT_CLIENT_SQL = [
+  `SET application_name = '${PLUGIN_INSTALL_LOCK_TIMEOUT_CLIENT_APPLICATION_NAME}'`,
+  "SET statement_timeout = '12s'",
+  "SET ROLE authenticated",
+  "SELECT pg_catalog.set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000001', false)",
+  `DO $timeout_client$ DECLARE v_started_at timestamptz := pg_catalog.clock_timestamp(); v_elapsed_ms numeric; BEGIN BEGIN PERFORM public.marketplace_install_plugin('20000000-0000-4000-8000-000000000001'::uuid, '${PLUGIN_INSTALL_LOCK_TIMEOUT_PLUGIN_ID}'::uuid, '{"lock_timeout":"must-rollback"}'::jsonb); RAISE EXCEPTION 'Plugin reinstall unexpectedly escaped its bounded lock wait' USING ERRCODE = 'ZX001'; EXCEPTION WHEN lock_not_available THEN v_elapsed_ms := EXTRACT(epoch FROM (pg_catalog.clock_timestamp() - v_started_at)) * 1000; IF SQLSTATE IS DISTINCT FROM '55P03' OR v_elapsed_ms < 4500 OR v_elapsed_ms >= 8000 THEN RAISE EXCEPTION 'Plugin install lock timeout violated its SQLSTATE or 4.5-8 second budget (state=%, elapsed_ms=%)', SQLSTATE, v_elapsed_ms; END IF; RAISE NOTICE 'Plugin reinstall returned bounded SQLSTATE 55P03 after % ms', v_elapsed_ms; END; END; $timeout_client$`,
+  "RESET ROLE",
+].join("; ") + ";";
+export const PLUGIN_INSTALL_LOCK_TIMEOUT_BARRIER_READY_SQL =
+  `SELECT count(*) FROM pg_catalog.pg_stat_activity AS barrier WHERE barrier.application_name = '${PLUGIN_INSTALL_LOCK_TIMEOUT_BARRIER_APPLICATION_NAME}' AND barrier.wait_event = 'PgSleep' AND EXISTS (SELECT 1 FROM pg_catalog.pg_locks AS advisory_lock WHERE advisory_lock.pid = barrier.pid AND advisory_lock.locktype = 'advisory' AND advisory_lock.granted);`;
+export const PLUGIN_INSTALL_LOCK_TIMEOUT_HOLDER_READY_SQL =
+  `SELECT count(*) FROM pg_catalog.pg_stat_activity AS holder JOIN pg_catalog.pg_stat_activity AS barrier ON barrier.application_name = '${PLUGIN_INSTALL_LOCK_TIMEOUT_BARRIER_APPLICATION_NAME}' WHERE holder.application_name = '${PLUGIN_INSTALL_LOCK_TIMEOUT_HOLDER_APPLICATION_NAME}' AND holder.wait_event_type = 'Lock' AND pg_catalog.pg_blocking_pids(holder.pid) = ARRAY[barrier.pid];`;
+export const PLUGIN_INSTALL_LOCK_TIMEOUT_CLIENT_READY_SQL =
+  `SELECT count(*) FROM pg_catalog.pg_stat_activity AS client JOIN pg_catalog.pg_stat_activity AS holder ON holder.application_name = '${PLUGIN_INSTALL_LOCK_TIMEOUT_HOLDER_APPLICATION_NAME}' WHERE client.application_name = '${PLUGIN_INSTALL_LOCK_TIMEOUT_CLIENT_APPLICATION_NAME}' AND client.wait_event_type = 'Lock' AND pg_catalog.pg_blocking_pids(client.pid) = ARRAY[holder.pid];`;
+export const VERIFY_PLUGIN_INSTALL_LOCK_TIMEOUT_ROLLBACK_SQL =
+  "SELECT contract.assert_plugin_install_lock_timeout_runtime_baseline();";
+export const RETRY_PLUGIN_INSTALL_AFTER_LOCK_TIMEOUT_SQL = [
+  "SET ROLE authenticated",
+  "SELECT pg_catalog.set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000001', false)",
+  `SELECT public.marketplace_install_plugin('20000000-0000-4000-8000-000000000001'::uuid, '${PLUGIN_INSTALL_LOCK_TIMEOUT_PLUGIN_ID}'::uuid, '{"lock_timeout":"fresh-retry"}'::jsonb)`,
+  "RESET ROLE",
+].join("; ") + ";";
+export const VERIFY_PLUGIN_INSTALL_LOCK_TIMEOUT_RETRY_SQL =
+  `DO $verify$ BEGIN IF NOT EXISTS (SELECT 1 FROM contract.plugin_install_lock_timeout_runtime_baseline AS baseline JOIN public.workspace_installed_plugins AS installation ON installation.id = (baseline.installation_state ->> 'id')::uuid JOIN effectime_private.workspace_plugin_configs AS private_config ON private_config.installed_plugin_id = installation.id JOIN public.marketplace_plugins AS plugin ON plugin.id = installation.plugin_id WHERE baseline.singleton AND installation.workspace_id = '20000000-0000-4000-8000-000000000001'::uuid AND installation.plugin_id = '${PLUGIN_INSTALL_LOCK_TIMEOUT_PLUGIN_ID}'::uuid AND installation.config = '{}'::jsonb AND installation.enabled AND private_config.raw_config = '{"lock_timeout":"fresh-retry"}'::jsonb AND plugin.install_count = (SELECT pg_catalog.count(*)::integer FROM public.workspace_installed_plugins AS counted WHERE counted.plugin_id = plugin.id AND counted.enabled)) THEN RAISE EXCEPTION 'Fresh manual plugin install retry did not commit atomically'; END IF; END; $verify$;`;
+export const CAPTURE_PLUGIN_INSTALL_LOCK_TIMEOUT_REAPPLY_STATE_SQL =
+  "INSERT INTO contract.state_baseline (state_name, state_value) VALUES ('plugin_install_lock_timeout_reapply', contract.plugin_install_lock_timeout_reapply_state()) ON CONFLICT (state_name) DO UPDATE SET state_value = EXCLUDED.state_value;";
+export const VERIFY_PLUGIN_INSTALL_LOCK_TIMEOUT_REAPPLY_STATE_SQL =
+  "DO $verify$ BEGIN IF contract.plugin_install_lock_timeout_reapply_state() IS DISTINCT FROM (SELECT state_value FROM contract.state_baseline WHERE state_name = 'plugin_install_lock_timeout_reapply') THEN RAISE EXCEPTION 'Plugin install lock-timeout migration reapply changed catalog, API, ACL or data'; END IF; END; $verify$;";
+
 export const TAMPER_CASES = Object.freeze([
   Object.freeze({
     label: "RLS predicate drift",
@@ -534,6 +598,24 @@ export const PLUGIN_INSTALL_COUNT_TAMPER_CASES = Object.freeze([
   }),
 ]);
 
+export const PLUGIN_INSTALL_LOCK_TIMEOUT_TAMPER_CASES = Object.freeze([
+  Object.freeze({
+    label: "plugin install lock-timeout source drift",
+    sql: "UPDATE pg_catalog.pg_proc SET prosrc = prosrc || E'\\n-- contract install-lock-timeout source tamper' WHERE oid = 'public.marketplace_install_plugin(uuid,uuid,jsonb)'::pg_catalog.regprocedure::oid;",
+    expectedFailure: /Plugin install RPC source attestation failed/i,
+  }),
+  Object.freeze({
+    label: "plugin install lock-timeout custom-role grant",
+    sql: "GRANT EXECUTE ON FUNCTION public.marketplace_install_plugin(uuid,uuid,jsonb) TO contract_acl_parent;",
+    expectedFailure: /Plugin install RPC ACL contract is incompatible/i,
+  }),
+  Object.freeze({
+    label: "plugin install lock-timeout unexpected function setting",
+    sql: "ALTER FUNCTION public.marketplace_install_plugin(uuid,uuid,jsonb) SET statement_timeout = '30s';",
+    expectedFailure: /Plugin install RPC timeout contract is incompatible/i,
+  }),
+]);
+
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const containerNamePattern = /^effectime-recovered-surface-acl-pg17-[1-9][0-9]*-[0-9a-f]{12}$/;
 const containerIdPattern = /^[0-9a-f]{64}$/;
@@ -551,6 +633,9 @@ const allowedContractSqlPaths = new Set([
   PLUGIN_INSTALL_COUNT_SEED_SQL_PATH,
   PLUGIN_INSTALL_COUNT_MIGRATION_SQL_PATH,
   PLUGIN_INSTALL_COUNT_ASSERTIONS_SQL_PATH,
+  PLUGIN_INSTALL_LOCK_TIMEOUT_SEED_SQL_PATH,
+  PLUGIN_INSTALL_LOCK_TIMEOUT_MIGRATION_SQL_PATH,
+  PLUGIN_INSTALL_LOCK_TIMEOUT_ASSERTIONS_SQL_PATH,
 ]);
 const allowedTamperSql = new Set(TAMPER_CASES.map((tamperCase) => tamperCase.sql));
 const allowedPluginSecretTamperSql = new Set(
@@ -563,6 +648,9 @@ const allowedPluginInstallPolicyTamperSql = new Set(
 );
 const allowedPluginInstallCountTamperSql = new Set(
   PLUGIN_INSTALL_COUNT_TAMPER_CASES.map((tamperCase) => tamperCase.sql),
+);
+const allowedPluginInstallLockTimeoutTamperSql = new Set(
+  PLUGIN_INSTALL_LOCK_TIMEOUT_TAMPER_CASES.map((tamperCase) => tamperCase.sql),
 );
 
 function assertContainerName(containerName) {
@@ -687,6 +775,21 @@ export function buildDockerRunArgs({ containerName, repoRoot, password, ownershi
     [
       resolve(repoRoot, "scripts/ci/plugin-install-count-concurrency-assertions.test.sql"),
       PLUGIN_INSTALL_COUNT_ASSERTIONS_SQL_PATH,
+    ],
+    [
+      resolve(repoRoot, "scripts/ci/plugin-install-lock-timeout-seed.test.sql"),
+      PLUGIN_INSTALL_LOCK_TIMEOUT_SEED_SQL_PATH,
+    ],
+    [
+      resolve(
+        repoRoot,
+        "supabase/migrations/20260722083000_v3_51_14_plugin_install_lock_timeout.sql",
+      ),
+      PLUGIN_INSTALL_LOCK_TIMEOUT_MIGRATION_SQL_PATH,
+    ],
+    [
+      resolve(repoRoot, "scripts/ci/plugin-install-lock-timeout-assertions.test.sql"),
+      PLUGIN_INSTALL_LOCK_TIMEOUT_ASSERTIONS_SQL_PATH,
     ],
   ];
 
@@ -826,6 +929,34 @@ export function buildPsqlPluginInstallCountTamperArgs(containerName, tamperSql) 
     `BEGIN; ${tamperSql}`,
     "--file",
     PLUGIN_INSTALL_COUNT_MIGRATION_SQL_PATH,
+  ];
+}
+
+export function buildPsqlPluginInstallLockTimeoutTamperArgs(
+  containerName,
+  tamperSql,
+) {
+  assertContainerName(containerName);
+  if (!allowedPluginInstallLockTimeoutTamperSql.has(tamperSql)) {
+    throw new Error("Plugin install lock-timeout tamper SQL is not allowlisted");
+  }
+  return [
+    "exec",
+    containerName,
+    "psql",
+    "-X",
+    "--username",
+    "postgres",
+    "--dbname",
+    CONTRACT_DATABASE,
+    "--set",
+    "ON_ERROR_STOP=1",
+    "--set",
+    "VERBOSITY=verbose",
+    "--command",
+    `BEGIN; ${tamperSql}`,
+    "--file",
+    PLUGIN_INSTALL_LOCK_TIMEOUT_MIGRATION_SQL_PATH,
   ];
 }
 
@@ -1089,6 +1220,9 @@ const pluginConcurrencyApplicationNames = new Set([
   PLUGIN_INSTALL_COUNT_FIXED_BARRIER_APPLICATION_NAME,
   PLUGIN_INSTALL_COUNT_FIXED_INSTALLER_APPLICATION_NAME,
   PLUGIN_INSTALL_COUNT_FIXED_UNINSTALLER_APPLICATION_NAME,
+  PLUGIN_INSTALL_LOCK_TIMEOUT_BARRIER_APPLICATION_NAME,
+  PLUGIN_INSTALL_LOCK_TIMEOUT_HOLDER_APPLICATION_NAME,
+  PLUGIN_INSTALL_LOCK_TIMEOUT_CLIENT_APPLICATION_NAME,
 ]);
 
 export function buildTerminatePluginConcurrencyApplicationSql(applicationName) {
@@ -1473,6 +1607,121 @@ async function runPluginInstallCountRace({
   );
 }
 
+async function runPluginInstallLockTimeoutContract({
+  containerName,
+  executeDockerSync,
+  executeDockerAsync,
+  wait,
+}) {
+  const barrier = executeDockerAsync(
+    buildPsqlCommandArgs(containerName, PLUGIN_INSTALL_LOCK_TIMEOUT_BARRIER_SQL),
+  );
+  let holder;
+  let timeoutClient;
+  let phaseError = null;
+  try {
+    await waitForPluginInstallPolicyActivity(
+      containerName,
+      PLUGIN_INSTALL_LOCK_TIMEOUT_BARRIER_READY_SQL,
+      "Plugin install lock-timeout barrier did not become ready",
+      {
+        executeDockerSync,
+        wait,
+        attempts: PLUGIN_INSTALL_LOCK_TIMEOUT_READINESS_ATTEMPTS,
+        intervalMilliseconds:
+          PLUGIN_INSTALL_LOCK_TIMEOUT_READINESS_INTERVAL_MILLISECONDS,
+      },
+    );
+    holder = executeDockerAsync(
+      buildPsqlCommandArgs(containerName, PLUGIN_INSTALL_LOCK_TIMEOUT_HOLDER_SQL),
+    );
+    await waitForPluginInstallPolicyActivity(
+      containerName,
+      PLUGIN_INSTALL_LOCK_TIMEOUT_HOLDER_READY_SQL,
+      "Plugin install lock-timeout holder did not block on its exact barrier PID",
+      {
+        executeDockerSync,
+        wait,
+        attempts: PLUGIN_INSTALL_LOCK_TIMEOUT_READINESS_ATTEMPTS,
+        intervalMilliseconds:
+          PLUGIN_INSTALL_LOCK_TIMEOUT_READINESS_INTERVAL_MILLISECONDS,
+      },
+    );
+    timeoutClient = executeDockerAsync(
+      buildPsqlCommandArgs(containerName, PLUGIN_INSTALL_LOCK_TIMEOUT_CLIENT_SQL),
+    );
+    await waitForPluginInstallPolicyActivity(
+      containerName,
+      PLUGIN_INSTALL_LOCK_TIMEOUT_CLIENT_READY_SQL,
+      "Plugin reinstall did not block on the exact plugin-row holder PID",
+      {
+        executeDockerSync,
+        wait,
+        attempts: PLUGIN_INSTALL_LOCK_TIMEOUT_READINESS_ATTEMPTS,
+        intervalMilliseconds:
+          PLUGIN_INSTALL_LOCK_TIMEOUT_READINESS_INTERVAL_MILLISECONDS,
+      },
+    );
+
+    const timeoutResult = await timeoutClient.completion;
+    assertSuccessfulAsyncDockerResult(
+      timeoutResult,
+      "Bounded plugin install lock-timeout client",
+    );
+    executeDockerSync(
+      buildPsqlCommandArgs(
+        containerName,
+        VERIFY_PLUGIN_INSTALL_LOCK_TIMEOUT_ROLLBACK_SQL,
+      ),
+      { stdio: "inherit" },
+    );
+
+    terminatePluginConcurrencyApplication(
+      containerName,
+      PLUGIN_INSTALL_LOCK_TIMEOUT_BARRIER_APPLICATION_NAME,
+      executeDockerSync,
+      { requireOne: true },
+    );
+    const holderResult = await holder.completion;
+    assertSuccessfulAsyncDockerResult(
+      holderResult,
+      "Plugin install lock-timeout row holder",
+    );
+  } catch (error) {
+    phaseError = error;
+  }
+
+  const cleanupError = await collectPluginConcurrencyCleanupError(
+    "Plugin install lock-timeout phase",
+    [barrier, holder, timeoutClient],
+    containerName,
+    executeDockerSync,
+  );
+  throwPluginConcurrencyPhaseErrors(
+    "Plugin install lock-timeout phase",
+    phaseError,
+    cleanupError,
+  );
+
+  executeDockerSync(
+    buildPsqlCommandArgs(
+      containerName,
+      RETRY_PLUGIN_INSTALL_AFTER_LOCK_TIMEOUT_SQL,
+    ),
+    { stdio: "inherit" },
+  );
+  executeDockerSync(
+    buildPsqlCommandArgs(
+      containerName,
+      VERIFY_PLUGIN_INSTALL_LOCK_TIMEOUT_RETRY_SQL,
+    ),
+    { stdio: "inherit" },
+  );
+  console.log(
+    "Plugin install function-scoped 55P03 timeout, rollback and fresh retry contract passed.",
+  );
+}
+
 export async function runRecoveredSurfaceAclDatabaseContract({
   containerName = createContainerName(),
   repoRoot = repositoryRoot,
@@ -1742,8 +1991,81 @@ export async function runRecoveredSurfaceAclDatabaseContract({
       { stdio: "inherit" },
     );
     console.log("Plugin install-count migration reapply contract passed.");
+
+    executeDockerSync(
+      buildPsqlFileArgs(containerName, PLUGIN_INSTALL_LOCK_TIMEOUT_SEED_SQL_PATH),
+      { stdio: "inherit" },
+    );
+    for (const tamperCase of PLUGIN_INSTALL_LOCK_TIMEOUT_TAMPER_CASES) {
+      const expectedFailure = executeDockerSync(
+        buildPsqlPluginInstallLockTimeoutTamperArgs(
+          containerName,
+          tamperCase.sql,
+        ),
+        { allowFailure: true, stdio: "pipe" },
+      );
+      assertExpectedPsqlFailure(expectedFailure, tamperCase.expectedFailure);
+      executeDockerSync(
+        buildPsqlCommandArgs(
+          containerName,
+          VERIFY_PLUGIN_INSTALL_LOCK_TIMEOUT_FAILED_PREFLIGHT_SQL,
+        ),
+        { stdio: "inherit" },
+      );
+      console.log(
+        `Fail-closed plugin install lock-timeout tamper passed: ${tamperCase.label}`,
+      );
+    }
+
+    executeDockerSync(
+      buildPsqlFileArgs(
+        containerName,
+        PLUGIN_INSTALL_LOCK_TIMEOUT_MIGRATION_SQL_PATH,
+        { singleTransaction: true },
+      ),
+      { stdio: "inherit" },
+    );
+    executeDockerSync(
+      buildPsqlFileArgs(
+        containerName,
+        PLUGIN_INSTALL_LOCK_TIMEOUT_ASSERTIONS_SQL_PATH,
+      ),
+      { stdio: "inherit" },
+    );
+    await runPluginInstallLockTimeoutContract({
+      containerName,
+      executeDockerSync,
+      executeDockerAsync,
+      wait,
+    });
+
+    executeDockerSync(
+      buildPsqlCommandArgs(
+        containerName,
+        CAPTURE_PLUGIN_INSTALL_LOCK_TIMEOUT_REAPPLY_STATE_SQL,
+      ),
+      { stdio: "inherit" },
+    );
+    for (let apply = 0; apply < 2; apply += 1) {
+      executeDockerSync(
+        buildPsqlFileArgs(
+          containerName,
+          PLUGIN_INSTALL_LOCK_TIMEOUT_MIGRATION_SQL_PATH,
+          { singleTransaction: true },
+        ),
+        { stdio: "inherit" },
+      );
+    }
+    executeDockerSync(
+      buildPsqlCommandArgs(
+        containerName,
+        VERIFY_PLUGIN_INSTALL_LOCK_TIMEOUT_REAPPLY_STATE_SQL,
+      ),
+      { stdio: "inherit" },
+    );
+    console.log("Plugin install lock-timeout migration reapply contract passed.");
     console.log(
-      "Recovered surface ACL, plugin secret-boundary, install-policy and install-count PostgreSQL 17.6 contracts passed.",
+      "Recovered surface ACL, plugin secret-boundary, install-policy, install-count and install lock-timeout PostgreSQL 17.6 contracts passed.",
     );
   } catch (error) {
     contractError = error;
