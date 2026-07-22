@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { EventEmitter } from "node:events";
 import { resolve } from "node:path";
 import test from "node:test";
 
 import {
+  ASYNC_DOCKER_TIMEOUT_MILLISECONDS,
   ASSERTIONS_SQL_PATH,
   assertExpectedPsqlFailure,
   buildCleanupArgs,
@@ -10,6 +12,7 @@ import {
   buildOwnershipInspectArgs,
   buildPostgresReadinessArgs,
   buildPsqlFileArgs,
+  buildPsqlPluginInstallCountTamperArgs,
   buildPsqlPluginInstallPolicyTamperArgs,
   buildPsqlPluginSecretTamperArgs,
   buildPsqlTamperArgs,
@@ -19,10 +22,21 @@ import {
   CONTRACT_DATABASE,
   createContainerName,
   createOwnershipToken,
+  dockerAsync,
   HARDENING_MIGRATION_SQL_PATH,
   MARKETPLACE_MIGRATION_SQL_PATH,
   OWNERSHIP_LABEL_KEY,
   parseCreatedContainerId,
+  PLUGIN_INSTALL_COUNT_ASSERTIONS_SQL_PATH,
+  PLUGIN_INSTALL_COUNT_BARRIER_SECONDS,
+  PLUGIN_INSTALL_COUNT_LEGACY_INSTALLER_READY_SQL,
+  PLUGIN_INSTALL_COUNT_LEGACY_UNINSTALLER_READY_SQL,
+  PLUGIN_INSTALL_COUNT_MIGRATION_SQL_PATH,
+  PLUGIN_INSTALL_COUNT_READINESS_ATTEMPTS,
+  PLUGIN_INSTALL_COUNT_READINESS_INTERVAL_MILLISECONDS,
+  PLUGIN_INSTALL_COUNT_SEED_SQL_PATH,
+  PLUGIN_INSTALL_COUNT_STATEMENT_TIMEOUT_SECONDS,
+  PLUGIN_INSTALL_COUNT_TAMPER_CASES,
   PLUGIN_INSTALL_POLICY_ASSERTIONS_SQL_PATH,
   PLUGIN_INSTALL_POLICY_LOCK_HOLDER_READY_SQL,
   PLUGIN_INSTALL_POLICY_MIGRATION_SQL_PATH,
@@ -36,8 +50,11 @@ import {
   resolveOwnedCleanupTarget,
   SETUP_SQL_PATH,
   TAMPER_CASES,
+  throwPluginConcurrencyPhaseErrors,
   waitForPostgres,
   waitForPluginInstallPolicyLockHolder,
+  buildTerminatePluginConcurrencyApplicationSql,
+  PLUGIN_INSTALL_COUNT_LEGACY_BARRIER_APPLICATION_NAME,
 } from "./recovered-surface-acl-db-contract.mjs";
 
 const containerName = "effectime-recovered-surface-acl-pg17-42-001122aabbcc";
@@ -84,7 +101,7 @@ test("rejects injected names and accepts only exact Docker creation IDs", () => 
   );
 });
 
-test("pins PostgreSQL 17.6 and mounts only the twelve exact inputs read-only", () => {
+test("pins PostgreSQL 17.6 and mounts only the fifteen exact inputs read-only", () => {
   const repoRoot = "C:\\Work\\Effectime Fixture";
   const args = buildDockerRunArgs({
     containerName,
@@ -153,6 +170,18 @@ test("pins PostgreSQL 17.6 and mounts only the twelve exact inputs read-only", (
       repoRoot,
       "scripts/ci/plugin-install-policy-assertions.test.sql",
     )},target=${PLUGIN_INSTALL_POLICY_ASSERTIONS_SQL_PATH},readonly`,
+    `type=bind,source=${resolve(
+      repoRoot,
+      "scripts/ci/plugin-install-count-concurrency-seed.test.sql",
+    )},target=${PLUGIN_INSTALL_COUNT_SEED_SQL_PATH},readonly`,
+    `type=bind,source=${resolve(
+      repoRoot,
+      "supabase/migrations/20260722080000_v3_51_13_plugin_install_count_concurrency.sql",
+    )},target=${PLUGIN_INSTALL_COUNT_MIGRATION_SQL_PATH},readonly`,
+    `type=bind,source=${resolve(
+      repoRoot,
+      "scripts/ci/plugin-install-count-concurrency-assertions.test.sql",
+    )},target=${PLUGIN_INSTALL_COUNT_ASSERTIONS_SQL_PATH},readonly`,
   ]);
   assert.equal(
     args.some((argument) => argument.includes("target=/workspace")),
@@ -194,6 +223,17 @@ test("psql entry points are isolated, fail closed, and file-allowlisted", () => 
   assert.equal(
     pluginInstallPolicyMigrationArgs.at(-1),
     PLUGIN_INSTALL_POLICY_MIGRATION_SQL_PATH,
+  );
+
+  const pluginInstallCountMigrationArgs = buildPsqlFileArgs(
+    containerName,
+    PLUGIN_INSTALL_COUNT_MIGRATION_SQL_PATH,
+    { singleTransaction: true },
+  );
+  assert.ok(pluginInstallCountMigrationArgs.includes("--single-transaction"));
+  assert.equal(
+    pluginInstallCountMigrationArgs.at(-1),
+    PLUGIN_INSTALL_COUNT_MIGRATION_SQL_PATH,
   );
 
   assert.throws(
@@ -263,6 +303,30 @@ test("psql entry points are isolated, fail closed, and file-allowlisted", () => 
     () => buildPsqlPluginInstallPolicyTamperArgs(containerName, "DROP DATABASE postgres;"),
     /tamper SQL is not allowlisted/,
   );
+
+  const pluginInstallCountTamperArgs = buildPsqlPluginInstallCountTamperArgs(
+    containerName,
+    PLUGIN_INSTALL_COUNT_TAMPER_CASES[0].sql,
+  );
+  assert.deepEqual(pluginInstallCountTamperArgs.slice(0, 3), [
+    "exec",
+    containerName,
+    "psql",
+  ]);
+  assert.equal(
+    pluginInstallCountTamperArgs[
+      pluginInstallCountTamperArgs.indexOf("--command") + 1
+    ],
+    `BEGIN; ${PLUGIN_INSTALL_COUNT_TAMPER_CASES[0].sql}`,
+  );
+  assert.equal(
+    pluginInstallCountTamperArgs.at(-1),
+    PLUGIN_INSTALL_COUNT_MIGRATION_SQL_PATH,
+  );
+  assert.throws(
+    () => buildPsqlPluginInstallCountTamperArgs(containerName, "DROP DATABASE postgres;"),
+    /tamper SQL is not allowlisted/,
+  );
 });
 
 test("expected-failure matcher accepts only the exact preflight failure", () => {
@@ -320,7 +384,7 @@ test("readiness requires an exact successful query result", async () => {
   );
 });
 
-test("plugin lock barrier requires exactly one sleeping holder", async () => {
+test("plugin lock barriers require exact blocker relationships", async () => {
   const calls = [];
   const outcomes = [
     { status: 0, stdout: "0\n", stderr: "" },
@@ -337,6 +401,16 @@ test("plugin lock barrier requires exactly one sleeping holder", async () => {
   });
   assert.equal(calls.length, 2);
   assert.equal(calls[0].at(-1), PLUGIN_INSTALL_POLICY_LOCK_HOLDER_READY_SQL);
+  assert.match(PLUGIN_INSTALL_POLICY_LOCK_HOLDER_READY_SQL, /pg_blocking_pids\(holder\.pid\)/);
+  assert.doesNotMatch(PLUGIN_INSTALL_POLICY_LOCK_HOLDER_READY_SQL, /PgSleep/);
+  assert.match(
+    PLUGIN_INSTALL_COUNT_LEGACY_INSTALLER_READY_SQL,
+    /pg_blocking_pids\(installer\.pid\).*ARRAY\[barrier\.pid\]/,
+  );
+  assert.match(
+    PLUGIN_INSTALL_COUNT_LEGACY_UNINSTALLER_READY_SQL,
+    /pg_blocking_pids\(uninstaller\.pid\).*ARRAY\[installer\.pid\]/,
+  );
   assert.ok(calls[0].includes("--tuples-only"));
   assert.ok(calls[0].includes("--no-align"));
 
@@ -347,7 +421,107 @@ test("plugin lock barrier requires exactly one sleeping holder", async () => {
       attempts: 1,
       intervalMilliseconds: 0,
     }),
-    /did not reach its deterministic sleep barrier/,
+    /did not reach its controlled advisory-lock barrier/,
+  );
+});
+
+test("async concurrency execution is bounded and backend cleanup is allowlisted", async () => {
+  assert.equal(ASYNC_DOCKER_TIMEOUT_MILLISECONDS, 45_000);
+  assert.equal(PLUGIN_INSTALL_COUNT_BARRIER_SECONDS, 35);
+  assert.equal(PLUGIN_INSTALL_COUNT_STATEMENT_TIMEOUT_SECONDS, 42);
+  assert.equal(PLUGIN_INSTALL_COUNT_READINESS_ATTEMPTS, 131);
+  assert.equal(PLUGIN_INSTALL_COUNT_READINESS_INTERVAL_MILLISECONDS, 100);
+  assert.ok(
+    PLUGIN_INSTALL_COUNT_BARRIER_SECONDS * 1_000 >
+      2 *
+        PLUGIN_INSTALL_COUNT_READINESS_ATTEMPTS *
+        PLUGIN_INSTALL_COUNT_READINESS_INTERVAL_MILLISECONDS,
+  );
+  assert.ok(
+    ASYNC_DOCKER_TIMEOUT_MILLISECONDS >
+      PLUGIN_INSTALL_COUNT_STATEMENT_TIMEOUT_SECONDS * 1_000,
+  );
+
+  const child = new EventEmitter();
+  child.stdout = new EventEmitter();
+  child.stderr = new EventEmitter();
+  let killCount = 0;
+  child.kill = () => {
+    killCount += 1;
+    return true;
+  };
+  const execution = dockerAsync(["exec", containerName, "bounded-test"], {
+    timeoutMilliseconds: 5,
+    spawnProcess: () => child,
+  });
+  const timeoutResult = await execution.completion;
+  assert.equal(timeoutResult.status, null);
+  assert.equal(timeoutResult.timedOut, true);
+  assert.match(timeoutResult.stderr, /exceeded 5ms/);
+  assert.equal(killCount, 1);
+
+  const terminationSql = buildTerminatePluginConcurrencyApplicationSql(
+    PLUGIN_INSTALL_COUNT_LEGACY_BARRIER_APPLICATION_NAME,
+  );
+  assert.match(terminationSql, /pg_terminate_backend/);
+  assert.match(
+    terminationSql,
+    new RegExp(PLUGIN_INSTALL_COUNT_LEGACY_BARRIER_APPLICATION_NAME),
+  );
+  assert.throws(
+    () => buildTerminatePluginConcurrencyApplicationSql("attacker'; SELECT 1; --"),
+    /not allowlisted/,
+  );
+});
+
+test("concurrency phase errors preserve the primary and cleanup failures", () => {
+  const primaryError = new Error("primary race failure");
+  const cleanupError = new AggregateError(
+    [new Error("backend cleanup failure")],
+    "cleanup failure",
+  );
+
+  assert.throws(
+    () =>
+      throwPluginConcurrencyPhaseErrors(
+        "Plugin install policy lock phase",
+        primaryError,
+        cleanupError,
+      ),
+    (error) => {
+      assert.ok(error instanceof AggregateError);
+      assert.equal(
+        error.message,
+        "Plugin install policy lock phase and cleanup both failed",
+      );
+      assert.deepEqual(error.errors, [primaryError, cleanupError]);
+      return true;
+    },
+  );
+  assert.throws(
+    () =>
+      throwPluginConcurrencyPhaseErrors(
+        "Plugin install policy status phase",
+        primaryError,
+        null,
+      ),
+    (error) => error === primaryError,
+  );
+  assert.throws(
+    () =>
+      throwPluginConcurrencyPhaseErrors(
+        "Plugin install-count fixed race",
+        null,
+        cleanupError,
+      ),
+    (error) => error === cleanupError,
+  );
+  assert.doesNotThrow(() =>
+    throwPluginConcurrencyPhaseErrors(
+      "Plugin install-count fixed race",
+      null,
+      null,
+    ),
   );
 });
 
