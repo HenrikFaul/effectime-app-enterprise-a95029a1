@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -15,11 +15,19 @@ export const ASSERTIONS_SQL_PATH = "/contract/assertions.sql";
 export const PLUGIN_SECRET_SEED_SQL_PATH = "/contract/plugin-secret-seed.sql";
 export const PLUGIN_SECRET_MIGRATION_SQL_PATH = "/contract/plugin-secret-migration.sql";
 export const PLUGIN_SECRET_ASSERTIONS_SQL_PATH = "/contract/plugin-secret-assertions.sql";
+export const PLUGIN_INSTALL_POLICY_SEED_SQL_PATH =
+  "/contract/plugin-install-policy-seed.sql";
+export const PLUGIN_INSTALL_POLICY_MIGRATION_SQL_PATH =
+  "/contract/plugin-install-policy-migration.sql";
+export const PLUGIN_INSTALL_POLICY_ASSERTIONS_SQL_PATH =
+  "/contract/plugin-install-policy-assertions.sql";
 export const OWNERSHIP_LABEL_KEY = "com.effectime.ci.recovered-surface-acl-contract";
 export const VERIFY_FAILED_PREFLIGHT_SQL =
   "SELECT contract.assert_preflight_left_no_partial_mutation();";
 export const VERIFY_PLUGIN_SECRET_FAILED_PREFLIGHT_SQL =
   "SELECT contract.assert_core_unchanged(true); DO $$ BEGIN IF pg_catalog.to_regclass('effectime_private.workspace_plugin_configs') IS NOT NULL OR pg_catalog.to_regprocedure('effectime_private.ensure_workspace_plugin_config_v1()') IS NOT NULL OR pg_catalog.to_regprocedure('public.marketplace_get_plugin_config_service_v1(uuid,uuid)') IS NOT NULL THEN RAISE EXCEPTION 'Failed plugin secret preflight left partial mutation'; END IF; END $$;";
+export const VERIFY_PLUGIN_INSTALL_POLICY_FAILED_PREFLIGHT_SQL =
+  "DO $verify$ BEGIN IF contract.plugin_install_policy_surface_state() IS DISTINCT FROM (SELECT surface_state FROM contract.plugin_install_policy_baseline WHERE singleton) OR (SELECT prosrc FROM pg_catalog.pg_proc WHERE oid = 'public.marketplace_install_plugin(uuid,uuid,jsonb)'::pg_catalog.regprocedure::oid) IS DISTINCT FROM (SELECT install_source FROM contract.plugin_install_policy_baseline WHERE singleton) OR contract.pgcrypto_trust_state() IS DISTINCT FROM (SELECT state_value FROM contract.state_baseline WHERE state_name = 'pgcrypto_trust') OR pg_catalog.has_schema_privilege('authenticated', 'public', 'CREATE') OR pg_catalog.has_schema_privilege('anon', 'public', 'CREATE') OR pg_catalog.has_schema_privilege('service_role', 'public', 'CREATE') THEN RAISE EXCEPTION 'Failed plugin install policy preflight left partial mutation'; END IF; END; $verify$;";
 export const CAPTURE_HARDENED_STATE_SQL =
   "INSERT INTO contract.state_baseline (state_name, state_value) VALUES ('hardened_mutable', contract.mutable_surface_state()), ('hardened_qr_source', (SELECT pg_catalog.jsonb_build_object('prosrc', procedure.prosrc) FROM pg_catalog.pg_proc AS procedure WHERE procedure.oid = 'public.clock_generate_qr(uuid,integer)'::pg_catalog.regprocedure::oid)) ON CONFLICT (state_name) DO UPDATE SET state_value = EXCLUDED.state_value;";
 export const SEED_REAPPLY_DRIFT_SQL =
@@ -36,6 +44,68 @@ export const SEED_PLUGIN_SECRET_REAPPLY_DRIFT_SQL =
     "GRANT REFERENCES (raw_config) ON TABLE effectime_private.workspace_plugin_configs TO service_role",
     "GRANT EXECUTE ON FUNCTION public.marketplace_get_plugin_config_service_v1(uuid,uuid) TO authenticated",
   ].join("; ") + ";";
+export const PLUGIN_INSTALL_POLICY_LOCK_HOLDER_APPLICATION_NAME =
+  "effectime_plugin_install_policy_lock_holder";
+export const PLUGIN_INSTALL_POLICY_STATUS_HOLDER_APPLICATION_NAME =
+  "effectime_plugin_install_policy_status_holder";
+export const PLUGIN_INSTALL_POLICY_INSTALL_WAITER_APPLICATION_NAME =
+  "effectime_plugin_install_policy_install_waiter";
+export const SEED_PLUGIN_INSTALL_POLICY_CONCURRENCY_SQL = [
+  "UPDATE public.tenant_subscriptions SET status = 'active' WHERE tier_id = (SELECT id FROM public.tiers WHERE tier_key = 'enterprise')",
+  "INSERT INTO public.marketplace_plugins (id, slug, name, version, category, manifest, status, pricing_model) VALUES ('57000000-0000-4000-8000-000000000001'::uuid, 'contract-policy-lock-holder', 'Contract Policy Lock Holder', '1.0.0', 'integration', '{}'::jsonb, 'published', 'free'), ('57000000-0000-4000-8000-000000000002'::uuid, 'contract-policy-concurrent-count', 'Contract Policy Concurrent Count', '1.0.0', 'integration', '{}'::jsonb, 'published', 'free'), ('57000000-0000-4000-8000-000000000003'::uuid, 'contract-policy-status-race', 'Contract Policy Status Race', '1.0.0', 'integration', '{}'::jsonb, 'published', 'free')",
+  "SET ROLE authenticated",
+  "SELECT pg_catalog.set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000001', false)",
+  "SELECT public.marketplace_install_plugin('20000000-0000-4000-8000-000000000001'::uuid, '57000000-0000-4000-8000-000000000003'::uuid, '{\"concurrency\":\"original\"}'::jsonb)",
+  "RESET ROLE",
+  "CREATE TABLE contract.plugin_status_race_baseline AS SELECT pg_catalog.to_jsonb(installation) AS installation_state, pg_catalog.to_jsonb(private_config) AS private_state, plugin.install_count FROM public.workspace_installed_plugins AS installation JOIN effectime_private.workspace_plugin_configs AS private_config ON private_config.installed_plugin_id = installation.id JOIN public.marketplace_plugins AS plugin ON plugin.id = installation.plugin_id WHERE installation.workspace_id = '20000000-0000-4000-8000-000000000001'::uuid AND installation.plugin_id = '57000000-0000-4000-8000-000000000003'::uuid",
+].join("; ") + ";";
+export const PLUGIN_INSTALL_POLICY_LOCK_HOLDER_SQL = [
+  `SET application_name = '${PLUGIN_INSTALL_POLICY_LOCK_HOLDER_APPLICATION_NAME}'`,
+  "BEGIN",
+  "SET LOCAL ROLE authenticated",
+  "SELECT pg_catalog.set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000001', true)",
+  "SELECT public.marketplace_install_plugin('20000000-0000-4000-8000-000000000001'::uuid, '57000000-0000-4000-8000-000000000001'::uuid, '{\"concurrency\":\"lock-holder\"}'::jsonb)",
+  "RESET ROLE",
+  "SELECT pg_catalog.pg_sleep(4)",
+  "COMMIT",
+].join("; ") + ";";
+export const PLUGIN_INSTALL_POLICY_LOCK_HOLDER_READY_SQL =
+  `SELECT count(*) FROM pg_catalog.pg_stat_activity WHERE application_name = '${PLUGIN_INSTALL_POLICY_LOCK_HOLDER_APPLICATION_NAME}' AND wait_event = 'PgSleep';`;
+export const PLUGIN_INSTALL_POLICY_BLOCKED_STATUS_SQL =
+  "SET lock_timeout = '750ms'; UPDATE public.marketplace_plugins SET status = 'approved' WHERE id = '57000000-0000-4000-8000-000000000001'::uuid;";
+export const VERIFY_PLUGIN_INSTALL_POLICY_LOCK_SQL =
+  "DO $verify$ BEGIN IF NOT EXISTS (SELECT 1 FROM public.workspace_installed_plugins AS installation JOIN effectime_private.workspace_plugin_configs AS private_config ON private_config.installed_plugin_id = installation.id WHERE installation.workspace_id = '20000000-0000-4000-8000-000000000001'::uuid AND installation.plugin_id = '57000000-0000-4000-8000-000000000001'::uuid AND installation.config = '{}'::jsonb AND installation.enabled AND private_config.raw_config = '{\"concurrency\":\"lock-holder\"}'::jsonb) OR (SELECT status FROM public.marketplace_plugins WHERE id = '57000000-0000-4000-8000-000000000001'::uuid) <> 'published' OR (SELECT install_count FROM public.marketplace_plugins WHERE id = '57000000-0000-4000-8000-000000000001'::uuid) <> 1 THEN RAISE EXCEPTION 'Late plugin status lock contract failed'; END IF; END; $verify$; UPDATE public.marketplace_plugins SET status = 'approved' WHERE id = '57000000-0000-4000-8000-000000000001'::uuid;";
+export const PLUGIN_INSTALL_POLICY_STATUS_HOLDER_SQL = [
+  `SET application_name = '${PLUGIN_INSTALL_POLICY_STATUS_HOLDER_APPLICATION_NAME}'`,
+  "BEGIN",
+  "SELECT id FROM public.workspace_installed_plugins WHERE workspace_id = '20000000-0000-4000-8000-000000000001'::uuid AND plugin_id = '57000000-0000-4000-8000-000000000003'::uuid FOR UPDATE",
+  "SELECT pg_catalog.pg_sleep(4)",
+  "COMMIT",
+].join("; ") + ";";
+export const PLUGIN_INSTALL_POLICY_STATUS_HOLDER_READY_SQL =
+  `SELECT count(*) FROM pg_catalog.pg_stat_activity WHERE application_name = '${PLUGIN_INSTALL_POLICY_STATUS_HOLDER_APPLICATION_NAME}' AND wait_event = 'PgSleep';`;
+export const PLUGIN_INSTALL_POLICY_INSTALL_WAITER_SQL = [
+  `SET application_name = '${PLUGIN_INSTALL_POLICY_INSTALL_WAITER_APPLICATION_NAME}'`,
+  "SET ROLE authenticated",
+  "SELECT pg_catalog.set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000001', false)",
+  "SELECT public.marketplace_install_plugin('20000000-0000-4000-8000-000000000001'::uuid, '57000000-0000-4000-8000-000000000003'::uuid, '{\"concurrency\":\"must-rollback\"}'::jsonb)",
+].join("; ") + ";";
+export const PLUGIN_INSTALL_POLICY_INSTALL_WAITER_READY_SQL =
+  `SELECT count(*) FROM pg_catalog.pg_stat_activity WHERE application_name = '${PLUGIN_INSTALL_POLICY_INSTALL_WAITER_APPLICATION_NAME}' AND wait_event_type = 'Lock';`;
+export const PLUGIN_INSTALL_POLICY_STATUS_CHANGE_SQL =
+  "SET lock_timeout = '750ms'; SET ROLE authenticated; SELECT pg_catalog.set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000003', false); SELECT public.marketplace_set_plugin_status('57000000-0000-4000-8000-000000000003'::uuid, 'archived');";
+export const VERIFY_PLUGIN_INSTALL_POLICY_STATUS_RACE_SQL =
+  "DO $verify$ BEGIN IF (SELECT count(*) FROM contract.plugin_status_race_baseline) <> 1 OR (SELECT status FROM public.marketplace_plugins WHERE id = '57000000-0000-4000-8000-000000000003'::uuid) <> 'archived' OR (SELECT install_count FROM public.marketplace_plugins WHERE id = '57000000-0000-4000-8000-000000000003'::uuid) IS DISTINCT FROM (SELECT install_count FROM contract.plugin_status_race_baseline) OR NOT EXISTS (SELECT 1 FROM public.workspace_installed_plugins AS installation JOIN effectime_private.workspace_plugin_configs AS private_config ON private_config.installed_plugin_id = installation.id CROSS JOIN contract.plugin_status_race_baseline AS baseline WHERE installation.workspace_id = '20000000-0000-4000-8000-000000000001'::uuid AND installation.plugin_id = '57000000-0000-4000-8000-000000000003'::uuid AND pg_catalog.to_jsonb(installation) = baseline.installation_state AND pg_catalog.to_jsonb(private_config) = baseline.private_state) THEN RAISE EXCEPTION 'Plugin status race did not preserve the preexisting installation atomically'; END IF; END; $verify$;";
+export const PLUGIN_INSTALL_POLICY_CONCURRENT_INSTALL_SQL = Object.freeze([
+  "SET ROLE authenticated; SELECT pg_catalog.set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000001', false); SELECT public.marketplace_install_plugin('20000000-0000-4000-8000-000000000001'::uuid, '57000000-0000-4000-8000-000000000002'::uuid, '{\"concurrency\":\"workspace-a\"}'::jsonb);",
+  "SET ROLE authenticated; SELECT pg_catalog.set_config('request.jwt.claim.sub', '10000000-0000-4000-8000-000000000005', false); SELECT public.marketplace_install_plugin('20000000-0000-4000-8000-000000000002'::uuid, '57000000-0000-4000-8000-000000000002'::uuid, '{\"concurrency\":\"workspace-b\"}'::jsonb);",
+]);
+export const VERIFY_PLUGIN_INSTALL_POLICY_CONCURRENT_COUNT_SQL =
+  "DO $verify$ BEGIN IF (SELECT count(*) FROM public.workspace_installed_plugins WHERE plugin_id = '57000000-0000-4000-8000-000000000002'::uuid AND enabled) <> 2 OR (SELECT count(*) FROM public.workspace_installed_plugins AS installation JOIN effectime_private.workspace_plugin_configs AS private_config ON private_config.installed_plugin_id = installation.id WHERE installation.plugin_id = '57000000-0000-4000-8000-000000000002'::uuid AND installation.config = '{}'::jsonb AND private_config.raw_config = CASE installation.workspace_id WHEN '20000000-0000-4000-8000-000000000001'::uuid THEN '{\"concurrency\":\"workspace-a\"}'::jsonb WHEN '20000000-0000-4000-8000-000000000002'::uuid THEN '{\"concurrency\":\"workspace-b\"}'::jsonb ELSE NULL END) <> 2 OR (SELECT install_count FROM public.marketplace_plugins WHERE id = '57000000-0000-4000-8000-000000000002'::uuid) <> 2 OR EXISTS (SELECT 1 FROM public.workspace_installed_plugins AS installation LEFT JOIN effectime_private.workspace_plugin_configs AS private_config ON private_config.installed_plugin_id = installation.id WHERE installation.config IS DISTINCT FROM '{}'::jsonb OR private_config.installed_plugin_id IS NULL) THEN RAISE EXCEPTION 'Concurrent plugin installs corrupted count or config totality'; END IF; END; $verify$;";
+export const CAPTURE_PLUGIN_INSTALL_POLICY_REAPPLY_STATE_SQL =
+  "INSERT INTO contract.state_baseline (state_name, state_value) VALUES ('plugin_install_policy_reapply', contract.plugin_install_policy_reapply_state()) ON CONFLICT (state_name) DO UPDATE SET state_value = EXCLUDED.state_value;";
+export const VERIFY_PLUGIN_INSTALL_POLICY_REAPPLY_STATE_SQL =
+  "DO $verify$ BEGIN IF contract.plugin_install_policy_reapply_state() IS DISTINCT FROM (SELECT state_value FROM contract.state_baseline WHERE state_name = 'plugin_install_policy_reapply') OR EXISTS (SELECT 1 FROM public.workspace_installed_plugins AS installation LEFT JOIN effectime_private.workspace_plugin_configs AS private_config ON private_config.installed_plugin_id = installation.id WHERE installation.config IS DISTINCT FROM '{}'::jsonb OR private_config.installed_plugin_id IS NULL) OR EXISTS (SELECT 1 FROM effectime_private.workspace_plugin_configs AS private_config LEFT JOIN public.workspace_installed_plugins AS installation ON installation.id = private_config.installed_plugin_id WHERE installation.id IS NULL) THEN RAISE EXCEPTION 'Plugin install policy reapply changed catalog, data, source, or totality'; END IF; END; $verify$;";
 
 export const TAMPER_CASES = Object.freeze([
   Object.freeze({
@@ -186,6 +256,84 @@ export const PLUGIN_SECRET_REAPPLY_TAMPER_CASES = Object.freeze([
   }),
 ]);
 
+export const PLUGIN_INSTALL_POLICY_TAMPER_CASES = Object.freeze([
+  Object.freeze({
+    label: "public schema CREATE grant",
+    sql: "GRANT CREATE ON SCHEMA public TO authenticated;",
+    expectedFailure: /Plugin install policy public schema trust contract is unsafe/i,
+  }),
+  Object.freeze({
+    label: "digest extension membership drift",
+    sql: "ALTER EXTENSION pgcrypto DROP FUNCTION extensions.digest(bytea,text);",
+    expectedFailure: /Trusted pgcrypto digest contract is required/i,
+  }),
+  Object.freeze({
+    label: "marketplace table owner drift",
+    sql: "ALTER TABLE public.marketplace_plugins OWNER TO contract_untrusted_owner;",
+    expectedFailure: /Plugin marketplace table contract is incompatible/i,
+  }),
+  Object.freeze({
+    label: "marketplace status nullability drift",
+    sql: "ALTER TABLE public.marketplace_plugins ALTER COLUMN status DROP NOT NULL;",
+    expectedFailure: /Plugin marketplace status contract is incompatible/i,
+  }),
+  Object.freeze({
+    label: "marketplace install-count type/default/nullability drift",
+    sql: "ALTER TABLE public.marketplace_plugins ALTER COLUMN install_count TYPE bigint, ALTER COLUMN install_count DROP DEFAULT, ALTER COLUMN install_count DROP NOT NULL;",
+    expectedFailure: /Plugin marketplace install-count contract is incompatible/i,
+  }),
+  Object.freeze({
+    label: "workspace installation uniqueness drift",
+    sql: "ALTER TABLE public.workspace_installed_plugins DROP CONSTRAINT workspace_installed_plugins_workspace_id_plugin_id_key;",
+    expectedFailure: /Plugin installation key contract is incompatible/i,
+  }),
+  Object.freeze({
+    label: "workspace installation plugin foreign-key drift",
+    sql: "ALTER TABLE public.workspace_installed_plugins DROP CONSTRAINT workspace_installed_plugins_plugin_id_fkey;",
+    expectedFailure: /Plugin installation runtime schema is incompatible/i,
+  }),
+  Object.freeze({
+    label: "private plugin raw-config nullability drift",
+    sql: "ALTER TABLE effectime_private.workspace_plugin_configs ALTER COLUMN raw_config DROP NOT NULL;",
+    expectedFailure: /Plugin private config runtime schema is incompatible: column raw_config/i,
+  }),
+  Object.freeze({
+    label: "private plugin config primary/foreign-key drift",
+    sql: "ALTER TABLE effectime_private.workspace_plugin_configs DROP CONSTRAINT workspace_plugin_configs_pkey, DROP CONSTRAINT workspace_plugin_configs_installed_plugin_id_fkey;",
+    expectedFailure: /Plugin private config key contract is incompatible/i,
+  }),
+  Object.freeze({
+    label: "plugin status RPC source drift",
+    sql: "UPDATE pg_catalog.pg_proc SET prosrc = prosrc || E'\\n-- contract status-source tamper' WHERE oid = 'public.marketplace_set_plugin_status(uuid,text)'::pg_catalog.regprocedure::oid;",
+    expectedFailure: /Plugin status RPC source attestation failed/i,
+  }),
+  Object.freeze({
+    label: "plugin status RPC custom-role grant",
+    sql: "GRANT EXECUTE ON FUNCTION public.marketplace_set_plugin_status(uuid,text) TO contract_acl_parent;",
+    expectedFailure: /Plugin status RPC ACL contract is incompatible/i,
+  }),
+  Object.freeze({
+    label: "plugin uninstall RPC custom-role grant",
+    sql: "GRANT EXECUTE ON FUNCTION public.marketplace_uninstall_plugin(uuid) TO contract_acl_parent;",
+    expectedFailure: /Plugin uninstall RPC ACL contract is incompatible/i,
+  }),
+  Object.freeze({
+    label: "workspace feature gate custom-role grant",
+    sql: "GRANT EXECUTE ON FUNCTION public.workspace_has_any_feature(uuid,text[]) TO contract_acl_parent;",
+    expectedFailure: /Workspace feature gate ACL contract is incompatible/i,
+  }),
+  Object.freeze({
+    label: "membership entitlement source drift",
+    sql: "UPDATE pg_catalog.pg_proc SET prosrc = prosrc || E'\\n-- contract membership-source tamper' WHERE oid = 'public.is_enterprise_member(uuid,uuid)'::pg_catalog.regprocedure::oid;",
+    expectedFailure: /Plugin entitlement helper source attestation failed: membership/i,
+  }),
+  Object.freeze({
+    label: "tenant entitlement custom-role grant",
+    sql: "GRANT EXECUTE ON FUNCTION public.tenant_enabled_features(uuid) TO contract_acl_parent;",
+    expectedFailure: /Plugin entitlement helper ACL contract is incompatible: tenant features/i,
+  }),
+]);
+
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const containerNamePattern = /^effectime-recovered-surface-acl-pg17-[1-9][0-9]*-[0-9a-f]{12}$/;
 const containerIdPattern = /^[0-9a-f]{64}$/;
@@ -197,12 +345,18 @@ const allowedContractSqlPaths = new Set([
   PLUGIN_SECRET_SEED_SQL_PATH,
   PLUGIN_SECRET_MIGRATION_SQL_PATH,
   PLUGIN_SECRET_ASSERTIONS_SQL_PATH,
+  PLUGIN_INSTALL_POLICY_SEED_SQL_PATH,
+  PLUGIN_INSTALL_POLICY_MIGRATION_SQL_PATH,
+  PLUGIN_INSTALL_POLICY_ASSERTIONS_SQL_PATH,
 ]);
 const allowedTamperSql = new Set(TAMPER_CASES.map((tamperCase) => tamperCase.sql));
 const allowedPluginSecretTamperSql = new Set(
   [...PLUGIN_SECRET_TAMPER_CASES, ...PLUGIN_SECRET_REAPPLY_TAMPER_CASES].map(
     (tamperCase) => tamperCase.sql,
   ),
+);
+const allowedPluginInstallPolicyTamperSql = new Set(
+  PLUGIN_INSTALL_POLICY_TAMPER_CASES.map((tamperCase) => tamperCase.sql),
 );
 
 function assertContainerName(containerName) {
@@ -298,6 +452,21 @@ export function buildDockerRunArgs({ containerName, repoRoot, password, ownershi
       resolve(repoRoot, "scripts/ci/plugin-config-secret-assertions.test.sql"),
       PLUGIN_SECRET_ASSERTIONS_SQL_PATH,
     ],
+    [
+      resolve(repoRoot, "scripts/ci/plugin-install-policy-seed.test.sql"),
+      PLUGIN_INSTALL_POLICY_SEED_SQL_PATH,
+    ],
+    [
+      resolve(
+        repoRoot,
+        "supabase/migrations/20260722061500_v3_51_12_plugin_install_policy_boundary.sql",
+      ),
+      PLUGIN_INSTALL_POLICY_MIGRATION_SQL_PATH,
+    ],
+    [
+      resolve(repoRoot, "scripts/ci/plugin-install-policy-assertions.test.sql"),
+      PLUGIN_INSTALL_POLICY_ASSERTIONS_SQL_PATH,
+    ],
   ];
 
   return [
@@ -335,6 +504,8 @@ export function buildPsqlFileArgs(containerName, sqlPath, { singleTransaction = 
     CONTRACT_DATABASE,
     "--set",
     "ON_ERROR_STOP=1",
+    "--set",
+    "VERBOSITY=verbose",
     ...(singleTransaction ? ["--single-transaction"] : []),
     "--file",
     sqlPath,
@@ -387,6 +558,31 @@ export function buildPsqlPluginSecretTamperArgs(containerName, tamperSql) {
   ];
 }
 
+export function buildPsqlPluginInstallPolicyTamperArgs(containerName, tamperSql) {
+  assertContainerName(containerName);
+  if (!allowedPluginInstallPolicyTamperSql.has(tamperSql)) {
+    throw new Error("Plugin install-policy tamper SQL is not allowlisted");
+  }
+  return [
+    "exec",
+    containerName,
+    "psql",
+    "-X",
+    "--username",
+    "postgres",
+    "--dbname",
+    CONTRACT_DATABASE,
+    "--set",
+    "ON_ERROR_STOP=1",
+    "--set",
+    "VERBOSITY=verbose",
+    "--command",
+    `BEGIN; ${tamperSql}`,
+    "--file",
+    PLUGIN_INSTALL_POLICY_MIGRATION_SQL_PATH,
+  ];
+}
+
 export function buildPsqlCommandArgs(containerName, command, { tuplesOnly = false } = {}) {
   assertContainerName(containerName);
   if (!command) {
@@ -403,6 +599,8 @@ export function buildPsqlCommandArgs(containerName, command, { tuplesOnly = fals
     CONTRACT_DATABASE,
     "--set",
     "ON_ERROR_STOP=1",
+    "--set",
+    "VERBOSITY=verbose",
     ...(tuplesOnly ? ["--tuples-only", "--no-align"] : []),
     "--command",
     command,
@@ -474,6 +672,55 @@ function dockerSync(args, { allowFailure = false, stdio = "pipe" } = {}) {
   return result;
 }
 
+function dockerAsync(args) {
+  const child = spawn("docker", args, {
+    stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true,
+  });
+  let stdout = "";
+  let stderr = "";
+  let settled = false;
+  let settleCompletion;
+  const completion = new Promise((resolveCompletion) => {
+    settleCompletion = resolveCompletion;
+  });
+  const settle = (result) => {
+    if (settled) return;
+    settled = true;
+    settleCompletion(result);
+  };
+
+  child.stdout.on("data", (chunk) => {
+    stdout += chunk.toString();
+  });
+  child.stderr.on("data", (chunk) => {
+    stderr += chunk.toString();
+  });
+  child.on("error", (error) => {
+    settle({ status: null, stdout, stderr: `${stderr}\n${error.message}`.trim() });
+  });
+  child.on("close", (status) => {
+    settle({ status, stdout, stderr });
+  });
+
+  return {
+    completion,
+    terminate: () => {
+      if (!settled) child.kill();
+    },
+  };
+}
+
+function assertSuccessfulAsyncDockerResult(result, label) {
+  if (!result || result.status !== 0) {
+    const details = [result?.stdout, result?.stderr].filter(Boolean).join("\n").trim();
+    throw new Error(
+      `${label} failed${result?.status === null ? " to start" : ` with exit code ${result?.status}`}${details ? `\n${details}` : ""}`,
+    );
+  }
+  return result;
+}
+
 export function cleanupOwnedContainer(
   { containerId, ownershipToken },
   executeDockerSync = dockerSync,
@@ -531,11 +778,174 @@ export async function waitForPostgres(
   );
 }
 
+async function waitForPluginInstallPolicyActivity(
+  containerName,
+  readySql,
+  failureMessage,
+  { executeDockerSync = dockerSync, wait = delay, attempts = 60, intervalMilliseconds = 100 } = {},
+) {
+  assertContainerName(containerName);
+  if (!readySql || !failureMessage) {
+    throw new Error("Plugin install policy activity contract is required");
+  }
+  if (!Number.isInteger(attempts) || attempts < 1 || intervalMilliseconds < 0) {
+    throw new Error("Invalid plugin install policy lock wait limits");
+  }
+
+  const activityArgs = buildPsqlCommandArgs(
+    containerName,
+    readySql,
+    { tuplesOnly: true },
+  );
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    const result = executeDockerSync(activityArgs, { allowFailure: true });
+    if (result.status === 0 && result.stdout?.trim() === "1") return;
+    if (attempt < attempts) await wait(intervalMilliseconds);
+  }
+  throw new Error(failureMessage);
+}
+
+export async function waitForPluginInstallPolicyLockHolder(
+  containerName,
+  options = {},
+) {
+  return waitForPluginInstallPolicyActivity(
+    containerName,
+    PLUGIN_INSTALL_POLICY_LOCK_HOLDER_READY_SQL,
+    "Plugin install policy lock holder did not reach its deterministic sleep barrier",
+    options,
+  );
+}
+
+async function runPluginInstallPolicyConcurrencyContract({
+  containerName,
+  executeDockerSync,
+  executeDockerAsync,
+  wait,
+}) {
+  executeDockerSync(
+    buildPsqlCommandArgs(containerName, SEED_PLUGIN_INSTALL_POLICY_CONCURRENCY_SQL),
+    { stdio: "inherit" },
+  );
+
+  const lockHolder = executeDockerAsync(
+    buildPsqlCommandArgs(containerName, PLUGIN_INSTALL_POLICY_LOCK_HOLDER_SQL),
+  );
+  let lockHolderResult;
+  try {
+    await waitForPluginInstallPolicyLockHolder(containerName, {
+      executeDockerSync,
+      wait,
+    });
+    const blockedStatusChange = executeDockerSync(
+      buildPsqlCommandArgs(containerName, PLUGIN_INSTALL_POLICY_BLOCKED_STATUS_SQL),
+      { allowFailure: true, stdio: "pipe" },
+    );
+    assertExpectedPsqlFailure(
+      blockedStatusChange,
+      /55P03: canceling statement due to lock timeout/i,
+    );
+    if (/40P01:/i.test([blockedStatusChange.stdout, blockedStatusChange.stderr].join("\n"))) {
+      throw new Error("Plugin install/status lock contract deadlocked");
+    }
+    lockHolderResult = await lockHolder.completion;
+    assertSuccessfulAsyncDockerResult(lockHolderResult, "Plugin install policy lock holder");
+  } finally {
+    lockHolder.terminate();
+    if (!lockHolderResult) await lockHolder.completion;
+  }
+
+  executeDockerSync(
+    buildPsqlCommandArgs(containerName, VERIFY_PLUGIN_INSTALL_POLICY_LOCK_SQL),
+    { stdio: "inherit" },
+  );
+
+  const statusHolder = executeDockerAsync(
+    buildPsqlCommandArgs(containerName, PLUGIN_INSTALL_POLICY_STATUS_HOLDER_SQL),
+  );
+  let installWaiter;
+  let statusHolderResult;
+  let installWaiterResult;
+  try {
+    await waitForPluginInstallPolicyActivity(
+      containerName,
+      PLUGIN_INSTALL_POLICY_STATUS_HOLDER_READY_SQL,
+      "Plugin status holder did not reach its deterministic sleep barrier",
+      { executeDockerSync, wait },
+    );
+    installWaiter = executeDockerAsync(
+      buildPsqlCommandArgs(containerName, PLUGIN_INSTALL_POLICY_INSTALL_WAITER_SQL),
+    );
+    await waitForPluginInstallPolicyActivity(
+      containerName,
+      PLUGIN_INSTALL_POLICY_INSTALL_WAITER_READY_SQL,
+      "Plugin install did not block on the late status revalidation lock",
+      { executeDockerSync, wait },
+    );
+    const statusChange = executeDockerSync(
+      buildPsqlCommandArgs(containerName, PLUGIN_INSTALL_POLICY_STATUS_CHANGE_SQL),
+      { allowFailure: true, stdio: "pipe" },
+    );
+    if (statusChange.status !== 0) {
+      const details = [statusChange.stdout, statusChange.stderr]
+        .filter(Boolean)
+        .join("\n")
+        .trim();
+      throw new Error(`Plugin status change blocked behind the reinstall waiter\n${details}`);
+    }
+    if (/40P01:/i.test([statusChange.stdout, statusChange.stderr].join("\n"))) {
+      throw new Error("Plugin reinstall/status ordering deadlocked");
+    }
+    statusHolderResult = await statusHolder.completion;
+    assertSuccessfulAsyncDockerResult(statusHolderResult, "Plugin installation-row holder");
+    installWaiterResult = await installWaiter.completion;
+    assertExpectedPsqlFailure(
+      installWaiterResult,
+      /P0001: Plugin not available for install \(status=archived\)/i,
+    );
+    if (/40P01:/i.test([installWaiterResult.stdout, installWaiterResult.stderr].join("\n"))) {
+      throw new Error("Plugin status/install race deadlocked");
+    }
+  } finally {
+    statusHolder.terminate();
+    installWaiter?.terminate();
+    if (!statusHolderResult) await statusHolder.completion;
+    if (installWaiter && !installWaiterResult) await installWaiter.completion;
+  }
+
+  executeDockerSync(
+    buildPsqlCommandArgs(containerName, VERIFY_PLUGIN_INSTALL_POLICY_STATUS_RACE_SQL),
+    { stdio: "inherit" },
+  );
+
+  const concurrentInstalls = PLUGIN_INSTALL_POLICY_CONCURRENT_INSTALL_SQL.map((command) =>
+    executeDockerAsync(buildPsqlCommandArgs(containerName, command)),
+  );
+  const concurrentResults = await Promise.all(
+    concurrentInstalls.map((execution) => execution.completion),
+  );
+  concurrentResults.forEach((result, index) => {
+    assertSuccessfulAsyncDockerResult(
+      result,
+      `Concurrent plugin install session ${index + 1}`,
+    );
+  });
+
+  executeDockerSync(
+    buildPsqlCommandArgs(containerName, VERIFY_PLUGIN_INSTALL_POLICY_CONCURRENT_COUNT_SQL),
+    { stdio: "inherit" },
+  );
+  console.log(
+    "Plugin install late-lock and concurrent install-count contracts passed.",
+  );
+}
+
 export async function runRecoveredSurfaceAclDatabaseContract({
   containerName = createContainerName(),
   repoRoot = repositoryRoot,
   ownershipToken = createOwnershipToken(),
   executeDockerSync = dockerSync,
+  executeDockerAsync = dockerAsync,
   wait = delay,
 } = {}) {
   assertContainerName(containerName);
@@ -659,8 +1069,60 @@ export async function runRecoveredSurfaceAclDatabaseContract({
     executeDockerSync(buildPsqlFileArgs(containerName, PLUGIN_SECRET_ASSERTIONS_SQL_PATH), {
       stdio: "inherit",
     });
+
+    executeDockerSync(buildPsqlFileArgs(containerName, PLUGIN_INSTALL_POLICY_SEED_SQL_PATH), {
+      stdio: "inherit",
+    });
+
+    for (const tamperCase of PLUGIN_INSTALL_POLICY_TAMPER_CASES) {
+      const expectedFailure = executeDockerSync(
+        buildPsqlPluginInstallPolicyTamperArgs(containerName, tamperCase.sql),
+        { allowFailure: true, stdio: "pipe" },
+      );
+      assertExpectedPsqlFailure(expectedFailure, tamperCase.expectedFailure);
+      executeDockerSync(
+        buildPsqlCommandArgs(
+          containerName,
+          VERIFY_PLUGIN_INSTALL_POLICY_FAILED_PREFLIGHT_SQL,
+        ),
+        { stdio: "inherit" },
+      );
+      console.log(`Fail-closed plugin install-policy tamper passed: ${tamperCase.label}`);
+    }
+
+    executeDockerSync(
+      buildPsqlFileArgs(containerName, PLUGIN_INSTALL_POLICY_MIGRATION_SQL_PATH, {
+        singleTransaction: true,
+      }),
+      { stdio: "inherit" },
+    );
+    executeDockerSync(
+      buildPsqlFileArgs(containerName, PLUGIN_INSTALL_POLICY_ASSERTIONS_SQL_PATH),
+      { stdio: "inherit" },
+    );
+    await runPluginInstallPolicyConcurrencyContract({
+      containerName,
+      executeDockerSync,
+      executeDockerAsync,
+      wait,
+    });
+    executeDockerSync(
+      buildPsqlCommandArgs(containerName, CAPTURE_PLUGIN_INSTALL_POLICY_REAPPLY_STATE_SQL),
+      { stdio: "inherit" },
+    );
+    executeDockerSync(
+      buildPsqlFileArgs(containerName, PLUGIN_INSTALL_POLICY_MIGRATION_SQL_PATH, {
+        singleTransaction: true,
+      }),
+      { stdio: "inherit" },
+    );
+    executeDockerSync(
+      buildPsqlCommandArgs(containerName, VERIFY_PLUGIN_INSTALL_POLICY_REAPPLY_STATE_SQL),
+      { stdio: "inherit" },
+    );
+    console.log("Plugin install policy migration reapply contract passed.");
     console.log(
-      "Recovered surface ACL and plugin secret-boundary PostgreSQL 17.6 contracts passed.",
+      "Recovered surface ACL, plugin secret-boundary and install-policy PostgreSQL 17.6 contracts passed.",
     );
   } catch (error) {
     contractError = error;
