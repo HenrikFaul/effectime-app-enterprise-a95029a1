@@ -1,7 +1,7 @@
 {
   "name": "effectime-app-enterprise",
   "private": true,
-  "version": "3.51.16",
+  "version": "3.51.17",
   "type": "module",
   "packageManager": "npm@11.13.0",
   "engines": {
@@ -51,6 +51,8 @@
     "db:member-profile-save:test": "node scripts/ci/member-profile-save-db-contract.mjs",
     "db:recovered-surface-acl:test": "node scripts/ci/recovered-surface-acl-db-contract.mjs",
     "security:secrets": "node scripts/ci/secret-scan.mjs",
+    "security:secrets:history": "node scripts/ci/history-secret-scan.mjs",
+    "security:secrets:test": "node --test scripts/ci/history-secret-scan.test.mjs",
     "release:sbom": "npm run release:sbom:web && npm run release:sbom:edge",
     "release:sbom:web": "node scripts/release/create-sbom.mjs",
     "release:sbom:edge": "node scripts/release/create-edge-sbom.mjs",
