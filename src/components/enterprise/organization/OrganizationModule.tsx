@@ -65,7 +65,10 @@ export function OrganizationModule({ workspaceId, isAdmin, canEditMemberProfiles
           <OrgStructure workspaceId={workspaceId} isAdmin={isAdmin} />
         </TabsContent>
         <TabsContent value="positions">
-          <BusinessRoleManager workspaceId={workspaceId} userId={userId ?? ''} />
+          <BusinessRoleManager
+            workspaceId={workspaceId}
+            canEditMemberProfiles={canEditMemberProfiles}
+          />
         </TabsContent>
         <TabsContent value="teams">
           <TeamManager workspaceId={workspaceId} userId={userId ?? ''} />

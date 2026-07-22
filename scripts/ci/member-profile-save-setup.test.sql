@@ -12,7 +12,8 @@ GRANT USAGE ON SCHEMA auth, contract TO authenticated, service_role;
 CREATE TABLE auth.users (
   id uuid PRIMARY KEY,
   email text,
-  raw_user_meta_data jsonb NOT NULL DEFAULT '{}'::jsonb
+  raw_user_meta_data jsonb NOT NULL DEFAULT '{}'::jsonb,
+  raw_app_meta_data jsonb NOT NULL DEFAULT '{}'::jsonb
 );
 
 CREATE OR REPLACE FUNCTION auth.uid()
@@ -22,6 +23,15 @@ STABLE
 SET search_path = pg_catalog
 AS $function$
   SELECT NULLIF(pg_catalog.current_setting('request.jwt.claim.sub', true), '')::uuid;
+$function$;
+
+CREATE OR REPLACE FUNCTION auth.role()
+RETURNS text
+LANGUAGE sql
+STABLE
+SET search_path = pg_catalog
+AS $function$
+  SELECT NULLIF(pg_catalog.current_setting('request.jwt.claim.role', true), '');
 $function$;
 
 CREATE OR REPLACE FUNCTION contract.assert_true(
@@ -386,6 +396,7 @@ INSERT INTO public.enterprise_role_permissions(
 
 INSERT INTO public.fixture_workspace_features(workspace_id, feature_key, enabled) VALUES
   ('11111111-1111-4111-8111-111111111111', 'members_list', true),
+  ('11111111-1111-4111-8111-111111111111', 'business_roles', true),
   ('22222222-2222-4222-8222-222222222222', 'members_list', true);
 
 INSERT INTO public.enterprise_member_role_allocations(
@@ -436,5 +447,44 @@ BEGIN
   RAISE EXCEPTION 'Timed out waiting for member profile save concurrency release';
 END;
 $function$;
+
+CREATE TABLE contract.business_role_delete_concurrency_gate (
+  id integer PRIMARY KEY,
+  released boolean NOT NULL DEFAULT false
+);
+INSERT INTO contract.business_role_delete_concurrency_gate(id, released)
+VALUES (11, false), (12, false);
+
+CREATE TABLE contract.business_role_delete_concurrency_results (
+  scenario text NOT NULL,
+  client text NOT NULL,
+  outcome text NOT NULL,
+  response jsonb,
+  PRIMARY KEY (scenario, client)
+);
+
+CREATE OR REPLACE FUNCTION contract.wait_for_business_role_delete_release(p_id integer)
+RETURNS void
+LANGUAGE plpgsql
+SET search_path = pg_catalog
+AS $function$
+BEGIN
+  LOOP
+    EXIT WHEN EXISTS (
+      SELECT 1
+      FROM contract.business_role_delete_concurrency_gate AS gate
+      WHERE gate.id = p_id AND gate.released
+    );
+    PERFORM pg_catalog.pg_sleep(0.05);
+  END LOOP;
+END;
+$function$;
+
+GRANT SELECT ON contract.business_role_delete_concurrency_gate
+  TO authenticated, service_role;
+GRANT INSERT ON contract.business_role_delete_concurrency_results
+  TO authenticated, service_role;
+GRANT EXECUTE ON FUNCTION contract.wait_for_business_role_delete_release(integer)
+  TO authenticated, service_role;
 REVOKE ALL ON FUNCTION contract.wait_for_member_profile_save_release() FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION contract.wait_for_member_profile_save_release() TO authenticated;

@@ -123,7 +123,8 @@ pull-request run uploaded that lock and deliberately failed as designed. A
 subsequent hosted run compiled exclusively from the committed graph and passed.
 
 The repository currently has historical lint debt; see `PROJECT_AUDIT.md` for the
-measured baseline: 1,161 errors and 99 warnings across 175 files. `npm run lint`
+measured v3.51.7 baseline: 1,148 errors and 98 warnings after 11 additional
+fingerprint improvements. `npm run lint`
 still reports the complete debt, while `npm run lint:ratchet` rejects new or
 moved diagnostic fingerprints and requires the baseline to be reduced when debt
 is removed. Do not weaken lint rules, coverage floors or bundle ceilings to hide
@@ -199,7 +200,7 @@ The generated public schema currently contains 30 tables, one view, 46
 functions and two enums whose defining migrations cannot be proven locally.
 `npm run schema:provenance` prevents this reviewed debt from changing silently;
 it does not make a clean install reproducible. A read-only live schema export,
-transitively complete recovery migration, 128/128 clean replay, regenerated-type
+transitively complete recovery migration, 130/130 clean replay, regenerated-type
 comparison, schema fingerprint and RLS/adversarial tests are required before a
 backend release.
 
@@ -315,8 +316,10 @@ snapshots and missing/multiple priority roles fail closed. Web, Android and iOS
 use the same strict TypeScript adapter and Supabase RPCs; there is no mobile-only
 data source or direct-table fallback. Run `npm run db:member-profile-save:test`
 for the pinned PostgreSQL 18.4 inventory, catalog, RBAC, rollback, lock,
-mixed-writer and MVCC contract. The legacy direct `BusinessRoleManager` path
-still needs a separate P1 transaction to enforce exact total/priority semantics.
+mixed-writer and MVCC contract. The legacy direct `BusinessRoleManager` path is
+closed by the stacked v3.51.7 candidate described below; v3.51.6 itself retains
+the narrower profile-save boundary.
+
 The current local candidate passes the 15/15 isolated runner, all five pinned
 PostgreSQL contracts, 208/208 focused UI/client/Edge-writer tests and 896/896
 full-coverage tests. Typecheck, production build, the reviewed 4,509,150 raw /
@@ -326,16 +329,57 @@ vulnerabilities are also green. These results prove source behavior, not a
 linked database apply, signed native release or production deployment.
 The same candidate passes mobile source 183/183, synced artifact 345/345,
 Capacitor bridge E2E 2/2 and tracked Android/iOS drift 0.
-Draft PR #177 freezes source commit
-`cce3fcade3c0a191166a57034e31b89832eafbe8`; hosted Quality Gate run
-`29868355151` passes all 10/10 jobs, including Android and locked iOS simulator
+Draft PR #177 freezes final source commit
+`9dea63e733589a3debd7d6d794c353cb24a0e548`; hosted Quality Gate run
+`29868681921` passes all 10/10 jobs, including Android and locked iOS simulator
 compilation plus the five PostgreSQL contracts. Release evidence artifact
-`8510171690`, diagnostics artifact `8510168237` and unsigned Android artifact
-`8510141514` prove this source candidate, not a production deployment.
+`8510309445`, diagnostics artifact `8510306792` and unsigned Android artifact
+`8510265497` prove this source candidate, not a production deployment.
 
-The locally derivable production-history state has 59 migration IDs in common
-with the repository, 69 local-only IDs and 84 remote-only IDs (128 local, 143
-remote). Three local-only HR/office/
+The stacked v3.51.7 release candidate in draft PR
+[#178](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/pull/178)
+closes the remaining direct business-role allocation boundary.
+`BusinessRoleManager` now edits a bounded
+snapshot with at most 20 canonical roles, exactly 100.00 percent allocation and
+exactly one priority role, then saves through the same optimistic atomic member-
+profile RPC. Tenant-wide business-role deletion is one server transaction with
+tenant/RBAC/entitlement rechecks, bounded locks, deterministic rebalance,
+postcondition verification and a minimal audit receipt; partial deletion or
+partial member-allocation updates roll back together.
+
+The same candidate introduces a durable pre-Auth identity-provisioning saga for
+the inventoried Edge writers and cleanup worker. Its four states and six
+service-role-only RPCs persist provisioning intent before Auth creation, bind
+the exact tenant-owned identity, and prepare database compensation before Auth
+deletion. Every claimed `pending_auth` retry re-prepares that cleanup; shared
+per-user write guards reject membership/profile resurrection, and finalization
+reacquires workspace/user gates, re-deletes and rechecks tenant rows, then
+commits `completed` atomically. A two-session PostgreSQL test proves writer-
+versus-finalizer serialization. The web, Android and iOS
+clients continue to use the same React application, Supabase project and
+versioned RPC/Edge data source—there is no mobile-only backend or privileged
+credential in either native shell. Current local evidence is focused Vitest
+99/99, Edge helper tests 60/60, Edge entrypoints 30/30, runner 15/15, pinned
+PostgreSQL 18.4 member-profile/business-role/identity-saga PASS, typecheck PASS,
+and 76 files / 992 tests in the full coverage run (51.27% statements/lines,
+75.11% branches, 46.39% functions). The reviewed bundle is 4,527,940 raw /
+1,296,700 gzip JavaScript bytes (+0.417% raw versus v3.51.6), with an exact
+ratchet rather than broad headroom. The improved ESLint baseline is 1,148 errors
+/ 98 warnings with 11 removed fingerprints. Hosted run `29879329719` passed all
+10/10 jobs for source head `77531b818b95a1cbe54a8d20abc3e3047a0c1c1e`;
+release evidence `8514194752`, diagnostics `8514193053` and unsigned Android
+artifact `8514165397` prove the source/CI candidate, not a production deploy.
+
+Production is **NO-GO**: the recurring identity-cleanup scheduler is not
+installed, and the existing migration-history drift, failed clean replay/linked
+lint and missing live SHA attestation remain unresolved. Follow
+`docs/runbooks/created-identity-cleanup.md`; restored-staging verification,
+reviewed scheduling and a DB-first rollout are release prerequisites.
+
+The last read-only linked comparison at the v3.51.6 boundary had 59 migration
+IDs in common, 69 local-only IDs and 84 remote-only IDs (128 local, 143 remote).
+The v3.51.7 candidate adds two intentionally unapplied local migrations, so the
+repository now contains 130. Three local-only HR/office/
 analytics migrations are proven duplicate-content variants of remote migrations
 under different IDs; bulk `migration repair --status reverted` would therefore
 be unsafe. A forward-only HR workflow candidate now adds fail-closed tenant

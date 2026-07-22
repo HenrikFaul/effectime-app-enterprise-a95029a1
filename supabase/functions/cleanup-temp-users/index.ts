@@ -1,6 +1,14 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.98.0";
 import { corsHeaders } from "../_shared/cors.ts";
 import { hasServiceRoleCredential } from "../_shared/request-security.ts";
+import {
+  classifyCreatedIdentityPreparationError,
+  isCompletedCreatedIdentityCleanupReceipt,
+  isFailedCreatedIdentityCleanupReceipt,
+  parseClaimedCreatedIdentityCleanups,
+  parseCreatedIdentityCleanupPreparationResult,
+  reconcileCreatedIdentityCleanupJobs,
+} from "../_shared/created-identity-cleanup.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -32,6 +40,72 @@ Deno.serve(async (req) => {
     }
     const admin = createClient(supabaseUrl, serviceKey);
 
+    const { data: claimedCleanupData, error: claimCleanupError } = await admin.rpc(
+      "claim_created_enterprise_identity_cleanup_jobs_v1",
+      { p_limit: 25 },
+    );
+    const claimedCleanups = claimCleanupError
+      ? null
+      : parseClaimedCreatedIdentityCleanups(claimedCleanupData);
+    if (claimedCleanups === null) {
+      console.error("cleanup-temp-users: identity cleanup claim failed");
+      return new Response(JSON.stringify({ error: "Identity cleanup queue unavailable" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const identityCleanup = await reconcileCreatedIdentityCleanupJobs({
+      jobs: claimedCleanups,
+      prepareDatabaseCleanup: async (job) => {
+        const { cleanupJobId, userId } = job;
+        // pending_auth claims carry their immutable bound user ID back through
+        // the idempotent prepare RPC before any Auth lookup or deletion.
+        const { data, error } = await admin.rpc(
+          "prepare_created_enterprise_identity_cleanup_v1",
+          {
+            p_cleanup_job_id: cleanupJobId,
+            p_user_id: userId,
+            p_membership_id: null,
+          },
+        );
+        if (error) {
+          return {
+            ok: false as const,
+            reason: classifyCreatedIdentityPreparationError(error),
+          };
+        }
+        return parseCreatedIdentityCleanupPreparationResult(
+          data,
+          cleanupJobId,
+        );
+      },
+      getAuthUser: (userId) => admin.auth.admin.getUserById(userId),
+      deleteAuthUser: (userId) => admin.auth.admin.deleteUser(userId),
+      completeDatabaseCleanup: async ({ cleanupJobId, userId }) => {
+        const { data, error } = await admin.rpc(
+          "complete_created_enterprise_identity_cleanup_v1",
+          { p_cleanup_job_id: cleanupJobId, p_user_id: userId },
+        );
+        return !error && isCompletedCreatedIdentityCleanupReceipt(data, cleanupJobId);
+      },
+      failDatabaseCleanup: async ({ cleanupJobId, status, userId }, reason) => {
+        const { data, error } = await admin.rpc(
+          "fail_created_enterprise_identity_cleanup_v1",
+          {
+            p_cleanup_job_id: cleanupJobId,
+            p_user_id: userId,
+            p_error_code: reason,
+          },
+        );
+        return !error && isFailedCreatedIdentityCleanupReceipt(data, {
+          cleanupJobId,
+          status,
+          reason,
+        });
+      },
+    });
+
     // Find all temporary profiles
     const { data: tempProfiles } = await admin
       .from('profiles')
@@ -39,7 +113,11 @@ Deno.serve(async (req) => {
       .eq('is_temporary', true);
 
     if (!tempProfiles || tempProfiles.length === 0) {
-      return new Response(JSON.stringify({ message: "No temp users to clean up.", deleted: 0 }), {
+      return new Response(JSON.stringify({
+        message: "No temp users to clean up.",
+        deleted: 0,
+        identity_cleanup: identityCleanup,
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -84,7 +162,11 @@ Deno.serve(async (req) => {
       }
     }
 
-    return new Response(JSON.stringify({ message: `Cleaned up ${deletedCount} temp users.`, deleted: deletedCount }), {
+    return new Response(JSON.stringify({
+      message: `Cleaned up ${deletedCount} temp users.`,
+      deleted: deletedCount,
+      identity_cleanup: identityCleanup,
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (err) {

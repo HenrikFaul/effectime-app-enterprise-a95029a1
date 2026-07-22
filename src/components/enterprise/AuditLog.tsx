@@ -35,6 +35,7 @@ export function AuditLog({ workspaceId }: Props) {
     'membership.invited': t('audit_log.action_membership_invited'),
     'membership.role_changed': t('audit_log.action_membership_role_changed'),
     'membership.profile_updated': t('audit_log.action_membership_profile_updated'),
+    'membership.business_role_deleted': t('audit_log.action_membership_business_role_deleted'),
     'membership.removed': t('audit_log.action_membership_removed'),
     'membership.suspended': t('audit_log.action_membership_suspended'),
     'rule.created': t('audit_log.action_rule_created'),

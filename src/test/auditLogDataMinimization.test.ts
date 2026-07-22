@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { SUPPORTED_LOCALES } from "../i18n/locales";
 
 const auditLogSource = readFileSync(
   join(process.cwd(), "src", "components", "enterprise", "AuditLog.tsx"),
@@ -42,5 +43,22 @@ describe("AuditLog client-side data minimization contract", () => {
     expect(auditLogSource).toContain(
       "'membership.profile_updated': t('audit_log.action_membership_profile_updated')",
     );
+  });
+
+  it("renders atomic business-role deletions with a label in every supported locale", () => {
+    expect(auditLogSource).toContain(
+      "'membership.business_role_deleted': t('audit_log.action_membership_business_role_deleted')",
+    );
+
+    for (const locale of SUPPORTED_LOCALES) {
+      const resourceSource = readFileSync(
+        join(process.cwd(), "src", "i18n", "resources", `${locale}.ts`),
+        "utf8",
+      );
+
+      expect(resourceSource, `missing localized audit label for ${locale}`).toMatch(
+        /action_membership_business_role_deleted:\s*['"][^'"]+['"]/,
+      );
+    }
   });
 });

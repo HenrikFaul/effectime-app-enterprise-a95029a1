@@ -1,9 +1,76 @@
+## 2026-07-22 — v3.51.7 Atomic business-role allocation and identity compensation (unreleased)
+
+**Status:** stacked draft PR
+[#178](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/pull/178)
+at source commit `77531b818b95a1cbe54a8d20abc3e3047a0c1c1e`. Hosted Quality
+Gate run `29879329719` passed all 10/10 jobs; release evidence artifact
+`8514194752`, diagnostics artifact `8514193053` and unsigned Android artifact
+`8514165397` retain the candidate evidence. The focused browser/client suite is
+99/99, Edge helper tests are 60/60, all 30/30 Edge entrypoints pass, the isolated
+database runner is 15/15, and the pinned PostgreSQL 18.4 member-profile/business-
+role/identity-saga contract and typecheck PASS. The complete Vitest coverage run
+is 76 files / 992 tests PASS (51.27% statements/lines, 75.11% branches, 46.39%
+functions). The strict ESLint ratchet records the improved current baseline of
+1,148 errors / 98 warnings, 11 fewer fingerprints than its prior boundary. These
+are source/CI contract results, not a linked-database apply, signed native
+artifact or production deployment.
+
+- Completes the `BusinessRoleManager` P1 boundary with bounded allocation
+  drafts and server-backed writes. A new snapshot accepts at most 20 canonical
+  roles, exactly 100.00 percent total allocation and exactly one priority role;
+  malformed, stale or historically incompatible state fails closed instead of
+  being silently normalized.
+- Routes member allocation saves through the same optimistic, atomic
+  `save_workspace_member_profile_v1` path used by the member profile sheet. The
+  manager reloads an authoritative snapshot for each mutation, preserving
+  tenant, RBAC, entitlement and revision checks across web, Android and iOS.
+- Adds a tenant-wide `delete_workspace_business_role_v1` transaction with
+  bounded advisory/row locking, server-side tenant/RBAC/entitlement rechecks,
+  deterministic survivor rebalance, exact total/priority postconditions and a
+  data-minimised `membership.business_role_deleted` audit receipt. Partial role
+  deletion or partially updated member allocations cannot commit.
+- Adds a durable, pre-Auth identity-provisioning saga for the inventoried Edge
+  writers. Four states (`provisioning`, `pending_auth`, `provisioned`,
+  `completed`) and six service-role-only RPCs register intent before Auth user
+  creation, verify exact tenant-owned Auth metadata, prepare DB compensation in
+  a transaction, and make worker retries idempotent.
+- Makes compensation DB-first: membership/profile cleanup commits before Auth
+  deletion, while every claimed `pending_auth` retry re-prepares that database
+  cleanup before touching Auth. Membership/profile write guards share the
+  per-user mutation gate and reject resurrection for `pending_auth`/`completed`
+  identities. Finalization reacquires workspace and per-user gates, re-deletes
+  and rechecks tenant-visible rows, then commits `completed` atomically. The
+  pinned PostgreSQL contract includes a two-session finalizer-versus-writer
+  serialization proof. Lost process responses, Auth visibility lag, cross-
+  workspace identity mismatch and wrong app metadata fail closed without
+  abandoning an untracked Auth identity.
+- Reviews the deliberate v3.51.7 product-contract bundle delta: JavaScript is
+  4,527,940 raw / 1,296,700 gzip bytes, largest 1,765,067 / 561,428; CSS remains
+  180,862 / 29,600. This is +18,790 raw / +6,250 gzip JavaScript bytes
+  (+0.417% raw) versus v3.51.6. The exact measured ceilings retain only the
+  prior 128/279-byte cross-platform allowances; no broad budget was added.
+- Keeps the existing React/Supabase data plane common to web, Android and iOS;
+  no mobile-only database, privileged mobile credential or divergent mutation
+  contract is introduced.
+
+Production remains **NO-GO**. No recurring scheduler for the identity-cleanup
+worker is installed, so automatic compensation is not operationally guaranteed.
+In addition, the last linked baseline's 59 shared / 69 local-only / 84 remote-
+only migration history drift plus two unapplied v3.51.7 migrations, failed clean
+replay/linked lint and missing live Git-SHA
+attestation still block a safe DB/Edge/web/native rollout. The operator contract
+and recovery procedure are documented in
+`docs/runbooks/created-identity-cleanup.md`; a reviewed scheduler, restored-
+staging acceptance and DB-first rollout are mandatory before production.
+
 ## 2026-07-21 — v3.51.6 Atomic workspace-member profile save (unreleased)
 
 **Status:** stacked draft PR
 [#177](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/pull/177)
-at source commit `cce3fcade3c0a191166a57034e31b89832eafbe8`. Hosted Quality
-Gate run `29868355151` passed all 10/10 jobs. The isolated runner is 15/15,
+at final source commit `9dea63e733589a3debd7d6d794c353cb24a0e548`. Hosted Quality
+Gate run `29868681921` passed all 10/10 jobs; release evidence artifact
+`8510309445`, diagnostics artifact `8510306792` and unsigned Android artifact
+`8510265497` were retained. The isolated runner is 15/15,
 the pinned PostgreSQL 18.4 atomic contract and all four affected legacy database
 contracts PASS, the focused UI/client/Edge-writer suite is 208/208, full coverage
 is 70 files and 896/896 tests, typecheck and production build/bundle PASS, and
