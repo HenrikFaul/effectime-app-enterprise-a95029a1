@@ -1,6 +1,9 @@
 ## 2026-07-22 — v3.51.13 Plugin install-count concurrency correctness (unreleased)
 
-**Status:** local source candidate; linked database and production not deployed.
+**Status:** stacked draft PR
+[#184](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/pull/184)
+at implementation head `cb0358eb6ab934fa5fb2a15012b93c74f1193674`;
+source pushed, linked database and production not deployed.
 
 - Fixes the historical install-vs-uninstall READ COMMITTED race without changing
   the `marketplace_uninstall_plugin(uuid)` API. Uninstall now deletes the
@@ -39,7 +42,11 @@ E2E 7/7; mobile source 183/183, artifact 345/345, E2E 2/2 and deterministic
 Android/iOS sync; Edge 31 entrypoints/configs, 65 imports and 86/86 tests;
 release identity 55/55 and Edge SBOM 7/7; dependency audit with zero known
 vulnerabilities; 1,545-file secret scan; and the exact 137-migration schema
-provenance gate. Hosted CI remains pending.
+provenance gate. Hosted Quality Gate run
+[`29907202609`](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/actions/runs/29907202609)
+passes all 11 jobs on the implementation head, including PostgreSQL 17.6/18.4,
+frontend, Edge, Android and locked iOS. Hosted artifacts: release evidence
+`8524406237`, diagnostics `8524404239`, unsigned Android `8524356479`.
 
 Production remains **NO-GO**. Rollout requires migration-history reconciliation,
 a short plugin-write drain, restored-staging DB-first apply, an exact post-apply
