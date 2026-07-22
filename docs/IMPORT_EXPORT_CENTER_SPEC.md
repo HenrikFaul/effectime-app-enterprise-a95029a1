@@ -654,7 +654,9 @@ The asterisk convention is universally understood. The lock icon reinforces that
 - Reference resolution (office_name → office_id, manager_email → membership.user_id)
 - Database duplicate detection (matching unique keys against existing records)
 - Business rule validation (date ranges, role hierarchy permissions)
-- Transactional batch write
+- **Target:** transactional batch write. **Current gap (v3.51.20):** the Edge
+  handler performs sequential row operations, so an unexpected server failure
+  can leave a documented partial result.
 
 ### 11.2 Edge Function: `import-entity-data`
 
@@ -683,29 +685,60 @@ Response 200:
 }
 ```
 
-**Dry-run mode**: `dry_run: true` runs all validation and reference resolution without committing — returns the same response shape. Used for Step 4 (Validation Preview) final check before Step 6 (Confirm).
+The request shape above is the target contract. **Current gap (v3.51.20):**
+`schema_version` is not authoritatively validated by the handler.
+
+**Dry-run target:** `dry_run: true` runs all server validation and reference
+resolution without committing and returns the same response shape. **Current
+gap (v3.51.20):** the active Import Wizard performs its validation preview on
+the client and does not invoke the server dry-run before confirmation.
 
 ### 11.3 Transactional Behavior
 
-Each entity import runs in a single PostgreSQL transaction. If a mid-transaction server error occurs, the entire transaction rolls back. Row-level validation errors are pre-filtered before the transaction begins (only valid rows enter the transaction).
+**Target:** each entity import runs in a single PostgreSQL transaction. If a
+mid-transaction server error occurs, the entire transaction rolls back, and
+only rows that passed validation enter the transaction. **Current gap
+(v3.51.20):** the handler performs row-level writes sequentially and can return
+partial success; full rollback is not yet guaranteed.
 
 ### 11.4 Authorization
 
-- Only `owner` and `resourceAssistant` roles may trigger imports
-- The Edge Function verifies role via `has_enterprise_role(workspace_id, user_id, ARRAY['owner','resourceAssistant'])`
-- All writes are scoped to the requesting user's workspace; cross-workspace writes are impossible by query construction
+- Only active `owner` and `resourceAssistant` members may trigger imports.
+- After authentication and role verification, but before `import.started`, dry-run
+  accounting, reference reads or writes, the Edge Function resolves the
+  workspace's authoritative tenant feature union. Both exact feature keys
+  `csv_import` and its documented dependency `members_list` are required.
+- A valid disabled entitlement returns a sanitized `403`. Tenant mapping,
+  feature lookup or malformed response failures return a sanitized `503`. This
+  redaction claim applies to the entitlement decision itself. **Current gap
+  (v3.51.20):** other inherited import validation/mutation error paths can still
+  return or log raw backend details and require a bounded error-code map.
+- The UI mirrors this decision to disable and explain Import without removing
+  Export. The Edge check remains authoritative for web, Android and iOS clients.
+- The handler resolves authorization and references from the requesting
+  workspace and create paths write that workspace identity. This is the current
+  tenant boundary, not a proof that every mutation is atomically protected from
+  a concurrent role or entitlement change; request-level adversarial coverage
+  remains required.
 
 ### 11.5 Workspace Scoping
 
-Every INSERT/UPDATE in the import service explicitly includes `workspace_id = <requesting_workspace_id>`. No row can be written to a different workspace. Reference resolution (e.g. office_name lookup) also scopes to the same workspace.
+**Target:** every INSERT/UPDATE is constrained by the requesting workspace, and
+reference resolution (for example `office_name`) uses the same tenant. Current
+create paths explicitly carry `workspace_id`; not every UPDATE includes an
+explicit workspace predicate because some use previously resolved parent/row
+identities. Cross-workspace and concurrent demotion/revocation behavior must be
+proven by dynamic request/DB contracts before production release.
 
 ### 11.6 Audit Events
 
-Two audit events per import run:
+**Target audit lifecycle:**
 1. `import.started` — logged when the user confirms (before execution)
 2. `import.completed` — logged after execution with full summary metadata
 
-Failed imports log `import.failed` with error details.
+**Current gap (v3.51.20):** `import.started` and successful completion are
+implemented, but a guaranteed `import.failed` event is not. Failure metadata
+must use bounded codes and never raw backend details.
 
 ### 11.7 Row-Level Error Reporting
 

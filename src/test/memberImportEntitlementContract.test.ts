@@ -21,7 +21,7 @@ describe('bulk member invitation entitlement contract', () => {
     expect(entitlement).toContain('parseLookupResult(tenantEnvelope)');
     expect(entitlement).toContain('parseLookupResult(featureEnvelope)');
     expect(entitlement).toMatch(
-      /\.feature_key ===\s+MEMBERS_INVITE_FEATURE_KEY/,
+      /resolveTenantFeatureEntitlement\(\s*client,\s*workspaceId,\s*\[MEMBERS_INVITE_FEATURE_KEY\],\s*\)/,
     );
     expect(entitlement).toContain('!featureResult.data.every(isEnabledFeatureRow)');
   });

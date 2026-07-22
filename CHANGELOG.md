@@ -1,7 +1,49 @@
+## 2026-07-22 — v3.51.20 CSV import entitlement parity (unreleased)
+
+**Status:** local source candidate on `codex/csv-import-entitlement`.
+Production deployment has not been performed. No database migration or new
+dependency is introduced.
+
+- **BIZONYÍTOTT:** `csv_import` is a Pro/Enterprise feature with the documented
+  `members_list` dependency, but the active `ImportExportCenter` exposed Import
+  to every workspace admin and `import-entity-data` reached `import.started`,
+  dry-run accounting and six service-role mutation families without either
+  exact entitlement. The legacy `CsvImportPanel` is not the runtime path.
+- Adds one fail-closed UI decision for `owner`/`resourceAssistant`, authoritative
+  feature availability, exact `members_list` and exact `csv_import`. Import is
+  disabled with an accessible explanation when unavailable; entitlement loss
+  returns the center to Export and unmounts the import wizard. Export behavior
+  and its existing authorization remain unchanged.
+- Adds the authoritative tenant feature-union gate after authentication/RBAC
+  but before `import.started`, dry-run results, reference reads or writes. A
+  valid disabled entitlement returns a sanitized 403; lookup, thrown or
+  malformed responses return a sanitized 503. Web, Android and iOS continue to
+  share the same Edge/Supabase data path.
+- Updates the Import/Export specification and feature catalog to the active
+  component and exact entitlement contract. Transactional import, UI-driven
+  server dry-run and `schema_version` enforcement remain separately tracked
+  gaps and are not claimed by this package.
+
+Local validation is green: focused UI/source contracts 23/23, exact Deno helper
+10/10, full Edge 96/96, 31/31 entrypoint checks with zero diagnostics, and the
+complete web coverage run 90 files / 1092/1092. Typecheck, unchanged 1,148/98
+lint fingerprint, production build, reviewed bundle budget, web E2E 7/7,
+Android/iOS sync, mobile foundation 390/390 and mobile E2E 2/2 pass. The current
+secret scan covers 1,575 repository text files with zero findings, dependency
+audit reports zero known vulnerabilities, and the exact Edge source identity is
+`a5f6228…` (91 files / 882,441 canonical bytes). Hosted evidence is pending.
+
+Rollback is the code/test/version/documentation commit revert. Rolling back only
+the Edge gate would reopen the entitlement bypass, so it requires disabling the
+import endpoint until a fixed server boundary is restored. Production remains
+**NO-GO** for the documented migration-history, restored-staging, Edge parity
+and same-SHA live-attestation blockers.
+
 ## 2026-07-22 — v3.51.19 invitation entitlement parity (unreleased)
 
-**Status:** local source candidate on `codex/invitation-entitlement-parity`.
-Production deployment and linked database apply have not been performed.
+**Status:** source + hosted candidate on `codex/invitation-entitlement-parity`;
+draft PR #190. Production deployment and linked database apply have not been
+performed.
 
 - **BIZONYÍTOTT:** the workspace header and member-list invitation controls
   previously depended on `members_list`, while the documented paid capability
@@ -40,7 +82,12 @@ All six legacy PostgreSQL contracts plus the new invitation contract PASS;
 migration/schema provenance, current-tree secret scan (1,573 files / 0
 findings), secret-scanner unit 10/10, Edge SBOM unit 7/7 and dependency audit
 (0 vulnerabilities) PASS. The unchanged ESLint ratchet remains 1,148 errors /
-98 warnings. Hosted CI evidence is recorded only after it runs successfully.
+98 warnings. Exact branch head
+`4dbba09e89ae71b345aa2e7c7c59d18d66a6d4fe` completed hosted run
+`29939910831` with 12/12 jobs and 0 annotations. The PR checkout attests
+potential merge `50597c4c2a0bfbe4a0d26a94596661a40ff9fb9a`; retained artifacts are
+release evidence `8537795808`, diagnostics `8537793580` and unsigned Android
+`8537760838`.
 
 Rollback is the code/CI/test/version/documentation commit revert plus a reviewed
 forward repair for the applied database migration; historical migration files

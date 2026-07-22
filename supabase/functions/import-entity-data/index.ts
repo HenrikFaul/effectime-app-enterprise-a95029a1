@@ -7,8 +7,11 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 import {
+  CSV_IMPORT_REQUIRED_FEATURE_KEYS,
   hasMemberInvitationCandidate,
+  planCsvImportAccess,
   planMembersInviteInvitation,
+  resolveCsvImportEntitlement,
   resolveMembersInviteEntitlement,
   type MembersInviteEntitlement,
 } from './entitlement.ts';
@@ -123,6 +126,25 @@ serve(async (req: Request) => {
       return jsonResponse({ error: 'Forbidden: admin role required' }, 403);
     }
     const actorRole = actorMembership.role as ImportActorRole;
+
+    // Feature preflight must complete after authentication/RBAC but before
+    // audit events, dry-run accounting, or any entity-specific reads/writes.
+    // csv_import depends on members_list in the shipped feature catalog.
+    const csvImportEntitlement = await resolveCsvImportEntitlement(
+      serviceClient,
+      workspace_id,
+    );
+    const csvImportAccess = planCsvImportAccess(csvImportEntitlement);
+    if (csvImportAccess.kind === 'blocked') {
+      if (!csvImportEntitlement.enabled && csvImportEntitlement.reason === 'lookup_error') {
+        console.error('csv_import entitlement lookup failed', {
+          workspaceId: workspace_id,
+          step: csvImportEntitlement.step,
+          features: CSV_IMPORT_REQUIRED_FEATURE_KEYS,
+        });
+      }
+      return jsonResponse({ error: csvImportAccess.message }, csvImportAccess.status);
+    }
 
     // Audit: import.started
     if (!dry_run) {
