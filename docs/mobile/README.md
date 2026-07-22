@@ -206,8 +206,8 @@ flowchart LR
   fizikai-device bizonyíték.
 - **BIZONYÍTOTT rollout-korlát:** a DB-migráció, PostgREST schema-cache és exact
   RPC/ACL/constraint inventory kerül ki először, utána azonos commitból a web,
-  Android és iOS kliens. A history driftből levezetett 59 shared / 69 local-only /
-  84 remote-only állapot, a hiányzó hiteles generated types és a restored-staging
+  Android és iOS kliens. A v3.51.9 read-only inventory szerinti 61 shared / 72
+  local-only / 82 remote-only állapot, a hiányzó hiteles generated types és a restored-staging
   adat-inventory miatt production **NO-GO**. A direct `BusinessRoleManager`
   total/priority tranzakciós invariantjai külön következő P1 csomag.
 
@@ -766,7 +766,13 @@ konkrét store-, CI-, konfiguráció- vagy készülékteszt-bizonyíték szüks�
   staging, reviewed scheduler activation, DB→Edge→scheduler-last rollout,
   pg_net response/worker-state korreláció és live SHA-attestation nélkül a
   v3.51.8 sem production deploy vagy aláírt store release.
-- **BIZONYÍTOTT:** a v3.51.4-en commitolt platformforrás, a v3.51.5–3.51.8
+- **BIZONYÍTOTT v3.51.9 source + hosted candidate:** a két visszanyert historikus
+  migráció ugyanazt a Supabase adatplatformot teszi reprodukálhatóbbá weben,
+  Androidon és iOS-en; külön mobil adatforrást nem vezet be. Draft PR #180
+  implementation head `b98cdc8…`, hosted run `29888707884` 10/10 PASS,
+  release evidence `8517495434`, diagnostics `8517494400`, unsigned Android
+  `8517474651`. Ez nem linked apply, store build vagy production deploy.
+- **BIZONYÍTOTT:** a v3.51.4-en commitolt platformforrás, a v3.51.5–3.51.9
   candidate implementációk és a review-zott Swift dependency lock fejlesztési
   foundationként **GO**, de a
   store release **NO-GO** a signing/store és device kapuk nélkül.

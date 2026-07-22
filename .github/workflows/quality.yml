@@ -171,6 +171,9 @@ jobs:
       - name: Scan repository source for high-confidence secrets
         run: npm run security:secrets
 
+      - name: Enforce recovered migration byte provenance
+        run: npm run migration:provenance:test && npm run migration:provenance
+
       - name: Enforce generated schema provenance baseline
         run: npm run schema:provenance:test && npm run schema:provenance
 

@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "algorithm": "sha256",
+  "migrations": [
+    {
+      "version": "20260514124827",
+      "name": "v3_22_0_clock_in_engine",
+      "path": "supabase/migrations/20260514124827_v3_22_0_clock_in_engine.sql",
+      "bytes": 12227,
+      "sha256": "89a2752acd0403f998ca987827f0a0ef6a8cffaadb21a78f6ddac02603a080f1"
+    },
+    {
+      "version": "20260514194031",
+      "name": "v3_30_0_plugin_marketplace",
+      "path": "supabase/migrations/20260514194031_v3_30_0_plugin_marketplace.sql",
+      "bytes": 14451,
+      "sha256": "b9652205609fa1f274281db86741c19637f8442d513ae325087c29bd94f663b4"
+    }
+  ]
+}

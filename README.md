@@ -64,6 +64,8 @@ npm run build
 npm run bundle:check
 npm run lint:ratchet
 npm run security:secrets
+npm run migration:provenance:test
+npm run migration:provenance
 npm run schema:provenance:test
 npm run schema:provenance
 npm run db:payroll:test
@@ -411,10 +413,22 @@ lint and missing live SHA attestation remain unresolved. Follow
 `docs/runbooks/created-identity-cleanup.md`; restored-staging verification,
 reviewed scheduling and a DB-first rollout are release prerequisites.
 
-The last read-only linked comparison at the v3.51.6 boundary had 59 migration
-IDs in common, 69 local-only IDs and 84 remote-only IDs (128 local, 143 remote).
-The v3.51.7 candidate adds two and v3.51.8 adds one intentionally unapplied local
-migration, so the repository now contains 131. Three local-only HR/office/
+The stacked v3.51.9 source candidate restores two exact remote-history SQL
+files at their original IDs without modifying their historical content. A
+raw-byte SHA-256 manifest, strict path/entry validation and targeted LF Git
+attributes reject missing, reordered, redirected, line-ending-drifted or edited
+copies. The exact schema-provenance debt drops by five tables and five functions;
+run `npm run migration:provenance:test`, `npm run migration:provenance` and the
+two schema-provenance commands above. This is source-history recovery only: it
+does not authorize a linked migration repair or production database apply.
+Draft PR #180 implementation head `b98cdc8f315eaf346ea8648b671506ac97d64caf`
+passed hosted Quality Gate run `29888707884` 10/10; release evidence
+`8517495434`, diagnostics `8517494400` and unsigned Android `8517474651` are
+source/CI evidence only.
+
+The latest read-only linked comparison after the v3.51.9 recovery has 61
+migration IDs in common, 72 local-only IDs and 82 remote-only IDs (133 local,
+143 remote). Three local-only HR/office/
 analytics migrations are proven duplicate-content variants of remote migrations
 under different IDs; bulk `migration repair --status reverted` would therefore
 be unsafe. A forward-only HR workflow candidate now adds fail-closed tenant
