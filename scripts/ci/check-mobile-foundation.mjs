@@ -1106,13 +1106,13 @@ function checkNativeCiSource() {
     [
       "actions/checkout",
       "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0",
-      11,
+      12,
       "checkout",
     ],
     [
       "actions/setup-node",
       "actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0",
-      11,
+      12,
       "setup-node",
     ],
     [
@@ -1222,7 +1222,8 @@ function checkNativeCiSource() {
     ["database-contract", "hr-workflow-database-contract"],
     ["hr-workflow-database-contract", "admin-override-database-contract"],
     ["admin-override-database-contract", "profiles-tenant-database-contract"],
-    ["profiles-tenant-database-contract", "member-profile-save-database-contract"],
+    ["profiles-tenant-database-contract", "invitation-entitlement-database-contract"],
+    ["invitation-entitlement-database-contract", "member-profile-save-database-contract"],
     ["member-profile-save-database-contract", "recovered-surface-acl-database-contract"],
     ["recovered-surface-acl-database-contract", "verify"],
   ];

@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 const root = join(process.cwd(), 'src', 'components');
 const sidebar = readFileSync(join(root, 'shell', 'WorkspaceSidebar.tsx'), 'utf8');
 const dashboard = readFileSync(join(root, 'enterprise', 'WorkspaceDashboard.tsx'), 'utf8');
+const memberList = readFileSync(join(root, 'enterprise', 'MemberList.tsx'), 'utf8');
 const recoveryPanel = readFileSync(join(root, 'enterprise', 'EntitlementRecoveryPanel.tsx'), 'utf8');
 const revocationList = readFileSync(join(root, 'enterprise', 'ICalTokenRevocationList.tsx'), 'utf8');
 const pluginCleanup = readFileSync(join(root, 'marketplace', 'InstalledPluginCleanupPanel.tsx'), 'utf8');
@@ -116,7 +117,15 @@ describe('workspace navigation/content entitlement integration', () => {
   it('fails closed for paid header actions and repairs hidden deep links only from authorized tabs', () => {
     expect(dashboard).toContain('isAdmin && featureAccessAvailable && <CommandCenterButton');
     expect(dashboard).toContain('isAdmin && featureAccessAvailable && <OrgPulseButton');
-    expect(dashboard).toContain("isAdmin && featureAccessAvailable && hasTabEntitlement('members')");
+    expect(dashboard).toMatch(
+      /const canInviteMembers = resolveCanInviteMembers\(\{[\s\S]*?isAdmin,[\s\S]*?featureAccessAvailable,[\s\S]*?membersTabEntitled: hasTabEntitlement\('members'\),[\s\S]*?membersInviteEnabled: isFeatureEnabled\('members_invite'\),[\s\S]*?\}\);/,
+    );
+    expect(dashboard).toMatch(/canInviteMembers && \([\s\S]*?setShowInvite\(true\)/);
+    expect(dashboard).toContain('canInviteMembers={canInviteMembers}');
+    expect(dashboard).toMatch(/canInviteMembers && <InviteMemberDialog/);
+    expect(memberList).toMatch(/canInviteMembers && \([\s\S]*?setShowInvite\(true\)/);
+    expect(memberList).toMatch(/canInviteMembers && \([\s\S]*?<InviteMemberDialog/);
+    expect(memberList).toMatch(/className=\{canInviteMembers \? 'ml-2' : undefined\}[\s\S]*?handleInstantUser/);
     expect(dashboard).toContain('const firstVisibleTab = visibleTopNavItems[0]?.value;');
     expect(dashboard).toContain('if (featureAccessAvailable && firstVisibleTab && !activeTabIsVisible)');
     expect(dashboard).toContain('setActiveTab(firstVisibleTab, { replace: true });');

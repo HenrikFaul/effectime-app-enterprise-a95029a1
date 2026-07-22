@@ -35,6 +35,8 @@ interface Props {
   userId: string;
   userRole: string;
   canEditMemberProfiles?: boolean;
+  /** Exact, fail-closed members_invite decision owned by WorkspaceDashboard. */
+  canInviteMembers?: boolean;
   /** Forwarded to MemberProfileSheet so its "Bővebb adatok" deep-links can switch top-level workspace tabs. */
   onNavigateTab?: (tab: string) => void;
 }
@@ -58,7 +60,7 @@ interface OfficeRef {
   name: string;
 }
 
-export function MemberList({ workspaceId, userId, userRole, canEditMemberProfiles = false, onNavigateTab }: Props) {
+export function MemberList({ workspaceId, userId, userRole, canEditMemberProfiles = false, canInviteMembers = false, onNavigateTab }: Props) {
   const { t } = useI18n();
   const [members, setMembers] = useState<Member[]>([]);
   const [offices, setOffices] = useState<OfficeRef[]>([]);
@@ -122,6 +124,10 @@ export function MemberList({ workspaceId, userId, userRole, canEditMemberProfile
       fetchGenerationRef.current += 1;
     };
   }, [fetchMembers]);
+
+  useEffect(() => {
+    if (!canInviteMembers) setShowInvite(false);
+  }, [canInviteMembers]);
 
   const handleRoleChange = async (memberId: string, newRole: string) => {
     const { error } = await supabase
@@ -301,10 +307,12 @@ export function MemberList({ workspaceId, userId, userRole, canEditMemberProfile
     <>
       {isAdmin && (
         <div className="flex justify-end mb-3">
-          <Button size="sm" onClick={() => setShowInvite(true)}>
-            <UserPlus className="h-4 w-4 mr-1" /> {t('members.add_member')}
-          </Button>
-          <Button size="sm" variant="secondary" className="ml-2" onClick={handleInstantUser} disabled={creatingInstantUser}>
+          {canInviteMembers && (
+            <Button size="sm" onClick={() => setShowInvite(true)}>
+              <UserPlus className="h-4 w-4 mr-1" /> {t('members.add_member')}
+            </Button>
+          )}
+          <Button size="sm" variant="secondary" className={canInviteMembers ? 'ml-2' : undefined} onClick={handleInstantUser} disabled={creatingInstantUser}>
             {creatingInstantUser ? t('members.instant_user_creating') : 'Instant user'}
           </Button>
         </div>
@@ -526,14 +534,16 @@ export function MemberList({ workspaceId, userId, userRole, canEditMemberProfile
         }}
       />
 
-      <InviteMemberDialog
-        open={showInvite}
-        onOpenChange={setShowInvite}
-        workspaceId={workspaceId}
-        invitedBy={userId}
-        actorRole={userRole}
-        onInvited={fetchMembers}
-      />
+      {canInviteMembers && (
+        <InviteMemberDialog
+          open={showInvite}
+          onOpenChange={setShowInvite}
+          workspaceId={workspaceId}
+          invitedBy={userId}
+          actorRole={userRole}
+          onInvited={fetchMembers}
+        />
+      )}
     </>
   );
 }

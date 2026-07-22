@@ -1,3 +1,53 @@
+## 2026-07-22 — v3.51.19 invitation entitlement parity (unreleased)
+
+**Status:** local source candidate on `codex/invitation-entitlement-parity`.
+Production deployment and linked database apply have not been performed.
+
+- **BIZONYÍTOTT:** the workspace header and member-list invitation controls
+  previously depended on `members_list`, while the documented paid capability
+  is the separate `members_invite` feature. The service-role invitation RPC,
+  direct authenticated invitation writes, and bulk-import invitation branch
+  also lacked the same exact entitlement decision.
+- Uses one fail-closed frontend decision for both invitation entry points and
+  closes an already-open dialog when authoritative feature access disappears.
+  Instant-user creation remains a separate, unchanged capability.
+- Adds a forward-only migration that checks the tenant feature union after
+  actor/RBAC authorization and before every issue/reissue write. The existing
+  RPC signature, defaults, OID, ACL, return type and search path are preserved.
+  Direct authenticated INSERT/UPDATE paths are protected by both RLS and the
+  mutation trigger; SELECT, owner cleanup DELETE, and invitation acceptance are
+  unchanged.
+- Bulk member import resolves the authoritative workspace-to-tenant mapping
+  before invitation accounting. Disabled workspaces receive a stable row error,
+  dry-runs cannot report false creation, lookup/malformed responses return a
+  sanitized 503, existing-member updates remain available, and database details
+  are excluded from both client responses and the new structured log fields.
+- Adds a pinned PostgreSQL 18.4 contract and an independent hosted quality job.
+  The contract covers tier/add-on/enabled override, missing/disabled override,
+  owner/assistant/member/cross-tenant/service-role behavior, issue/reissue
+  atomicity, direct RLS/trigger writes, cleanup/accept compatibility, metadata
+  identity and double reapply.
+
+Local validation: focused UI/import Vitest 18/18; DB runner unit 10/10 and the
+pinned PostgreSQL 18.4 invitation contract PASS; Deno target 7/7, full Edge
+93/93, 31/31 entrypoint/config and immutable Edge source identity
+`108292092bf934a03d4cc85863983459f93bf62b98479e8b5562ad2a7416afac`
+(91 files / 875,652 canonical bytes) PASS. Full coverage is 88 files and
+1,083/1,083 tests (55.47% statements/lines, 80.75% branches and 35.82%
+functions); typecheck, production build, reviewed bundle budget, web smoke 7/7,
+mobile source 228/228, synchronized artifact 390/390 and mobile E2E 2/2 PASS.
+All six legacy PostgreSQL contracts plus the new invitation contract PASS;
+migration/schema provenance, current-tree secret scan (1,573 files / 0
+findings), secret-scanner unit 10/10, Edge SBOM unit 7/7 and dependency audit
+(0 vulnerabilities) PASS. The unchanged ESLint ratchet remains 1,148 errors /
+98 warnings. Hosted CI evidence is recorded only after it runs successfully.
+
+Rollback is the code/CI/test/version/documentation commit revert plus a reviewed
+forward repair for the applied database migration; historical migration files
+must not be deleted after deployment. Production remains **NO-GO** until the
+linked history/lint drift, restored-staging acceptance, and same-SHA live
+attestation blockers are resolved.
+
 ## 2026-07-22 — v3.51.18 fail-closed entitlement outage recovery (unreleased)
 
 **Status:** source + hosted candidate on `codex/entitlement-outage-recovery`;
