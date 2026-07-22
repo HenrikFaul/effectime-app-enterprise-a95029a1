@@ -1,4 +1,8 @@
 const MEMBERS_INVITE_FEATURE_KEY = "members_invite";
+export const CSV_IMPORT_REQUIRED_FEATURE_KEYS = [
+  "csv_import",
+  "members_list",
+] as const;
 const ENABLED_FEATURE_SOURCES = new Set(["tier", "addon", "override"]);
 
 interface LookupError {
@@ -16,13 +20,34 @@ interface TenantWorkspaceQuery {
   maybeSingle(): PromiseLike<unknown>;
 }
 
-export interface MembersInviteServiceClient {
+export interface TenantFeatureServiceClient {
   from(table: "tenant_workspaces"): TenantWorkspaceQuery;
   rpc(
     functionName: "tenant_enabled_features",
     args: { _tenant_id: string },
   ): PromiseLike<unknown>;
 }
+
+export type MembersInviteServiceClient = TenantFeatureServiceClient;
+
+export type TenantFeatureEntitlement =
+  | { enabled: true; tenantId: string }
+  | {
+    enabled: false;
+    reason: "feature_disabled";
+    tenantId: string;
+    missingFeatureKeys: string[];
+  }
+  | {
+    enabled: false;
+    reason: "lookup_error";
+    step:
+      | "tenant_lookup"
+      | "tenant_response"
+      | "feature_lookup"
+      | "feature_response";
+    error: string;
+  };
 
 export type MembersInviteEntitlement =
   | { enabled: true; tenantId: string }
@@ -46,6 +71,15 @@ export type MembersInviteInvitationPlan =
   }
   | { kind: "dry_run" }
   | { kind: "issue" };
+
+export type CsvImportAccessPlan =
+  | { kind: "allowed" }
+  | {
+    kind: "blocked";
+    status: 403 | 503;
+    code: "FEATURE_DISABLED" | "ENTITLEMENT_UNAVAILABLE";
+    message: string;
+  };
 
 export function hasMemberInvitationCandidate(
   rows: Array<Record<string, unknown>>,
@@ -102,15 +136,16 @@ function isEnabledFeatureRow(value: unknown): boolean {
 }
 
 /**
- * Resolve the exact invitation entitlement from the service-only tenant
- * mapping and feature-union boundaries. Every lookup or response-contract
- * failure is explicit so callers can fail closed instead of treating it as a
- * disabled feature or an empty result.
+ * Resolve exact required features from the service-only tenant mapping and
+ * feature-union boundaries. Every lookup or response-contract failure is
+ * explicit so callers can fail closed instead of treating it as a disabled
+ * feature or an empty result.
  */
-export async function resolveMembersInviteEntitlement(
-  client: MembersInviteServiceClient,
+export async function resolveTenantFeatureEntitlement(
+  client: TenantFeatureServiceClient,
   workspaceId: string,
-): Promise<MembersInviteEntitlement> {
+  requiredFeatureKeys: readonly string[],
+): Promise<TenantFeatureEntitlement> {
   let tenantEnvelope: unknown;
   try {
     tenantEnvelope = await client
@@ -203,12 +238,74 @@ export async function resolveMembersInviteEntitlement(
     };
   }
 
-  return featureResult.data.some((row) =>
-      (row as Record<string, unknown>).feature_key ===
-        MEMBERS_INVITE_FEATURE_KEY
-    )
-    ? { enabled: true, tenantId }
-    : { enabled: false, reason: "feature_disabled", tenantId };
+  const enabledFeatureKeys = new Set(
+    featureResult.data.map((row) =>
+      (row as Record<string, unknown>).feature_key as string
+    ),
+  );
+  const missingFeatureKeys = [...new Set(requiredFeatureKeys)].filter(
+    (featureKey) => !enabledFeatureKeys.has(featureKey),
+  );
+
+  return missingFeatureKeys.length === 0 ? { enabled: true, tenantId } : {
+    enabled: false,
+    reason: "feature_disabled",
+    tenantId,
+    missingFeatureKeys,
+  };
+}
+
+/** Preserve the invitation-specific result contract for existing callers. */
+export async function resolveMembersInviteEntitlement(
+  client: MembersInviteServiceClient,
+  workspaceId: string,
+): Promise<MembersInviteEntitlement> {
+  const entitlement = await resolveTenantFeatureEntitlement(
+    client,
+    workspaceId,
+    [MEMBERS_INVITE_FEATURE_KEY],
+  );
+  if (entitlement.enabled || entitlement.reason === "lookup_error") {
+    return entitlement;
+  }
+  return {
+    enabled: false,
+    reason: "feature_disabled",
+    tenantId: entitlement.tenantId,
+  };
+}
+
+/** Require the import feature and its documented members-list dependency. */
+export function resolveCsvImportEntitlement(
+  client: TenantFeatureServiceClient,
+  workspaceId: string,
+): Promise<TenantFeatureEntitlement> {
+  return resolveTenantFeatureEntitlement(
+    client,
+    workspaceId,
+    CSV_IMPORT_REQUIRED_FEATURE_KEYS,
+  );
+}
+
+/** Convert internal resolution details into a stable, sanitized HTTP plan. */
+export function planCsvImportAccess(
+  entitlement: TenantFeatureEntitlement,
+): CsvImportAccessPlan {
+  if (entitlement.enabled) return { kind: "allowed" };
+  if (entitlement.reason === "lookup_error") {
+    return {
+      kind: "blocked",
+      status: 503,
+      code: "ENTITLEMENT_UNAVAILABLE",
+      message: "CSV import entitlement is temporarily unavailable",
+    };
+  }
+  return {
+    kind: "blocked",
+    status: 403,
+    code: "FEATURE_DISABLED",
+    message: "CSV import is not enabled for this workspace",
+  };
 }
 
 /**

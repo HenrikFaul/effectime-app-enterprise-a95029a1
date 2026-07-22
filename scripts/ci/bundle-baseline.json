@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "purpose": "Current production bundle debt ceiling. The measured v3.51.19 exact members_invite UI boundary produces 4,554,116 raw / 1,304,445 gzip JavaScript bytes: +332 raw / +23 gzip versus the reviewed v3.51.18 artifact. The increase is limited to the shared fail-closed invitation decision, entitlement-loss dialog reset and propagation to both invitation entry points; no dependency was added. Only the raw total ceiling advances by that reviewed delta while retaining the existing 128-byte cross-platform/SHA allowance. The previous gzip, largest-file and CSS ceilings remain unchanged because the current artifact still fits them. Further increases require an explicit reviewed baseline update.",
+  "purpose": "Current production bundle debt ceiling. The measured v3.51.20 exact csv_import and members_list UI boundary produces 4,554,710 raw / 1,304,738 gzip JavaScript bytes: +594 raw / +293 gzip versus the reviewed v3.51.19 artifact. The increase is limited to fail-closed import availability, entitlement-loss dialog reset and deterministic accessible focus restoration; no dependency was added. The total ceilings retain only the existing 128-byte raw and 279-byte gzip cross-platform/SHA allowances. Largest-file and CSS ceilings remain unchanged; the disabled-state class path was simplified so no new CSS debt is accepted. Further increases require an explicit reviewed baseline update.",
   "ceilings": {
     "javascript": {
-      "totalRawBytes": 4554244,
-      "totalGzipBytes": 1304701,
+      "totalRawBytes": 4554838,
+      "totalGzipBytes": 1305017,
       "largestRawBytes": 1775966,
       "largestGzipBytes": 564923
     },

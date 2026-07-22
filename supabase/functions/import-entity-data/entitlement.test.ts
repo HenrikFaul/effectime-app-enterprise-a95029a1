@@ -1,7 +1,10 @@
 import {
+  CSV_IMPORT_REQUIRED_FEATURE_KEYS,
   hasMemberInvitationCandidate,
   type MembersInviteServiceClient,
+  planCsvImportAccess,
   planMembersInviteInvitation,
+  resolveCsvImportEntitlement,
   resolveMembersInviteEntitlement,
 } from "./entitlement.ts";
 
@@ -128,6 +131,115 @@ Deno.test("enabled dry-runs report only a dry-run plan and never request issuanc
     planMembersInviteInvitation({ enabled: true, tenantId }, false),
     { kind: "issue" },
   );
+});
+
+Deno.test("csv_import requires the exact feature and documented members_list dependency", async () => {
+  const enabled = serviceClient({
+    featureResult: {
+      data: [
+        { feature_key: "members_list", source: "tier" },
+        { feature_key: "csv_import", source: "addon" },
+      ],
+      error: null,
+    },
+  });
+  const enabledEntitlement = await resolveCsvImportEntitlement(
+    enabled.client,
+    workspaceId,
+  );
+  assertEquals(CSV_IMPORT_REQUIRED_FEATURE_KEYS, [
+    "csv_import",
+    "members_list",
+  ]);
+  assertEquals(enabledEntitlement, { enabled: true, tenantId });
+  assertEquals(planCsvImportAccess(enabledEntitlement), { kind: "allowed" });
+
+  const missingDependency = serviceClient({
+    featureResult: {
+      data: [{ feature_key: "csv_import", source: "override" }],
+      error: null,
+    },
+  });
+  const missingDependencyEntitlement = await resolveCsvImportEntitlement(
+    missingDependency.client,
+    workspaceId,
+  );
+  assertEquals(missingDependencyEntitlement, {
+    enabled: false,
+    reason: "feature_disabled",
+    tenantId,
+    missingFeatureKeys: ["members_list"],
+  });
+  assertEquals(planCsvImportAccess(missingDependencyEntitlement), {
+    kind: "blocked",
+    status: 403,
+    code: "FEATURE_DISABLED",
+    message: "CSV import is not enabled for this workspace",
+  });
+});
+
+Deno.test("csv_import near matches and missing primary entitlement fail closed", async () => {
+  const missingPrimary = serviceClient({
+    featureResult: {
+      data: [
+        { feature_key: "members_list", source: "tier" },
+        { feature_key: "csv_import_preview", source: "addon" },
+      ],
+      error: null,
+    },
+  });
+  const entitlement = await resolveCsvImportEntitlement(
+    missingPrimary.client,
+    workspaceId,
+  );
+  assertEquals(entitlement, {
+    enabled: false,
+    reason: "feature_disabled",
+    tenantId,
+    missingFeatureKeys: ["csv_import"],
+  });
+  assertEquals(planCsvImportAccess(entitlement), {
+    kind: "blocked",
+    status: 403,
+    code: "FEATURE_DISABLED",
+    message: "CSV import is not enabled for this workspace",
+  });
+});
+
+Deno.test("csv_import malformed and failed feature envelopes map to a sanitized 503 plan", async () => {
+  const cases = [
+    serviceClient({ featureThrow: new Error("secret upstream detail") }),
+    serviceClient({ featureResult: null }),
+    serviceClient({
+      featureResult: {
+        data: [
+          { feature_key: "csv_import", source: "tier" },
+          { feature_key: "members_list", source: "unexpected" },
+        ],
+        error: null,
+      },
+    }),
+  ];
+
+  for (const harness of cases) {
+    const entitlement = await resolveCsvImportEntitlement(
+      harness.client,
+      workspaceId,
+    );
+    if (entitlement.enabled || entitlement.reason !== "lookup_error") {
+      throw new Error("Expected csv_import lookup failure");
+    }
+    const plan = planCsvImportAccess(entitlement);
+    assertEquals(plan, {
+      kind: "blocked",
+      status: 503,
+      code: "ENTITLEMENT_UNAVAILABLE",
+      message: "CSV import entitlement is temporarily unavailable",
+    });
+    if (JSON.stringify(plan).includes("secret upstream detail")) {
+      throw new Error("Sanitized plan leaked a lookup error");
+    }
+  }
 });
 
 Deno.test("tenant lookup and malformed mapping responses fail closed", async () => {

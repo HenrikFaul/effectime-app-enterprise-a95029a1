@@ -6,6 +6,7 @@ const root = join(process.cwd(), 'src', 'components');
 const sidebar = readFileSync(join(root, 'shell', 'WorkspaceSidebar.tsx'), 'utf8');
 const dashboard = readFileSync(join(root, 'enterprise', 'WorkspaceDashboard.tsx'), 'utf8');
 const memberList = readFileSync(join(root, 'enterprise', 'MemberList.tsx'), 'utf8');
+const importExportCenter = readFileSync(join(root, 'enterprise', 'import-export', 'ImportExportCenter.tsx'), 'utf8');
 const recoveryPanel = readFileSync(join(root, 'enterprise', 'EntitlementRecoveryPanel.tsx'), 'utf8');
 const revocationList = readFileSync(join(root, 'enterprise', 'ICalTokenRevocationList.tsx'), 'utf8');
 const pluginCleanup = readFileSync(join(root, 'marketplace', 'InstalledPluginCleanupPanel.tsx'), 'utf8');
@@ -89,6 +90,17 @@ describe('workspace navigation/content entitlement integration', () => {
       /canViewWorkspaceSettings && hasTabEntitlement\('settings'\)[\s\S]*?<WorkspaceSettings/,
     );
     expect(dashboard).not.toMatch(/<FeatureGate[^>]+feature="ical_feed"/);
+  });
+
+  it('uses one exact fail-closed CSV import decision without restricting export', () => {
+    expect(dashboard).toMatch(
+      /const canImport = isAdmin\s*&&\s*featureAccessAvailable\s*&&\s*isFeatureEnabled\('members_list'\)\s*&&\s*isFeatureEnabled\('csv_import'\);/,
+    );
+    expect(dashboard).toMatch(/<WorkspaceSettings[\s\S]*?canImport=\{canImport\}/);
+    expect(dashboard).toMatch(/<ImportExportCenter[\s\S]*?canImport=\{canImport\}/);
+    expect(importExportCenter).toContain("const [mode, setMode] = useState<ActionMode>('export');");
+    expect(importExportCenter).toContain("mode === 'import' && canImport");
+    expect(importExportCenter).toContain("mode === 'export' || canImport");
   });
 
   it('mounts a sanitized recovery surface outside every entitlement-gated tab', () => {

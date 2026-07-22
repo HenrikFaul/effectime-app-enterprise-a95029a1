@@ -218,7 +218,7 @@ acceptance szükséges; a funkció új kérelmet hoz létre, nem meglévő dönt
 | SET-002 | Szerepkör-jogosultságok | `?tab=settings` / `role-permissions` | owner | RolePermissionManager | verified |
 | SET-003 | Lokalizáció / fordítás | `?tab=settings` / `localization-settings` | owner/resourceAssistant | LocalizationSettings | verified |
 | SET-004 | Branding / arculat | `?tab=settings` | owner | BrandingManager | verified |
-| SET-005 | CSV import | `?tab=settings` | owner/resourceAssistant | CsvImportPanel | verified |
+| SET-005 | CSV import | `?tab=settings` | owner/resourceAssistant + `csv_import`; `members_list` dependency | ImportExportCenter | verified |
 | SET-006 | Értesítések | `?tab=settings` | owner/resourceAssistant | EnterpriseNotifications | verified |
 | SET-007 | Értesítési preferenciák | `?tab=settings` | member+ | NotificationPreferences | verified |
 | SET-008 | Integráció egészség | `?tab=settings` / `integration-health` | owner/resourceAssistant | IntegrationHealthCenter | verified |
