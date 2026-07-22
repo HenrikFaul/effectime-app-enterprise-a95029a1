@@ -143,6 +143,30 @@ describe('i18n key parity — EN and HU bundles', () => {
     }
   });
 
+  it('entitlement outage and token-revocation recovery keys are non-empty in every supported locale', () => {
+    const criticalKeys = [
+      'feature_gate.entitlement_unavailable_title',
+      'feature_gate.entitlement_unavailable_description',
+      'feature_gate.retry_entitlements',
+      'feature_gate.retrying_entitlements',
+      'ical_subscription.entitlement_unavailable_description',
+      'ical_subscription.revoke_card_title',
+      'ical_subscription.loading_summaries',
+      'ical_subscription.summary_load_failed',
+      'ical_subscription.retry_summary_load',
+      'ical_subscription.revoke_failed',
+      'ical_subscription.feed_revoked',
+      'ical_subscription.no_revocable_feeds',
+      'ical_subscription.scope_unknown',
+      'ical_subscription.delete_feed',
+    ];
+    for (const [locale, bundle] of supportedBundles) {
+      for (const key of criticalKeys) {
+        expect(bundle.get(key)?.trim(), `${locale} missing or empty: ${key}`).toBeTruthy();
+      }
+    }
+  });
+
   it('birthday milestone recovery keys are non-empty in every supported locale', () => {
     const criticalKeys = [
       'birthday_widget.loading',

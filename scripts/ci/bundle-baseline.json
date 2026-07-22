@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "purpose": "Current production bundle debt ceiling. The measured v3.51.15 owner-only installed-plugin recovery surface produces 4,537,693 raw / 1,299,419 gzip JavaScript bytes: +8,054 raw / +1,992 gzip (+0.178% raw) versus the reviewed v3.51.14 artifact. The total ceilings retain only the existing 128-byte raw and 279-byte gzip cross-platform/SHA allowances. Largest JavaScript raw rises by the measured 2,645-byte product-contract delta and remains exact; largest gzip retains only the existing 35-byte allowance. CSS raw rises by the measured 38-byte responsive wrapping rule while its gzip ceiling does not increase. Further increases require an explicit reviewed baseline update.",
+  "purpose": "Current production bundle debt ceiling. The measured v3.51.18 actor-scoped entitlement recovery, history/focus lifecycle and token-minimized iCal revocation surface produces 4,553,784 raw / 1,304,422 gzip JavaScript bytes: +15,980 raw / +4,958 gzip (+0.352% raw) versus the exact reviewed v3.51.17 local artifact. The increase is the localized fail-visible recovery UI, token-free summary/revoke lifecycle, actor-aware entitlement boundary, deterministic retry ownership and accessible deep-link recovery; no dependency was added. The total ceilings retain only the existing 128-byte raw and 279-byte gzip cross-platform/SHA allowances. Largest JavaScript raw rises by the measured 7,985-byte product-contract delta and remains exact; largest gzip retains only the existing 35-byte allowance. CSS is unchanged. Further increases require an explicit reviewed baseline update.",
   "ceilings": {
     "javascript": {
-      "totalRawBytes": 4537821,
-      "totalGzipBytes": 1299698,
-      "largestRawBytes": 1767981,
-      "largestGzipBytes": 562234
+      "totalRawBytes": 4553912,
+      "totalGzipBytes": 1304701,
+      "largestRawBytes": 1775966,
+      "largestGzipBytes": 564923
     },
     "css": {
       "totalRawBytes": 180900,
