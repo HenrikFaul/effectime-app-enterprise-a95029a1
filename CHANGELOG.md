@@ -1,7 +1,9 @@
 ## 2026-07-22 — v3.51.16 GitHub Actions Node 24 runtime hardening (unreleased)
 
-**Status:** local CI source candidate; no database, API, application dependency,
-product runtime or production deployment change.
+**Status:** stacked draft PR #187; implementation head
+`f92fdec011d1d9073bb989d42015bbca5b45754f`; hosted implementation gate 11/11
+PASS. No database, API, application dependency, product runtime or production
+deployment change.
 
 - **BIZONYÍTOTT:** v3.51.15 hosted run `29917203882` passed all 11 jobs but
   emitted a Node 20 action-runtime deprecation annotation on every job. GitHub
@@ -36,8 +38,16 @@ Edge 31/31 check plus 86/86 suite, release identity 55/55, Edge SBOM 7/7,
 dependency audit (0 vulnerabilities), secret scan (1,552 files), targeted
 ESLint and `git diff --check` PASS. The full lint ratchet remains unchanged at
 1,148 errors / 98 warnings. Local Android compilation is blocked by unaccepted
-SDK licences and iOS compilation requires macOS; the GitHub-hosted 11-job gate
-and zero-Node-20-annotation acceptance therefore remain mandatory after commit.
+SDK licences and iOS compilation requires macOS.
+
+Hosted validation: run `29920014033` passed all 11 jobs for implementation SHA
+`f92fdec…` / PR merge candidate `44c44c7…`, including Android unit/lint/assemble
+and the unsigned iOS simulator build. All 11 check-runs produced zero annotations
+and therefore zero Node 20 deprecations. Setup-node v5 logs prove Node 22.23.1,
+exactly six `package-manager-cache: false` DB jobs and five cached jobs. The
+hosted merge manifest is 62,981 bytes. Release evidence `8529577754` retains 30
+days, diagnostics `8529557269` 14 days, and unsigned Android `8529531692` seven
+days. A final docs-head rerun remains mandatory after recording this evidence.
 
 Rollback is a workflow/checker/version/documentation commit revert. No data,
 schema, API, package dependency, application bundle or end-user behavior is
