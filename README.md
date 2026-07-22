@@ -336,8 +336,10 @@ compilation plus the five PostgreSQL contracts. Release evidence artifact
 `8510309445`, diagnostics artifact `8510306792` and unsigned Android artifact
 `8510265497` prove this source candidate, not a production deployment.
 
-The stacked v3.51.7 local release candidate closes the remaining direct
-business-role allocation boundary. `BusinessRoleManager` now edits a bounded
+The stacked v3.51.7 release candidate in draft PR
+[#178](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/pull/178)
+closes the remaining direct business-role allocation boundary.
+`BusinessRoleManager` now edits a bounded
 snapshot with at most 20 canonical roles, exactly 100.00 percent allocation and
 exactly one priority role, then saves through the same optimistic atomic member-
 profile RPC. Tenant-wide business-role deletion is one server transaction with
@@ -363,8 +365,10 @@ and 76 files / 992 tests in the full coverage run (51.27% statements/lines,
 75.11% branches, 46.39% functions). The reviewed bundle is 4,527,940 raw /
 1,296,700 gzip JavaScript bytes (+0.417% raw versus v3.51.6), with an exact
 ratchet rather than broad headroom. The improved ESLint baseline is 1,148 errors
-/ 98 warnings with 11 removed fingerprints. Hosted PR/workflow evidence for
-v3.51.7 is still pending.
+/ 98 warnings with 11 removed fingerprints. Hosted run `29879329719` passed all
+10/10 jobs for source head `77531b818b95a1cbe54a8d20abc3e3047a0c1c1e`;
+release evidence `8514194752`, diagnostics `8514193053` and unsigned Android
+artifact `8514165397` prove the source/CI candidate, not a production deploy.
 
 Production is **NO-GO**: the recurring identity-cleanup scheduler is not
 installed, and the existing migration-history drift, failed clean replay/linked

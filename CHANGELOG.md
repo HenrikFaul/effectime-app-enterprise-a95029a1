@@ -1,15 +1,19 @@
 ## 2026-07-22 — v3.51.7 Atomic business-role allocation and identity compensation (unreleased)
 
-**Status:** local release candidate; hosted PR/workflow evidence is pending. The
-focused browser/client suite is 99/99, Edge helper tests are 60/60, all 30/30
-Edge entrypoints pass, the isolated database runner is 15/15, and the pinned
-PostgreSQL 18.4 member-profile/business-role/identity-saga contract and
-typecheck PASS. The complete Vitest coverage run is 76 files / 992 tests PASS
-(51.27% statements/lines, 75.11% branches, 46.39% functions). The strict ESLint
-ratchet records the improved current baseline of 1,148 errors / 98 warnings, 11
-fewer fingerprints than its prior boundary. These are local source-contract
-results, not a linked-database apply, hosted native artifact or production
-deployment.
+**Status:** stacked draft PR
+[#178](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/pull/178)
+at source commit `77531b818b95a1cbe54a8d20abc3e3047a0c1c1e`. Hosted Quality
+Gate run `29879329719` passed all 10/10 jobs; release evidence artifact
+`8514194752`, diagnostics artifact `8514193053` and unsigned Android artifact
+`8514165397` retain the candidate evidence. The focused browser/client suite is
+99/99, Edge helper tests are 60/60, all 30/30 Edge entrypoints pass, the isolated
+database runner is 15/15, and the pinned PostgreSQL 18.4 member-profile/business-
+role/identity-saga contract and typecheck PASS. The complete Vitest coverage run
+is 76 files / 992 tests PASS (51.27% statements/lines, 75.11% branches, 46.39%
+functions). The strict ESLint ratchet records the improved current baseline of
+1,148 errors / 98 warnings, 11 fewer fingerprints than its prior boundary. These
+are source/CI contract results, not a linked-database apply, signed native
+artifact or production deployment.
 
 - Completes the `BusinessRoleManager` P1 boundary with bounded allocation
   drafts and server-backed writes. A new snapshot accepts at most 20 canonical
