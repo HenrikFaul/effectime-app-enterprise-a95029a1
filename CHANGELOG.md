@@ -1,8 +1,8 @@
 ## 2026-07-22 — v3.51.20 CSV import entitlement parity (unreleased)
 
-**Status:** local source candidate on `codex/csv-import-entitlement`.
-Production deployment has not been performed. No database migration or new
-dependency is introduced.
+**Status:** source + hosted candidate on `codex/csv-import-entitlement`; draft
+PR #191. Production deployment has not been performed. No database migration or
+new dependency is introduced.
 
 - **BIZONYÍTOTT:** `csv_import` is a Pro/Enterprise feature with the documented
   `members_list` dependency, but the active `ImportExportCenter` exposed Import
@@ -28,10 +28,14 @@ Local validation is green: focused UI/source contracts 23/23, exact Deno helper
 10/10, full Edge 96/96, 31/31 entrypoint checks with zero diagnostics, and the
 complete web coverage run 90 files / 1092/1092. Typecheck, unchanged 1,148/98
 lint fingerprint, production build, reviewed bundle budget, web E2E 7/7,
-Android/iOS sync, mobile foundation 390/390 and mobile E2E 2/2 pass. The current
+Android/iOS sync, clean release foundation 410/410 and mobile E2E 2/2 pass. The current
 secret scan covers 1,575 repository text files with zero findings, dependency
 audit reports zero known vulnerabilities, and the exact Edge source identity is
-`a5f6228…` (91 files / 882,441 canonical bytes). Hosted evidence is pending.
+`a5f6228…` (91 files / 882,441 canonical bytes). The exact `91696b6…` source
+head's run `29942854980` is 12/12 PASS with zero annotations; PR checkout
+`d6994f3…` is the attested potential merge. Retained artifacts are release
+evidence `8538995651`, diagnostics `8538993487`, and unsigned Android
+`8538946339`.
 
 Rollback is the code/test/version/documentation commit revert. Rolling back only
 the Edge gate would reopen the entitlement bypass, so it requires disabling the
