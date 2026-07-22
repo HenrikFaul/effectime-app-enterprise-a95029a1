@@ -1,8 +1,8 @@
 ## 2026-07-22 — v3.51.22 CSV import client integrity boundary (unreleased)
 
-**Status:** local candidate on `codex/csv-import-client-boundary`. Production
-deployment has not been performed. No database migration, Edge contract or new
-dependency is introduced.
+**Status:** source + hosted candidate on `codex/csv-import-client-boundary`;
+draft PR #193. Production deployment has not been performed. No database
+migration, Edge contract or new dependency is introduced.
 
 - **BIZONYÍTOTT:** the active Import Wizard advanced a selected file from step
   1 to an auto-skipped step 2 that had no forward action; treated every
@@ -47,18 +47,21 @@ Import Wizard files with 89/89 tests; complete coverage 96 files / 1,190/1,190
 tests (56.50% statements/lines, 80.84% branches, 39.56% functions);
 TypeScript; zero-diagnostic targeted ESLint; and the reduced 1,121-error/
 98-warning lint fingerprint. Production build and the explicitly reviewed
-4,570,088 raw / 1,310,139 gzip JavaScript bundle ceiling pass; largest chunk is
-1,783,491 raw / 567,359 gzip and CSS remains 180,900 / 29,610. Web E2E is 7/7,
+4,570,199 raw / 1,310,246 gzip clean source-head JavaScript bundle ceiling pass;
+the hosted merge candidate is 4,570,181 / 1,310,205. Largest chunk is
+1,783,491 raw / 567,356 gzip and CSS remains 180,900 / 29,610. Web E2E is 7/7,
 mobile source 228/228,
-deterministic Capacitor sync, mobile foundation 390/390 and mobile E2E 2/2
+deterministic Capacitor sync, mobile release foundation 410/410 and mobile E2E 2/2
 pass. Full Edge is 109/109, entrypoint check 31/31, log safety and ratchet unit
 24/24 pass. All seven isolated PostgreSQL contracts, migration/schema
 provenance, release identity 55/55 and Edge SBOM unit 7/7 pass. Dependency
-audit reports zero vulnerabilities; current secret scan covers 1,585 files and
-the fetched-history scan covers 894 commits / 3,754 blobs / 219,179,108 bytes
-with zero findings. Exact Edge identity remains `060c81a…` (95 files / 913,321
-canonical bytes). Hosted candidate and clean-head release artifacts are still
-pending and are not claimed here.
+audit reports zero vulnerabilities; the hosted current secret scan covers 1,586
+files and the fetched-history scan covers 894 commits / 3,779 blobs /
+222,477,389 bytes with zero findings. Exact Edge identity remains `060c81a…`
+(95 files / 913,321 canonical bytes). Exact source head `15b482e…` and potential
+merge `86d89b3…` passed hosted Quality Gate run `29956363505` with all 12 jobs
+successful and zero annotations. Retained release/diagnostics/unsigned Android
+artifacts are `8544266999` / `8544265085` / `8544223123`.
 
 Rollback is a single source/test/i18n/version/documentation commit revert. The
 request body, Edge response contract and database schema are unchanged.
