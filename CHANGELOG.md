@@ -1,9 +1,10 @@
 ## 2026-07-22 — v3.51.17 complete Git-history secret gate (unreleased)
 
-**Status:** implementation commit
-`ee032dcbf32f17f0cadab7f60609490b4e54e40e`; stacked draft PR and hosted
-Quality Gate pending. No database, API, application dependency, product runtime
-or production deployment change.
+**Status:** implementation head
+`ce7914114a345aafb6b075b399f6edc47853c3b7`; stacked draft PR #188. The
+initial hosted run `29926716039` passed 11/11, but a final run is pending for the
+explicit detached-HEAD inventory follow-up. No database, API, application
+dependency, product runtime or production deployment change.
 
 - **BIZONYÍTOTT:** the previous high-confidence scanner inspected only the
   current tracked/untracked working tree. A credential committed and deleted in
@@ -21,21 +22,21 @@ or production deployment change.
   token-bearing filename or binary signing file cannot hide behind a safe-path
   alias of the same deduplicated blob.
 - Diagnostics contain only escaped path/blob metadata, line and detector; match
-  values and source lines are never retained or printed. Nine deterministic
+  values and source lines are never retained or printed. Ten deterministic
   Node tests cover every detector family, anon/service-role JWT separation,
   committed-then-deleted blob/filename/commit/tag secrets, duplicate binary
-  signing aliases, process-level exit/redaction, clean SHA-1/SHA-256 history,
-  oversized objects, shallow clones, missing objects and raw Git-error
-  redaction for an attacker-controlled broken ref.
+  signing aliases, an unreferenced detached HEAD, process-level exit/redaction,
+  clean SHA-1/SHA-256 history, oversized objects, shallow clones, missing
+  objects and raw Git-error redaction for an attacker-controlled broken ref.
 - The verify job already uses full-history checkout. It now runs scanner tests,
   current-tree scan and reachable-history scan in that exact order before
   dependency installation; the fail-closed source contract enforces all three
   commands and `fetch-depth: 0`.
 
-Local focused validation: scanner tests 9/9; current tree 1,556 text files;
-implementation-head history 882 commit objects, zero annotated tag objects,
-3,649 unique blobs, 1,618 scanned historical paths, 3,602 text and 47 binary
-blobs / 208,331,486 streamed object bytes; mobile/CI source contract 226/226;
+Local focused validation: scanner tests 10/10; current tree 1,556 text files;
+exact `ce79141…` implementation-head history 884 commit objects, zero annotated
+tag objects, 3,653 unique blobs, 1,618 scanned historical paths, 3,606 text and
+47 binary blobs / 208,967,248 streamed object bytes; mobile/CI source contract 226/226;
 targeted ESLint and diff check PASS. Full local regression also passed: 80 files
 and 1,034/1,034 coverage tests; typecheck; unchanged 1,148-error/98-warning lint
 ratchet; 4,092-module production build; bundle ceiling; web smoke 7/7; mobile
