@@ -1,7 +1,9 @@
 ## 2026-07-22 — v3.51.15 Owner-only installed-plugin cleanup after downgrade/archive (unreleased)
 
-**Status:** local source candidate; no database, API or dependency change and no
-production deployment.
+**Status:** stacked draft PR
+[#186](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/pull/186)
+at implementation head `cfb132251c871c12b4e99395a3274dbc642ff1b5`;
+source pushed, linked database and production not deployed.
 
 - **BIZONYÍTOTT:** the marketplace catalog is protected by
   `plugin_marketplace_browse`, while the existing owner-authorized uninstall RPC
@@ -34,11 +36,24 @@ PASS; full coverage 80 files and 1,034/1,034 tests (51.60% statements/lines,
 smoke 7/7, Android/iOS deterministic sync, mobile source/runtime/E2E
 183/345/2, Edge 86/86, release identity 55/55, Edge SBOM 7/7, migration/schema
 provenance, 1,552-file secret scan and zero-vulnerability dependency audit PASS.
-The reviewed bundle is 4,537,693 raw / 1,299,419 gzip JavaScript bytes; largest
-JavaScript is 1,767,981 / 562,199 and CSS is 180,900 / 29,610. The narrow budget
-increase is recorded explicitly; no unbounded ceiling was introduced. Clean-HEAD
-mobile release attestation and hosted CI remain pending until this source is
-committed.
+The clean implementation HEAD passes all 365 mobile release assertions and
+produces a 62,915-byte immutable manifest for exact SHA `cfb1322…`. Its reviewed
+bundle is 4,537,804 raw / 1,299,567 gzip JavaScript bytes; largest JavaScript is
+1,767,981 / 562,184 and CSS is 180,900 / 29,610. The narrow budget increase is
+recorded explicitly; no unbounded ceiling was introduced.
+
+Hosted Quality Gate run
+[`29917203882`](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/actions/runs/29917203882)
+passes all 11 jobs reported against the implementation head. GitHub's
+pull-request checkout validates potential merge commit
+`1fd445d8614c9d73062f0b04ebca25b5d5e93abb`: 80/80 test files and 1,034/1,034
+tests, exact hosted bundle 4,537,786 raw / 1,299,514 gzip JavaScript bytes,
+largest 1,767,981 / 562,186 and CSS 180,900 / 29,610, web smoke 7/7 and native
+shell smoke 2/2 PASS. Release evidence `8528453444`, diagnostics `8528450962`
+and unsigned Android `8528411950` were retained; locked iOS simulator compile
+also passes. The hosted 62,981-byte manifest, web SBOM (707 components) and Edge
+SBOM (464 components, 31 entrypoints) attest the merge candidate, not a store or
+production deployment.
 
 **BIZONYÍTOTT limitation:** the panel is mounted inside the Settings tab, which
 still requires an enabled `ws_general` feature. Freemium and Pro include that
