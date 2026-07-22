@@ -1,10 +1,9 @@
 ## 2026-07-22 — v3.51.17 complete Git-history secret gate (unreleased)
 
-**Status:** implementation head
-`ce7914114a345aafb6b075b399f6edc47853c3b7`; stacked draft PR #188. The
-initial hosted run `29926716039` passed 11/11, but a final run is pending for the
-explicit detached-HEAD inventory follow-up. No database, API, application
-dependency, product runtime or production deployment change.
+**Status:** stacked draft PR #188; implementation head
+`ce7914114a345aafb6b075b399f6edc47853c3b7`; hosted implementation gate
+`29927511094` passed 11/11. No database, API, application dependency, product
+runtime or production deployment change.
 
 - **BIZONYÍTOTT:** the previous high-confidence scanner inspected only the
   current tracked/untracked working tree. A credential committed and deleted in
@@ -45,8 +44,19 @@ contracts; Edge 31-entrypoint check plus 86/86 suite; release, migration, schema
 SBOM and source-identity gates; and dependency audit with zero vulnerabilities.
 The exact clean implementation head rebuilt and deterministically synchronized
 the shared Android/iOS artifact with zero native drift; release contract 408/408
-and a 62,910-byte manifest attesting `ee032dc…` PASS. Hosted evidence remains
-mandatory before the candidate is complete.
+and a 62,910-byte manifest attesting `ee032dc…` PASS. The hosted gate below
+completes the source-candidate evidence.
+
+Hosted validation: run `29927511094` passed all 11 jobs for source head
+`1c1f4bc…` / PR merge candidate `5edb21c…`, with zero annotations. The scanner
+suite passed 10/10; current tree scanned 1,556 files; explicit HEAD + fetched-ref
+history scanned 884 commit objects, zero annotated tags, 3,655 blobs, 1,618
+historical paths, 3,608 text plus 47 binary blobs / 209,574,766 bytes with zero
+findings. Full coverage remained 80 files / 1,034 tests, mobile contract 388/388,
+Android unit/lint/assemble and locked unsigned iOS simulator compile passed.
+Release evidence `8532684019` retains 30 days, diagnostics `8532681136` 14 days,
+and unsigned Android `8532609597` seven days; the hosted 62,981-byte manifest
+attests the merge candidate.
 
 Rollback is a workflow/checker/scanner/version/documentation commit revert.
 Production remains **NO-GO** because migration history, restored staging,
