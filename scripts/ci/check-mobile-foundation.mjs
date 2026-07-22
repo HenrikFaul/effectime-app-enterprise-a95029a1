@@ -1101,8 +1101,105 @@ function checkNativeCiSource() {
     releaseCheckIndex >= 0 && lockedResolveIndex >= 0 && releaseCheckIndex < lockedResolveIndex,
     "iOS CI must validate the committed release contract before resolving the locked Swift graph.",
   );
+
+  const node24ActionPins = [
+    [
+      "actions/checkout",
+      "actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0",
+      11,
+      "checkout",
+    ],
+    [
+      "actions/setup-node",
+      "actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0",
+      11,
+      "setup-node",
+    ],
+    [
+      "actions/upload-artifact",
+      "actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0",
+      4,
+      "upload-artifact",
+    ],
+    [
+      "actions/setup-java",
+      "actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0",
+      1,
+      "setup-java",
+    ],
+    [
+      "denoland/setup-deno",
+      "denoland/setup-deno@22d081ff2d3a40755e97629de92e3bcbfa7cf2ed # v2.0.5",
+      4,
+      "setup-deno",
+    ],
+  ];
+  for (const [actionFamily, pin, expectedCount, actionName] of node24ActionPins) {
+    const actualCount = workflow.split(pin).length - 1;
+    const familyCount = workflow.split(`${actionFamily}@`).length - 1;
+    assert(
+      actualCount === expectedCount,
+      `Quality CI must use the reviewed Node 24 ${actionName} pin exactly ${expectedCount} times; found ${actualCount}.`,
+    );
+    assert(
+      familyCount === expectedCount,
+      `Quality CI must not use an additional or alternate ${actionName} pin; expected ${expectedCount} total references, found ${familyCount}.`,
+    );
+  }
+  const expectedActionReferenceCount = node24ActionPins.reduce(
+    (total, [, , expectedCount]) => total + expectedCount,
+    0,
+  );
+  // Count every YAML `uses:` token, including canonical multi-line steps,
+  // shorthand `- uses:` steps and flow-style mappings. A new syntax shape must
+  // fail closed instead of bypassing the reviewed action-family allowlist.
+  const actionReferenceCount = workflow.match(/\buses\s*:/gu)?.length ?? 0;
   assert(
-    !/^\s*uses:\s*[^\s]+@(?![a-f0-9]{40}\s*(?:#|$))/mu.test(workflow),
+    actionReferenceCount === expectedActionReferenceCount,
+    `Quality CI must use only the ${expectedActionReferenceCount} reviewed external action references; found ${actionReferenceCount}.`,
+  );
+
+  const jobSlice = (jobName, nextJobName) => {
+    const start = workflow.indexOf(`  ${jobName}:`);
+    const end = nextJobName ? workflow.indexOf(`  ${nextJobName}:`, start) : workflow.length;
+    assert(start >= 0 && end > start, `Quality CI job ${jobName} must remain discoverable.`);
+    return workflow.slice(start, end);
+  };
+  const uncachedNodeJobs = [
+    ["database-contract", "hr-workflow-database-contract"],
+    ["hr-workflow-database-contract", "admin-override-database-contract"],
+    ["admin-override-database-contract", "profiles-tenant-database-contract"],
+    ["profiles-tenant-database-contract", "member-profile-save-database-contract"],
+    ["member-profile-save-database-contract", "recovered-surface-acl-database-contract"],
+    ["recovered-surface-acl-database-contract", "verify"],
+  ];
+  for (const [jobName, nextJobName] of uncachedNodeJobs) {
+    const job = jobSlice(jobName, nextJobName);
+    assert(
+      job.includes("node-version: 22") &&
+        job.includes("package-manager-cache: false") &&
+        !job.includes("cache: npm"),
+      `Database contract job ${jobName} must keep Node 22 and explicitly disable setup-node v5 automatic caching.`,
+    );
+  }
+  const cachedNodeJobs = [
+    ["verify", "android-compile"],
+    ["android-compile", "ios-compile"],
+    ["ios-compile", "edge-safety"],
+    ["edge-safety", "edge-check"],
+    ["edge-check", undefined],
+  ];
+  for (const [jobName, nextJobName] of cachedNodeJobs) {
+    const job = jobSlice(jobName, nextJobName);
+    assert(
+      job.includes("node-version: 22") &&
+        job.includes("cache: npm") &&
+        !job.includes("package-manager-cache: false"),
+      `Quality CI job ${jobName} must keep the explicit reviewed Node 22 npm-cache contract.`,
+    );
+  }
+  assert(
+    !/^\s*(?:-\s*)?uses:\s*[^\s]+@(?![a-f0-9]{40}\s*(?:#|$))/mu.test(workflow),
     "Every GitHub Action in quality.yml must be pinned to a full commit SHA.",
   );
 }
