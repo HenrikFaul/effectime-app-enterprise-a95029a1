@@ -209,6 +209,7 @@ describe('i18n key parity — EN and HU bundles', () => {
       'import_wizard.btn_remove_file',
       'import_wizard.duplicate_mapping',
       'export_wizard.export_error',
+      'export_center.toast_export_error',
     ];
     for (const [locale, bundle] of supportedBundles) {
       for (const key of criticalKeys) {

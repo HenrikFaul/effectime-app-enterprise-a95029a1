@@ -1,3 +1,64 @@
+## 2026-07-22 — v3.51.23 export permission and client-integrity boundary (unreleased)
+
+**Status:** source + hosted candidate on `codex/export-permission-integrity`;
+draft PR #194.
+Production deployment has not been performed. No database migration, Edge wire
+contract or new dependency is introduced.
+
+- **BIZONYÍTOTT:** the shared Reports/Audit/Export tab previously mounted all
+  three independently configurable capabilities when any sibling permission
+  and any sibling entitlement admitted the tab. It now intersects each exact
+  role permission with its own `run_report`, `audit_log` or `export_center`
+  entitlement before either navigation or content mounting. Report-adjacent
+  feature gates remain nested below report access and cannot broaden RBAC.
+- Hardens the active legacy leave export from partial/false success to a typed,
+  fail-closed boundary. Leave, profile, membership, holiday, company-day,
+  filter and audit provider errors, rejected transports and successful-but-null
+  reads now stop the flow with stable codes and no provider detail. Audit is
+  required before browser download; formula-leading CSV cells reuse the shared
+  neutralizer; XML/HTML values are escaped; overlap queries include requests
+  crossing the selected date boundary; and Excel XML is truthfully named and
+  audited as `.xls`. XML 1.0-forbidden control characters and lone surrogates
+  are replaced before XML or SpreadsheetML generation.
+- Adds synchronous single-flight guards and workspace-generation checks for
+  filter and export requests, so double clicks, late workspace responses and
+  stale `finally` handlers cannot start duplicate downloads or clear a newer
+  operation. All eight locales receive a stable generic export error.
+- Reduces the ESLint debt fingerprint from 1,121 to 1,108 errors with warnings
+  unchanged at 98. The reviewed JavaScript artifact is 4,573,782 raw /
+  1,312,186 gzip bytes; the +3,583 / +1,940 increase from v3.51.22 is under
+  0.15%, has no CSS/dependency growth, and is recorded in the explicit bundle
+  ceiling.
+- **Known P1 release blockers remain:** browser-side RLS does not enforce the
+  exact export permission, the audit insert can still accept caller-supplied
+  actor metadata, and multi-query exports do not provide an atomic, exact-count
+  snapshot. A server-owned export RPC/job must check permission and entitlement,
+  derive `auth.uid()`, materialize a complete snapshot and atomically audit it.
+  Migration-history drift and the lack of isolated staging make a speculative
+  production database change unsafe in this package.
+
+Local validation is green: focused access/export/i18n contracts 83/83; complete
+coverage 99 files / 1,223/1,223 tests (56.92% statements/lines, 80.63%
+branches, 40.45% functions); TypeScript; the reduced 1,108-error/98-warning
+lint fingerprint; production build and reviewed bundle ceiling; web E2E 7/7;
+mobile source 228/228, deterministic Android/iOS sync and mobile E2E 2/2. The
+clean-worktree-only native release assertion is also 410/410 PASS. The hosted
+Quality Gate run `29961698732` passed all 12/12 jobs with zero annotations on
+exact source head `52a8f72…` and potential merge `6a9b7fc…`.
+
+The first hosted potential-merge build measured 4,573,875 raw / 1,312,277 gzip
+JavaScript bytes, 93 / 91 bytes above the local release-SHA variant. Eleven of
+twelve jobs passed; only the raw ceiling was 74 bytes too narrow. The reviewed
+baseline now records both artifacts and retains only 128 raw bytes above the
+hosted measurement. The replacement hosted artifact is 4,573,875 raw /
+1,312,283 gzip JavaScript bytes, largest 1,784,589 / 567,743; release evidence
+`8546300258`, diagnostics `8546297683` and Android `8546246028` were retained.
+
+Rollback is the source/test/i18n/version/documentation commit revert. It does
+not undo an already downloaded file or audit row. Production remains **NO-GO**
+for the inherited migration-history, staging, server-owned export snapshot,
+Edge parity and same-SHA live-attestation blockers.
+
 ## 2026-07-22 — v3.51.22 CSV import client integrity boundary (unreleased)
 
 **Status:** source + hosted candidate on `codex/csv-import-client-boundary`;

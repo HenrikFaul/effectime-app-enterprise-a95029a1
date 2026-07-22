@@ -776,6 +776,17 @@ distinguishes this uncertainty but does not make the writes transactional.
   preserve this ordering contract.
 - The UI mirrors this decision to disable and explain Import without removing
   Export. The Edge check remains authoritative for web, Android and iOS clients.
+- As of v3.51.23, the shared Reports/Audit/Export shell independently intersects
+  each role permission with its exact entitlement: `reports` + `run_report`,
+  `audit` + `audit_log`, and `export` + `export_center`. An umbrella tab or a
+  sibling capability cannot broaden the client mount decision.
+- **Current export authorization gap (v3.51.23):** the active legacy leave
+  exporter still reads browser-visible tables under their domain RLS policies.
+  Those policies do not constitute an authoritative `export` permission plus
+  `export_center` entitlement decision. The target is a server-owned export
+  RPC/job that checks both exact gates, derives the actor from `auth.uid()` and
+  returns an attested complete snapshot. Client gating is defense in depth,
+  not the production authorization boundary.
 - The handler resolves authorization and references from the requesting
   workspace and create paths write that workspace identity. This is the current
   tenant boundary, not a proof that every mutation is atomically protected from
@@ -803,6 +814,15 @@ as a bounded warning and cannot retroactively roll back those writes. A
 guaranteed `import.failed` event and atomic coupling between mutations and the
 completion audit remain gaps. Audit and log metadata use bounded codes and do
 not include raw backend details.
+
+As of v3.51.23, the active legacy leave exporter requires a successful audit
+insert before requesting the browser download and rejects provider errors,
+transport rejection and null read responses. This improves fail-closed client
+behavior but does not make the audit authoritative: the current INSERT policy
+does not derive `actor_id` from `auth.uid()`, and the data reads plus audit are
+not one transaction. The newer Export Wizard also still needs the same
+audit-before-download boundary. Production export requires one server-owned,
+idempotent snapshot/audit receipt rather than a caller-supplied actor record.
 
 ### 11.7 Row-Level Error Reporting
 

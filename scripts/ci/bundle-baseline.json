@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "purpose": "Current production bundle debt ceiling. The v3.51.22 CSV import client-integrity boundary measures 4,570,199 raw / 1,310,246 gzip JavaScript bytes on the clean source head and 4,570,181 / 1,310,205 on the hosted PR merge candidate. Against the committed v3.51.20 measured artifact (4,554,710 / 1,304,738), the larger source measurement is +15,489 raw / +5,508 gzip (under 0.43%) across the v3.51.21 server-error and v3.51.22 client-integrity boundaries: deterministic response validation, versioned guidance detection, source-index preservation, last-selection-wins parsing, duplicate-submit and mapping-collision guards, bounded error-body reads, accessibility semantics, and localized recovery copy. No database, Edge wire contract, CSS, dependency or speculative request timeout was added. The total ceilings retain only the existing 128-byte raw and 279-byte gzip cross-platform/SHA allowances; largest gzip retains the existing 35-byte allowance. Further increases require an explicit reviewed baseline update.",
+  "purpose": "Current production bundle debt ceiling. The v3.51.23 export permission and client-integrity boundary measures 4,573,782 raw / 1,312,186 gzip JavaScript bytes on the reviewed Windows source tree and 4,573,875 raw / 1,312,277 gzip on hosted Linux potential-merge SHA 7174d37. Against the v3.51.22 clean source artifact (4,570,199 / 1,310,246), the source delta is +3,583 raw / +1,940 gzip (under 0.15%) for exact reports/audit/export permission-entitlement isolation, typed fail-closed legacy export reads, stable transport/artifact/download error codes, stale-scope and single-flight guards, pre-download audit enforcement, overlap-correct leave selection, truthful XLS naming, XML 1.0 character filtering, XML/HTML escaping and shared formula-neutralized CSV generation. No database, Edge wire contract, CSS or dependency was added. The hosted measurement is 93 raw / 91 gzip bytes above the local artifact solely from the release-SHA build variant. The reviewed ceilings leave 128-byte raw and 52-byte gzip total allowances above that hosted artifact; largest raw and gzip leave 128-byte and 34-byte allowances. Further increases require an explicit reviewed baseline update.",
   "ceilings": {
     "javascript": {
-      "totalRawBytes": 4570216,
-      "totalGzipBytes": 1310418,
-      "largestRawBytes": 1783491,
-      "largestGzipBytes": 567394
+      "totalRawBytes": 4574003,
+      "totalGzipBytes": 1312329,
+      "largestRawBytes": 1784717,
+      "largestGzipBytes": 567768
     },
     "css": {
       "totalRawBytes": 180900,
