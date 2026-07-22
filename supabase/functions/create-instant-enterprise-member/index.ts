@@ -1,5 +1,14 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.98.0";
 import { corsHeaders } from "../_shared/cors.ts";
+import {
+  classifyCreatedIdentityPreparationError,
+  cleanupRegisteredCreatedIdentity,
+  completeCreatedIdentityProvisioningVerified,
+  isCompletedCreatedIdentityCleanupReceipt,
+  parseCreatedIdentityCleanupPreparationResult,
+  parseRegisteredCreatedIdentityProvisioningReceipt,
+} from "../_shared/created-identity-cleanup.ts";
+import { checkInstantMemberCreationAuthorization } from "../_shared/instant-member-authorization.ts";
 
 // Pool of realistic Hungarian names for instant users.
 // Different from DEMO_PERSONAS so no collision with demo workspace members.
@@ -81,25 +90,25 @@ Deno.serve(async (req) => {
     const workspaceId = typeof body.workspace_id === "string" ? body.workspace_id : "";
     if (!workspaceId) return jsonRes({ error: "Hiányzó workspace_id." }, 400);
 
-    const { data: adminMembership, error: adminMembershipError } = await admin
-      .from("enterprise_memberships")
-      .select("id, role, status")
-      .eq("workspace_id", workspaceId)
-      .eq("user_id", user.id)
-      .eq("status", "active")
-      .in("role", ["owner", "resourceAssistant"])
-      .maybeSingle();
-
-    if (adminMembershipError) {
-      console.error("Instant member admin check error:", adminMembershipError);
-      return jsonRes({ error: "Nem sikerült ellenőrizni a jogosultságot." }, 500);
+    const authorization = await checkInstantMemberCreationAuthorization(
+      userClient,
+      admin,
+      workspaceId,
+      user.id,
+    );
+    if (!authorization.allowed) {
+      console.warn(
+        `[instant-member-authz] denied reason=${authorization.reason} step=${authorization.step}`,
+      );
+      return authorization.status === 503
+        ? jsonRes({ error: "A jogosultság-ellenőrzés átmenetileg nem elérhető." }, 503)
+        : jsonRes({ error: "Nincs jogosultság instant tag létrehozásához." }, 403);
     }
-    if (!adminMembership) return jsonRes({ error: "Nincs jogosultság instant tag létrehozásához." }, 403);
 
     const [membersRes, officesRes, skillsRes, allocationsRes] = await Promise.all([
       admin
         .from("enterprise_memberships")
-        .select("id, team, location, business_role, city, office_id, weekly_capacity_hours, base_working_hours, working_pattern")
+        .select("id, user_id, team, location, business_role, city, office_id, weekly_capacity_hours, base_working_hours, working_pattern")
         .eq("workspace_id", workspaceId)
         .eq("status", "active"),
       admin
@@ -121,7 +130,7 @@ Deno.serve(async (req) => {
     if (skillsRes.error) return jsonRes({ error: "Nem sikerült betölteni a skill értékkészletet." }, 500);
     if (allocationsRes.error) return jsonRes({ error: "Nem sikerült betölteni a hozzárendelési értékkészletet." }, 500);
 
-    const members = (membersRes.data || []).filter((m: any) => m.id !== adminMembership.id);
+    const members = (membersRes.data || []).filter((member) => member.user_id !== user.id);
     const offices = officesRes.data || [];
     const skills = skillsRes.data || [];
     const existingAllocations = (allocationsRes.data || []).filter((a: any) =>
@@ -153,11 +162,76 @@ Deno.serve(async (req) => {
     const displayName = persona.displayName;
     const email = `instant-${workspaceId.slice(0, 8)}-${Date.now()}-${randomToken(3)}@instant.syncfolk.local`;
     const password = `${randomToken(18)}Aa1!`;
+    const cleanupIntentId = crypto.randomUUID();
+
+    const { data: registrationData, error: registrationError } = await admin.rpc(
+      "register_created_enterprise_identity_provisioning_v1",
+      {
+        p_workspace_id: workspaceId,
+        p_cleanup_intent_id: cleanupIntentId,
+      },
+    );
+    const registration = registrationError
+      ? null
+      : parseRegisteredCreatedIdentityProvisioningReceipt(registrationData, {
+        workspaceId,
+        cleanupIntentId,
+      });
+    if (!registration) {
+      console.error("Instant member provisioning registration failed.");
+      return jsonRes({ error: "Nem sikerült előkészíteni az instant user létrehozását." }, 500);
+    }
+
+    const cleanupCreatedIdentity = async (
+      expectedUserId: string | null,
+      membershipId: string | null,
+    ) =>
+      cleanupRegisteredCreatedIdentity({
+        cleanupJobId: registration.cleanupJobId,
+        expectedUserId,
+        prepareDatabaseCleanup: async () => {
+          const { data, error } = await admin.rpc(
+            "prepare_created_enterprise_identity_cleanup_v1",
+            {
+              p_cleanup_job_id: registration.cleanupJobId,
+              p_user_id: expectedUserId,
+              p_membership_id: membershipId,
+            },
+          );
+          if (error) {
+            return {
+              ok: false as const,
+              reason: classifyCreatedIdentityPreparationError(error),
+            };
+          }
+          return parseCreatedIdentityCleanupPreparationResult(
+            data,
+            registration.cleanupJobId,
+          );
+        },
+        getAuthUser: (userId) => admin.auth.admin.getUserById(userId),
+        deleteAuthUser: (userId) => admin.auth.admin.deleteUser(userId),
+        completeDatabaseCleanup: async (cleanupJobId, userId) => {
+          const { data, error } = await admin.rpc(
+            "complete_created_enterprise_identity_cleanup_v1",
+            {
+              p_cleanup_job_id: cleanupJobId,
+              p_user_id: userId,
+            },
+          );
+          return !error && isCompletedCreatedIdentityCleanupReceipt(data, cleanupJobId);
+        },
+      });
 
     const { data: createdUser, error: createUserError } = await admin.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
+      app_metadata: {
+        effectime_identity_kind: "enterprise_instant_member",
+        effectime_workspace_id: workspaceId,
+        effectime_cleanup_intent_id: cleanupIntentId,
+      },
       user_metadata: {
         display_name: displayName,
         source: "enterprise_instant_user",
@@ -166,7 +240,11 @@ Deno.serve(async (req) => {
     });
 
     if (createUserError || !createdUser.user) {
-      console.error("Instant member auth user create error:", createUserError);
+      console.error("Instant member auth user creation failed.");
+      const cleanup = await cleanupCreatedIdentity(createdUser.user?.id ?? null, null);
+      if (!cleanup.ok) {
+        console.error(`Instant member provisioning reconciliation pending: ${cleanup.reason}.`);
+      }
       return jsonRes({ error: "Nem sikerült létrehozni az instant user auth rekordját." }, 500);
     }
 
@@ -196,8 +274,11 @@ Deno.serve(async (req) => {
       .single();
 
     if (membershipError || !insertedMembership) {
-      console.error("Instant member membership insert error:", membershipError);
-      await admin.auth.admin.deleteUser(instantUserId).catch(() => null);
+      console.error("Instant member membership insertion failed.");
+      const cleanup = await cleanupCreatedIdentity(instantUserId, null);
+      if (!cleanup.ok) {
+        console.error(`Instant member compensation incomplete: ${cleanup.reason}.`);
+      }
       return jsonRes({ error: "Nem sikerült létrehozni az aktív enterprise tagságot." }, 500);
     }
 
@@ -214,7 +295,14 @@ Deno.serve(async (req) => {
         },
       }, { onConflict: "user_id" });
 
-    if (profileError) console.error("Instant member profile upsert error:", profileError);
+    if (profileError) {
+      console.error("Instant member profile upsert failed.");
+      const cleanup = await cleanupCreatedIdentity(instantUserId, insertedMembership.id);
+      if (!cleanup.ok) {
+        console.error(`Instant member compensation incomplete: ${cleanup.reason}.`);
+      }
+      return jsonRes({ error: "Nem sikerült létrehozni az instant user profilját." }, 500);
+    }
 
     const membershipId = insertedMembership.id;
     const allocationRole = membershipPayload.business_role;
@@ -228,7 +316,14 @@ Deno.serve(async (req) => {
           percentage: 100,
           is_priority: true,
         });
-      if (allocationError) console.error("Instant member role allocation insert error:", allocationError);
+      if (allocationError) {
+        console.error("Instant member role allocation insertion failed.");
+        const cleanup = await cleanupCreatedIdentity(instantUserId, membershipId);
+        if (!cleanup.ok) {
+          console.error(`Instant member compensation incomplete: ${cleanup.reason}.`);
+        }
+        return jsonRes({ error: "Nem sikerült létrehozni a munkakör-allokációt." }, 500);
+      }
     }
 
     const skillRows = pickSome(skills, 3).map((skill: any) => ({
@@ -241,6 +336,27 @@ Deno.serve(async (req) => {
     if (skillRows.length > 0) {
       const { error: skillError } = await admin.from("enterprise_member_skills").insert(skillRows);
       if (skillError) console.error("Instant member skill insert error:", skillError);
+    }
+
+    const provisioningCompleted = await completeCreatedIdentityProvisioningVerified({
+      expected: {
+        cleanupJobId: registration.cleanupJobId,
+        userId: instantUserId,
+        membershipId,
+      },
+      completeProvisioning: () =>
+        admin.rpc(
+          "complete_created_enterprise_identity_provisioning_v1",
+          {
+            p_cleanup_job_id: registration.cleanupJobId,
+            p_user_id: instantUserId,
+            p_membership_id: membershipId,
+          },
+        ),
+    });
+    if (!provisioningCompleted) {
+      console.error("Instant member provisioning completion was not proven.");
+      return jsonRes({ error: "Az instant user létrehozása nem igazolható." }, 500);
     }
 
     return jsonRes({

@@ -7,6 +7,14 @@ import {
   AUTH_BOOTSTRAP_EXTRA_TRIGGER_DRIFT_CASE,
   AUTH_BOOTSTRAP_TRIGGER_DRIFT_CASE,
   ASSERTIONS_SQL_PATH,
+  BUSINESS_ROLE_MIGRATION_SQL_PATH,
+  BUSINESS_ROLE_ASSERTIONS_SQL_PATH,
+  BUSINESS_ROLE_CONCURRENCY_SQL_PATH,
+  IDENTITY_CLEANUP_MIGRATION_SQL_PATH,
+  IDENTITY_CLEANUP_ASSERTIONS_SQL_PATH,
+  IDENTITY_CLEANUP_CONCURRENCY_SQL_PATH,
+  IDENTITY_CLEANUP_FINALIZER_BARRIER_QUERY,
+  IDENTITY_CLEANUP_FINALIZER_WAIT_QUERY,
   assertExpectedInventoryFailure,
   assertExpectedMigrationFailure,
   buildCleanupArgs,
@@ -96,8 +104,32 @@ test("pins PostgreSQL 18.4 and mounts only reviewed inputs read-only", () => {
     )},target=${MIGRATION_SQL_PATH},readonly`,
     `type=bind,source=${resolve(
       repoRoot,
+      "supabase/migrations/20260721233000_v3_51_7_atomic_business_role_delete.sql",
+    )},target=${BUSINESS_ROLE_MIGRATION_SQL_PATH},readonly`,
+    `type=bind,source=${resolve(
+      repoRoot,
+      "supabase/migrations/20260721234500_v3_51_7_created_identity_compensation.sql",
+    )},target=${IDENTITY_CLEANUP_MIGRATION_SQL_PATH},readonly`,
+    `type=bind,source=${resolve(
+      repoRoot,
       "scripts/ci/member-profile-save-assertions.test.sql",
     )},target=${ASSERTIONS_SQL_PATH},readonly`,
+    `type=bind,source=${resolve(
+      repoRoot,
+      "scripts/ci/business-role-delete-assertions.test.sql",
+    )},target=${BUSINESS_ROLE_ASSERTIONS_SQL_PATH},readonly`,
+    `type=bind,source=${resolve(
+      repoRoot,
+      "scripts/ci/created-identity-cleanup-assertions.test.sql",
+    )},target=${IDENTITY_CLEANUP_ASSERTIONS_SQL_PATH},readonly`,
+    `type=bind,source=${resolve(
+      repoRoot,
+      "scripts/ci/created-identity-cleanup-concurrency.test.sql",
+    )},target=${IDENTITY_CLEANUP_CONCURRENCY_SQL_PATH},readonly`,
+    `type=bind,source=${resolve(
+      repoRoot,
+      "scripts/ci/business-role-delete-concurrency.test.sql",
+    )},target=${BUSINESS_ROLE_CONCURRENCY_SQL_PATH},readonly`,
     `type=bind,source=${resolve(
       repoRoot,
       "scripts/ci/member-profile-save-concurrency.test.sql",
@@ -109,7 +141,13 @@ test("psql entry points are isolated and path allow-listed", () => {
   for (const sqlPath of [
     SETUP_SQL_PATH,
     MIGRATION_SQL_PATH,
+    BUSINESS_ROLE_MIGRATION_SQL_PATH,
+    IDENTITY_CLEANUP_MIGRATION_SQL_PATH,
     ASSERTIONS_SQL_PATH,
+    BUSINESS_ROLE_ASSERTIONS_SQL_PATH,
+    IDENTITY_CLEANUP_ASSERTIONS_SQL_PATH,
+    IDENTITY_CLEANUP_CONCURRENCY_SQL_PATH,
+    BUSINESS_ROLE_CONCURRENCY_SQL_PATH,
     CONCURRENCY_SQL_PATH,
   ]) {
     const args = buildPsqlFileArgs(containerName, sqlPath);
@@ -255,6 +293,17 @@ test("concurrency evidence uses fixed advisory and blocking-session queries", ()
   assert.match(CONCURRENCY_WAIT_QUERY, /effectime-member-profile-save-a/);
   assert.match(CONCURRENCY_WAIT_QUERY, /effectime-member-profile-save-b/);
   assert.doesNotMatch(CONCURRENCY_WAIT_QUERY, /\$\{|;\s*(DROP|DELETE)/i);
+  assert.match(IDENTITY_CLEANUP_FINALIZER_BARRIER_QUERY, /classid = 734561/);
+  assert.match(IDENTITY_CLEANUP_FINALIZER_BARRIER_QUERY, /objid = 13/);
+  assert.match(IDENTITY_CLEANUP_FINALIZER_WAIT_QUERY, /pg_blocking_pids/);
+  assert.match(
+    IDENTITY_CLEANUP_FINALIZER_WAIT_QUERY,
+    /effectime-created-identity-finalizer/,
+  );
+  assert.match(
+    IDENTITY_CLEANUP_FINALIZER_WAIT_QUERY,
+    /effectime-created-identity-finalize-writer/,
+  );
 });
 
 test("cleanup accepts only exact container IDs and ownership evidence", () => {

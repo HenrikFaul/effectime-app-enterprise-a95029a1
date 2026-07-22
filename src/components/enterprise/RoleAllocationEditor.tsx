@@ -6,13 +6,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Trash2, Lock, Unlock, Plus, Star } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useI18n } from '@/i18n/I18nProvider';
+import {
+  addRoleAllocation,
+  canonicalizeRoleName,
+  removeRoleAllocation,
+  setRoleAllocationPercentage,
+  setRoleAllocationPriority,
+  toggleRoleAllocationLock,
+  type RoleAllocationDraft,
+} from '@/lib/roleAllocationDraft';
 
-export interface Allocation {
-  business_role: string;
-  percentage: number;
-  locked?: boolean;
-  is_priority?: boolean;
-}
+export type Allocation = RoleAllocationDraft;
 
 interface Props {
   allocations: Allocation[];
@@ -31,111 +35,45 @@ export function RoleAllocationEditor({ allocations, onChange, availableRoles }: 
   const { t } = useI18n();
   const [pendingRole, setPendingRole] = useState<string>('');
 
-  const remainingRoles = availableRoles.filter(r => !allocations.some(a => a.business_role === r));
-  const round2 = (n: number) => +n.toFixed(2);
+  const allocatedRoleKeys = new Set(
+    allocations.flatMap(allocation => {
+      const canonical = canonicalizeRoleName(allocation.business_role);
+      return canonical.ok ? [canonical.key] : [];
+    }),
+  );
+  const remainingRoles = availableRoles.filter(role => {
+    const canonical = canonicalizeRoleName(role);
+    return canonical.ok && !allocatedRoleKeys.has(canonical.key);
+  });
 
-  const ensureSinglePriority = (arr: Allocation[]): Allocation[] => {
-    if (arr.length === 0) return arr;
-    const hasPriority = arr.some(a => a.is_priority);
-    if (!hasPriority) {
-      // Promote the first row to priority
-      return arr.map((a, i) => ({ ...a, is_priority: i === 0 }));
-    }
-    // Make sure only one is priority
-    let seen = false;
-    return arr.map(a => {
-      if (a.is_priority && !seen) { seen = true; return a; }
-      if (a.is_priority && seen) return { ...a, is_priority: false };
-      return a;
-    });
+  const apply = (result: ReturnType<typeof addRoleAllocation>) => {
+    if (result.ok) onChange(result.allocations);
+    return result.ok;
   };
 
   const addRole = () => {
     if (!pendingRole) return;
-    const lockedSum = allocations.filter(a => a.locked).reduce((s, a) => s + a.percentage, 0);
-    const remainingPool = Math.max(0, 100 - lockedSum);
-    const unlockedExisting = allocations.filter(a => !a.locked);
-    const newCount = unlockedExisting.length + 1;
-    const equal = round2(remainingPool / newCount);
-
-    const next: Allocation[] = allocations.map(a =>
-      a.locked ? a : { ...a, percentage: equal }
-    );
-    next.push({ business_role: pendingRole, percentage: equal, locked: false, is_priority: allocations.length === 0 });
-    fixRounding(next);
-    onChange(ensureSinglePriority(next));
-    setPendingRole('');
+    if (apply(addRoleAllocation(allocations, pendingRole))) setPendingRole('');
   };
 
   const removeRole = (role: string) => {
-    const removedWasPriority = allocations.find(a => a.business_role === role)?.is_priority;
-    const next = allocations.filter(a => a.business_role !== role);
-    if (next.length > 0) {
-      const lockedSum = next.filter(a => a.locked).reduce((s, a) => s + a.percentage, 0);
-      const unlocked = next.filter(a => !a.locked);
-      const remainingPool = Math.max(0, 100 - lockedSum);
-      if (unlocked.length > 0) {
-        const equal = round2(remainingPool / unlocked.length);
-        next.forEach(a => { if (!a.locked) a.percentage = equal; });
-        fixRounding(next);
-      }
-      if (removedWasPriority) {
-        // Promote first remaining to priority
-        next.forEach((a, i) => { a.is_priority = i === 0; });
-      }
-    }
-    onChange(ensureSinglePriority(next));
+    apply(removeRoleAllocation(allocations, role));
   };
 
   const toggleLock = (role: string) => {
-    const next = allocations.map(a =>
-      a.business_role === role ? { ...a, locked: !a.locked } : a
-    );
-    onChange(next);
+    apply(toggleRoleAllocationLock(allocations, role));
   };
 
   const setPriority = (role: string) => {
-    const next = allocations.map(a => ({ ...a, is_priority: a.business_role === role }));
-    onChange(next);
+    apply(setRoleAllocationPriority(allocations, role));
   };
 
   const setPercentage = (role: string, rawValue: number) => {
-    const target = allocations.find(a => a.business_role === role);
-    if (!target || target.locked) return;
-
-    const lockedSum = allocations.filter(a => a.locked).reduce((s, a) => s + a.percentage, 0);
-    const remainingPool = Math.max(0, 100 - lockedSum);
-    const newValue = Math.max(0, Math.min(remainingPool, rawValue));
-
-    const otherUnlocked = allocations.filter(a => !a.locked && a.business_role !== role);
-    const remainForOthers = Math.max(0, remainingPool - newValue);
-    const otherSum = otherUnlocked.reduce((s, a) => s + a.percentage, 0);
-
-    const next: Allocation[] = allocations.map(a => {
-      if (a.business_role === role) return { ...a, percentage: round2(newValue) };
-      if (a.locked) return a;
-      if (otherUnlocked.length === 0) return a;
-      const ratio = otherSum > 0 ? a.percentage / otherSum : 1 / otherUnlocked.length;
-      return { ...a, percentage: round2(remainForOthers * ratio) };
-    });
-    fixRounding(next);
-    onChange(next);
-  };
-
-  const fixRounding = (arr: Allocation[]) => {
-    const sum = arr.reduce((s, a) => s + a.percentage, 0);
-    const diff = round2(100 - sum);
-    if (Math.abs(diff) < 0.01) return;
-    for (let i = arr.length - 1; i >= 0; i--) {
-      if (!arr[i].locked) {
-        arr[i].percentage = round2(arr[i].percentage + diff);
-        return;
-      }
-    }
+    apply(setRoleAllocationPercentage(allocations, role, rawValue));
   };
 
   const total = allocations.reduce((s, a) => s + a.percentage, 0);
-  const isValid = Math.abs(total - 100) < 0.5 || allocations.length === 0;
+  const isValid = Math.round(total * 100) === 10_000 || allocations.length === 0;
 
   return (
     <div className="space-y-3">
