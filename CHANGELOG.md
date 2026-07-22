@@ -1,7 +1,9 @@
 ## 2026-07-22 — v3.51.14 Bounded plugin install lock wait and safe retry (unreleased)
 
-**Status:** local source candidate with broad gates PASS; hosted CI pending;
-linked database and production not deployed.
+**Status:** stacked draft PR
+[#185](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/pull/185)
+at implementation head `d75f269d73dc9c27be1949e3d1a2f009fc3134c6`;
+source pushed, linked database and production not deployed.
 
 - Adds a five-second function-scoped `lock_timeout` to the existing
   `marketplace_install_plugin(uuid, uuid, jsonb)` RPC with `ALTER FUNCTION`
@@ -39,14 +41,22 @@ functions); TypeScript, targeted ESLint and unchanged 1,148/98 lint ratchet
 PASS. The final pinned PostgreSQL 17.6 contract passed in 76.5 seconds with the
 prior 43 tamper cases plus three new timeout cases, deterministic
 timeout/rollback/fresh database retry and double reapply; the owned container
-was removed exactly. Production build, reviewed bundle (4,529,639 raw /
-1,297,427 gzip JS), web smoke 7/7, mobile 183/345/2 plus deterministic Android
+was removed exactly. Production build, reviewed pre-commit bundle measurement
+(4,529,639 raw / 1,297,427 gzip JS), web smoke 7/7, mobile 183/345/2 plus deterministic Android
 and iOS sync, Edge check/ratchet/log-safety and final 86/86 suite, release
 identity 55/55, Edge SBOM 7/7, migration/schema provenance, 1,550-file secret
 scan and zero-vulnerability dependency audit PASS. A two-millisecond Edge
 test-only timeout flaked once at 85/86 under parallel load; a 20 ms
 non-production bound then passed the isolated file three times and the full
-suite. Hosted CI is still pending for this candidate.
+suite. Hosted Quality Gate run
+[`29913434706`](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/actions/runs/29913434706)
+passes all 11 jobs reported against the implementation head. GitHub's
+pull-request checkout validates potential merge commit
+`cb93c0998c6645e4b680f434fa308e8795b85ff3` (base `86c4d74…` plus head
+`d75f269…`): exact hosted bundle 4,529,732 raw / 1,297,498 gzip JS, release
+evidence `8526921475`, diagnostics `8526918713` and unsigned Android
+`8526878038`. Android and locked iOS compile both pass; these are candidate
+artifacts, not store or production releases.
 
 Production remains **NO-GO** until the 61 shared / 77 local-only / 82
 remote-only migration histories are reconciled, full replay and restored
