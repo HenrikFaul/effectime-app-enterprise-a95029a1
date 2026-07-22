@@ -426,6 +426,23 @@ passed hosted Quality Gate run `29888707884` 10/10; release evidence
 `8517495434`, diagnostics `8517494400` and unsigned Android `8517474651` are
 source/CI evidence only.
 
+The stacked v3.51.11 candidate closes the recovered plugin marketplace's
+browser-visible configuration boundary. Historical raw JSON is copied into an
+RLS-enabled `effectime_private.workspace_plugin_configs` table, while the
+public compatibility column remains available but is constrained to `{}`.
+Install/reinstall stays owner-only and atomically writes the private value;
+uninstall cascades it. Only a `service_role` RPC with an exact workspace +
+enabled-installation pair can return raw config, and browser callers are
+source-gated from selecting `config` or mutating the table. Run
+`npm run db:recovered-surface-acl:test` for the pinned PostgreSQL 17.6 legacy-
+shape, role/tenant, tamper, atomicity and reapply contract. Seven new preflight
+and three reapply tamper cases include unknown schema/table/column/function
+grantees and lost private-row handling. This is private
+JSONB isolation, not Vault encryption; a separate Vault/rotation/restore wave
+remains open. The linked database has not been written, and production remains
+NO-GO until history reconciliation, restored-staging acceptance and an
+authenticated deploy channel are available.
+
 The stacked v3.51.10 candidate applies the first forward-only security wave to
 those recovered clock and marketplace objects. It attests the linked ordinary
 tables, exact RLS predicates, routine metadata/config/source and the complete
@@ -442,9 +459,11 @@ restored-staging gates. Draft PR #181 implementation head
 `8518455066` and unsigned Android `8518432152` are source/CI evidence. Web,
 Android and iOS remain on the same React/Supabase data plane; this release
 introduces no mobile-only database or privileged key.
-The linked database has not been written, and full-row
-`workspace_installed_plugins.config` visibility remains a separate P1
-safe-projection/Vault hardening item. Production is **NO-GO**.
+The linked database has not been written. The v3.51.11 source candidate removes
+the browser projection and adds the private/redacted storage contract, but the
+historical linked policy continues to expose full-row `config` until a reviewed
+DB-first rollout. Vault encryption remains a separate hardening item.
+Production is **NO-GO**.
 
 The latest read-only linked comparison after the v3.51.9 recovery has 61
 migration IDs in common, 72 local-only IDs and 82 remote-only IDs (133 local,
