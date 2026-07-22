@@ -1,7 +1,8 @@
 ## 2026-07-22 — v3.51.9 Recovered migration provenance (unreleased)
 
-**Status:** local source candidate on
-`codex/migration-provenance-recovery-wave1`; not deployed.
+**Status:** stacked draft PR
+[#180](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/pull/180)
+at implementation head `b98cdc8f315eaf346ea8648b671506ac97d64caf`; not deployed.
 
 - Restores the exact remote-history sources for the v3.22 clock-in engine and
   v3.30 plugin marketplace at their original migration IDs. Their reviewed
@@ -32,6 +33,12 @@ Supabase PostgreSQL replay attempt reached the
 migration runner but stopped at the first historical Storage dependency because
 that isolated DB image does not contain the Supabase Storage schema. The owned
 temporary container was identity-checked and removed; no linked write occurred.
+
+GitHub-hosted Quality Gate run `29888707884` passed all 10/10 jobs at the
+implementation head, including the new byte-provenance gate, all five pinned
+PostgreSQL contracts, Edge, Android and locked iOS. Release evidence artifact
+`8517495434`, diagnostics `8517494400` and unsigned Android artifact
+`8517474651` prove this source/CI candidate, not a production deployment.
 
 Production remains **NO-GO**. The files have not been applied or repaired on the
 linked database, 72 local-only and 82 remote-only IDs remain, a full Supabase

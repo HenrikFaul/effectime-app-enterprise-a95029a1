@@ -421,6 +421,10 @@ copies. The exact schema-provenance debt drops by five tables and five functions
 run `npm run migration:provenance:test`, `npm run migration:provenance` and the
 two schema-provenance commands above. This is source-history recovery only: it
 does not authorize a linked migration repair or production database apply.
+Draft PR #180 implementation head `b98cdc8f315eaf346ea8648b671506ac97d64caf`
+passed hosted Quality Gate run `29888707884` 10/10; release evidence
+`8517495434`, diagnostics `8517494400` and unsigned Android `8517474651` are
+source/CI evidence only.
 
 The latest read-only linked comparison after the v3.51.9 recovery has 61
 migration IDs in common, 72 local-only IDs and 82 remote-only IDs (133 local,
