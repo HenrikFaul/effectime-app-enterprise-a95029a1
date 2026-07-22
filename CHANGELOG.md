@@ -1,3 +1,50 @@
+## 2026-07-22 — v3.51.10 Recovered surface ACL hardening (unreleased)
+
+**Status:** stacked draft PR
+[#181](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/pull/181)
+at implementation head `4046c8ae799678b76589be57d216feff7279850e`;
+source pushed, linked database and production not deployed.
+
+- Adds a forward-only PostgreSQL 17+ migration for the recovered clock-in and
+  plugin-marketplace surfaces. It removes every effective `anon` table/routine
+  privilege, gives `authenticated` table `SELECT` plus only the six intended
+  user RPCs, removes browser execution of the internal Haversine helper, and
+  preserves the exact pre-migration `service_role` table/column/function
+  privilege contract, including PostgreSQL 17 `MAINTAIN`.
+- Replaces only `clock_generate_qr` so its pgcrypto call is bound to the exact
+  extension-owned `extensions.gen_random_bytes(integer)` signature while every
+  recovered routine receives a `pg_catalog`-only `search_path`. Signature, OID,
+  owner, ACL, defaults, execution metadata and business behavior are retained.
+- Fails before mutation if an expected ordinary table/owner/RLS contract, the
+  exact ten-policy set and predicates, browser role isolation, routine shape,
+  original-or-hardened config, canonical LF-normalized source hash, or the
+  pgcrypto schema/extension/function ownership and membership chain has drifted.
+  Postconditions also reject inherited/effective browser column privileges.
+- Adds three read-only linked-inventory scripts and a pinned
+  `postgres:17.6@sha256:00bc8661…02929` adversarial database contract to CI.
+  The contract proves 13 transactional tamper cases, zero partial mutation,
+  data/policy/OID/source stability, service-role preservation, ACL repair,
+  idempotent reapply, tenant RLS and clock/marketplace RPC smoke.
+
+Local validation: DB runner 11/11 and PostgreSQL 17.6 contract PASS; 13/13
+fail-closed tamper cases; migration invariants 34/34; byte provenance 9/9 plus
+2 exact files; schema parser 7/7 and unchanged 134-migration debt gate; full
+coverage 76 files / 995 tests; typecheck, lint ratchet, production build, exact
+bundle budget, dependency audit, 1,534-file secret scan, browser smoke 7/7,
+mobile source 183/183, artifact 345/345, bridge smoke 2/2 and clean native
+release contract 365/365 PASS. Hosted Quality Gate run `29891543713` passed all
+11/11 jobs; release evidence `8518456625`, diagnostics `8518455066` and
+unsigned Android artifact `8518432152` prove the source/CI candidate, not a
+database apply or production deployment.
+
+Production remains **NO-GO**. The migration was not applied to the linked
+database; 72 local-only / 82 remote-only history IDs, full Supabase replay,
+restored-staging acceptance and immutable live provider/Git-SHA attestation
+remain open. Active workspace members can still read the complete
+`workspace_installed_plugins.config` JSON under the historical product policy;
+credential/webhook values require a separate safe projection plus private/Vault
+storage migration rather than an unreviewed behavior change in this ACL wave.
+
 ## 2026-07-22 — v3.51.9 Recovered migration provenance (unreleased)
 
 **Status:** stacked draft PR

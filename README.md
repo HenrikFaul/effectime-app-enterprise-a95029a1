@@ -426,6 +426,26 @@ passed hosted Quality Gate run `29888707884` 10/10; release evidence
 `8517495434`, diagnostics `8517494400` and unsigned Android `8517474651` are
 source/CI evidence only.
 
+The stacked v3.51.10 candidate applies the first forward-only security wave to
+those recovered clock and marketplace objects. It attests the linked ordinary
+tables, exact RLS predicates, routine metadata/config/source and the complete
+pgcrypto trust chain before mutation; removes PUBLIC/anonymous and browser
+write/maintenance privileges; limits authenticated execution to the six product
+RPCs; binds QR entropy to the schema-qualified extension function; and preserves
+the effective service-role contract. Run
+`npm run db:recovered-surface-acl:test` for the pinned PostgreSQL 17.6 contract.
+Its 13 tamper scenarios, drift repair, idempotent reapply and two-tenant runtime
+smoke are regression evidence, not permission to bypass migration-history or
+restored-staging gates. Draft PR #181 implementation head
+`4046c8ae799678b76589be57d216feff7279850e` passed hosted Quality Gate run
+`29891543713` with all 11/11 jobs; release evidence `8518456625`, diagnostics
+`8518455066` and unsigned Android `8518432152` are source/CI evidence. Web,
+Android and iOS remain on the same React/Supabase data plane; this release
+introduces no mobile-only database or privileged key.
+The linked database has not been written, and full-row
+`workspace_installed_plugins.config` visibility remains a separate P1
+safe-projection/Vault hardening item. Production is **NO-GO**.
+
 The latest read-only linked comparison after the v3.51.9 recovery has 61
 migration IDs in common, 72 local-only IDs and 82 remote-only IDs (133 local,
 143 remote). Three local-only HR/office/
