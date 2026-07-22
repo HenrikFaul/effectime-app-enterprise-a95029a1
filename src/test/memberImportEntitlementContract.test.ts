@@ -7,6 +7,10 @@ const importer = readFileSync(
   join(root, 'supabase/functions/import-entity-data/index.ts'),
   'utf8',
 );
+const handler = readFileSync(
+  join(root, 'supabase/functions/import-entity-data/handler.ts'),
+  'utf8',
+);
 const entitlement = readFileSync(
   join(root, 'supabase/functions/import-entity-data/entitlement.ts'),
   'utf8',
@@ -42,12 +46,13 @@ describe('bulk member invitation entitlement contract', () => {
     expect(importer).not.toContain("from('enterprise_invitations').insert");
     expect(invitationPath).not.toContain('message: error.message');
     expect(invitationPath).toContain("message: 'Invitation could not be issued'");
-    expect(invitationPath).toContain('errorCode,');
+    expect(invitationPath).toContain('provider_code: safeProviderCode(error.code)');
+    expect(invitationPath.match(/code: 'DB_ERROR'/g)).toHaveLength(2);
+    expect(invitationPath.match(/reason_code: 'INVITATION_FAILED'/g)).toHaveLength(2);
     expect(invitationPath).not.toMatch(/console\.error\([\s\S]*?\berror,\s*\}/);
     expect(importer).not.toContain('${membersInviteEntitlement.error}');
-    expect(importer).toContain(
-      "return jsonResponse({ error: 'Import dependency is temporarily unavailable' }, 503)",
-    );
+    expect(handler).toContain('"Import dependency is temporarily unavailable"');
+    expect(handler).toContain('"IMPORT_DEPENDENCY_UNAVAILABLE"');
   });
 
   it('keeps existing-member updates outside the invitation entitlement gate', () => {

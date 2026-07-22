@@ -270,6 +270,15 @@ Exception: `membership_id` (the record's own PK) is exported for update-mode ide
 - **Booleans**: Exported as `true` / `false` strings. Accept: `true/false`, `igen/nem`, `1/0`, `yes/no` on import.
 - **Null/empty**: Empty cell = null. Never export "null" as a literal string.
 
+### 5.7 CSV Spreadsheet Execution Safety
+
+Every generated CSV header and data cell whose first effective character could
+start a spreadsheet formula (`=`, `+`, `-` or `@`, including leading spaces),
+or which starts with a tab/carriage return, is prefixed with an apostrophe
+before RFC 4180 escaping. Safe values remain byte-for-byte unchanged. This
+v3.51.21 boundary applies to CSV generation; it must be preserved for current
+data exports, blank templates and downloaded row-error reports.
+
 ---
 
 ## 6. IMPORT DESIGN
@@ -654,7 +663,7 @@ The asterisk convention is universally understood. The lock icon reinforces that
 - Reference resolution (office_name → office_id, manager_email → membership.user_id)
 - Database duplicate detection (matching unique keys against existing records)
 - Business rule validation (date ranges, role hierarchy permissions)
-- **Target:** transactional batch write. **Current gap (v3.51.20):** the Edge
+- **Target:** transactional batch write. **Current gap (v3.51.21):** the Edge
   handler performs sequential row operations, so an unexpected server failure
   can leave a documented partial result.
 
@@ -685,12 +694,12 @@ Response 200:
 }
 ```
 
-The request shape above is the target contract. **Current gap (v3.51.20):**
+The request shape above is the target contract. **Current gap (v3.51.21):**
 `schema_version` is not authoritatively validated by the handler.
 
 **Dry-run target:** `dry_run: true` runs all server validation and reference
 resolution without committing and returns the same response shape. **Current
-gap (v3.51.20):** the active Import Wizard performs its validation preview on
+gap (v3.51.21):** the active Import Wizard performs its validation preview on
 the client and does not invoke the server dry-run before confirmation.
 
 ### 11.3 Transactional Behavior
@@ -698,7 +707,7 @@ the client and does not invoke the server dry-run before confirmation.
 **Target:** each entity import runs in a single PostgreSQL transaction. If a
 mid-transaction server error occurs, the entire transaction rolls back, and
 only rows that passed validation enter the transaction. **Current gap
-(v3.51.20):** the handler performs row-level writes sequentially and can return
+(v3.51.21):** the handler performs row-level writes sequentially and can return
 partial success; full rollback is not yet guaranteed.
 
 ### 11.4 Authorization
@@ -709,10 +718,16 @@ partial success; full rollback is not yet guaranteed.
   workspace's authoritative tenant feature union. Both exact feature keys
   `csv_import` and its documented dependency `members_list` are required.
 - A valid disabled entitlement returns a sanitized `403`. Tenant mapping,
-  feature lookup or malformed response failures return a sanitized `503`. This
-  redaction claim applies to the entitlement decision itself. **Current gap
-  (v3.51.20):** other inherited import validation/mutation error paths can still
-  return or log raw backend details and require a bounded error-code map.
+  feature lookup or malformed response failures return a sanitized `503`.
+- The v3.51.21 handler boundary returns stable additive `code` values without
+  provider messages. JSON responses are `Cache-Control: no-store`, carry
+  `X-Request-Id`, and expose that header through CORS; server-side failures also
+  return the same bounded `request_id` in the JSON body. Invalid JSON is a
+  bounded `400`, and methods other than `POST`/`OPTIONS` receive `405`.
+- Authentication, active-role and entitlement denial occurs before the
+  authorized executor, so `import.started`, dry-run accounting, dependency
+  reads and writes remain at zero on those paths. Real-`Request` handler tests
+  preserve this ordering contract.
 - The UI mirrors this decision to disable and explain Import without removing
   Export. The Edge check remains authoritative for web, Android and iOS clients.
 - The handler resolves authorization and references from the requesting
@@ -736,9 +751,12 @@ proven by dynamic request/DB contracts before production release.
 1. `import.started` — logged when the user confirms (before execution)
 2. `import.completed` — logged after execution with full summary metadata
 
-**Current gap (v3.51.20):** `import.started` and successful completion are
-implemented, but a guaranteed `import.failed` event is not. Failure metadata
-must use bounded codes and never raw backend details.
+As of v3.51.21, failure to persist `import.started` fails closed before entity
+reads or writes. A completion-audit failure after sequential writes is logged
+as a bounded warning and cannot retroactively roll back those writes. A
+guaranteed `import.failed` event and atomic coupling between mutations and the
+completion audit remain gaps. Audit and log metadata use bounded codes and do
+not include raw backend details.
 
 ### 11.7 Row-Level Error Reporting
 
@@ -747,7 +765,15 @@ The Edge Function returns a structured error array (see Section 11.2). Each erro
 - `field`: which column
 - `value`: the submitted value
 - `code`: machine error code (e.g. `REQUIRED_EMPTY`, `INVALID_ENUM`, `REFERENCE_NOT_FOUND`, `DUPLICATE_KEY`, `BUSINESS_RULE`)
+- `reason_code` (optional): additive, more specific provider-failure category
 - `message`: human-readable Hungarian explanation
+
+Provider write failures preserve the legacy machine contract `code: DB_ERROR`
+and add `reason_code: ROW_WRITE_FAILED` (or `INVITATION_FAILED`) with a fixed
+client message; provider messages and codes are not reflected. Every returned
+`value`, including validation and reference errors, is limited to 256 Unicode
+code points so a surrogate pair is never split. Prerequisite lookup failures
+fail the request closed instead of being interpreted as an empty dataset.
 
 ---
 
@@ -1120,60 +1146,22 @@ IF Import:
 
 ---
 
-## APPENDIX: Supabase Edge Function Skeleton
+## APPENDIX: Supabase Edge Function Structure
 
-```typescript
-// supabase/functions/import-entity-data/index.ts
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+The authoritative implementation is
+`supabase/functions/import-entity-data/handler.ts` plus `index.ts`; copied
+single-callback skeletons are not an acceptable implementation because they
+bypass the tested zero-side-effect authorization boundary. The runtime shape is:
 
-const SUPPORTED_ENTITIES = ['members', 'leave', 'locations', 'work_categories', 'job_roles', 'positions', 'skills'];
-
-serve(async (req) => {
-  const authHeader = req.headers.get('Authorization');
-  const supabase = createClient(
-    Deno.env.get('SUPABASE_URL')!,
-    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
-    { global: { headers: { Authorization: authHeader! } } }
-  );
-
-  const body = await req.json();
-  const { workspace_id, entity, mode, rows, dry_run, schema_version } = body;
-
-  // Authorization check
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return new Response('Unauthorized', { status: 401 });
-
-  const { data: hasRole } = await supabase.rpc('has_enterprise_role', {
-    p_workspace_id: workspace_id,
-    p_user_id: user.id,
-    p_roles: ['owner', 'resourceAssistant']
-  });
-  if (!hasRole) return new Response('Forbidden', { status: 403 });
-
-  if (!SUPPORTED_ENTITIES.includes(entity)) {
-    return new Response(JSON.stringify({ error: 'Unknown entity' }), { status: 400 });
-  }
-
-  // Entity-specific handler
-  const handler = ENTITY_HANDLERS[entity];
-  const result = await handler({ supabase, workspace_id, mode, rows, dry_run });
-
-  // Audit event
-  if (!dry_run) {
-    await supabase.from('enterprise_audit_events').insert({
-      workspace_id,
-      actor_id: user.id,
-      action: result.errors?.length ? 'import.completed_with_errors' : 'import.completed',
-      metadata: { entity, ...result.summary }
-    });
-  }
-
-  return new Response(JSON.stringify(result), {
-    headers: { 'Content-Type': 'application/json' }
-  });
-});
+```text
+Deno.serve(createImportEntityDataHandler(...))
+  handler.ts: method/body validation → authentication → active role → exact entitlements
+  index.ts:    Supabase adapters → start audit → prerequisite reads → entity writes → completion audit
 ```
+
+The handler owns ordering, stable error responses and request correlation. The
+index executor is unreachable until authentication, workspace role and exact
+entitlement checks all succeed.
 
 ---
 

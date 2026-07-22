@@ -147,11 +147,21 @@ export async function parseUploadedFile(file: File): Promise<ParsedFile> {
 
 // ===== File Generation =====
 
+/**
+ * Keep user-controlled CSV cells from being interpreted as formulas by
+ * spreadsheet applications. The leading apostrophe is the interoperable CSV
+ * convention for forcing text and is deliberately applied before RFC escaping.
+ */
+export function neutralizeSpreadsheetFormula(value: string): string {
+  return /^[\t\r]|^[ ]*[=+\-@]/u.test(value) ? `'${value}` : value;
+}
+
 function csvEscape(value: string): string {
-  if (value.includes('"') || value.includes(',') || value.includes('\n') || value.includes('\r')) {
-    return `"${value.replace(/"/g, '""')}"`;
+  const safeValue = neutralizeSpreadsheetFormula(value);
+  if (safeValue.includes('"') || safeValue.includes(',') || safeValue.includes('\n') || safeValue.includes('\r')) {
+    return `"${safeValue.replace(/"/g, '""')}"`;
   }
-  return value;
+  return safeValue;
 }
 
 export function generateCSV(headers: string[], rows: string[][]): string {

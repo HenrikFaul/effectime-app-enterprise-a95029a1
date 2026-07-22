@@ -4,17 +4,28 @@
 // Validates workspace membership + admin role, resolves references, and writes
 // data with row-level error reporting and audit logging.
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
+import { createStructuredLogger } from '../_shared/structured-logger.ts';
 import {
-  CSV_IMPORT_REQUIRED_FEATURE_KEYS,
   hasMemberInvitationCandidate,
-  planCsvImportAccess,
   planMembersInviteInvitation,
   resolveCsvImportEntitlement,
   resolveMembersInviteEntitlement,
   type MembersInviteEntitlement,
 } from './entitlement.ts';
+import {
+  boundedImportRowValue,
+  rowWriteFailure,
+  safeProviderCode,
+} from './errors.ts';
+import {
+  createImportEntityDataHandler,
+  ImportDependencyError,
+  type AuthorizedImportCommand,
+  type AuthorizedImportResult,
+  type ImportRowError,
+  type ImportSummary,
+} from './handler.ts';
 import {
   parseEnterpriseRole,
   parseMembershipStatus,
@@ -25,193 +36,191 @@ import {
   type MembershipStatus,
 } from './security.ts';
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-};
-
-interface ImportRequest {
-  workspace_id: string;
-  entity: string;
-  mode: 'create' | 'upsert';
-  rows: Record<string, any>[];
-  dry_run?: boolean;
-}
-
-interface RowError {
-  row_index: number;
-  field: string;
-  value: string;
-  code: string;
-  message: string;
-}
-
-interface Summary {
-  total: number;
-  created: number;
-  updated: number;
-  skipped: number;
-  failed: number;
-}
-
-class ImportDependencyError extends Error {}
+type RowError = ImportRowError;
+type Summary = ImportSummary;
+type ImportServiceClient = ReturnType<typeof createClient>;
 
 async function resolveAuthUsersByEmail(client: any, emails: unknown[]) {
   const { data, error } = await client.rpc('get_user_ids_by_emails', { p_emails: emails });
   if (error) {
-    throw new ImportDependencyError(`Auth directory lookup failed: ${error.message}`);
+    throw new ImportDependencyError('auth_directory_lookup');
   }
   if (!Array.isArray(data)) {
-    throw new ImportDependencyError('Auth directory lookup returned an invalid response');
+    throw new ImportDependencyError('auth_directory_response');
   }
   return data;
 }
 
-const SUPPORTED_ENTITIES = ['members', 'leave', 'offices', 'work_categories', 'job_roles', 'skills'];
+const logger = createStructuredLogger({ service: 'import-entity-data' });
 
-serve(async (req: Request) => {
-  if (req.method === 'OPTIONS') return new Response(null, { headers: corsHeaders });
-
-  try {
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      return jsonResponse({ error: 'Missing Authorization header' }, 401);
+Deno.serve(createImportEntityDataHandler({
+  logger,
+  createDependencies: (authHeader: string) => {
+    const supabaseUrl = Deno.env.get('SUPABASE_URL');
+    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+    if (!supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
+      throw new ImportDependencyError('function_configuration');
     }
 
-    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-    const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-
-    // User-context client (for auth check + RLS)
+    // User-context client is restricted to authentication; the service client
+    // resolves exact tenant authorization and owns the authorized import path.
     const userClient = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
-    // Service client for writes that need elevated privilege (e.g. profile lookups)
     const serviceClient = createClient(supabaseUrl, supabaseServiceKey);
 
-    const { data: { user }, error: userErr } = await userClient.auth.getUser();
-    if (userErr || !user) return jsonResponse({ error: 'Unauthorized' }, 401);
+    return {
+      authenticate: async () => {
+        try {
+          const { data: { user }, error } = await userClient.auth.getUser();
+          if (error || !user) return { kind: 'denied' as const };
+          return { kind: 'authenticated' as const, userId: user.id };
+        } catch {
+          return { kind: 'unavailable' as const };
+        }
+      },
+      resolveActor: async (workspaceId: string, userId: string) => {
+        try {
+          const { data, error } = await serviceClient
+            .from('enterprise_memberships')
+            .select('role')
+            .eq('workspace_id', workspaceId)
+            .eq('user_id', userId)
+            .eq('status', 'active')
+            .maybeSingle();
+          if (error) {
+            return {
+              kind: 'unavailable' as const,
+              providerCode: error.code,
+            };
+          }
+          if (!data || !['owner', 'resourceAssistant'].includes(data.role)) {
+            return { kind: 'denied' as const };
+          }
+          return {
+            kind: 'authorized' as const,
+            role: data.role as ImportActorRole,
+          };
+        } catch {
+          return { kind: 'unavailable' as const };
+        }
+      },
+      resolveCsvImportEntitlement: (workspaceId: string) =>
+        resolveCsvImportEntitlement(serviceClient, workspaceId),
+      executeAuthorizedImport: (command: AuthorizedImportCommand) =>
+        executeAuthorizedImport(serviceClient, command),
+    };
+  },
+}));
 
-    const body: ImportRequest = await req.json();
-    const { workspace_id, entity, mode, rows, dry_run } = body;
+async function executeAuthorizedImport(
+  serviceClient: ImportServiceClient,
+  command: AuthorizedImportCommand,
+): Promise<AuthorizedImportResult> {
+  const {
+    workspace_id,
+    entity,
+    mode,
+    rows,
+    dry_run,
+    actor_id,
+    actor_role,
+  } = command;
 
-    if (!workspace_id || !entity || !Array.isArray(rows)) {
-      return jsonResponse({ error: 'Missing required fields' }, 400);
+  // Audit and every entity read/write stay behind the handler's exact RBAC
+  // and entitlement preflight.
+  if (!dry_run) {
+    try {
+      const { error: auditStartError } = await serviceClient
+        .from('enterprise_audit_events')
+        .insert({
+          workspace_id,
+          actor_id,
+          action: 'import.started',
+          metadata: { entity, mode, row_count: rows.length },
+        });
+      if (auditStartError) {
+        logger.error('import_started_audit_failed', {
+          workspace_id,
+          entity,
+          provider_code: safeProviderCode(auditStartError.code),
+        });
+        throw new ImportDependencyError('audit_start_write');
+      }
+    } catch (error) {
+      if (error instanceof ImportDependencyError) throw error;
+      logger.error('import_started_audit_failed', {
+        workspace_id,
+        entity,
+        provider_code: 'UNKNOWN',
+      });
+      throw new ImportDependencyError('audit_start_write');
     }
-    if (!['create', 'upsert'].includes(mode)) {
-      return jsonResponse({ error: 'Invalid import mode' }, 400);
-    }
-    if (rows.length > 2000) {
-      return jsonResponse({ error: 'Import row limit exceeded' }, 413);
-    }
-    if (!SUPPORTED_ENTITIES.includes(entity)) {
-      return jsonResponse({ error: `Unsupported entity: ${entity}` }, 400);
-    }
+  }
 
-    // Resolve the exact active actor role. Importing member access fields needs
-    // stricter rules than the other resource-assistant import operations.
-    const { data: actorMembership, error: actorMembershipError } = await serviceClient
-      .from('enterprise_memberships')
-      .select('role')
-      .eq('workspace_id', workspace_id)
-      .eq('user_id', user.id)
-      .eq('status', 'active')
-      .maybeSingle();
-    if (actorMembershipError) {
-      console.error('Failed to resolve import actor membership', actorMembershipError);
-      return jsonResponse({ error: 'Workspace authorization is temporarily unavailable' }, 503);
-    }
-    if (!actorMembership || !['owner', 'resourceAssistant'].includes(actorMembership.role)) {
-      return jsonResponse({ error: 'Forbidden: admin role required' }, 403);
-    }
-    const actorRole = actorMembership.role as ImportActorRole;
+  let summary: Summary = { total: rows.length, created: 0, updated: 0, skipped: 0, failed: 0 };
+  let errors: RowError[] = [];
 
-    // Feature preflight must complete after authentication/RBAC but before
-    // audit events, dry-run accounting, or any entity-specific reads/writes.
-    // csv_import depends on members_list in the shipped feature catalog.
-    const csvImportEntitlement = await resolveCsvImportEntitlement(
-      serviceClient,
-      workspace_id,
-    );
-    const csvImportAccess = planCsvImportAccess(csvImportEntitlement);
-    if (csvImportAccess.kind === 'blocked') {
-      if (!csvImportEntitlement.enabled && csvImportEntitlement.reason === 'lookup_error') {
-        console.error('csv_import entitlement lookup failed', {
-          workspaceId: workspace_id,
-          step: csvImportEntitlement.step,
-          features: CSV_IMPORT_REQUIRED_FEATURE_KEYS,
+  switch (entity) {
+    case 'members':
+      ({ summary, errors } = await importMembers(
+        serviceClient,
+        workspace_id,
+        mode,
+        rows,
+        dry_run,
+        actor_id,
+        actor_role,
+      ));
+      break;
+    case 'leave':
+      ({ summary, errors } = await importLeave(serviceClient, workspace_id, mode, rows, dry_run));
+      break;
+    case 'offices':
+      ({ summary, errors } = await importOffices(serviceClient, workspace_id, mode, rows, dry_run));
+      break;
+    case 'work_categories':
+      ({ summary, errors } = await importWorkCategories(serviceClient, workspace_id, mode, rows, dry_run));
+      break;
+    case 'job_roles':
+      ({ summary, errors } = await importJobRoles(serviceClient, workspace_id, mode, rows, dry_run));
+      break;
+    case 'skills':
+      ({ summary, errors } = await importSkills(serviceClient, workspace_id, mode, rows, dry_run));
+      break;
+  }
+
+  if (!dry_run) {
+    try {
+      const { error: auditCompletionError } = await serviceClient
+        .from('enterprise_audit_events')
+        .insert({
+          workspace_id,
+          actor_id,
+          action: errors.length > 0 ? 'import.completed_with_errors' : 'import.completed',
+          metadata: { entity, mode, ...summary, error_count: errors.length },
+        });
+      if (auditCompletionError) {
+        // Entity writes may already be committed. Returning 503 here would
+        // invite an unsafe whole-import retry, so retain the successful result
+        // and emit only bounded operational evidence for reconciliation.
+        logger.warn('import_completion_audit_failed_after_writes', {
+          workspace_id,
+          entity,
+          provider_code: safeProviderCode(auditCompletionError.code),
         });
       }
-      return jsonResponse({ error: csvImportAccess.message }, csvImportAccess.status);
-    }
-
-    // Audit: import.started
-    if (!dry_run) {
-      await serviceClient.from('enterprise_audit_events').insert({
+    } catch {
+      logger.warn('import_completion_audit_failed_after_writes', {
         workspace_id,
-        actor_id: user.id,
-        action: 'import.started',
-        metadata: { entity, mode, row_count: rows.length },
+        entity,
+        provider_code: 'UNKNOWN',
       });
     }
-
-    let summary: Summary = { total: rows.length, created: 0, updated: 0, skipped: 0, failed: 0 };
-    let errors: RowError[] = [];
-
-    switch (entity) {
-      case 'members':
-        ({ summary, errors } = await importMembers(
-          serviceClient,
-          workspace_id,
-          mode,
-          rows,
-          dry_run,
-          user.id,
-          actorRole,
-        ));
-        break;
-      case 'leave':
-        ({ summary, errors } = await importLeave(serviceClient, workspace_id, mode, rows, dry_run));
-        break;
-      case 'offices':
-        ({ summary, errors } = await importOffices(serviceClient, workspace_id, mode, rows, dry_run));
-        break;
-      case 'work_categories':
-        ({ summary, errors } = await importWorkCategories(serviceClient, workspace_id, mode, rows, dry_run));
-        break;
-      case 'job_roles':
-        ({ summary, errors } = await importJobRoles(serviceClient, workspace_id, mode, rows, dry_run));
-        break;
-      case 'skills':
-        ({ summary, errors } = await importSkills(serviceClient, workspace_id, mode, rows, dry_run));
-        break;
-    }
-
-    if (!dry_run) {
-      await serviceClient.from('enterprise_audit_events').insert({
-        workspace_id,
-        actor_id: user.id,
-        action: errors.length > 0 ? 'import.completed_with_errors' : 'import.completed',
-        metadata: { entity, mode, ...summary, error_count: errors.length },
-      });
-    }
-
-    return jsonResponse({ success: true, summary, errors });
-  } catch (e: any) {
-    console.error('import-entity-data fatal:', e);
-    if (e instanceof ImportDependencyError) {
-      return jsonResponse({ error: 'Import dependency is temporarily unavailable' }, 503);
-    }
-    return jsonResponse({ error: e?.message || 'Internal error' }, 500);
   }
-});
 
-function jsonResponse(body: any, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-  });
+  return { summary, errors };
 }
 
 // ===== Members =====
@@ -229,7 +238,13 @@ async function importMembers(
   const errors: RowError[] = [];
 
   // Pre-fetch existing data for resolution
-  const { data: offices } = await client.from('enterprise_offices').select('id, name').eq('workspace_id', workspaceId);
+  const { data: offices, error: officesError } = await client
+    .from('enterprise_offices')
+    .select('id, name')
+    .eq('workspace_id', workspaceId);
+  if (officesError) {
+    throw new ImportDependencyError('member_offices_lookup');
+  }
   const officeByName = new Map((offices || []).map((o: any) => [o.name.toLowerCase(), o.id]));
 
   const { data: existingMemberships, error: membershipsError } = await client
@@ -237,7 +252,7 @@ async function importMembers(
     .select('id, user_id, role, status')
     .eq('workspace_id', workspaceId);
   if (membershipsError) {
-    throw new ImportDependencyError(`Membership lookup failed: ${membershipsError.message}`);
+    throw new ImportDependencyError('member_memberships_lookup');
   }
   const existingUserIds = new Set((existingMemberships || []).map((m: any) => m.user_id));
   const membershipByUser = new Map((existingMemberships || []).map((m: any) => [m.user_id, m]));
@@ -259,11 +274,11 @@ async function importMembers(
   if (hasInvitationCandidate) {
     membersInviteEntitlement = await resolveMembersInviteEntitlement(client, workspaceId);
     if (!membersInviteEntitlement.enabled && membersInviteEntitlement.reason === 'lookup_error') {
-      console.error('members_invite entitlement lookup failed', {
-        workspaceId,
+      logger.error('members_invite_entitlement_lookup_failed', {
+        workspace_id: workspaceId,
         step: membersInviteEntitlement.step,
       });
-      throw new ImportDependencyError('members_invite entitlement lookup failed');
+      throw new ImportDependencyError('members_invite_entitlement');
     }
   }
 
@@ -271,7 +286,13 @@ async function importMembers(
     const r = rows[i];
     const email = String(r.email || '').toLowerCase();
     if (!email) {
-      errors.push({ row_index: i, field: 'email', value: '', code: 'REQUIRED_EMPTY', message: 'Email kötelező' });
+      errors.push({
+        row_index: i,
+        field: 'email',
+        value: boundedImportRowValue(''),
+        code: 'REQUIRED_EMPTY',
+        message: 'Email kötelező',
+      });
       summary.failed++;
       continue;
     }
@@ -286,7 +307,7 @@ async function importMembers(
       errors.push({
         row_index: i,
         field: 'role',
-        value: String(r.role),
+        value: boundedImportRowValue(r.role),
         code: 'INVALID_ROLE',
         message: 'Érvénytelen workspace szerepkör',
       });
@@ -301,7 +322,7 @@ async function importMembers(
       errors.push({
         row_index: i,
         field: 'status',
-        value: String(r.status),
+        value: boundedImportRowValue(r.status),
         code: 'INVALID_STATUS',
         message: 'Érvénytelen tagsági státusz',
       });
@@ -321,7 +342,7 @@ async function importMembers(
         errors.push({
           row_index: i,
           field: requestedRole && requestedRole !== 'member' ? 'role' : 'status',
-          value: String(r.role || r.status || ''),
+          value: boundedImportRowValue(r.role || r.status || ''),
           code: 'FORBIDDEN_ACCESS_CHANGE',
           message: accessError,
         });
@@ -329,7 +350,7 @@ async function importMembers(
         return;
       }
       if (!membersInviteEntitlement) {
-        throw new ImportDependencyError('members_invite entitlement was not preflighted');
+        throw new ImportDependencyError('members_invite_preflight');
       }
       const invitationPlan = planMembersInviteInvitation(
         membersInviteEntitlement,
@@ -339,7 +360,7 @@ async function importMembers(
         errors.push({
           row_index: i,
           field: 'email',
-          value: email,
+          value: boundedImportRowValue(email),
           code: invitationPlan.code,
           message: invitationPlan.message,
         });
@@ -359,26 +380,31 @@ async function importMembers(
         _actor_id: actorId,
       });
       if (error) {
-        const errorCode = typeof error.code === 'string' && /^[a-z0-9_]{1,32}$/i.test(error.code)
-          ? error.code
-          : 'UNKNOWN';
-        console.error('Bulk member invitation RPC failed', {
-          workspaceId,
-          rowIndex: i,
-          errorCode,
+        logger.error('bulk_member_invitation_failed', {
+          workspace_id: workspaceId,
+          row_index: i,
+          provider_code: safeProviderCode(error.code),
         });
         errors.push({
           row_index: i,
           field: 'email',
-          value: email,
+          value: boundedImportRowValue(email),
           code: 'DB_ERROR',
+          reason_code: 'INVITATION_FAILED',
           message: 'Invitation could not be issued',
         });
         summary.failed++;
       } else if (data?.ok === true) summary.created++;
       else if (data?.code === 'ALREADY_MEMBER') summary.skipped++;
       else {
-        errors.push({ row_index: i, field: 'email', value: email, code: 'DB_ERROR', message: 'Invitation could not be issued' });
+        errors.push({
+          row_index: i,
+          field: 'email',
+          value: boundedImportRowValue(email),
+          code: 'DB_ERROR',
+          reason_code: 'INVITATION_FAILED',
+          message: 'Invitation could not be issued',
+        });
         summary.failed++;
       }
     };
@@ -424,7 +450,7 @@ async function importMembers(
         errors.push({
           row_index: i,
           field: requestedRole && requestedRole !== existingMembership.role ? 'role' : 'status',
-          value: String(r.role || r.status || ''),
+          value: boundedImportRowValue(r.role || r.status || ''),
           code: 'FORBIDDEN_ACCESS_CHANGE',
           message: accessError,
         });
@@ -437,7 +463,7 @@ async function importMembers(
         .update(membershipFields({}, actorRole === 'owner'))
         .eq('id', existingMembership.id);
       if (error) {
-        errors.push({ row_index: i, field: 'general', value: email, code: 'DB_ERROR', message: error.message });
+        errors.push(rowWriteFailure({ rowIndex: i, value: email }));
         summary.failed++;
       } else summary.updated++;
     } else {
@@ -462,7 +488,7 @@ async function importLeave(client: any, workspaceId: string, mode: string, rows:
     .eq('workspace_id', workspaceId)
     .eq('status', 'active');
   if (workspaceMembershipsError) {
-    throw new ImportDependencyError(`Leave membership lookup failed: ${workspaceMembershipsError.message}`);
+    throw new ImportDependencyError('leave_memberships_lookup');
   }
   const activeWorkspaceUserIds = new Set(
     (workspaceMemberships || []).map((membership: any) => membership.user_id),
@@ -477,7 +503,13 @@ async function importLeave(client: any, workspaceId: string, mode: string, rows:
   );
 
   // Pre-fetch existing for duplicate detection
-  const { data: existing } = await client.from('leave_requests').select('user_id, start_date, end_date, leave_type').eq('workspace_id', workspaceId);
+  const { data: existing, error: existingLeaveError } = await client
+    .from('leave_requests')
+    .select('user_id, start_date, end_date, leave_type')
+    .eq('workspace_id', workspaceId);
+  if (existingLeaveError) {
+    throw new ImportDependencyError('leave_existing_lookup');
+  }
   const existingKeys = new Set((existing || []).map((e: any) => `${e.user_id}||${e.start_date}||${e.end_date}||${e.leave_type}`));
 
   for (let i = 0; i < rows.length; i++) {
@@ -485,7 +517,13 @@ async function importLeave(client: any, workspaceId: string, mode: string, rows:
     const email = String(r.email || '').toLowerCase();
     const userId = userIdByEmail.get(email);
     if (!userId) {
-      errors.push({ row_index: i, field: 'email', value: email, code: 'REFERENCE_NOT_FOUND', message: `Tag nem található: ${email}` });
+      errors.push({
+        row_index: i,
+        field: 'email',
+        value: boundedImportRowValue(email),
+        code: 'REFERENCE_NOT_FOUND',
+        message: 'Tag nem található',
+      });
       summary.failed++;
       continue;
     }
@@ -508,7 +546,7 @@ async function importLeave(client: any, workspaceId: string, mode: string, rows:
       half_day_period: r.half_day_period || null,
     });
     if (error) {
-      errors.push({ row_index: i, field: 'general', value: email, code: 'DB_ERROR', message: error.message });
+      errors.push(rowWriteFailure({ rowIndex: i, value: email }));
       summary.failed++;
     } else summary.created++;
   }
@@ -522,24 +560,30 @@ async function importOffices(client: any, workspaceId: string, mode: string, row
   const summary: Summary = { total: rows.length, created: 0, updated: 0, skipped: 0, failed: 0 };
   const errors: RowError[] = [];
 
-  const { data: existing } = await client.from('enterprise_offices').select('id, name').eq('workspace_id', workspaceId);
+  const { data: existing, error: officeLookupError } = await client
+    .from('enterprise_offices')
+    .select('id, name')
+    .eq('workspace_id', workspaceId);
+  if (officeLookupError) {
+    throw new ImportDependencyError('office_existing_lookup');
+  }
   const idByName = new Map((existing || []).map((o: any) => [o.name.toLowerCase(), o.id]));
 
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
     const name = String(r.name || '').trim();
-    if (!name) { errors.push({ row_index: i, field: 'name', value: '', code: 'REQUIRED_EMPTY', message: 'Név kötelező' }); summary.failed++; continue; }
+    if (!name) { errors.push({ row_index: i, field: 'name', value: boundedImportRowValue(''), code: 'REQUIRED_EMPTY', message: 'Név kötelező' }); summary.failed++; continue; }
     const existingId = idByName.get(name.toLowerCase());
     if (existingId) {
       if (mode === 'create') { summary.skipped++; continue; }
       if (dryRun) { summary.updated++; continue; }
       const { error } = await client.from('enterprise_offices').update({ city: r.city || null, address: r.address || null }).eq('id', existingId);
-      if (error) { errors.push({ row_index: i, field: 'general', value: name, code: 'DB_ERROR', message: error.message }); summary.failed++; }
+      if (error) { errors.push(rowWriteFailure({ rowIndex: i, value: name })); summary.failed++; }
       else summary.updated++;
     } else {
       if (dryRun) { summary.created++; continue; }
       const { error } = await client.from('enterprise_offices').insert({ workspace_id: workspaceId, name, city: r.city || null, address: r.address || null });
-      if (error) { errors.push({ row_index: i, field: 'general', value: name, code: 'DB_ERROR', message: error.message }); summary.failed++; }
+      if (error) { errors.push(rowWriteFailure({ rowIndex: i, value: name })); summary.failed++; }
       else summary.created++;
     }
   }
@@ -552,25 +596,31 @@ async function importWorkCategories(client: any, workspaceId: string, mode: stri
   const summary: Summary = { total: rows.length, created: 0, updated: 0, skipped: 0, failed: 0 };
   const errors: RowError[] = [];
 
-  const { data: existing } = await client.from('enterprise_workspace_role_categories').select('id, name').eq('workspace_id', workspaceId);
+  const { data: existing, error: workCategoryLookupError } = await client
+    .from('enterprise_workspace_role_categories')
+    .select('id, name')
+    .eq('workspace_id', workspaceId);
+  if (workCategoryLookupError) {
+    throw new ImportDependencyError('work_category_existing_lookup');
+  }
   const idByName = new Map((existing || []).map((c: any) => [c.name.toLowerCase(), c.id]));
 
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
     const name = String(r.name || '').trim();
-    if (!name) { errors.push({ row_index: i, field: 'name', value: '', code: 'REQUIRED_EMPTY', message: 'Név kötelező' }); summary.failed++; continue; }
+    if (!name) { errors.push({ row_index: i, field: 'name', value: boundedImportRowValue(''), code: 'REQUIRED_EMPTY', message: 'Név kötelező' }); summary.failed++; continue; }
     const existingId = idByName.get(name.toLowerCase());
     const isActive = r.is_active === true || r.is_active === 'true' || r.is_active === undefined;
     if (existingId) {
       if (mode === 'create') { summary.skipped++; continue; }
       if (dryRun) { summary.updated++; continue; }
       const { error } = await client.from('enterprise_workspace_role_categories').update({ is_active: isActive }).eq('id', existingId);
-      if (error) { errors.push({ row_index: i, field: 'general', value: name, code: 'DB_ERROR', message: error.message }); summary.failed++; }
+      if (error) { errors.push(rowWriteFailure({ rowIndex: i, value: name })); summary.failed++; }
       else summary.updated++;
     } else {
       if (dryRun) { summary.created++; continue; }
       const { error } = await client.from('enterprise_workspace_role_categories').insert({ workspace_id: workspaceId, name, is_active: isActive });
-      if (error) { errors.push({ row_index: i, field: 'general', value: name, code: 'DB_ERROR', message: error.message }); summary.failed++; }
+      if (error) { errors.push(rowWriteFailure({ rowIndex: i, value: name })); summary.failed++; }
       else summary.created++;
     }
   }
@@ -583,19 +633,31 @@ async function importJobRoles(client: any, workspaceId: string, mode: string, ro
   const summary: Summary = { total: rows.length, created: 0, updated: 0, skipped: 0, failed: 0 };
   const errors: RowError[] = [];
 
-  const { data: cats } = await client.from('enterprise_workspace_role_categories').select('id, name').eq('workspace_id', workspaceId);
+  const { data: cats, error: jobCategoryLookupError } = await client
+    .from('enterprise_workspace_role_categories')
+    .select('id, name')
+    .eq('workspace_id', workspaceId);
+  if (jobCategoryLookupError) {
+    throw new ImportDependencyError('job_category_lookup');
+  }
   const catIdByName = new Map((cats || []).map((c: any) => [c.name.toLowerCase(), c.id]));
 
-  const { data: existing } = await client.from('enterprise_workspace_roles').select('id, name, category_id').eq('workspace_id', workspaceId);
+  const { data: existing, error: jobRoleLookupError } = await client
+    .from('enterprise_workspace_roles')
+    .select('id, name, category_id')
+    .eq('workspace_id', workspaceId);
+  if (jobRoleLookupError) {
+    throw new ImportDependencyError('job_role_existing_lookup');
+  }
   const existingByKey = new Map((existing || []).map((r: any) => [`${r.category_id}||${r.name.toLowerCase()}`, r.id]));
 
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
     const name = String(r.name || '').trim();
     const catName = String(r.category_name || '').trim();
-    if (!name || !catName) { errors.push({ row_index: i, field: 'name', value: name, code: 'REQUIRED_EMPTY', message: 'Név és kategória kötelező' }); summary.failed++; continue; }
+    if (!name || !catName) { errors.push({ row_index: i, field: 'name', value: boundedImportRowValue(name), code: 'REQUIRED_EMPTY', message: 'Név és kategória kötelező' }); summary.failed++; continue; }
     const catId = catIdByName.get(catName.toLowerCase());
-    if (!catId) { errors.push({ row_index: i, field: 'category_name', value: catName, code: 'REFERENCE_NOT_FOUND', message: `Kategória nem található: ${catName}` }); summary.failed++; continue; }
+    if (!catId) { errors.push({ row_index: i, field: 'category_name', value: boundedImportRowValue(catName), code: 'REFERENCE_NOT_FOUND', message: 'Kategória nem található' }); summary.failed++; continue; }
 
     const key = `${catId}||${name.toLowerCase()}`;
     const existingId = existingByKey.get(key);
@@ -604,12 +666,12 @@ async function importJobRoles(client: any, workspaceId: string, mode: string, ro
       if (mode === 'create') { summary.skipped++; continue; }
       if (dryRun) { summary.updated++; continue; }
       const { error } = await client.from('enterprise_workspace_roles').update({ is_active: isActive }).eq('id', existingId);
-      if (error) { errors.push({ row_index: i, field: 'general', value: name, code: 'DB_ERROR', message: error.message }); summary.failed++; }
+      if (error) { errors.push(rowWriteFailure({ rowIndex: i, value: name })); summary.failed++; }
       else summary.updated++;
     } else {
       if (dryRun) { summary.created++; continue; }
       const { error } = await client.from('enterprise_workspace_roles').insert({ workspace_id: workspaceId, name, category_id: catId, is_active: isActive });
-      if (error) { errors.push({ row_index: i, field: 'general', value: name, code: 'DB_ERROR', message: error.message }); summary.failed++; }
+      if (error) { errors.push(rowWriteFailure({ rowIndex: i, value: name })); summary.failed++; }
       else summary.created++;
     }
   }
@@ -622,24 +684,30 @@ async function importSkills(client: any, workspaceId: string, mode: string, rows
   const summary: Summary = { total: rows.length, created: 0, updated: 0, skipped: 0, failed: 0 };
   const errors: RowError[] = [];
 
-  const { data: existing } = await client.from('enterprise_skills').select('id, name').eq('workspace_id', workspaceId);
+  const { data: existing, error: skillLookupError } = await client
+    .from('enterprise_skills')
+    .select('id, name')
+    .eq('workspace_id', workspaceId);
+  if (skillLookupError) {
+    throw new ImportDependencyError('skill_existing_lookup');
+  }
   const idByName = new Map((existing || []).map((s: any) => [s.name.toLowerCase(), s.id]));
 
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
     const name = String(r.name || '').trim();
-    if (!name) { errors.push({ row_index: i, field: 'name', value: '', code: 'REQUIRED_EMPTY', message: 'Név kötelező' }); summary.failed++; continue; }
+    if (!name) { errors.push({ row_index: i, field: 'name', value: boundedImportRowValue(''), code: 'REQUIRED_EMPTY', message: 'Név kötelező' }); summary.failed++; continue; }
     const existingId = idByName.get(name.toLowerCase());
     if (existingId) {
       if (mode === 'create') { summary.skipped++; continue; }
       if (dryRun) { summary.updated++; continue; }
       const { error } = await client.from('enterprise_skills').update({ category: r.category || null, color: r.color || '#6366f1' }).eq('id', existingId);
-      if (error) { errors.push({ row_index: i, field: 'general', value: name, code: 'DB_ERROR', message: error.message }); summary.failed++; }
+      if (error) { errors.push(rowWriteFailure({ rowIndex: i, value: name })); summary.failed++; }
       else summary.updated++;
     } else {
       if (dryRun) { summary.created++; continue; }
       const { error } = await client.from('enterprise_skills').insert({ workspace_id: workspaceId, name, category: r.category || null, color: r.color || '#6366f1' });
-      if (error) { errors.push({ row_index: i, field: 'general', value: name, code: 'DB_ERROR', message: error.message }); summary.failed++; }
+      if (error) { errors.push(rowWriteFailure({ rowIndex: i, value: name })); summary.failed++; }
       else summary.created++;
     }
   }

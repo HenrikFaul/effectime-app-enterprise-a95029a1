@@ -29,6 +29,7 @@ function typeScript() {
 
 export const piiSensitiveFunctions = Object.freeze([
   "supabase/functions/auth-email-hook/index.ts",
+  "supabase/functions/import-entity-data/index.ts",
   "supabase/functions/send-transactional-email/index.ts",
 ]);
 
