@@ -3,7 +3,7 @@
   "purpose": "Existing ESLint diagnostic fingerprint ceiling. CI fails on new findings and requires baseline reduction when findings are fixed.",
   "command": "eslint . --format json",
   "totals": {
-    "errors": 1145,
+    "errors": 1121,
     "warnings": 98
   },
   "counts": {
@@ -20,7 +20,7 @@
       "warnings": 0
     },
     "@typescript-eslint/no-explicit-any": {
-      "errors": 1116,
+      "errors": 1092,
       "warnings": 0
     },
     "@typescript-eslint/no-require-imports": {
@@ -431,30 +431,6 @@
       "react-hooks/exhaustive-deps": {
         "errors": 0,
         "warnings": 1
-      }
-    },
-    "src/components/enterprise/import-export/ExportWizard.tsx": {
-      "@typescript-eslint/no-explicit-any": {
-        "errors": 3,
-        "warnings": 0
-      }
-    },
-    "src/components/enterprise/import-export/ImportWizard.tsx": {
-      "@typescript-eslint/no-explicit-any": {
-        "errors": 4,
-        "warnings": 0
-      }
-    },
-    "src/components/enterprise/import-export/utils/data-fetcher.ts": {
-      "@typescript-eslint/no-explicit-any": {
-        "errors": 14,
-        "warnings": 0
-      }
-    },
-    "src/components/enterprise/import-export/utils/validator.ts": {
-      "@typescript-eslint/no-explicit-any": {
-        "errors": 3,
-        "warnings": 0
       }
     },
     "src/components/enterprise/IntegrationManager.tsx": {
@@ -3303,161 +3279,6 @@
         "severity": "errors",
         "message": "Unexpected any. Specify a different type.",
         "source": "} catch (e: any) {",
-        "count": 1
-      }
-    },
-    "src/components/enterprise/import-export/ExportWizard.tsx": {
-      "30370ac6a576bbaf6b86": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "<Select value={format} onValueChange={(v: any) => setFormat(v)}>",
-        "count": 1
-      },
-      "bc2a880432caa7ec19c2": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "await (supabase as any).from('enterprise_audit_events').insert({",
-        "count": 1
-      },
-      "f9aee9e796c5001d1d4f": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "} catch (e: any) {",
-        "count": 1
-      }
-    },
-    "src/components/enterprise/import-export/ImportWizard.tsx": {
-      "02163a3b0b07e7dc0261": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const s = (data as any)?.summary;",
-        "count": 1
-      },
-      "f9aee9e796c5001d1d4f": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "} catch (e: any) {",
-        "count": 3
-      }
-    },
-    "src/components/enterprise/import-export/utils/data-fetcher.ts": {
-      "10b232dceb42cf1a12b2": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const { data } = await (supabase as any)",
-        "count": 1
-      },
-      "1c6a476ba81716f46254": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "return roles.map((r: any) => ({",
-        "count": 1
-      },
-      "1cd6294992e6c4b032af": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const { data, error } = await (supabase as any).rpc('get_workspace_leave_for_export', {",
-        "count": 1
-      },
-      "2a98895798f35e7a554b": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "return (data || []).map((c: any) => ({",
-        "count": 1
-      },
-      "41dcbd76dca0d2284325": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const { data, error } = await (supabase as any).rpc('get_workspace_members_for_export', {",
-        "count": 1
-      },
-      "59137e1b8644023c2d90": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const catMap = new Map((cats || []).map((c: any) => [c.id, c.name]));",
-        "count": 1
-      },
-      "69f492cb6b5d25f76c8b": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "return (data || []).map((s: any) => ({",
-        "count": 1
-      },
-      "7ef6fcf76d9f87beed7b": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "return (data || []).map((r: any): Record<string, string> => ({",
-        "count": 2
-      },
-      "8dd5507c6eb5bb71a710": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "(data || []).forEach((m: any) => {",
-        "count": 1
-      },
-      "94fd2b8111b79a54af5d": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "return (data || []).map((o: any) => ({",
-        "count": 1
-      },
-      "ce412af422e3f7a28928": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const { data: cats } = await (supabase as any)",
-        "count": 1
-      },
-      "ef6b3bf428855c07ab62": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const { data: roles, error } = await (supabase as any)",
-        "count": 1
-      },
-      "feabb7c5cfe27dcdc94e": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const { data, error } = await (supabase as any)",
-        "count": 1
-      }
-    },
-    "src/components/enterprise/import-export/utils/validator.ts": {
-      "dde180a5b879521fa997": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "cleanedRow: Record<string, any>;",
-        "count": 1
-      },
-      "e9be51b50b1e39e6ad48": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "const cleanedRow: Record<string, any> = {};",
-        "count": 1
-      },
-      "ebe53c4453947e13ee8f": {
-        "ruleId": "@typescript-eslint/no-explicit-any",
-        "severity": "errors",
-        "message": "Unexpected any. Specify a different type.",
-        "source": "function validateField(field: FieldDefinition, rawValue: string): { error: ErrorCode | null; cleaned: any; message?: string } {",
         "count": 1
       }
     },

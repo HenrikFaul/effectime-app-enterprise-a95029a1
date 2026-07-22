@@ -194,6 +194,29 @@ describe('i18n key parity — EN and HU bundles', () => {
     }
   });
 
+  it('import and export safety recovery keys are non-empty in every supported locale', () => {
+    const criticalKeys = [
+      'import_wizard.toast_error',
+      'import_wizard.toast_file_read_error',
+      'import_wizard.toast_invalid_headers',
+      'import_wizard.toast_import_failed',
+      'import_wizard.toast_import_uncertain',
+      'import_wizard.result_failed_description',
+      'import_wizard.result_uncertain',
+      'import_wizard.result_uncertain_description',
+      'import_wizard.support_code',
+      'import_wizard.support_reference',
+      'import_wizard.btn_remove_file',
+      'import_wizard.duplicate_mapping',
+      'export_wizard.export_error',
+    ];
+    for (const [locale, bundle] of supportedBundles) {
+      for (const key of criticalKeys) {
+        expect(bundle.get(key)?.trim(), `${locale} missing or empty: ${key}`).toBeTruthy();
+      }
+    }
+  });
+
   it('profile load and optimistic-conflict recovery keys are non-empty in every supported locale', () => {
     const criticalKeys = [
       'profile.load_error',

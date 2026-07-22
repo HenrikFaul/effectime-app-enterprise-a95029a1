@@ -1,6 +1,137 @@
 import { supabase } from '@/integrations/supabase/client';
 import type { EntityConfig } from '../config/entity-registry';
 
+interface ExportQueryResult<TRow> {
+  data: TRow[] | null;
+  error: unknown;
+}
+
+interface ExportQuery<TRow> extends PromiseLike<ExportQueryResult<TRow>> {
+  select(columns: string): ExportQuery<TRow>;
+  eq(column: string, value: string): ExportQuery<TRow>;
+  order(column: string): Promise<ExportQueryResult<TRow>>;
+}
+
+interface ExportDataClient {
+  rpc<TRow>(name: string, params: Record<string, unknown>): Promise<ExportQueryResult<TRow>>;
+  from<TRow>(table: string): ExportQuery<TRow>;
+}
+
+interface MemberExportRow {
+  email?: string | null;
+  display_name?: string | null;
+  role?: string | null;
+  status?: string | null;
+  team?: string | null;
+  business_role?: string | null;
+  office_name?: string | null;
+  org_unit_name?: string | null;
+  city?: string | null;
+  location?: string | null;
+  base_working_hours?: string | number | null;
+  weekly_capacity_hours?: string | number | null;
+  joined_at?: string | null;
+  manager_email?: string | null;
+  subordinate_emails?: string | null;
+  seniority?: string | null;
+  leadership_level?: string | null;
+  leadership_category?: string | null;
+  contract_type?: string | null;
+  employer_rights?: boolean | null;
+  skills?: string | null;
+  membership_id?: string | null;
+  user_id?: string | null;
+}
+
+interface LeaveExportRow {
+  email?: string | null;
+  display_name?: string | null;
+  team?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  leave_type?: string | null;
+  status?: string | null;
+  is_half_day?: boolean | null;
+  half_day_period?: string | null;
+  comment?: string | null;
+}
+
+interface OfficeExportRow {
+  id: string;
+  name?: string | null;
+  city?: string | null;
+  address?: string | null;
+}
+
+interface WorkCategoryExportRow {
+  id: string;
+  name?: string | null;
+  is_active?: boolean | null;
+}
+
+interface JobRoleExportRow {
+  id: string;
+  name?: string | null;
+  is_active?: boolean | null;
+  category_id?: string | null;
+}
+
+interface JobRoleCategoryExportRow {
+  id: string;
+  name?: string | null;
+}
+
+interface PositionExportRow {
+  business_role?: string | null;
+}
+
+interface SkillExportRow {
+  id: string;
+  name?: string | null;
+  category?: string | null;
+  color?: string | null;
+}
+
+const exportDataClient = supabase as unknown as ExportDataClient;
+
+export const ENTITY_DATA_FETCH_ERROR_MESSAGE = 'Unable to load export data.';
+
+export type EntityDataFetchErrorCode =
+  | 'MEMBERS_QUERY_FAILED'
+  | 'LEAVE_QUERY_FAILED'
+  | 'OFFICES_QUERY_FAILED'
+  | 'WORK_CATEGORIES_QUERY_FAILED'
+  | 'JOB_ROLES_QUERY_FAILED'
+  | 'JOB_ROLE_CATEGORIES_QUERY_FAILED'
+  | 'POSITIONS_QUERY_FAILED'
+  | 'SKILLS_QUERY_FAILED'
+  | 'UNSUPPORTED_ENTITY';
+
+/**
+ * Stable client boundary for export-data lookup failures.
+ *
+ * Provider error text is intentionally not retained because it can contain
+ * schema details, identifiers, or other data that must not reach the UI.
+ */
+export class EntityDataFetchError extends Error {
+  readonly code: EntityDataFetchErrorCode;
+
+  constructor(code: EntityDataFetchErrorCode) {
+    super(ENTITY_DATA_FETCH_ERROR_MESSAGE);
+    this.name = 'EntityDataFetchError';
+    this.code = code;
+  }
+}
+
+function assertQuerySucceeded(
+  error: unknown,
+  code: EntityDataFetchErrorCode
+): void {
+  if (error) {
+    throw new EntityDataFetchError(code);
+  }
+}
+
 export async function fetchEntityRows(
   entity: EntityConfig,
   workspaceId: string,
@@ -22,16 +153,16 @@ export async function fetchEntityRows(
     case 'skills':
       return fetchSkills(workspaceId);
     default:
-      return [];
+      throw new EntityDataFetchError('UNSUPPORTED_ENTITY');
   }
 }
 
 async function fetchMembers(workspaceId: string): Promise<Record<string, string>[]> {
-  const { data, error } = await (supabase as any).rpc('get_workspace_members_for_export', {
+  const { data, error } = await exportDataClient.rpc<MemberExportRow>('get_workspace_members_for_export', {
     p_workspace_id: workspaceId,
   });
-  if (error) throw new Error(`Failed to fetch members: ${error.message}`);
-  return (data || []).map((r: any): Record<string, string> => ({
+  assertQuerySucceeded(error, 'MEMBERS_QUERY_FAILED');
+  return (data || []).map((r): Record<string, string> => ({
     email: r.email || '',
     display_name: r.display_name || '',
     role: r.role || 'member',
@@ -59,14 +190,14 @@ async function fetchMembers(workspaceId: string): Promise<Record<string, string>
 }
 
 async function fetchLeave(workspaceId: string, filters?: { startDate?: string; endDate?: string; statusFilter?: string }): Promise<Record<string, string>[]> {
-  const { data, error } = await (supabase as any).rpc('get_workspace_leave_for_export', {
+  const { data, error } = await exportDataClient.rpc<LeaveExportRow>('get_workspace_leave_for_export', {
     p_workspace_id: workspaceId,
     p_start_date: filters?.startDate || null,
     p_end_date: filters?.endDate || null,
     p_status: filters?.statusFilter && filters.statusFilter !== 'all' ? filters.statusFilter : null,
   });
-  if (error) throw new Error(`Failed to fetch leave records: ${error.message}`);
-  return (data || []).map((r: any): Record<string, string> => ({
+  assertQuerySucceeded(error, 'LEAVE_QUERY_FAILED');
+  return (data || []).map((r): Record<string, string> => ({
     email: r.email || '',
     display_name: r.display_name || '',
     team: r.team || '',
@@ -81,13 +212,13 @@ async function fetchLeave(workspaceId: string, filters?: { startDate?: string; e
 }
 
 async function fetchOffices(workspaceId: string): Promise<Record<string, string>[]> {
-  const { data, error } = await supabase
-    .from('enterprise_offices')
+  const { data, error } = await exportDataClient
+    .from<OfficeExportRow>('enterprise_offices')
     .select('id, name, city, address')
     .eq('workspace_id', workspaceId)
     .order('name');
-  if (error) throw new Error(`Failed to fetch offices: ${error.message}`);
-  return (data || []).map((o: any) => ({
+  assertQuerySucceeded(error, 'OFFICES_QUERY_FAILED');
+  return (data || []).map((o) => ({
     name: o.name || '',
     city: o.city || '',
     address: o.address || '',
@@ -96,13 +227,13 @@ async function fetchOffices(workspaceId: string): Promise<Record<string, string>
 }
 
 async function fetchWorkCategories(workspaceId: string): Promise<Record<string, string>[]> {
-  const { data, error } = await (supabase as any)
-    .from('enterprise_workspace_role_categories')
+  const { data, error } = await exportDataClient
+    .from<WorkCategoryExportRow>('enterprise_workspace_role_categories')
     .select('id, name, is_active')
     .eq('workspace_id', workspaceId)
     .order('name');
-  if (error) throw new Error(`Failed to fetch work categories: ${error.message}`);
-  return (data || []).map((c: any) => ({
+  assertQuerySucceeded(error, 'WORK_CATEGORIES_QUERY_FAILED');
+  return (data || []).map((c) => ({
     name: c.name || '',
     is_active: c.is_active ? 'true' : 'false',
     category_id: c.id,
@@ -110,19 +241,20 @@ async function fetchWorkCategories(workspaceId: string): Promise<Record<string, 
 }
 
 async function fetchJobRoles(workspaceId: string): Promise<Record<string, string>[]> {
-  const { data: roles, error } = await (supabase as any)
-    .from('enterprise_workspace_roles')
+  const { data: roles, error } = await exportDataClient
+    .from<JobRoleExportRow>('enterprise_workspace_roles')
     .select('id, name, is_active, category_id')
     .eq('workspace_id', workspaceId)
     .order('name');
-  if (error) throw new Error(`Failed to fetch job roles: ${error.message}`);
+  assertQuerySucceeded(error, 'JOB_ROLES_QUERY_FAILED');
   if (!roles || roles.length === 0) return [];
-  const { data: cats } = await (supabase as any)
-    .from('enterprise_workspace_role_categories')
+  const { data: cats, error: categoriesError } = await exportDataClient
+    .from<JobRoleCategoryExportRow>('enterprise_workspace_role_categories')
     .select('id, name')
     .eq('workspace_id', workspaceId);
-  const catMap = new Map((cats || []).map((c: any) => [c.id, c.name]));
-  return roles.map((r: any) => ({
+  assertQuerySucceeded(categoriesError, 'JOB_ROLE_CATEGORIES_QUERY_FAILED');
+  const catMap = new Map((cats || []).map((c) => [c.id, c.name]));
+  return roles.map((r) => ({
     name: r.name || '',
     category_name: (catMap.get(r.category_id) as string) || '',
     is_active: r.is_active ? 'true' : 'false',
@@ -131,12 +263,13 @@ async function fetchJobRoles(workspaceId: string): Promise<Record<string, string
 }
 
 async function fetchPositions(workspaceId: string): Promise<Record<string, string>[]> {
-  const { data } = await (supabase as any)
-    .from('enterprise_memberships')
+  const { data, error } = await exportDataClient
+    .from<PositionExportRow>('enterprise_memberships')
     .select('business_role')
     .eq('workspace_id', workspaceId);
+  assertQuerySucceeded(error, 'POSITIONS_QUERY_FAILED');
   const counts = new Map<string, number>();
-  (data || []).forEach((m: any) => {
+  (data || []).forEach((m) => {
     if (m.business_role) counts.set(m.business_role, (counts.get(m.business_role) || 0) + 1);
   });
   return Array.from(counts.entries())
@@ -145,13 +278,13 @@ async function fetchPositions(workspaceId: string): Promise<Record<string, strin
 }
 
 async function fetchSkills(workspaceId: string): Promise<Record<string, string>[]> {
-  const { data, error } = await supabase
-    .from('enterprise_skills')
+  const { data, error } = await exportDataClient
+    .from<SkillExportRow>('enterprise_skills')
     .select('id, name, category, color')
     .eq('workspace_id', workspaceId)
     .order('name');
-  if (error) throw new Error(`Failed to fetch skills: ${error.message}`);
-  return (data || []).map((s: any) => ({
+  assertQuerySucceeded(error, 'SKILLS_QUERY_FAILED');
+  return (data || []).map((s) => ({
     name: s.name || '',
     category: s.category || '',
     color: s.color || '',

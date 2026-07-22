@@ -22,7 +22,7 @@ export interface RowValidationResult {
   rowIndex: number;
   status: 'valid' | 'warning' | 'error';
   errors: RowError[];
-  cleanedRow: Record<string, any>;
+  cleanedRow: Record<string, string | number | boolean>;
 }
 
 export interface ValidationSummary {
@@ -36,6 +36,56 @@ export interface ValidationSummary {
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DATE_RE_ISO = /^\d{4}-\d{2}-\d{2}$/;
+const GUIDANCE_ROW_MARKER = '__EFFECTIME_GUIDANCE_V1__';
+
+function normalizedHeader(header: string): string {
+  return header.replace(/\s*\*\s*$/, '').trim().toLocaleLowerCase('en-US');
+}
+
+export function getImportHeaderIssue(
+  headers: readonly string[],
+): 'empty' | 'duplicate' | null {
+  const seen = new Set<string>();
+  for (const header of headers) {
+    const normalized = normalizedHeader(header);
+    if (!normalized) return 'empty';
+    if (seen.has(normalized)) return 'duplicate';
+    seen.add(normalized);
+  }
+  return null;
+}
+
+export function getDuplicateMappedFieldKeys(
+  mapping: Readonly<Record<string, string>>,
+): string[] {
+  const counts = new Map<string, number>();
+  for (const fieldKey of Object.values(mapping)) {
+    if (!fieldKey || fieldKey === '__ignore__') continue;
+    counts.set(fieldKey, (counts.get(fieldKey) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([fieldKey]) => fieldKey);
+}
+
+function guidanceValue(field: FieldDefinition): string {
+  if (field.templateExample !== undefined) return field.templateExample;
+  if (field.type === 'date') return '(YYYY-MM-DD)';
+  if (field.type === 'boolean') return 'true/false';
+  if (field.type === 'enum') return field.enumValues?.join(' | ') ?? '';
+  return '';
+}
+
+export function buildTemplateGuidanceRow(
+  fields: readonly FieldDefinition[],
+): string[] {
+  return fields.map((field, index) => {
+    const value = guidanceValue(field);
+    return index === 0
+      ? `${GUIDANCE_ROW_MARKER}${value ? ` ${value}` : ''}`
+      : value;
+  });
+}
 
 export function normalizeBoolean(v: string): boolean | null {
   const s = (v || '').trim().toLowerCase();
@@ -63,7 +113,14 @@ export function normalizeDate(v: string): string | null {
   return null;
 }
 
-function validateField(field: FieldDefinition, rawValue: string): { error: ErrorCode | null; cleaned: any; message?: string } {
+function validateField(
+  field: FieldDefinition,
+  rawValue: string,
+): {
+  error: ErrorCode | null;
+  cleaned: string | number | boolean | null;
+  message?: string;
+} {
   const value = (rawValue ?? '').trim();
 
   if (field.required && !value) {
@@ -113,7 +170,8 @@ function validateField(field: FieldDefinition, rawValue: string): { error: Error
 export function validateRows(
   entity: EntityConfig,
   rows: Record<string, string>[],
-  columnMapping: Record<string, string>
+  columnMapping: Record<string, string>,
+  sourceRowOffset = 0,
 ): ValidationSummary {
   const perRow: RowValidationResult[] = [];
   const allErrors: RowError[] = [];
@@ -121,7 +179,7 @@ export function validateRows(
 
   rows.forEach((row, rowIndex) => {
     const errors: RowError[] = [];
-    const cleanedRow: Record<string, any> = {};
+    const cleanedRow: Record<string, string | number | boolean> = {};
 
     // Map file columns to field keys
     const fieldValues: Record<string, string> = {};
@@ -145,9 +203,11 @@ export function validateRows(
     }
 
     // Cross-field business rules
-    if (entity.key === 'leave' && cleanedRow.start_date && cleanedRow.end_date) {
-      if (cleanedRow.end_date < cleanedRow.start_date) {
-        const e: RowError = { rowIndex, field: 'end_date', value: cleanedRow.end_date, code: 'BUSINESS_RULE', message: 'End date cannot be earlier than start date' };
+    const startDate = cleanedRow.start_date;
+    const endDate = cleanedRow.end_date;
+    if (entity.key === 'leave' && typeof startDate === 'string' && typeof endDate === 'string') {
+      if (endDate < startDate) {
+        const e: RowError = { rowIndex, field: 'end_date', value: endDate, code: 'BUSINESS_RULE', message: 'End date cannot be earlier than start date' };
         errors.push(e);
         allErrors.push(e);
       }
@@ -160,7 +220,7 @@ export function validateRows(
         const keyStr = keyParts.join('||');
         const prev = seenKeys.get(keyStr);
         if (prev !== undefined) {
-          const e: RowError = { rowIndex, field: entity.uniqueKeyFields[0], value: keyParts[0], code: 'DUPLICATE_IN_FILE', message: `Duplicate row in file (other row: ${prev + 1})` };
+          const e: RowError = { rowIndex, field: entity.uniqueKeyFields[0], value: keyParts[0], code: 'DUPLICATE_IN_FILE', message: `Duplicate row in file (other row: ${prev + sourceRowOffset + 1})` };
           errors.push(e);
           allErrors.push(e);
         } else {
@@ -192,7 +252,7 @@ export function validateRows(
  * Tries exact-key, alias, label, lowercased matches.
  */
 export function autoMapColumns(entity: EntityConfig, fileHeaders: string[]): Record<string, string> {
-  const mapping: Record<string, string> = {};
+  const mapping = Object.create(null) as Record<string, string>;
   const fields = entity.fields.filter(f => f.importable);
 
   for (const header of fileHeaders) {
@@ -211,22 +271,54 @@ export function autoMapColumns(entity: EntityConfig, fileHeaders: string[]): Rec
   return mapping;
 }
 
-/**
- * Detect and skip a guidance row.
- * Heuristic: if the second row's values match the templateExample values exactly,
- * or none of its required-field cells contain a valid value (e.g. email format), skip it.
- */
+/** Detects only a version-marked guidance row or an exact legacy full-template signature. */
 export function detectGuidanceRow(entity: EntityConfig, mapping: Record<string, string>, firstRow: Record<string, string>): boolean {
-  // Look up email column or first required field
-  const emailField = entity.fields.find(f => f.type === 'email' && f.required);
-  if (emailField) {
-    const fileHeader = Object.entries(mapping).find(([, k]) => k === emailField.key)?.[0];
-    if (fileHeader) {
-      const v = (firstRow[fileHeader] || '').trim();
-      // Guidance row often contains placeholder like "kovacs.bela@ceg.hu"
-      if (v && v.includes('@ceg.hu')) return true;
-      if (v && !EMAIL_RE.test(v)) return true; // not a valid email — likely guidance
-    }
+  const importableFields = entity.fields.filter((field) => field.importable);
+  const mapped = Object.entries(mapping).flatMap(([header, fieldKey]) => {
+    if (fieldKey === '__ignore__') return [];
+    const field = importableFields.find((candidate) => candidate.key === fieldKey);
+    return field ? [{ header, field }] : [];
+  });
+  if (mapped.length === 0) return false;
+
+  const actual = mapped.map(({ header }) => (firstRow[header] ?? '').trim());
+  const canonicalGuidanceRow = buildTemplateGuidanceRow(importableFields);
+  const canonicalMarkedValues = new Map(
+    importableFields.map((field, index) => [
+      field.key,
+      canonicalGuidanceRow[index].trim(),
+    ]),
+  );
+  const marked = mapped.map(({ field }) => canonicalMarkedValues.get(field.key) ?? '');
+  const markerFieldKey = importableFields[0]?.key;
+  const markerFieldIndex = mapped.findIndex(({ field }) => field.key === markerFieldKey);
+  if (
+    markerFieldIndex >= 0
+    && actual[markerFieldIndex] === marked[markerFieldIndex]
+    && actual.every((value, index) => value === marked[index])
+  ) {
+    return true;
   }
-  return false;
+
+  // Backward compatibility for templates generated before the marker existed:
+  // accept only a complete importable-field signature. Invalid data is never a
+  // guidance signal, and partial one-column files remain data.
+  const mappedKeys = new Set(mapped.map(({ field }) => field.key));
+  if (!importableFields.every((field) => mappedKeys.has(field.key))) return false;
+
+  const legacyCandidates = [
+    mapped.map(({ field }) => guidanceValue(field).trim()),
+    mapped.map(({ field }) => (
+      field.templateExample
+      || (field.type === 'date' ? '(YYYY-MM-DD)' : field.enumValues?.join(' | ') || '')
+    ).trim()),
+    mapped.map(({ field }) => (
+      field.templateExample
+      || (field.type === 'date' ? '(YYYY-MM-DD)' : field.type === 'boolean' ? 'true/false' : '')
+    ).trim()),
+    mapped.map(({ field }) => (field.templateExample || '').trim()),
+  ];
+  return legacyCandidates.some((expected) => (
+    actual.every((value, index) => value === expected[index])
+  ));
 }

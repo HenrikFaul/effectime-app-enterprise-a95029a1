@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
@@ -6,15 +6,28 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Upload, FileText, AlertCircle, CheckCircle2, ArrowLeft, ArrowRight, Loader2, FileDown, AlertTriangle, X, Info, Sparkles, Database } from 'lucide-react';
+import { Upload, AlertCircle, CheckCircle2, ArrowLeft, ArrowRight, Loader2, FileDown, AlertTriangle, X, Info, Sparkles, Database } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
 import type { EntityConfig } from './config/entity-registry';
 import { fetchEntityRows } from './utils/data-fetcher';
 import { generateCSV, generateExcelXML, downloadFile, parseUploadedFile } from './utils/file-parser';
-import { autoMapColumns, validateRows, detectGuidanceRow, type ValidationSummary, type RowError } from './utils/validator';
+import {
+  autoMapColumns,
+  buildTemplateGuidanceRow,
+  validateRows,
+  detectGuidanceRow,
+  getDuplicateMappedFieldKeys,
+  getImportHeaderIssue,
+  type ValidationSummary,
+} from './utils/validator';
 import { useI18n } from '@/i18n/I18nProvider';
+import {
+  invokeImportEntityData,
+  type ImportEntityDataEntity,
+  type ImportEntityDataOutcome,
+} from '@/lib/importEntityDataApi';
 
 interface Props {
   entity: EntityConfig;
@@ -26,23 +39,20 @@ interface Props {
 type Step = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 type ImportMode = 'create' | 'upsert';
 
-interface ImportResultData {
-  success: boolean;
-  summary: { total: number; created: number; updated: number; skipped: number; failed: number };
-  errors: { row_index: number; field: string; value: string; code: string; message: string }[];
-}
-
-export function ImportWizard({ entity, workspaceId, userId, onClose }: Props) {
+export function ImportWizard({ entity, workspaceId, onClose }: Props) {
   const [step, setStep] = useState<Step>(1);
   const [file, setFile] = useState<File | null>(null);
   const [parsedHeaders, setParsedHeaders] = useState<string[]>([]);
   const [parsedRows, setParsedRows] = useState<string[][]>([]);
+  const [sourceRowOffset, setSourceRowOffset] = useState(0);
   const [columnMapping, setColumnMapping] = useState<Record<string, string>>({});
   const [validation, setValidation] = useState<ValidationSummary | null>(null);
   const [importMode, setImportMode] = useState<ImportMode>('create');
   const [confirmed, setConfirmed] = useState(false);
   const [importing, setImporting] = useState(false);
-  const [result, setResult] = useState<ImportResultData | null>(null);
+  const [result, setResult] = useState<ImportEntityDataOutcome | null>(null);
+  const fileSelectionGeneration = useRef(0);
+  const submissionInFlight = useRef(false);
   const { t } = useI18n();
 
   const importableFields = useMemo(() => entity.fields.filter(f => f.importable), [entity]);
@@ -51,11 +61,17 @@ export function ImportWizard({ entity, workspaceId, userId, onClose }: Props) {
   const goNext = () => setStep((s) => Math.min(7, s + 1) as Step);
   const goBack = () => setStep((s) => Math.max(1, s - 1) as Step);
 
+  const resetDerivedImportState = () => {
+    setValidation(null);
+    setConfirmed(false);
+    setResult(null);
+  };
+
   // Map row arrays to row objects keyed by file header
   const rowObjects = useMemo<Record<string, string>[]>(() => {
     if (parsedHeaders.length === 0) return [];
     return parsedRows.map(r => {
-      const o: Record<string, string> = {};
+      const o = Object.create(null) as Record<string, string>;
       parsedHeaders.forEach((h, i) => { o[h] = r[i] ?? ''; });
       return o;
     });
@@ -66,7 +82,7 @@ export function ImportWizard({ entity, workspaceId, userId, onClose }: Props) {
   const downloadBlankTemplate = () => {
     const fields = importableFields;
     const headers = fields.map(f => f.required ? `${f.key} *` : f.key);
-    const guidance = fields.map(f => f.templateExample || (f.type === 'date' ? '(YYYY-MM-DD)' : f.type === 'enum' ? f.enumValues?.join(' | ') || '' : ''));
+    const guidance = buildTemplateGuidanceRow(fields);
     const requiredFlags = fields.map(f => f.required);
     const xml = generateExcelXML(headers, [], { requiredFlags, guidanceRow: guidance, sheetName: entity.label });
     downloadFile(xml, `effectime_${entity.key}_sablon.xls`, 'application/vnd.ms-excel');
@@ -78,119 +94,182 @@ export function ImportWizard({ entity, workspaceId, userId, onClose }: Props) {
       const rows = await fetchEntityRows(entity, workspaceId);
       const fields = importableFields;
       const headers = fields.map(f => f.required ? `${f.key} *` : f.key);
-      const guidance = fields.map(f => f.templateExample || '');
+      const guidance = buildTemplateGuidanceRow(fields);
       const dataRows = rows.map(r => fields.map(f => r[f.key] ?? ''));
       const requiredFlags = fields.map(f => f.required);
       const xml = generateExcelXML(headers, dataRows, { requiredFlags, guidanceRow: guidance, sheetName: entity.label });
       downloadFile(xml, `effectime_${entity.key}_jelenlegi_adatok.xls`, 'application/vnd.ms-excel');
       toast.success(t('import_wizard.toast_data_downloaded', { count: dataRows.length }));
-    } catch (e: any) {
-      toast.error(t('import_wizard.toast_error', { msg: e?.message }));
+    } catch {
+      toast.error(t('import_wizard.toast_error'));
     }
   };
 
   // ===== Step 2: File Upload =====
 
   const handleFileSelect = async (f: File) => {
+    const selectionGeneration = ++fileSelectionGeneration.current;
+    resetDerivedImportState();
     if (f.size > 5 * 1024 * 1024) {
       toast.error(t('import_wizard.toast_file_too_large'));
       return;
     }
     try {
       const parsed = await parseUploadedFile(f);
+      if (selectionGeneration !== fileSelectionGeneration.current) return;
       if (parsed.headers.length === 0) {
         toast.error(t('import_wizard.toast_empty_file'));
         return;
       }
-      if (parsed.rows.length > 2000) {
-        toast.error(t('import_wizard.toast_too_many_rows', { count: parsed.rows.length }));
+      if (getImportHeaderIssue(parsed.headers)) {
+        toast.error(t('import_wizard.toast_invalid_headers'));
+        return;
+      }
+      // Auto-map columns
+      const mapping = autoMapColumns(entity, parsed.headers);
+      // Auto-detect and skip guidance row
+      let rows = parsed.rows;
+      let rowOffset = 0;
+      if (parsed.rows.length > 0) {
+        const firstRowObj = Object.create(null) as Record<string, string>;
+        parsed.headers.forEach((h, i) => { firstRowObj[h] = parsed.rows[0][i] ?? ''; });
+        if (detectGuidanceRow(entity, mapping, firstRowObj)) {
+          rows = parsed.rows.slice(1);
+          rowOffset = 1;
+          toast.info(t('import_wizard.toast_guidance_skipped'));
+        }
+      }
+      if (rows.length > 2000) {
+        toast.error(t('import_wizard.toast_too_many_rows', { count: rows.length }));
         return;
       }
       setFile(f);
       setParsedHeaders(parsed.headers);
-      setParsedRows(parsed.rows);
-      // Auto-map columns
-      const mapping = autoMapColumns(entity, parsed.headers);
       setColumnMapping(mapping);
-      // Auto-detect and skip guidance row
-      if (parsed.rows.length > 0) {
-        const firstRowObj: Record<string, string> = {};
-        parsed.headers.forEach((h, i) => { firstRowObj[h] = parsed.rows[0][i] ?? ''; });
-        if (detectGuidanceRow(entity, mapping, firstRowObj)) {
-          setParsedRows(parsed.rows.slice(1));
-          toast.info(t('import_wizard.toast_guidance_skipped'));
-        }
-      }
-      goNext();
-    } catch (e: any) {
-      toast.error(t('import_wizard.toast_file_read_error', { msg: e?.message || 'unknown' }));
+      setParsedRows(rows);
+      setSourceRowOffset(rowOffset);
+      setStep(3);
+    } catch {
+      if (selectionGeneration !== fileSelectionGeneration.current) return;
+      toast.error(t('import_wizard.toast_file_read_error'));
     }
+  };
+
+  const clearSelectedFile = () => {
+    fileSelectionGeneration.current += 1;
+    setFile(null);
+    setParsedHeaders([]);
+    setParsedRows([]);
+    setSourceRowOffset(0);
+    setColumnMapping({});
+    resetDerivedImportState();
+    setStep(1);
+  };
+
+  const updateColumnMapping = (header: string, field: string) => {
+    setColumnMapping((previous) => ({ ...previous, [header]: field }));
+    resetDerivedImportState();
   };
 
   // ===== Step 3 → 4: Mapping → Validation =====
 
   const runValidation = () => {
-    const v = validateRows(entity, rowObjects, columnMapping);
+    const mapped = new Set(Object.values(columnMapping));
+    if (
+      requiredFieldKeys.some((fieldKey) => !mapped.has(fieldKey))
+      || getDuplicateMappedFieldKeys(columnMapping).length > 0
+    ) {
+      return;
+    }
+    const v = validateRows(entity, rowObjects, columnMapping, sourceRowOffset);
     setValidation(v);
+    setConfirmed(false);
+    setResult(null);
     goNext();
+  };
+
+  const updateImportMode = (mode: ImportMode) => {
+    setImportMode(mode);
+    setConfirmed(false);
+    setResult(null);
   };
 
   const unmappedRequiredFields = useMemo(() => {
     const mapped = new Set(Object.values(columnMapping));
     return requiredFieldKeys.filter(k => !mapped.has(k));
   }, [columnMapping, requiredFieldKeys]);
+  const duplicateMappedFields = useMemo(
+    () => getDuplicateMappedFieldKeys(columnMapping),
+    [columnMapping],
+  );
 
   // ===== Step 6: Confirm + Submit =====
 
   const submitImport = async () => {
-    if (!validation) return;
+    if (!validation || submissionInFlight.current) return;
+    submissionInFlight.current = true;
     setImporting(true);
     setResult(null);
     try {
-      const validRowsData = validation.perRow.filter(r => r.status === 'valid').map(r => r.cleanedRow);
-      const { data, error } = await supabase.functions.invoke('import-entity-data', {
-        body: {
-          workspace_id: workspaceId,
-          entity: entity.key,
+      const validRows = validation.perRow
+        .filter((row) => row.status === 'valid')
+        .map((row) => ({
+          sourceRowIndex: row.rowIndex + sourceRowOffset,
+          data: row.cleanedRow,
+        }));
+      const outcome = await invokeImportEntityData(
+        (functionName, options) => supabase.functions.invoke(functionName, options),
+        {
+          workspaceId,
+          entity: entity.key as ImportEntityDataEntity,
           mode: importMode,
-          rows: validRowsData,
-          dry_run: false,
+          rows: validRows,
+          dryRun: false,
         },
-      });
+      );
 
-      if (error) {
-        toast.error(t('import_wizard.toast_import_failed', { msg: error.message }));
-        setResult({
-          success: false,
-          summary: { total: validRowsData.length, created: 0, updated: 0, skipped: 0, failed: validRowsData.length },
-          errors: [{ row_index: -1, field: 'general', value: '', code: 'EDGE_FUNCTION_ERROR', message: error.message }],
-        });
-        setStep(7);
-        return;
-      }
-
-      setResult(data as ImportResultData);
+      setResult(outcome);
       setStep(7);
-      const s = (data as any)?.summary;
-      if (s?.created || s?.updated) toast.success(t('import_wizard.toast_import_success', { created: s.created, updated: s.updated }));
-    } catch (e: any) {
-      toast.error(t('import_wizard.toast_error', { msg: e?.message }));
+      if (outcome.kind === 'completed') {
+        if (outcome.summary.created || outcome.summary.updated) {
+          toast.success(t('import_wizard.toast_import_success', {
+            created: outcome.summary.created,
+            updated: outcome.summary.updated,
+          }));
+        }
+      } else {
+        toast.error(t(outcome.outcomeUnknown
+          ? 'import_wizard.toast_import_uncertain'
+          : 'import_wizard.toast_import_failed'));
+      }
+    } catch {
+      toast.error(t('import_wizard.toast_import_uncertain'));
       setResult({
-        success: false,
-        summary: { total: 0, created: 0, updated: 0, skipped: 0, failed: 0 },
-        errors: [{ row_index: -1, field: 'general', value: '', code: 'CLIENT_ERROR', message: e?.message || 'unknown' }],
+        kind: 'failure',
+        failureKind: 'network',
+        serverCode: null,
+        requestId: null,
+        httpStatus: null,
+        outcomeUnknown: true,
       });
       setStep(7);
     } finally {
+      submissionInFlight.current = false;
       setImporting(false);
     }
   };
 
   const downloadErrorReport = () => {
     if (!validation && !result) return;
-    const errors = result?.errors || validation?.errors || [];
+    const errors = result?.kind === 'completed' ? result.errors : validation?.errors || [];
     const headers = ['row_index', 'field', 'value', 'code', 'message'];
-    const rows = errors.map(e => [String(e.row_index ?? ''), e.field || '', e.value || '', e.code || '', e.message || '']);
+    const rows = errors.map((error) => [
+      String('row_index' in error ? error.row_index : error.rowIndex + sourceRowOffset),
+      error.field || '',
+      error.value || '',
+      error.code || '',
+      error.message || '',
+    ]);
     const csv = generateCSV(headers, rows);
     downloadFile(csv, `effectime_${entity.key}_import_errors.csv`, 'text/csv;charset=utf-8');
   };
@@ -265,7 +344,13 @@ export function ImportWizard({ entity, workspaceId, userId, onClose }: Props) {
               <p className="font-medium">{t('import_wizard.file_loaded', { name: file.name })}</p>
               <p className="text-[11px] text-muted-foreground">{t('import_wizard.file_stats', { cols: parsedHeaders.length, rows: parsedRows.length, size: (file.size / 1024).toFixed(1) })}</p>
             </div>
-            <Button type="button" size="sm" variant="ghost" onClick={() => { setFile(null); setParsedHeaders([]); setParsedRows([]); setStep(1); }}>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              aria-label={t('import_wizard.btn_remove_file')}
+              onClick={clearSelectedFile}
+            >
               <X className="h-3.5 w-3.5" />
             </Button>
           </div>
@@ -292,6 +377,17 @@ export function ImportWizard({ entity, workspaceId, userId, onClose }: Props) {
             </div>
           )}
 
+          {duplicateMappedFields.length > 0 && (
+            <div className="rounded-md border-2 border-destructive bg-destructive/5 p-3 text-xs">
+              <p className="font-medium text-destructive flex items-center gap-1.5">
+                <AlertCircle className="h-3.5 w-3.5" />
+                {t('import_wizard.duplicate_mapping', {
+                  fields: duplicateMappedFields.join(', '),
+                })}
+              </p>
+            </div>
+          )}
+
           <ScrollArea className="max-h-[40vh]">
             <table className="w-full text-xs border rounded-md">
               <thead className="bg-muted">
@@ -310,7 +406,7 @@ export function ImportWizard({ entity, workspaceId, userId, onClose }: Props) {
                     <tr key={h} className="border-t">
                       <td className="p-2"><code className="text-[11px]">{h}</code></td>
                       <td className="p-2">
-                        <Select value={mapped} onValueChange={(v) => setColumnMapping(prev => ({ ...prev, [h]: v }))}>
+                        <Select value={mapped} onValueChange={(v) => updateColumnMapping(h, v)}>
                           <SelectTrigger className="h-7 text-[11px]"><SelectValue /></SelectTrigger>
                           <SelectContent>
                             <SelectItem value="__ignore__"><span className="text-muted-foreground">{t('import_wizard.opt_ignore')}</span></SelectItem>
@@ -359,7 +455,7 @@ export function ImportWizard({ entity, workspaceId, userId, onClose }: Props) {
               <p className="font-medium text-destructive">{t('import_wizard.errors_found', { count: validation.errors.length })}</p>
               {validation.errors.slice(0, 30).map((e, i) => (
                 <p key={i} className="text-[11px]">
-                  <span className="text-muted-foreground">{t('import_wizard.row_ref', { n: e.rowIndex + 1 })}</span> — <code>{e.field}</code>: {e.message}
+                  <span className="text-muted-foreground">{t('import_wizard.row_ref', { n: e.rowIndex + sourceRowOffset + 1 })}</span> — <code>{e.field}</code>: {e.message}
                 </p>
               ))}
               {validation.errors.length > 30 && <p className="text-[11px] text-muted-foreground">{t('import_wizard.more_errors', { count: validation.errors.length - 30 })}</p>}
@@ -387,7 +483,7 @@ export function ImportWizard({ entity, workspaceId, userId, onClose }: Props) {
                       rv.status === 'error' && 'bg-destructive/5',
                       rv.status === 'warning' && 'bg-warning/5',
                     )}>
-                      <td className="p-1.5 text-muted-foreground">{rv.rowIndex + 1}</td>
+                      <td className="p-1.5 text-muted-foreground">{rv.rowIndex + sourceRowOffset + 1}</td>
                       <td className="p-1.5">
                         {rv.status === 'valid' && <CheckCircle2 className="h-3 w-3 text-success" />}
                         {rv.status === 'warning' && <AlertTriangle className="h-3 w-3 text-warning" />}
@@ -427,7 +523,8 @@ export function ImportWizard({ entity, workspaceId, userId, onClose }: Props) {
           <div className="space-y-2">
             <button
               type="button"
-              onClick={() => setImportMode('create')}
+              onClick={() => updateImportMode('create')}
+              aria-pressed={importMode === 'create'}
               className={cn('w-full text-left rounded-md border p-3 text-xs transition',
                 importMode === 'create' ? 'border-primary bg-primary/5 ring-2 ring-primary/30' : 'hover:bg-accent/30')}
             >
@@ -437,7 +534,8 @@ export function ImportWizard({ entity, workspaceId, userId, onClose }: Props) {
             {entity.supportsUpsert && (
               <button
                 type="button"
-                onClick={() => setImportMode('upsert')}
+                onClick={() => updateImportMode('upsert')}
+                aria-pressed={importMode === 'upsert'}
                 className={cn('w-full text-left rounded-md border p-3 text-xs transition',
                   importMode === 'upsert' ? 'border-primary bg-primary/5 ring-2 ring-primary/30' : 'hover:bg-accent/30')}
               >
@@ -481,13 +579,16 @@ export function ImportWizard({ entity, workspaceId, userId, onClose }: Props) {
       )}
 
       {/* Step 7: Result */}
-      {step === 7 && result && (
+      {step === 7 && result?.kind === 'completed' && (
         <div className="space-y-3">
-          <div className={cn('rounded-md border p-3 text-xs flex items-start gap-2',
-            result.success !== false ? 'border-success/40 bg-success/10' : 'border-destructive/40 bg-destructive/10')}>
-            {result.success !== false ? <CheckCircle2 className="h-4 w-4 text-success" /> : <AlertCircle className="h-4 w-4 text-destructive" />}
+          <div
+            className="rounded-md border border-success/40 bg-success/10 p-3 text-xs flex items-start gap-2"
+            role="status"
+            aria-live="polite"
+          >
+            <CheckCircle2 className="h-4 w-4 text-success" />
             <div>
-              <p className="font-medium">{result.success !== false ? t('import_wizard.result_success') : t('import_wizard.result_failed')}</p>
+              <p className="font-medium">{t('import_wizard.result_success')}</p>
               <p className="text-[11px] text-muted-foreground">
                 {t('import_wizard.result_summary', { created: result.summary.created, updated: result.summary.updated, skipped: result.summary.skipped, failed: result.summary.failed })}
               </p>
@@ -509,6 +610,45 @@ export function ImportWizard({ entity, workspaceId, userId, onClose }: Props) {
         </div>
       )}
 
+      {step === 7 && result?.kind === 'failure' && (
+        <div
+          role="alert"
+          className={cn(
+            'rounded-md border p-3 text-xs flex items-start gap-2',
+            result.outcomeUnknown
+              ? 'border-warning/40 bg-warning/10'
+              : 'border-destructive/40 bg-destructive/10',
+          )}
+        >
+          <AlertCircle className={cn(
+            'h-4 w-4 shrink-0',
+            result.outcomeUnknown ? 'text-warning' : 'text-destructive',
+          )} />
+          <div className="space-y-1">
+            <p className="font-medium">
+              {t(result.outcomeUnknown
+                ? 'import_wizard.result_uncertain'
+                : 'import_wizard.result_failed')}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              {t(result.outcomeUnknown
+                ? 'import_wizard.result_uncertain_description'
+                : 'import_wizard.result_failed_description')}
+            </p>
+            {result.serverCode && (
+              <p className="text-[11px] font-mono">
+                {t('import_wizard.support_code', { code: result.serverCode })}
+              </p>
+            )}
+            {result.requestId && (
+              <p className="text-[11px] font-mono">
+                {t('import_wizard.support_reference', { requestId: result.requestId })}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Footer navigation */}
       <div className="flex items-center justify-between gap-2 pt-3 border-t">
         <div>
@@ -522,8 +662,18 @@ export function ImportWizard({ entity, workspaceId, userId, onClose }: Props) {
           <Button type="button" variant="outline" size="sm" onClick={onClose} disabled={importing}>
             {step === 7 ? t('import_wizard.btn_close') : t('import_wizard.btn_cancel')}
           </Button>
+          {step === 2 && (
+            <Button type="button" size="sm" onClick={goNext}>
+              {t('import_wizard.btn_next')} <ArrowRight className="h-3.5 w-3.5 ml-1" />
+            </Button>
+          )}
           {step === 3 && (
-            <Button type="button" size="sm" onClick={runValidation} disabled={unmappedRequiredFields.length > 0}>
+            <Button
+              type="button"
+              size="sm"
+              onClick={runValidation}
+              disabled={unmappedRequiredFields.length > 0 || duplicateMappedFields.length > 0}
+            >
               {t('import_wizard.btn_validate')} <ArrowRight className="h-3.5 w-3.5 ml-1" />
             </Button>
           )}
