@@ -1,3 +1,54 @@
+## 2026-07-22 — v3.51.16 GitHub Actions Node 24 runtime hardening (unreleased)
+
+**Status:** local CI source candidate; no database, API, application dependency,
+product runtime or production deployment change.
+
+- **BIZONYÍTOTT:** v3.51.15 hosted run `29917203882` passed all 11 jobs but
+  emitted a Node 20 action-runtime deprecation annotation on every job. GitHub
+  already forces those JavaScript actions onto Node 24 and plans to remove Node
+  20 from runners in fall 2026.
+- Updates all 11 `actions/checkout` uses to signed release v5.1.0 at immutable
+  SHA `fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09`, all 11
+  `actions/setup-node` uses to v5.0.0 at
+  `a0853c24544627f65ddf259abe73b1d18a591444`, and all four
+  `actions/upload-artifact` uses to v6.0.0 at
+  `b7c566a772e6b6bfb58ed0dc250532a479d7789f`. Each reviewed action declares
+  `runs.using: node24`; every workflow reference remains full-SHA pinned.
+- Keeps the Effectime command runtime on Node 22. Because setup-node v5 detects
+  `packageManager` and may enable caching automatically, the six PostgreSQL
+  contract jobs now set `package-manager-cache: false`; the five existing
+  dependency-heavy jobs retain their explicit `cache: npm` contract. Checkout
+  still uses `persist-credentials: false`, workflow permissions remain
+  `contents: read`, and artifact names, conditions, paths and retention periods
+  are unchanged.
+- Extends the existing fail-closed mobile/CI source contract to require exactly
+  11 checkout, 11 setup-node, four upload-artifact, one setup-java and four
+  setup-deno reviewed Node 24 pins, exactly 31 reviewed external action
+  references, plus the six uncached DB jobs and five explicitly cached jobs.
+  This prevents a future tag downgrade, partial migration, unreviewed action
+  family or silent cache-policy drift.
+
+Local validation: YAML and actionlint PASS; mobile/CI source contract 216/216;
+full unit/coverage 80 files and 1,034/1,034 tests; typecheck, 4,092-module build,
+bundle ceiling, web smoke 7/7, shared Android/iOS sync, mobile contract 377/377
+and mobile smoke 2/2 PASS with zero native drift. Schema/migration provenance,
+Edge 31/31 check plus 86/86 suite, release identity 55/55, Edge SBOM 7/7,
+dependency audit (0 vulnerabilities), secret scan (1,552 files), targeted
+ESLint and `git diff --check` PASS. The full lint ratchet remains unchanged at
+1,148 errors / 98 warnings. Local Android compilation is blocked by unaccepted
+SDK licences and iOS compilation requires macOS; the GitHub-hosted 11-job gate
+and zero-Node-20-annotation acceptance therefore remain mandatory after commit.
+
+Rollback is a workflow/checker/version/documentation commit revert. No data,
+schema, API, package dependency, application bundle or end-user behavior is
+changed. The current GitHub-hosted Ubuntu 24.04 and macOS 26 runners exceed the
+Node 24 actions' documented minimum runner version 2.327.1.
+
+Production remains **NO-GO**: the 61 shared / 77 local-only / 82 remote-only
+migration history, 7-error/6-warning linked lint, missing live release manifest
+and absent authenticated same-SHA deploy path are unchanged. This CI supply-
+chain hardening does not authorize a database, Edge, web or store deployment.
+
 ## 2026-07-22 — v3.51.15 Owner-only installed-plugin cleanup after downgrade/archive (unreleased)
 
 **Status:** stacked draft PR
