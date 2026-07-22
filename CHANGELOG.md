@@ -1,8 +1,8 @@
 ## 2026-07-23 — v3.51.24 Export Wizard authorization and delivery boundary (unreleased)
 
-**Status:** source candidate on `codex/export-wizard-integrity`. Production
-deployment has not been performed. No database migration, Edge wire contract or
-new dependency is introduced.
+**Status:** source + hosted candidate on `codex/export-wizard-integrity`; draft
+PR #195. Production deployment has not been performed. No database migration,
+Edge wire contract or new dependency is introduced.
 
 - **BIZONYÍTOTT:** the Settings path mounted `ImportExportCenter` for every
   owner/resourceAssistant and defaulted to Export without receiving the exact
@@ -48,8 +48,11 @@ E2E 2/2 with zero tracked native drift; Edge 109/109 plus 31/31 entrypoint and
 0/0 diagnostic ratchet; 0 dependency vulnerabilities; current/history secret,
 migration/schema provenance and Edge source-identity gates PASS. The clean
 worktree native release assertion is 410/410 PASS on implementation commit
-`c7e2caa…`. The hosted Quality Gate is recorded only after pushing the exact
-source SHA.
+`c7e2caa…`. Hosted Quality Gate run `29965167738` passed 12/12 jobs with zero
+annotations on exact PR head `0a4994d…` and potential merge `a120686…`. The
+hosted artifact is 4,578,543 raw / 1,313,727 gzip JavaScript bytes, largest
+1,785,150 / 567,948, with unchanged CSS. Retained release, diagnostics and
+unsigned Android artifacts are `8547601907`, `8547600079` and `8547564723`.
 
 Known P1 server blockers remain unchanged: browser RLS is not the authoritative
 exact export permission/entitlement boundary, audit actors are caller-supplied,
