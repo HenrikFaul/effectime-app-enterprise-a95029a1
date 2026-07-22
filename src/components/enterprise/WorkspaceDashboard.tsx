@@ -9,6 +9,7 @@ import { DocumentGeneratorPanel } from '@/components/documents/DocumentGenerator
 import { RecruitingPanel } from '@/components/candidates/RecruitingPanel';
 import { CopilotPanel } from '@/components/ai-copilot/CopilotPanel';
 import { PluginMarketplacePanel } from '@/components/marketplace/PluginMarketplacePanel';
+import { InstalledPluginCleanupPanel } from '@/components/marketplace/InstalledPluginCleanupPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { CollapsibleCardTrigger } from '@/components/ui/collapsible-card-trigger';
@@ -615,6 +616,12 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
             {canViewWorkspaceSettings && hasTabEntitlement('settings') && (
               <TabsContent value="settings" data-help-region="workspace.settings">
                 <WorkspaceSettings workspace={workspace} userRole={userRole} userId={userId} onRefresh={onRefresh} canUseIcalFeed={canUseIcalFeed} canViewPermissionConfig={userRole === 'owner' || canView('permission_config')} canViewLayoutSetting={userRole === 'owner' || canView('layout_setting')} />
+                {/* Recovery remains available to the exact workspace owner after
+                    a tier downgrade or catalog archival. The backend uninstall
+                    RPC is still the authoritative tenant boundary. */}
+                {userRole === 'owner' && (
+                  <InstalledPluginCleanupPanel workspaceId={workspace.id} />
+                )}
                 {/* Plugin marketplace (Top-20 Rank 19, v3.30.0). Workspace
                     owner only; RPCs enforce. Enterprise tier required via
                     FeatureGate. */}
