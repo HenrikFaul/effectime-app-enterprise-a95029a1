@@ -115,6 +115,43 @@ CREATE TABLE public.tier_features (
   PRIMARY KEY (tier_id, feature_id)
 );
 
+-- Deterministic backing rows for the production workspace entitlement helper.
+-- The contract keeps its exact shipped source/metadata while replacing only
+-- the unrelated billing aggregation beneath tenant_enabled_features().
+CREATE TABLE public.tenant_workspaces (
+  tenant_id uuid NOT NULL,
+  workspace_id uuid NOT NULL UNIQUE,
+  PRIMARY KEY (tenant_id, workspace_id)
+);
+
+CREATE TABLE public.tenant_subscriptions (
+  tenant_id uuid NOT NULL,
+  tier_id uuid NOT NULL REFERENCES public.tiers(id),
+  status text NOT NULL,
+  ends_at timestamptz
+);
+
+CREATE TABLE public.tenant_addons (
+  tenant_id uuid NOT NULL,
+  addon_id uuid NOT NULL,
+  status text NOT NULL,
+  ends_at timestamptz
+);
+
+CREATE TABLE public.addon_features (
+  addon_id uuid NOT NULL,
+  feature_id uuid NOT NULL REFERENCES public.features(id),
+  PRIMARY KEY (addon_id, feature_id)
+);
+
+CREATE TABLE public.tenant_feature_overrides (
+  tenant_id uuid NOT NULL,
+  feature_id uuid NOT NULL REFERENCES public.features(id),
+  enabled boolean NOT NULL,
+  expires_at timestamptz,
+  PRIMARY KEY (tenant_id, feature_id)
+);
+
 INSERT INTO public.tiers (tier_key) VALUES ('pro'), ('enterprise');
 INSERT INTO public.features (
   feature_key, name, module, description, status, dependencies, route_path, menu_path, sort_order
@@ -150,15 +187,14 @@ RETURNS boolean
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = pg_catalog
+SET search_path = public
 AS $$
   SELECT EXISTS (
-    SELECT 1
-    FROM public.enterprise_memberships AS membership
-    WHERE membership.workspace_id = _workspace_id
-      AND membership.user_id = _user_id
-      AND membership.status = 'active'
-      AND membership.role = ANY (_roles)
+    SELECT 1 FROM public.enterprise_memberships
+    WHERE workspace_id = _workspace_id
+      AND user_id = _user_id
+      AND status = 'active'
+      AND role = ANY(_roles)
   )
 $$;
 
@@ -167,16 +203,84 @@ RETURNS boolean
 LANGUAGE sql
 STABLE
 SECURITY DEFINER
-SET search_path = pg_catalog
+SET search_path = public
 AS $$
   SELECT EXISTS (
-    SELECT 1
-    FROM public.enterprise_memberships AS membership
-    WHERE membership.workspace_id = _workspace_id
-      AND membership.user_id = _user_id
-      AND membership.status = 'active'
+    SELECT 1 FROM public.enterprise_memberships
+    WHERE workspace_id = _workspace_id
+      AND user_id = _user_id
+      AND status = 'active'
   )
 $$;
+
+CREATE FUNCTION public.tenant_enabled_features(_tenant_id uuid)
+RETURNS TABLE(feature_key text, source text)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  WITH enabled AS (
+    SELECT f.feature_key, 'tier'::text AS source
+    FROM public.tenant_subscriptions ts
+    JOIN public.tier_features tf ON tf.tier_id = ts.tier_id
+    JOIN public.features f ON f.id = tf.feature_id
+    WHERE ts.tenant_id = _tenant_id AND ts.status = 'active'
+      AND (ts.ends_at IS NULL OR ts.ends_at > now())
+    UNION
+    SELECT f.feature_key, 'addon'::text
+    FROM public.tenant_addons ta
+    JOIN public.addon_features af ON af.addon_id = ta.addon_id
+    JOIN public.features f ON f.id = af.feature_id
+    WHERE ta.tenant_id = _tenant_id AND ta.status = 'active'
+      AND (ta.ends_at IS NULL OR ta.ends_at > now())
+    UNION
+    SELECT f.feature_key, 'override'::text
+    FROM public.tenant_feature_overrides o
+    JOIN public.features f ON f.id = o.feature_id
+    WHERE o.tenant_id = _tenant_id AND o.enabled = true
+      AND (o.expires_at IS NULL OR o.expires_at > now())
+  ),
+  disabled AS (
+    SELECT f.feature_key
+    FROM public.tenant_feature_overrides o
+    JOIN public.features f ON f.id = o.feature_id
+    WHERE o.tenant_id = _tenant_id AND o.enabled = false
+      AND (o.expires_at IS NULL OR o.expires_at > now())
+  )
+  SELECT DISTINCT e.feature_key, e.source FROM enabled e
+  WHERE e.feature_key NOT IN (SELECT feature_key FROM disabled);
+$$;
+
+REVOKE ALL ON FUNCTION public.tenant_enabled_features(uuid)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.tenant_enabled_features(uuid)
+  TO service_role;
+
+CREATE FUNCTION public.workspace_has_any_feature(
+  _workspace_id uuid,
+  _feature_keys text[]
+)
+RETURNS boolean
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path TO 'pg_catalog', 'public'
+AS $function$
+  SELECT public.is_enterprise_member(_workspace_id, auth.uid())
+    AND EXISTS (
+      SELECT 1
+      FROM public.tenant_workspaces AS mapping
+      CROSS JOIN LATERAL public.tenant_enabled_features(mapping.tenant_id) AS enabled
+      WHERE mapping.workspace_id = _workspace_id
+        AND enabled.feature_key = ANY(COALESCE(_feature_keys, ARRAY[]::text[]))
+    );
+$function$;
+
+REVOKE ALL ON FUNCTION public.workspace_has_any_feature(uuid, text[])
+  FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.workspace_has_any_feature(uuid, text[])
+  TO authenticated;
 
 CREATE FUNCTION public.has_role(_user_id uuid, _role public.app_role)
 RETURNS boolean
@@ -239,6 +343,20 @@ INSERT INTO public.profiles (user_id, display_name) VALUES
 INSERT INTO public.enterprise_workspaces (id, name) VALUES
   ('20000000-0000-4000-8000-000000000001', 'Workspace A'),
   ('20000000-0000-4000-8000-000000000002', 'Workspace B');
+
+INSERT INTO public.tenant_workspaces (tenant_id, workspace_id) VALUES
+  ('21000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001'),
+  ('21000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000002');
+
+INSERT INTO public.tenant_subscriptions (tenant_id, tier_id, status, ends_at)
+SELECT fixture.tenant_id, tier.id, 'inactive', NULL
+FROM (
+  VALUES
+    ('21000000-0000-4000-8000-000000000001'::uuid),
+    ('21000000-0000-4000-8000-000000000002'::uuid)
+) AS fixture(tenant_id)
+CROSS JOIN public.tiers AS tier
+WHERE tier.tier_key = 'enterprise';
 
 INSERT INTO public.enterprise_memberships (id, workspace_id, user_id, role, status) VALUES
   ('30000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'owner', 'active'),

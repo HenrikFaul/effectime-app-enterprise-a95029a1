@@ -10,6 +10,7 @@ import {
   buildOwnershipInspectArgs,
   buildPostgresReadinessArgs,
   buildPsqlFileArgs,
+  buildPsqlPluginInstallPolicyTamperArgs,
   buildPsqlPluginSecretTamperArgs,
   buildPsqlTamperArgs,
   cleanupOwnedContainer,
@@ -22,6 +23,11 @@ import {
   MARKETPLACE_MIGRATION_SQL_PATH,
   OWNERSHIP_LABEL_KEY,
   parseCreatedContainerId,
+  PLUGIN_INSTALL_POLICY_ASSERTIONS_SQL_PATH,
+  PLUGIN_INSTALL_POLICY_LOCK_HOLDER_READY_SQL,
+  PLUGIN_INSTALL_POLICY_MIGRATION_SQL_PATH,
+  PLUGIN_INSTALL_POLICY_SEED_SQL_PATH,
+  PLUGIN_INSTALL_POLICY_TAMPER_CASES,
   PLUGIN_SECRET_ASSERTIONS_SQL_PATH,
   PLUGIN_SECRET_MIGRATION_SQL_PATH,
   PLUGIN_SECRET_SEED_SQL_PATH,
@@ -31,6 +37,7 @@ import {
   SETUP_SQL_PATH,
   TAMPER_CASES,
   waitForPostgres,
+  waitForPluginInstallPolicyLockHolder,
 } from "./recovered-surface-acl-db-contract.mjs";
 
 const containerName = "effectime-recovered-surface-acl-pg17-42-001122aabbcc";
@@ -77,7 +84,7 @@ test("rejects injected names and accepts only exact Docker creation IDs", () => 
   );
 });
 
-test("pins PostgreSQL 17.6 and mounts only the nine exact inputs read-only", () => {
+test("pins PostgreSQL 17.6 and mounts only the twelve exact inputs read-only", () => {
   const repoRoot = "C:\\Work\\Effectime Fixture";
   const args = buildDockerRunArgs({
     containerName,
@@ -134,6 +141,18 @@ test("pins PostgreSQL 17.6 and mounts only the nine exact inputs read-only", () 
       repoRoot,
       "scripts/ci/plugin-config-secret-assertions.test.sql",
     )},target=${PLUGIN_SECRET_ASSERTIONS_SQL_PATH},readonly`,
+    `type=bind,source=${resolve(
+      repoRoot,
+      "scripts/ci/plugin-install-policy-seed.test.sql",
+    )},target=${PLUGIN_INSTALL_POLICY_SEED_SQL_PATH},readonly`,
+    `type=bind,source=${resolve(
+      repoRoot,
+      "supabase/migrations/20260722061500_v3_51_12_plugin_install_policy_boundary.sql",
+    )},target=${PLUGIN_INSTALL_POLICY_MIGRATION_SQL_PATH},readonly`,
+    `type=bind,source=${resolve(
+      repoRoot,
+      "scripts/ci/plugin-install-policy-assertions.test.sql",
+    )},target=${PLUGIN_INSTALL_POLICY_ASSERTIONS_SQL_PATH},readonly`,
   ]);
   assert.equal(
     args.some((argument) => argument.includes("target=/workspace")),
@@ -165,6 +184,17 @@ test("psql entry points are isolated, fail closed, and file-allowlisted", () => 
   );
   assert.ok(pluginSecretMigrationArgs.includes("--single-transaction"));
   assert.equal(pluginSecretMigrationArgs.at(-1), PLUGIN_SECRET_MIGRATION_SQL_PATH);
+
+  const pluginInstallPolicyMigrationArgs = buildPsqlFileArgs(
+    containerName,
+    PLUGIN_INSTALL_POLICY_MIGRATION_SQL_PATH,
+    { singleTransaction: true },
+  );
+  assert.ok(pluginInstallPolicyMigrationArgs.includes("--single-transaction"));
+  assert.equal(
+    pluginInstallPolicyMigrationArgs.at(-1),
+    PLUGIN_INSTALL_POLICY_MIGRATION_SQL_PATH,
+  );
 
   assert.throws(
     () => buildPsqlFileArgs(containerName, CLOCK_MIGRATION_SQL_PATH),
@@ -207,6 +237,30 @@ test("psql entry points are isolated, fail closed, and file-allowlisted", () => 
   assert.equal(pluginTamperArgs.at(-1), PLUGIN_SECRET_MIGRATION_SQL_PATH);
   assert.throws(
     () => buildPsqlPluginSecretTamperArgs(containerName, "DROP DATABASE postgres;"),
+    /tamper SQL is not allowlisted/,
+  );
+
+  const pluginInstallPolicyTamperArgs = buildPsqlPluginInstallPolicyTamperArgs(
+    containerName,
+    PLUGIN_INSTALL_POLICY_TAMPER_CASES[0].sql,
+  );
+  assert.deepEqual(pluginInstallPolicyTamperArgs.slice(0, 3), [
+    "exec",
+    containerName,
+    "psql",
+  ]);
+  assert.equal(
+    pluginInstallPolicyTamperArgs[
+      pluginInstallPolicyTamperArgs.indexOf("--command") + 1
+    ],
+    `BEGIN; ${PLUGIN_INSTALL_POLICY_TAMPER_CASES[0].sql}`,
+  );
+  assert.equal(
+    pluginInstallPolicyTamperArgs.at(-1),
+    PLUGIN_INSTALL_POLICY_MIGRATION_SQL_PATH,
+  );
+  assert.throws(
+    () => buildPsqlPluginInstallPolicyTamperArgs(containerName, "DROP DATABASE postgres;"),
     /tamper SQL is not allowlisted/,
   );
 });
@@ -263,6 +317,37 @@ test("readiness requires an exact successful query result", async () => {
       intervalMilliseconds: 0,
     }),
     /did not become queryable/,
+  );
+});
+
+test("plugin lock barrier requires exactly one sleeping holder", async () => {
+  const calls = [];
+  const outcomes = [
+    { status: 0, stdout: "0\n", stderr: "" },
+    { status: 0, stdout: "1\n", stderr: "" },
+  ];
+  await waitForPluginInstallPolicyLockHolder(containerName, {
+    executeDockerSync: (args) => {
+      calls.push(args);
+      return outcomes.shift();
+    },
+    wait: async () => {},
+    attempts: 2,
+    intervalMilliseconds: 0,
+  });
+  assert.equal(calls.length, 2);
+  assert.equal(calls[0].at(-1), PLUGIN_INSTALL_POLICY_LOCK_HOLDER_READY_SQL);
+  assert.ok(calls[0].includes("--tuples-only"));
+  assert.ok(calls[0].includes("--no-align"));
+
+  await assert.rejects(
+    waitForPluginInstallPolicyLockHolder(containerName, {
+      executeDockerSync: () => ({ status: 0, stdout: "2\n", stderr: "" }),
+      wait: async () => {},
+      attempts: 1,
+      intervalMilliseconds: 0,
+    }),
+    /did not reach its deterministic sleep barrier/,
   );
 });
 

@@ -1,6 +1,65 @@
+## 2026-07-22 — v3.51.12 Plugin installation policy boundary (unreleased)
+
+**Status:** stacked draft PR
+[#183](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/pull/183)
+at implementation head `1aa7bcd7e84efaf3268f100a9a2123bd91464edc`;
+source pushed, linked database and production not deployed.
+
+- Keeps the existing `marketplace_install_plugin(uuid, uuid, jsonb)` signature,
+  default, return value, owner-only authorization, installation identity,
+  private configuration write and install-count behavior, while adding a
+  server-side `plugin_install` entitlement check. Browser, PWA, Android and iOS
+  continue to use the same Supabase RPC and data source.
+- Restricts new installs and reinstalls to the exact `published` marketplace
+  status. Existing installations are intentionally grandfathered and remain
+  uninstallable after entitlement loss; no historical installation or private
+  configuration is deleted or disabled by the migration.
+- Revalidates publication under a marketplace-row lock before commit so a
+  concurrent archive/status transition cannot leave a newly installed
+  non-published plugin. The public `{}` marker and private configuration remain
+  in the same transaction, preserving the v3.51.11 secret boundary.
+- Adds fail-closed catalog/source/ACL/configuration preconditions and focused
+  PostgreSQL contracts for denied non-entitled/non-published mutations,
+  successful published install/reinstall, private-write atomicity,
+  grandfathering and uninstall cleanup. The exact runtime columns, defaults,
+  PK/UNIQUE/FK relationships, helper trust chain and old/new RPC source are
+  attested before mutation.
+
+Local validation: runner unit 12/12; pinned PostgreSQL 17.6 contract with 40/40
+fail-closed tamper cases (15 recovered-surface, 7 plugin-secret preflight, 3
+plugin-secret reapply and 15 install-policy), behavior, two-session status
+rollback, two-workspace concurrent install-count and explicit migration reapply
+PASS. Typecheck; full coverage 77 files / 996 tests; migration/schema
+provenance at 136 migrations; unchanged lint ratchet; dependency audit (0 known
+vulnerabilities); 1,542-file secret scan; production build and bundle budget;
+web smoke 7/7; mobile source/artifact/bridge/release 183/345/2/365; Edge inventory,
+ratchet, log safety, release identity and SBOM contracts PASS. The first full
+Edge run exposed one existing timing-sensitive timeout test (85/86); its
+isolated run and the repeated full run passed 11/11 and 86/86, so this remains
+an explicit non-determinism risk rather than a hidden green claim.
+
+Hosted Quality Gate run `29901330094` passed all 11/11 jobs. Release evidence
+artifact `8522068999`, diagnostics `8522067209` and unsigned Android artifact
+`8522032542` prove the source/CI candidate, including locked iOS compilation;
+they do not prove a linked database apply or live production deployment.
+Production is **NO-GO** until migration-history reconciliation, full replay,
+restored-staging DB-first acceptance and an authenticated same-SHA production
+publish are complete.
+
+Known P2 follow-ups are runtime enforcement of feature status/dependencies,
+explicit downgrade cleanup UX, a product policy for service-role access to
+grandfathered enabled installations, bounded database lock/statement timeouts
+with retry guidance, deterministic concurrency-test barriers, and the existing
+install-vs-uninstall stale `install_count` race. Webhook tenant correlation,
+SSRF, retention and Vault-backed secret lifecycle remain separate hardening
+waves.
+
 ## 2026-07-22 — v3.51.11 Plugin configuration secret boundary (unreleased)
 
-**Status:** local source candidate; linked database and production not deployed.
+**Status:** stacked draft PR
+[#182](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/pull/182)
+at implementation head `e9cddac573f7310737ce2608cfbabe5a32e2cc9c`;
+source pushed, linked database and production not deployed.
 
 - Moves every historical `workspace_installed_plugins.config` JSON value into
   `effectime_private.workspace_plugin_configs` in one locked transaction. The
@@ -47,6 +106,11 @@ cases; browser caller 1/1; migration invariants 34/34; full coverage 77 files /
 bundle budget, web smoke 7/7, Edge 86/86 + 31/31 diagnostic inventory, mobile
 source 183/183, synchronized artifact 345/345 and bridge smoke 2/2 PASS. Native
 release clean-tree and hosted Android/iOS compilation are commit/CI gates.
+
+Hosted Quality Gate run `29897254527` passed all 11/11 jobs. Release evidence
+artifact `8520498650`, diagnostics `8520497375` and unsigned Android artifact
+`8520475937` prove the source/CI candidate, not a linked database apply or live
+production deployment.
 
 ## 2026-07-22 — v3.51.10 Recovered surface ACL hardening (unreleased)
 
