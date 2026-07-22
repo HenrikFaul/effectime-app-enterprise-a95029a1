@@ -1,3 +1,52 @@
+## 2026-07-22 — v3.51.13 Plugin install-count concurrency correctness (unreleased)
+
+**Status:** local source candidate; linked database and production not deployed.
+
+- Fixes the historical install-vs-uninstall READ COMMITTED race without changing
+  the `marketplace_uninstall_plugin(uuid)` API. Uninstall now deletes the
+  installation, acquires the marketplace row in a separate `FOR NO KEY UPDATE`
+  statement, and performs the count update in the following fresh snapshot.
+  The established installation-to-plugin lock order is preserved.
+- Reconciles every pre-existing stale `marketplace_plugins.install_count` from
+  the exact enabled installation rows. The drift-only update runs under
+  installation-then-marketplace `SHARE ROW EXCLUSIVE` locks with a five-second
+  transaction-local lock timeout; timeout aborts the complete migration instead
+  of accepting a partial repair. All other grandfathered business data remains
+  unchanged; affected marketplace `updated_at` values record the repair.
+- Preserves the uninstall OID, signature, return type, owner-only authorization,
+  owner, `SECURITY DEFINER`, volatility, search path and explicit ACL. The
+  v3.51.12 entitlement/published-only install boundary and the v3.51.11 private
+  configuration boundary remain source-attested and unchanged. Web, PWA,
+  Android and iOS continue to use the same Supabase RPC/data plane.
+- Replaces timing-only concurrency waits with exact application/PID blocker
+  chains and controlled advisory barriers. Barrier, SQL and child-process
+  timeouts are bounded with explicit backend cleanup; timeout behavior now has
+  an executable unit test and a race failure is retained alongside any cleanup
+  failure.
+
+Focused validation: runner unit 14/14; pinned PostgreSQL 17.6 full contract PASS
+in 95.6 seconds on the final cleanup-preserving runner. The contract
+deterministically proves the v3.51.12 stale state
+(one enabled installation, stored count zero), applies v3.51.13 directly to that
+state and proves global reconciliation, then proves the fixed concurrent result
+(one/one). All 43 fail-closed tamper cases, API/ACL/OID/source invariants,
+grandfathering, authorization atomicity and two migration reapplications pass.
+The two owned failure-run containers and both successful-run containers were all
+removed. Local broad gates pass: typecheck; 77 files / 996 tests with 51.27%
+statements and lines, 75.11% branches and 46.39% functions; unchanged
+1,148-error / 98-warning lint ratchet; production build and bundle budget; web
+E2E 7/7; mobile source 183/183, artifact 345/345, E2E 2/2 and deterministic
+Android/iOS sync; Edge 31 entrypoints/configs, 65 imports and 86/86 tests;
+release identity 55/55 and Edge SBOM 7/7; dependency audit with zero known
+vulnerabilities; 1,545-file secret scan; and the exact 137-migration schema
+provenance gate. Hosted CI remains pending.
+
+Production remains **NO-GO**. Rollout requires migration-history reconciliation,
+a short plugin-write drain, restored-staging DB-first apply, an exact post-apply
+count query, and an authenticated same-SHA production publish. If the five-second
+lock budget is exhausted, keep writes paused and retry the whole migration; do
+not bypass its locks or repair history blindly.
+
 ## 2026-07-22 — v3.51.12 Plugin installation policy boundary (unreleased)
 
 **Status:** stacked draft PR
