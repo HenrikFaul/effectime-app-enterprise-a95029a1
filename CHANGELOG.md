@@ -1,9 +1,8 @@
 ## 2026-07-22 — v3.51.21 CSV import bounded failure boundary (unreleased)
 
-**Status:** fully validated local source candidate on
-`codex/csv-import-error-boundary`. Commit, push, pull request, hosted CI and
-production deployment have not yet been performed. No database migration or
-new dependency is introduced.
+**Status:** source + hosted candidate on `codex/csv-import-error-boundary`;
+draft PR #192. Production deployment has not been performed. No database
+migration or new dependency is introduced.
 
 - **BIZONYÍTOTT:** the inherited `import-entity-data` handler could return the
   fatal provider exception message, include ten raw database write messages in
@@ -41,7 +40,11 @@ provenance, release identity 55/55 and Edge SBOM unit 7/7 pass. Dependency audit
 reports zero vulnerabilities; current-tree secret scan covers 1,581 files and
 the full fetched-history scan covers 891 commits / 3,730 blobs / 216,928,609
 bytes with zero findings. The exact Edge source identity is `060c81a…` (95 files
-/ 913,321 canonical bytes). Hosted CI is not yet claimed.
+/ 913,321 canonical bytes). Exact source head `4dfa4b1…` completed hosted run
+`29949758390` with all 12 jobs PASS and zero annotations; PR checkout potential
+merge SHA is `355e3c9…`. Retained artifacts are release evidence `8541710604`
+(30 days), diagnostics `8541708590` (14 days), and unsigned Android
+`8541666923` (7 days).
 
 Rollback is the source/test/version/documentation commit revert. Disabling only
 the sanitization or fail-closed dependency boundary would reintroduce a data-
