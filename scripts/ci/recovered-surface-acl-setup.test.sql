@@ -26,9 +26,25 @@ $roles$;
 CREATE SCHEMA IF NOT EXISTS auth AUTHORIZATION postgres;
 CREATE SCHEMA IF NOT EXISTS extensions AUTHORIZATION postgres;
 CREATE SCHEMA IF NOT EXISTS contract AUTHORIZATION postgres;
+CREATE SCHEMA IF NOT EXISTS effectime_private AUTHORIZATION postgres;
 REVOKE CREATE ON SCHEMA public, extensions FROM PUBLIC, anon, authenticated, service_role;
 GRANT USAGE ON SCHEMA public, auth, extensions TO anon, authenticated, service_role;
 GRANT USAGE ON SCHEMA contract TO anon, authenticated, service_role;
+-- Production already contains unrelated helpers in this schema. The plugin
+-- migration must preserve their identity and the existing schema ACL while
+-- still denying every direct table/column path to raw plugin config.
+GRANT USAGE ON SCHEMA effectime_private TO authenticated;
+
+CREATE FUNCTION effectime_private.contract_existing_helper()
+RETURNS boolean
+LANGUAGE sql
+IMMUTABLE
+SET search_path = pg_catalog
+AS $$
+  SELECT true
+$$;
+GRANT EXECUTE ON FUNCTION effectime_private.contract_existing_helper()
+  TO authenticated;
 
 CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
 
@@ -116,6 +132,15 @@ AS $$
   SELECT NULLIF(pg_catalog.current_setting('request.jwt.claim.sub', true), '')::uuid
 $$;
 
+CREATE FUNCTION auth.role()
+RETURNS text
+LANGUAGE sql
+STABLE
+SET search_path = pg_catalog
+AS $$
+  SELECT NULLIF(pg_catalog.current_setting('request.jwt.claim.role', true), '')
+$$;
+
 CREATE FUNCTION public.has_enterprise_role(
   _workspace_id uuid,
   _user_id uuid,
@@ -200,14 +225,16 @@ INSERT INTO auth.users (id, email) VALUES
   ('10000000-0000-4000-8000-000000000002', 'member-a@example.test'),
   ('10000000-0000-4000-8000-000000000003', 'developer-admin@example.test'),
   ('10000000-0000-4000-8000-000000000004', 'outsider@example.test'),
-  ('10000000-0000-4000-8000-000000000005', 'owner-b@example.test');
+  ('10000000-0000-4000-8000-000000000005', 'owner-b@example.test'),
+  ('10000000-0000-4000-8000-000000000006', 'assistant-a@example.test');
 
 INSERT INTO public.profiles (user_id, display_name) VALUES
   ('10000000-0000-4000-8000-000000000001', 'Owner A'),
   ('10000000-0000-4000-8000-000000000002', 'Member A'),
   ('10000000-0000-4000-8000-000000000003', 'Developer Admin'),
   ('10000000-0000-4000-8000-000000000004', 'Outsider'),
-  ('10000000-0000-4000-8000-000000000005', 'Owner B');
+  ('10000000-0000-4000-8000-000000000005', 'Owner B'),
+  ('10000000-0000-4000-8000-000000000006', 'Assistant A');
 
 INSERT INTO public.enterprise_workspaces (id, name) VALUES
   ('20000000-0000-4000-8000-000000000001', 'Workspace A'),
@@ -216,7 +243,8 @@ INSERT INTO public.enterprise_workspaces (id, name) VALUES
 INSERT INTO public.enterprise_memberships (id, workspace_id, user_id, role, status) VALUES
   ('30000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000001', 'owner', 'active'),
   ('30000000-0000-4000-8000-000000000002', '20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000002', 'member', 'active'),
-  ('30000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000005', 'owner', 'active');
+  ('30000000-0000-4000-8000-000000000003', '20000000-0000-4000-8000-000000000002', '10000000-0000-4000-8000-000000000005', 'owner', 'active'),
+  ('30000000-0000-4000-8000-000000000004', '20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000006', 'resourceAssistant', 'active');
 
 INSERT INTO public.enterprise_offices (
   id, workspace_id, name, geofence_lat, geofence_lng, geofence_radius_m, clock_in_nfc_tag

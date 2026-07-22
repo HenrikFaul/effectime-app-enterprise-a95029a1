@@ -27,7 +27,6 @@ export interface WorkspaceInstalledPlugin {
   id: string;
   workspace_id: string;
   plugin_id: string;
-  config: Record<string, unknown>;
   enabled: boolean;
   installed_at: string;
 }
@@ -53,7 +52,7 @@ export function useInstalledPlugins(workspaceId: string | null | undefined) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('workspace_installed_plugins')
-        .select('id, workspace_id, plugin_id, config, enabled, installed_at')
+        .select('id, workspace_id, plugin_id, enabled, installed_at')
         .eq('workspace_id', workspaceId as string)
         .order('installed_at', { ascending: false });
       if (error) throw error;
