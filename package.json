@@ -1,7 +1,7 @@
 {
   "name": "effectime-app-enterprise",
   "private": true,
-  "version": "3.51.8",
+  "version": "3.51.9",
   "type": "module",
   "packageManager": "npm@11.13.0",
   "engines": {
@@ -40,6 +40,8 @@
     "edge:ratchet": "node scripts/ci/check-edge-functions.mjs --ratchet",
     "edge:ratchet:test": "node --test scripts/ci/deno-runtime.test.mjs scripts/ci/edge-diagnostic-ratchet.test.mjs scripts/ci/edge-import-inventory.test.mjs scripts/ci/edge-log-safety.test.mjs scripts/ci/run-edge-tests.test.mjs",
     "edge:test": "node scripts/ci/run-edge-tests.mjs",
+    "migration:provenance": "node scripts/ci/check-remote-migration-provenance.mjs",
+    "migration:provenance:test": "node --test scripts/ci/check-remote-migration-provenance.test.mjs",
     "schema:provenance": "node scripts/ci/check-schema-provenance.mjs",
     "schema:provenance:test": "node --test scripts/ci/schema-provenance.test.mjs",
     "db:payroll:test": "node scripts/ci/payroll-snapshot-db-contract.mjs",

@@ -295,7 +295,6 @@
       "ai_copilot_messages",
       "ai_copilot_rate_limits",
       "ats_integrations",
-      "clock_events",
       "compliance_rulesets",
       "compliance_violations",
       "customer_success_health_scores",
@@ -313,14 +312,10 @@
       "enterprise_attendance_segments",
       "enterprise_webhook_deliveries",
       "generated_documents",
-      "marketplace_plugins",
-      "plugin_webhook_events",
-      "qr_clock_sessions",
       "reseller_admins",
       "resellers",
       "shift_trade_acceptances",
-      "shift_trade_offers",
-      "workspace_installed_plugins"
+      "shift_trade_offers"
     ],
     "views": [
       "workspace_active_tier"
@@ -343,7 +338,6 @@
       "attendance_transition_period",
       "attendance_upsert_oncall_window",
       "attendance_upsert_segment",
-      "clock_generate_qr",
       "compliance_check_working_time",
       "customer_success_calculate_health_score",
       "customer_success_record_onboarding_step",
@@ -355,10 +349,6 @@
       "get_workspace_members_for_export",
       "import_enterprise_catalog_to_workspace",
       "is_reseller_admin",
-      "marketplace_install_plugin",
-      "marketplace_set_plugin_status",
-      "marketplace_submit_plugin",
-      "marketplace_uninstall_plugin",
       "reseller_get_usage",
       "reseller_provision_workspace",
       "reseller_update_theme",

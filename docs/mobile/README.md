@@ -206,8 +206,8 @@ flowchart LR
   fizikai-device bizonyíték.
 - **BIZONYÍTOTT rollout-korlát:** a DB-migráció, PostgREST schema-cache és exact
   RPC/ACL/constraint inventory kerül ki először, utána azonos commitból a web,
-  Android és iOS kliens. A history driftből levezetett 59 shared / 69 local-only /
-  84 remote-only állapot, a hiányzó hiteles generated types és a restored-staging
+  Android és iOS kliens. A v3.51.9 read-only inventory szerinti 61 shared / 72
+  local-only / 82 remote-only állapot, a hiányzó hiteles generated types és a restored-staging
   adat-inventory miatt production **NO-GO**. A direct `BusinessRoleManager`
   total/priority tranzakciós invariantjai külön következő P1 csomag.
 

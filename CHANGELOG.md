@@ -1,3 +1,46 @@
+## 2026-07-22 — v3.51.9 Recovered migration provenance (unreleased)
+
+**Status:** local source candidate on
+`codex/migration-provenance-recovery-wave1`; not deployed.
+
+- Restores the exact remote-history sources for the v3.22 clock-in engine and
+  v3.30 plugin marketplace at their original migration IDs. Their reviewed
+  byte identities are frozen as 12,227 bytes / SHA-256
+  `89a2752acd0403f998ca987827f0a0ef6a8cffaadb21a78f6ddac02603a080f1`
+  and 14,451 bytes / SHA-256
+  `b9652205609fa1f274281db86741c19637f8442d513ae325087c29bd94f663b4`.
+  The historical SQL is not rewritten or repaired in place.
+- Adds a fail-closed, dependency-free byte-provenance gate with an exact
+  two-entry manifest, path containment, regular-file/symlink rejection,
+  byte-length and raw SHA-256 verification. Targeted Git LF attributes keep the
+  attestation stable across Windows and Linux without canonicalizing content in
+  the verifier.
+- Intentionally reduces the generated-schema provenance debt by five tables
+  and five functions. The exact gate now proves 140/165 tables, 3/4 views,
+  58/99 functions and 9/11 enums from 133 local migrations.
+- A fresh read-only linked comparison is now 61 shared / 72 local-only / 82
+  remote-only migration IDs (133 local, 143 remote). This is evidence of two
+  recovered IDs, not migration-history reconciliation.
+
+Local validation: migration-provenance tests 9/9 PASS, both raw migration
+identities PASS, schema-provenance parser 7/7 PASS and the exact 133-migration
+schema gate PASS. Full coverage is 76 files / 992 tests; typecheck, strict lint
+ratchet, production build, exact bundle budget, browser 7/7, mobile source
+183/183, synced artifact 345/345, mobile E2E 2/2, Edge 31/31 and 86/86,
+dependency audit and 1,526-file current-tree secret scan PASS. A standalone
+Supabase PostgreSQL replay attempt reached the
+migration runner but stopped at the first historical Storage dependency because
+that isolated DB image does not contain the Supabase Storage schema. The owned
+temporary container was identity-checked and removed; no linked write occurred.
+
+Production remains **NO-GO**. The files have not been applied or repaired on the
+linked database, 72 local-only and 82 remote-only IDs remain, a full Supabase
+clean replay and restored-staging acceptance are still missing, and the live
+artifact has no immutable Git-SHA attestation. The recovered clock/marketplace
+DDL also has separately documented ACL, secret-visibility, tenant-integrity,
+retention and idempotency risks that require forward-only hardening rather than
+historical edits.
+
 ## 2026-07-22 — v3.51.8 Fenced identity-cleanup scheduler foundation (unreleased)
 
 **Status:** stacked draft PR
