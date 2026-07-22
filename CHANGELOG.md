@@ -1,8 +1,9 @@
 ## 2026-07-22 — v3.51.17 complete Git-history secret gate (unreleased)
 
-**Status:** local candidate; commit, stacked draft PR and hosted Quality Gate
-pending. No database, API, application dependency, product runtime or production
-deployment change.
+**Status:** implementation commit
+`ee032dcbf32f17f0cadab7f60609490b4e54e40e`; stacked draft PR and hosted
+Quality Gate pending. No database, API, application dependency, product runtime
+or production deployment change.
 
 - **BIZONYÍTOTT:** the previous high-confidence scanner inspected only the
   current tracked/untracked working tree. A credential committed and deleted in
@@ -32,17 +33,19 @@ deployment change.
   commands and `fetch-depth: 0`.
 
 Local focused validation: scanner tests 9/9; current tree 1,556 text files;
-history 881 commit objects, zero annotated tag objects, 3,639 unique blobs,
-1,615 scanned historical paths, 3,592 text and 47 binary blobs / 207,237,846
-streamed object bytes; mobile/CI source contract 226/226;
+implementation-head history 882 commit objects, zero annotated tag objects,
+3,649 unique blobs, 1,618 scanned historical paths, 3,602 text and 47 binary
+blobs / 208,331,486 streamed object bytes; mobile/CI source contract 226/226;
 targeted ESLint and diff check PASS. Full local regression also passed: 80 files
 and 1,034/1,034 coverage tests; typecheck; unchanged 1,148-error/98-warning lint
 ratchet; 4,092-module production build; bundle ceiling; web smoke 7/7; mobile
 contract 388/388 plus smoke 2/2 and zero native drift; all six isolated database
 contracts; Edge 31-entrypoint check plus 86/86 suite; release, migration, schema,
 SBOM and source-identity gates; and dependency audit with zero vulnerabilities.
-Clean committed-head release and hosted evidence remain mandatory before the
-candidate is complete.
+The exact clean implementation head rebuilt and deterministically synchronized
+the shared Android/iOS artifact with zero native drift; release contract 408/408
+and a 62,910-byte manifest attesting `ee032dc…` PASS. Hosted evidence remains
+mandatory before the candidate is complete.
 
 Rollback is a workflow/checker/scanner/version/documentation commit revert.
 Production remains **NO-GO** because migration history, restored staging,
