@@ -4,7 +4,7 @@ Audit dátuma: 2026-07-17–22
 Repository: `C:\Work\Github\effectime-app-enterprise-a95029a1`
 Remote: `HenrikFaul/effectime-app-enterprise-a95029a1`
 Auditált main HEAD: `f52671880748c58802d94e0705204d846f4b5928`
-Munkabranch: `codex/plugin-install-lock-timeout`
+Munkabranch: `codex/plugin-downgrade-cleanup`
 
 ## 1. Átvételi összkép
 
@@ -16,7 +16,7 @@ repositoryra vonatkozik.
 
 **BIZONYÍTOTT:** a helyes repository a teljes Effectime Enterprise terméket
 tartalmazza: több mint 846 elérhető alapcommit, a candidate-del több mint 1 500
-  követett vagy új fájl, 149 jelenlegi enterprise UI-fájl, az I-36 candidate-del
+  követett vagy új fájl, 149 jelenlegi enterprise UI-fájl, az I-37 candidate-del
 138 helyi SQL-migráció és 31 Edge Function-könyvtár. A publikus oldal,
 auth, workspace shell, tagság/RBAC, naptár, szabadság, jóváhagyás, jelenlét,
 payroll, szervezet, erőforrás, projekt/Gantt/Agile, riport, analitika, API,
@@ -48,6 +48,10 @@ install/uninstall számlálórace-t friss statement-snapshotra épülő lock-pro
   szerződést és stale-workspace-safe kézi retry UX-et ad; a pinned PG17.6
   timeout/rollback/retry contract és minden széles lokális kapu zöld. Linked
   apply egyik csomagnál sem futott.
+  Az I-37 code-only candidate az exact owner számára a marketplace entitlement-
+  gaten kívüli, katalógusfüggetlen installed-plugin cleanup felületet ad aktív
+  Enterprise→Pro/Freemium downgrade és catalog archival után; a lokális teljes
+  regressziós, webes és közös Android/iOS kapuk zöldek, production deploy nincs.
 A generált
 public sémából 25 tábla, 1 view, 41 függvény és 2 enum eredete továbbra sem
 bizonyítható migrációval, és a dokumentált többlépcsős approval chain nincs
@@ -165,6 +169,7 @@ adatbázis-objektumot nem töröltünk.
 | R-042 | Plugintelepítés Enterprise-entitlementje és published-only szerződése | marketplace specifikáció `plugin_install` Enterprise mappingje + történeti RPC `approved` elfogadása + UI exact `published` szűrése | BIZONYÍTOTT source + hosted candidate | változatlan install RPC-shape; server-side `plugin_install` kapu; exact `published`; státusz sorlock alatti újraellenőrzése; meglévő installok és uninstall megőrzése | candidate-ben igen; linked DB-t nem ír | runner 12/12; pinned PG17.6: 40 fail-closed tamper, ebből 15 install-policy; státusz-race rollback, két-workspace konkurens count, reapply; full 77/996; type/build/web/mobile/security/Edge kapuk; hosted 11/11 | igen | draft PR #183, implementation head `1aa7bcd…`, run `29901330094`; production NO-GO | history reconcile; restored-staging DB-first apply; P2 stale install-count race, runtime feature-metaadat, downgrade UX, getter-policy és bounded lock-wait |
 | R-043 | Plugin install/uninstall számláló konzisztencia és meglévő drift helyreállítása | történeti uninstall statement-snapshot + determinisztikusan reprodukált `1 aktív / 0 tárolt` állapot + marketplace UI rendezés/megjelenítés | BIZONYÍTOTT source + hosted candidate | változatlan uninstall RPC-shape/OID/ACL; külön plugin `FOR NO KEY UPDATE`; következő statementben friss count; öt másodperces fail-closed lock-budget és drift-only globális reconciliation | candidate-ben igen; linked DB-t nem ír | runner 14/14; pinned PG17.6 végső teljes contract 95,6 s: 43 tamper, legacy red, globális repair, fixed green, grandfather/API/ACL/OID és dupla reapply; type/coverage/lint/build/web/mobile/Edge/security/provenance lokálisan PASS; hosted 11/11 | igen | draft PR #184, implementation head `cb0358e…`, run `29907202609`; production NO-GO | history reconcile; plugin-write drain; restored-staging DB-first apply + exact post-count; ugyanazon SHA deploy |
 | R-044 | Bounded plugin-install lock wait és sanitizált kézi retry | install RPC késői plugin-sorlockja korlátlanul várhatott; a kliens nyers backend hibaüzenetet fűzött a toastba | BIZONYÍTOTT source + local/hosted contract | változatlan RPC body/API/OID/ACL mellett `lock_timeout=5s`; 55P03/40P01/40001 bounded klienshiba; raw részletek tiltása; per-plugin pending, explicit retry és szinkron workspace-azonossági stale-result guard | candidate-ben igen; linked DB-t nem ír | runner 14/14; API+UI 21/21; pinned PG17.6 46 tamper + exact blocker + 4,5–8 s 55P03 + teljes rollback + stabil-ID manual retry + dupla reapply; full 79/1017; type/lint/build/bundle/web/mobile/Edge/security/provenance PASS; hosted 11/11 | igen | draft PR #185, implementation head `d75f269…`, run `29913434706`; production NO-GO | history reconcile; restored-staging DB-first apply; timeout-metrika |
+| R-045 | Owner-only installed-plugin cleanup aktív csomag-downgrade vagy katalógus-archiválás után | I-34 grandfathering/uninstall contract + marketplace FeatureGate és runtime caller inventory | BIZONYÍTOTT local source candidate | `InstalledPluginCleanupPanel`, `WorkspaceDashboard`, meglévő redaktált inventory hook és owner-only uninstall RPC | candidate-ben igen; Enterprise→Pro/Freemium Settings útvonalon | cleanup 16/16; focused 6 fájl / 52/52; full 80/1034; type/lint/build/bundle/web/mobile/Edge/security/provenance PASS | igen | aktív tier-downgrade és catalog-hidden cleanup forrásszinten lezárva; production nincs deployolva | authenticated owner/non-owner downgrade/archive E2E; inactive/expired product policy; clean-HEAD/hosted és ugyanazon SHA production acceptance |
 
 ## 4. Megtalált és kijavított hiányok
 
@@ -397,6 +402,18 @@ státuszoszlopai jelzik:
   Workspace-váltás invalidálja a régi mutation toast/refetch/retry állapotát. A
   runner 14/14, API+UI 21/21 és a végső pinned PG17.6 contract 76,5 másodperc
   alatt PASS; linked apply és production deploy nem történt.
+- Az I-37 source candidate lezárja az aktív csomag-downgrade és katalógus-
+  archiválás után elárvuló uninstall UI P2 rését. Az exact owner számára a
+  Settingsben, a marketplace browse gate-en kívül jelenik meg a defaultból
+  összecsukott cleanup panel. Kizárólag a redaktált installation inventoryt
+  olvassa, nem függ a published katalógustól, és a meglévő owner-only RPC-t exact
+  installation ID-val hívja. Explicit konfigurációtörlési/újratelepíthetetlenségi
+  figyelmeztetés, fail-closed receipt, sanitizált hiba, friss kézi retry,
+  post-delete refetch-lock, fókusz-visszaállítás és workspace-generation/
+  operation-token stale guard készült. Cleanup 16/16, focused 52/52, full
+  80/1034, type/lint/build/bundle/web/mobile/Edge/security/provenance PASS.
+  **BIZONYÍTOTT korlát:** aktív `ws_general` nélkül a Settings tab sem mountol;
+  az inactive/expired recovery kívánt működése **BIZONYTALAN** termékdöntés.
 
 ## 5. Hiányok és kockázatok
 
@@ -435,7 +452,7 @@ státuszoszlopai jelzik:
 | E2E/coverage                        | nincs teljes auth/workspace/RBAC/leave/payroll/integration böngészős release gate                                                    | L     | Playwright staging suite, fixture, coverage baseline                |
 | Plugin secret catalog/lock mélység  | Az I-33 exact ACL és adat-totalitás contractja zöld, de a private tábla extra user-trigger/constraint készletét és a korábbi public policy-k reapply driftjét nem attesztálja újra; a migrációs lockot a runner egy sessionben teszteli. | M | exact policy/constraint/trigger-set pre/postcondition; rosszindulatú extra trigger és permisszív policy tamper; két-session lock-timeout + veszteségmentes retry |
 | Plugin runtime feature-metaadat      | Az I-34 apply-preflight az aktuális `plugin_install` catalog státuszt ellenőrzi, de a közös runtime entitlement-helper feature-status és feature-dependency szemantikája nincs e csomagban megerősítve. Későbbi catalog-deaktiválás vagy dependency-változás ezért külön runtime-policy kérdés. | M | fail-closed aktív-státusz/dependency contract; catalog-váltás alatti két-session teszt; downgrade runbook |
-| Plugin downgrade cleanup UX          | Az I-34 szándékosan grandfathereli a meglévő installációkat és szerveroldalon entitlement-vesztés után is engedi az uninstallt, de a marketplace browse FeatureGate elrejtheti azt a UI-felületet, amelyből a tulajdonos takarítani tudna. | S/M | revoke-only installed-plugin inventory és uninstall UX; web/Android/iOS downgrade, retry, a11y és stale-workspace teszt |
+| Plugin cleanup recovery edge cases   | Az I-37 source candidate az Enterprise→Pro/Freemium és catalog-hidden exact-owner cleanupot lezárja. **BIZONYÍTOTT korlát:** a panel a `ws_general`-lel entitlementelt Settings tabban van; aktív tier/add-on/override nélkül nem mountol. Valódi authenticated owner/non-owner + downgrade + archived-plugin E2E még nincs. A teljesen inactive/expired recovery kívánt útvonala **BIZONYTALAN** termékpolitika. | S/M | product decision az inactive/expired útvonalról; authenticated böngészős downgrade/archive E2E; ugyanazon SHA production acceptance |
 | Plugin service getter grandfathering | Az I-33 service-role getter enabled + exact workspace/install párra korlátozott, de nem követel aktuális `plugin_install` entitlementet vagy `published` státuszt. Ez támogatja a szándékos grandfatheringet, ugyanakkor a háttérfeldolgozás leállítási/folytatási termékpolitikája nincs rögzítve. | M | explicit continue/pause/revoke policy; auditált transition; worker/service contract entitlement- és archive-esetekkel |
 | Plugin install bounded lock-wait     | Az I-34 státusz sorlockja megszünteti az install/archive TOCTOU-t, de nem vezet be saját lock- vagy statement-timeoutot és retry receiptet. Hosszú státusztranzakció ezért a platform timeoutjáig blokkolhatja a telepítést. | S/M | dokumentált bounded timeout; retryable hibakód; két-session wait/timeout/rollback teszt; kliens fail-visible retry UX |
 | Plugin install/uninstall count race  | Az I-35 candidate a régi `1 aktív / 0 tárolt` állapotot determinisztikusan reprodukálja, külön plugin-lock statementtel megszünteti a stale snapshotot, és bounded globális reconciliationnel javítja a korábbi driftet. A teljes PG17.6 contract lokálisan zöld; linked rollout még nincs. | M | **forrásban javítva:** restored-staging plugin-write drain, migration apply, exact globális post-count és konkurens acceptance; utána ugyanazon SHA rollout |
@@ -503,6 +520,7 @@ státuszoszlopai jelzik:
 | I-34   | Plugin install entitlement + published-only boundary | egy forward-only migration ugyanazon RPC OID/signature/default/return/ACL mögött; owner után server-side `plugin_install`; exact `published`; státusz-lock és commit előtti recheck; public/private atomi write; grandfathered install + uninstall | runner 12/12; pinned PG17.6: 40 fail-closed tamper, ebből 15 install-policy; státusz-race rollback, két-workspace konkurens count, explicit reapply; full 77/996; type/lint/build/bundle/web 7/mobile 183/345/2/365/security/Edge PASS, egy dokumentált 85/86→86/86 flake; hosted 11/11 | additív migration; linked apply előtt history reconcile; DB-first rollout; rollback csak forward-fix/feature pause, entitlementet vagy published-only határt nem szabad vakon lazítani; meglévő installáció nem törölhető automatikusan | draft PR #183, implementation head `1aa7bcd…`, run `29901330094`, release `8522068999`, diagnostics `8522067209`, Android `8522032542`; production NO-GO |
 | I-35   | Plugin install-count concurrency + derived-data repair | változatlan uninstall RPC OID/signature/ACL; installation delete → külön plugin `FOR NO KEY UPDATE` → friss count statement; öt másodperces lock-timeout, installation→marketplace `SHARE ROW EXCLUSIVE`, drift-only globális repair és exact postcondition; deterministic barrier/cleanup hardening | runner 14/14; pinned PG17.6 végső run 95,6 s: összesen 43 tamper, legacy `1/0`, közvetlen migration repair, fixed `1/1`, API/ACL/OID/grandfather/auth-atomicity és dupla reapply; type/coverage/lint/build/web/mobile/Edge/security/provenance lokálisan PASS; hosted 11/11 | additív forward-only migration; rolloutkor rövid plugin-write drain és post-count; lock-timeoutnál teljes retry; régi RPC-re revert és count-lock megkerülése tilos, csak forward fix/pause | draft PR #184, implementation head `cb0358e…`, run `29907202609`, release `8524406237`, diagnostics `8524404239`, Android `8524356479`; linked apply és production NO-GO |
 | I-36   | Bounded plugin-install lock wait + safe manual retry | változatlan install RPC body/OID/signature/ACL mellett function-scoped `lock_timeout=5s`; code-only retry classification, sanitizált hiba, per-plugin pending, explicit friss kattintás és workspace/unmount stale-result guard | runner 14/14; pinned PG17.6 46 tamper, exact blocker chain, 4,5–8 s `55P03`, teljes rollback, stabil-ID friss retry és dupla reapply; API/UI 21/21; full 79/1017; type/lint/build/web/mobile/Edge/security/provenance; hosted 11/11 | additív forward-only metadata migration; nincs automatikus retry; DB-first rollout, timeoutnál teljes tranzakció retry; linked history/staging nélkül apply tilos | draft PR #185, implementation head `d75f269…`, hosted merge `cb93c099…`, run `29913434706`, release `8526921475`, diagnostics `8526918713`, Android `8526878038`; linked apply és production NO-GO |
+| I-37   | Owner-only installed-plugin cleanup downgrade/archive után | marketplace browse gate-en kívüli, owner-only, összecsukott panel; redaktált catalog-independent inventory; exact-ID confirm; konfigurációtörlési/reinstall warning; sanitizált fail-visible állapotok; friss kézi retry; refetchig globális lock; generation+operation stale guard; fókusz-visszaállítás; EN/HU + EN fallback | cleanup 16/16; focused 6 fájl / 52/52; full 80/1034; type/lint/build/bundle/web 7/mobile 183/345/2/Edge 86/security/provenance PASS | nincs DB/API/dependency/migration változás; frontend revert eltávolítja a felületet, de a felhasználó által megerősített uninstall/config-törlés nem áll vissza kódreverttel; inactive/expired útvonal nincs megváltoztatva | local source candidate; clean-HEAD/hosted pending; production NO-GO |
 
 ## 7. Ellenőrzések és eredmények
 
@@ -608,30 +626,31 @@ iOS. Release `8524406237`, diagnostics `8524404239`, unsigned Android
 | Plugin install policy I-34 contract  | LOKÁLIS PASS             | Runner 12/12; pinned PostgreSQL 17.6; 40 fail-closed tamperből 15 install-policy, köztük 5 runtime-schema eset; published install/reinstall, mind a 4 nem publikált státusz denial, entitlement denial/no mutation, public/private atomicitás, grandfathering, entitlement-vesztés utáni uninstall, státusz-race rollback, két-workspace concurrent count és explicit reapply PASS. Nincs linked apply vagy deploy állítás. |
 | Plugin install-count I-35 contract | LOKÁLIS PASS | Runner 14/14; pinned PostgreSQL 17.6 végső teljes contract 95,6 s. A régi `1/0` race, közvetlen bounded globális repair, új `1/1` race, három új fail-closed tamper, exact API/ACL/OID/source, grandfathered business-state, authorization rollback és dupla reapply PASS. Ez célzott fixture, nem linked apply vagy production deploy. |
 | Plugin install lock-timeout I-36 contract | LOKÁLIS PASS | Runner 14/14; pinned PostgreSQL 17.6 végső teljes contract 76,5 s. Három új fail-closed tamper, exact barrier→holder→client PID-lánc, 4,5–8 s ablakban `55P03`, teljes public/private/timestamp rollback, a lock előtt változatlanul pontos count, azonos installation-ID-jú friss kézi retry és dupla reapply PASS. API+UI 21/21, TypeScript és célzott ESLint PASS. Ez célzott fixture, nem linked apply vagy production deploy. |
-| Release identity / Edge SBOM contract   | I-36 LOKÁLIS + HOSTED PASS | Current release-identity 55/55 és Edge SBOM unit 7/7; a verifier strict clean HEAD-et követel, továbbá determinisztikus web/mobile fingerprintet, immutable Edge source-tree-t és pontos Edge inventoryt. Hosted I-36 release artifact `8526921475`, potential merge identity `cb93c099…`. |
+| Release identity / Edge SBOM contract   | I-37 LOKÁLIS PASS / HOSTED PENDING | Current release-identity 55/55 és Edge SBOM unit 7/7; a verifier strict clean HEAD-et követel, továbbá determinisztikus web/mobile fingerprintet, immutable Edge source-tree-t és pontos Edge inventoryt. I-37 hosted evidence a commit után kötelező. |
 | `release:verify:deployment`             | LOKÁLIS CONTRACT PASS / LIVE FAIL | A fail-closed verifier unit 27/27; a jelenlegi `effectime.app` még nem szolgál release manifestet, és a Lovable/Cloudflare immutable deployment-ID header/API mapping sincs igazolva, ezért production attestation NO-GO. |
 | Mobile target suite                     | PASS                    | 93/93 célzott teszt: URL/origin, PKCE/deep-link és HTTPS raw-token tiltás, secure envelope/migráció/reinstall/reset tombstone/logout lock, recovery UX, CSP transform, native bridge és internal path |
-| `npm run mobile:check:source`           | I-36 LOKÁLIS PASS       | 183/183 source assertion: exact dependency integrity/kétplatformos plugin allowlist, release identity, CSP, identity/deep link/minimumok, auth/data-source/CI és natív build-artifact contract. |
-| `npm run mobile:check`                  | I-36 LOKÁLIS PASS       | A v3.51.14 shared `dist-mobile` és Android/iOS artifact contract 345/345 PASS; ugyanaz a React/Supabase adatforrás. |
-| `npm run test:e2e:mobile:built`         | I-36 LOKÁLIS PASS       | 2/2 landing/auth bridge-emuláció a v3.51.14 `dist-mobile` artifacton PASS. |
-| `npm run mobile:sync` / release check   | I-36 LOKÁLIS + HOSTED PASS | Android/iOS sync és normalizálás current tree-n PASS, natív drift 0; a clean-HEAD 365/365 release assertion `d75f269…` után lokálisan és a hosted natív jobokban PASS. |
+| `npm run mobile:check:source`           | I-37 LOKÁLIS PASS       | 183/183 source assertion: exact dependency integrity/kétplatformos plugin allowlist, release identity, CSP, identity/deep link/minimumok, auth/data-source/CI és natív build-artifact contract. |
+| `npm run mobile:check`                  | I-37 LOKÁLIS PASS       | A v3.51.15 shared `dist-mobile` és Android/iOS artifact contract 345/345 PASS; ugyanaz a React/Supabase adatforrás. |
+| `npm run test:e2e:mobile:built`         | I-37 LOKÁLIS PASS       | 2/2 landing/auth bridge-emuláció a v3.51.15 `dist-mobile` artifacton PASS. |
+| `npm run mobile:sync` / release check   | I-37 SYNC PASS / CLEAN-HEAD PENDING | Android/iOS sync és normalizálás current tree-n PASS, natív drift 0; a release check kizárólag a commit előtti 9 dirty/untracked path miatt állt meg, ezért clean-HEAD-en kötelező újrafuttatni. |
 | Android unit/lint/assemble              | I-36 HOSTED PASS        | Run `29913434706` Android jobja PASS, artifact `8526878038`; ez unsigned candidate, nem store release. |
 | iOS Xcode build                         | I-36 HOSTED PASS        | Run `29913434706` locked Swift package graphja és unsigned simulator buildje PASS; ez nem store release. |
-| `npm test` / `npm run test:coverage`    | I-36 LOKÁLIS PASS       | Current tree: 79 fájl, 1017/1017 teszt; statements/lines 51,45% (45 663/88 741), branches 75,21% (2 236/2 973), functions 46,97% (334/711). |
-| `npm run test:e2e:built`                | I-36 LOKÁLIS PASS       | A v3.51.14 built-web smoke 7/7 PASS egy workerrel. |
-| `npm run build`                         | I-36 LOKÁLIS PASS       | A v3.51.14 production build 4091 modullal PASS; nincs új runtime dependency. |
-| `npm run bundle:check`                  | I-36 LOKÁLIS + HOSTED PASS | Reviewed pre-commit: JS 4 529 639 raw / 1 297 427 gzip; committed `d75f269…`: 4 529 750 / 1 297 483; hosted merge `cb93c099…`: 4 529 732 / 1 297 498. Largest raw 1 765 336, hosted largest gzip 561 526; CSS 180 862 / 29 600; mind az exact reviewed ceiling alatt. |
-| `npm audit --audit-level=low`           | I-36 LOKÁLIS PASS       | 0 ismert vulnerability. |
-| `npm run security:secrets`              | I-36 LOKÁLIS PASS       | 1 550 tracked és nem ignorált untracked text file magas bizonyosságú current-tree scan + tracked mobil signing-key fájlnév tiltás; history scan még nyitott. |
-| `npm run lint:ratchet`                  | I-36 LOKÁLIS PASS       | 1 148 error / 98 warning; a diagnosztikai fingerprint változatlan, új vagy elmozdított diagnosztika nincs. |
+| `npm test` / `npm run test:coverage`    | I-37 LOKÁLIS PASS       | Current tree: 80 fájl, 1034/1034 teszt; statements/lines 51,60% (45 936/89 022), branches 75,48% (2 297/3 043), functions 47,71% (344/721). |
+| Plugin downgrade cleanup I-37 UI/integration | LOKÁLIS PASS KORLÁTTAL | Cleanup komponens 16/16; hat focused fájl 52/52; exact-owner gate, catalog-independent inventory, exact installation ID, malformed receipt, sanitizált hiba, friss confirmos retry, refetch-lock, Escape/cancel/fókusz és A→B→A stale guard PASS. Authenticated böngészős downgrade/archive E2E még nyitott. |
+| `npm run test:e2e:built`                | I-37 LOKÁLIS PASS       | A v3.51.15 built-web smoke 7/7 PASS egy workerrel, köztük 320/390/768 px public clipping check; ez nem authenticated downgrade E2E. |
+| `npm run build`                         | I-37 LOKÁLIS PASS       | A v3.51.15 production build 4092 modullal PASS; nincs új runtime dependency. |
+| `npm run bundle:check`                  | I-37 LOKÁLIS PASS / HOSTED PENDING | JS 4 537 693 raw / 1 299 419 gzip; largest 1 767 981 / 562 199; CSS 180 900 / 29 610. A mért +0,178% raw JS és +38 raw CSS explicit szűk baseline-frissítéssel PASS; nincs nyitott plafon. |
+| `npm audit`                             | I-37 LOKÁLIS PASS       | 0 ismert production vagy development vulnerability. |
+| `npm run security:secrets`              | I-37 LOKÁLIS PASS       | 1 552 tracked és nem ignorált untracked text file magas bizonyosságú current-tree scan + tracked mobil signing-key fájlnév tiltás; history scan még nyitott. |
+| `npm run lint:ratchet`                  | I-37 LOKÁLIS PASS       | 1 148 error / 98 warning; a diagnosztikai fingerprint változatlan, új vagy elmozdított diagnosztika nincs. |
 | Strukturált logger Deno teszt/check     | I-26 LOKÁLIS PASS       | Edge log-safety, `auth-email-hook` és `send-transactional-email` Deno 2.9.3 check PASS; strukturálatlan érzékeny hiba nem került vissza. |
-| `npm run edge:check` / ratchet / test    | I-36 LOKÁLIS PASS       | 31/31 entrypoint és config, 0 Deno diagnostic; 65/65 remote import exact, 0 unpinned; Deno 2.9.3; teljes Edge suite a test-only timeout stabilizálása után 86/86 PASS. Immutable source gate `27bdaca73e6d84b12c4d28aac81ae2797aaecec7ab1beade24ecb7c9aebe1180`, 89 fájl / 859 880 canonical byte. |
-| Edge strukturált log és release SBOM    | I-36 LOKÁLIS PASS       | Edge log-safety PASS; release identity 55/55 és Edge SBOM unit 7/7, a 31 deployálható entrypoint/config teljes leltárával. |
+| `npm run edge:check` / ratchet / test    | I-37 LOKÁLIS PASS       | 31/31 entrypoint és config, 0 Deno diagnostic; 65/65 remote import exact, 0 unpinned; Deno 2.9.3; teljes Edge suite 86/86 PASS. Immutable source gate `27bdaca73e6d84b12c4d28aac81ae2797aaecec7ab1beade24ecb7c9aebe1180`, 89 fájl / 859 880 canonical byte. |
+| Edge strukturált log és release SBOM    | I-37 LOKÁLIS PASS       | Edge log-safety PASS; release identity 55/55 és Edge SBOM unit 7/7, a 31 deployálható entrypoint/config teljes leltárával. |
 | Payroll contract és UI regresszió       | PASS                    | Deno payroll contract 15/15; célzott Vitest 20/20; AuditLog allowlist 2/2; typed Edge check PASS; current full unit 549/549 |
 | Payroll snapshot DB contract            | I-25 REVALIDÁLVA PASS   | runner unit 12/12; pinned PostgreSQL 18.4 migration/digest/ACL/search_path/trigger/negative auth/member drift/audit rollback PASS. A readiness valódi `SELECT 1` lekérdezéssel igazolja a név szerinti céladatbázist, ezért a konténerfolyamat és az adatbázis-létrehozás közti race fail-closed. Négy manipulált pgcrypto/schema trust eset fail-closed; runtime TRUNCATE, direct service reset és reserved-audit forge/tamper/delete tiltott; whitespace/NULL és 7/8/1000/1001 indokhatárok, exact prev/new audit, locked/exported/legacy reopen auditált. Determinisztikus lock és reopen exactly-one-winner, valamint actor-demotion→reopen fail-closed, bitazonos sor/0 audit igazolt. Collisionteszt idegen konténert megőriz; nincs hálózat/host port, csak két read-only mount, ownership-ID+label cleanup PASS. Ez célzott fixture, nem teljes migration replay. |
 | HR workflow tenant DB/UI contract       | I-25 REVALIDÁLVA PASS   | runner unit 8/8; pinned PostgreSQL 18.4 static contract, repeat apply és legacy-row preservation PASS; cross-workspace template/membership/instance/task/assignee, inactive membership, member/admin RLS, list PII, parent cascade és exact RPC/FK catalog fail-closed. Négy determinisztikus reassignment/suspension/direct-write lock-race PASS. UI data+a11y+request-ordering 10/10; nincs `eq.undefined`, backend/task hiba fail-visible, pending instance-read deduplikált, workspace-váltás és unmount utáni válasz invalidált. Nincs hálózat/host port; exact ownership cleanup és bounded child termination. Célzott fixture, nem teljes migration replay vagy restored-staging bizonyíték. |
 | Migration byte provenance gate         | I-31 LOKÁLIS PASS       | Unit 9/9; két exact recovered SQL / 26 678 raw byte; a kanonikus byte+SHA a verifierben és a manifestben is rögzített; path, entry-set, type, symlink, length, SHA-256 és koordinált SQL+manifest drift fail-closed ellenőrzés; Git LF contract PASS. |
-| Schema provenance gate                  | I-36 LOKÁLIS PASS | Parser unit 7/7; az exact-debt gate 138 migráción megtartotta a 25/1/41/2 ismert unproven surface baseline-t. Az I-27–I-36 candidate RPC-k és private táblák nincsenek hitelesen regenerált generated types-ban, ezért az exact local interface nem helyettesíti a linked-schema regenerálást. |
+| Schema provenance gate                  | I-37 LOKÁLIS PASS | Az exact-debt gate 138 migráción megtartotta a 25/1/41/2 ismert unproven surface baseline-t. Az I-27–I-36 candidate RPC-k és private táblák nincsenek hitelesen regenerált generated types-ban, ezért az exact local interface nem helyettesíti a linked-schema regenerálást. I-37 nem módosít sémát. |
 | SBOM és release manifest                | I-29 HOSTED PASS | Run `29879703648`, release evidence artifact `8514318251`, diagnostics `8514316593`; ez source candidate evidence, nem live deploy. |
 | GitHub-hosted quality workflow          | I-29 PASS | Draft PR #178 final source `f628d0b7d0931be5f16ebd03e14a608648077ac8`; run `29879703648` mind a 10 jobja PASS, benne az öt PostgreSQL contract, frontend/Edge, Android és locked iOS. |
 | I-36 hosted release evidence            | PASS | Draft PR #185 implementation head `d75f269d73dc9c27be1949e3d1a2f009fc3134c6`; a PR checkout potential merge SHA-ja `cb93c0998c6645e4b680f434fa308e8795b85ff3`. Run `29913434706` mind a 11 jobja PASS; release `8526921475`, diagnostics `8526918713`, unsigned Android `8526878038`. Ez source/merge-candidate CI bizonyíték, nem linked apply vagy production deploy. |
@@ -700,12 +719,12 @@ vagy forráskódhibaként van lezárva, mert a tényleges production build PASS.
 16. Fokozatos lint-, coverage-, E2E- és bundle-adósság csökkentés.
 
 Az I-34–I-36 következő kontrollált hulláma csak history reconcile után a restored-
-staging DB-first acceptance. Az I-35 a történeti install/uninstall count-race-t,
-az I-36 a bounded install lock-waitet, teljes rollbacket és kézi retry UX-et
-forrásszinten lezárja. A runtime feature-status/dependency, entitlement-vesztés
-utáni downgrade-cleanup UI és grandfathered service-getter policy külön P2-k;
-ezek hiánya nem lazíthatja vissza a szerveroldali entitlement/published-only
-határt.
+staging DB-first acceptance. Az I-35 a count-race-t, az I-36 a bounded lock-waitet,
+az I-37 pedig az aktív tier-downgrade/catalog-hidden owner cleanup UI-t zárja le
+forrásszinten. A runtime feature-status/dependency és grandfathered service-getter
+policy továbbra külön P2. Az inactive/expired, `ws_general` nélküli recovery
+útvonala termékdöntést és külön acceptance-et igényel; egyik nyitott tétel sem
+lazíthatja vissza az entitlement/published-only vagy owner-only szerverhatárt.
 
 ## 9. Emberi döntést igénylő kérdések
 
@@ -821,3 +840,12 @@ PR #185 implementációs headjére jelentett hosted run `29913434706` mind a 11
 jobja PASS; a PR checkout a `cb93c099…` potential merge commitet attesztálja.
 A migration-history drift miatt linked apply és production deploy továbbra sem
 engedélyezett.
+
+A v3.51.15 I-37 code-only source candidate nem módosít adatbázist, API-t vagy
+függőséget. Az aktív tier-downgrade és catalog-hidden exact-owner cleanup focused
+52/52 és full 80/1034 kapuja, type/lint/build/bundle, web 7/7, mobile
+183/345/2, Edge 86/86, release/security és provenance ellenőrzése zöld.
+Authenticated böngészős downgrade/archive acceptance és inactive/expired
+recovery policy még nyitott. A clean-HEAD release és hosted eredményt a commit
+után kell rögzíteni. A globális migration-history, replay, linked-lint és
+live-attestation blockerek miatt production deploy továbbra **NO-GO**.

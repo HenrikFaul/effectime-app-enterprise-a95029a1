@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 const root = join(process.cwd(), 'src', 'components');
 const sidebar = readFileSync(join(root, 'shell', 'WorkspaceSidebar.tsx'), 'utf8');
 const dashboard = readFileSync(join(root, 'enterprise', 'WorkspaceDashboard.tsx'), 'utf8');
+const pluginCleanup = readFileSync(join(root, 'marketplace', 'InstalledPluginCleanupPanel.tsx'), 'utf8');
 
 describe('workspace navigation/content entitlement integration', () => {
   it('renders both navigation layouts from the same pre-filtered item model', () => {
@@ -85,5 +86,22 @@ describe('workspace navigation/content entitlement integration', () => {
       /canViewWorkspaceSettings && hasTabEntitlement\('settings'\)[\s\S]*?<WorkspaceSettings/,
     );
     expect(dashboard).not.toMatch(/<FeatureGate[^>]+feature="ical_feed"/);
+  });
+
+  it('keeps exact-owner plugin cleanup outside the marketplace browse entitlement', () => {
+    expect(dashboard).toContain("import { InstalledPluginCleanupPanel } from '@/components/marketplace/InstalledPluginCleanupPanel';");
+    expect(dashboard).toMatch(
+      /userRole === 'owner' && \([\s\S]*?<InstalledPluginCleanupPanel workspaceId=\{workspace\.id\} \/>[\s\S]*?\)/,
+    );
+
+    const cleanupIndex = dashboard.indexOf('<InstalledPluginCleanupPanel');
+    const marketplaceGateIndex = dashboard.indexOf('feature="plugin_marketplace_browse"');
+    expect(cleanupIndex).toBeGreaterThan(-1);
+    expect(marketplaceGateIndex).toBeGreaterThan(cleanupIndex);
+
+    expect(pluginCleanup).toContain('useInstalledPlugins(workspaceId)');
+    expect(pluginCleanup).toContain('uninstallPlugin(installation.id)');
+    expect(pluginCleanup).not.toContain('useMarketplacePlugins');
+    expect(pluginCleanup).not.toContain(".from('workspace_installed_plugins')");
   });
 });

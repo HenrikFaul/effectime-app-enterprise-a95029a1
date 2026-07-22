@@ -1,3 +1,63 @@
+## 2026-07-22 — v3.51.15 Owner-only installed-plugin cleanup after downgrade/archive (unreleased)
+
+**Status:** local source candidate; no database, API or dependency change and no
+production deployment.
+
+- **BIZONYÍTOTT:** the marketplace catalog is protected by
+  `plugin_marketplace_browse`, while the existing owner-authorized uninstall RPC
+  remains available after `plugin_install` entitlement loss. Adds an owner-only,
+  collapsed installed-plugin cleanup panel to Workspace Settings outside the
+  marketplace browse gate, so an Enterprise→Pro/Freemium downgrade does not
+  orphan the uninstall path.
+- Reads only the redacted workspace installation inventory (`id`,
+  `workspace_id`, `plugin_id`, `enabled`, `installed_at`) and does not query or
+  join the published catalog. Archived, unpublished or otherwise catalog-hidden
+  installations therefore remain identifiable by plugin ID and removable by
+  the exact workspace owner; the existing RPC remains the authoritative
+  tenant/RBAC boundary.
+- Requires explicit confirmation and warns that removal deletes the workspace
+  configuration and that reinstall may no longer be available. Malformed
+  receipts fail closed, raw backend details never reach the UI, retryable
+  conflicts require a fresh confirmed action, and row actions remain locked
+  until the authoritative post-removal inventory refresh settles.
+- Adds loading, empty, fail-visible retry and success/refresh-error states,
+  responsive text wrapping, keyboard dismissal and deterministic focus
+  restoration. Workspace generations plus per-operation tokens suppress stale
+  success, error, refetch and pending-state effects across A→B→A workspace
+  changes and unmounts. English and Hungarian copy are explicit; other
+  configured locales use the established English fallback.
+
+Local validation: cleanup 16/16 and the six related source-contract files 52/52
+PASS; full coverage 80 files and 1,034/1,034 tests (51.60% statements/lines,
+75.48% branches, 47.71% functions); TypeScript, targeted ESLint and the unchanged
+1,148-error/98-warning lint ratchet PASS. Production build (4,092 modules), web
+smoke 7/7, Android/iOS deterministic sync, mobile source/runtime/E2E
+183/345/2, Edge 86/86, release identity 55/55, Edge SBOM 7/7, migration/schema
+provenance, 1,552-file secret scan and zero-vulnerability dependency audit PASS.
+The reviewed bundle is 4,537,693 raw / 1,299,419 gzip JavaScript bytes; largest
+JavaScript is 1,767,981 / 562,199 and CSS is 180,900 / 29,610. The narrow budget
+increase is recorded explicitly; no unbounded ceiling was introduced. Clean-HEAD
+mobile release attestation and hosted CI remain pending until this source is
+committed.
+
+**BIZONYÍTOTT limitation:** the panel is mounted inside the Settings tab, which
+still requires an enabled `ws_general` feature. Freemium and Pro include that
+feature, but a workspace with no active tier, add-on or override supplying
+`ws_general` cannot reach this recovery surface. The desired inactive/expired
+subscription recovery policy is **BIZONYTALAN** and requires a product decision;
+this package does not invent an authorization bypass. A real authenticated
+owner/non-owner + downgrade + archived-plugin browser E2E is also still open.
+
+Rollback is a single frontend commit revert; no schema or API rollback is
+required. A user-confirmed uninstall and its configuration deletion cannot be
+undone by reverting the UI and may be recoverable only through an otherwise
+permitted reinstall or an approved backup process.
+
+Production remains **NO-GO**: the 61 shared / 77 local-only / 82 remote-only
+migration history is unreconciled, full 138-migration replay is unproven, linked
+lint still reports 7 errors / 6 warnings, and the live release manifest is
+missing. This P2 source package does not authorize a production deployment.
+
 ## 2026-07-22 — v3.51.14 Bounded plugin install lock wait and safe retry (unreleased)
 
 **Status:** stacked draft PR
