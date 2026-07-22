@@ -398,9 +398,12 @@ the adversarial AST log-safety suite 9/9, a 16/16 DB-runner contract and all fiv
 pinned PostgreSQL 18.4 contracts, including deterministic event-extension and
 temporary-to-permanent upgrade races. The frozen Edge identity is
 `5d38e629bc798af9e4536f51b819e2b99cd5378f95250478e09d05c3c26c6bce`
-(89 files / 859,724 canonical bytes). These are local source contracts until
-the stacked PR and hosted run below are recorded; they are not restored-staging
-or live deployment evidence.
+(89 files / 859,724 canonical bytes). Stacked draft PR
+[#179](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/pull/179)
+at implementation head `1e3d874275c33115e97c0216ef36e5b832edd3f7` has hosted
+Quality Gate run `29885969841` with all 10/10 jobs PASS; release evidence
+`8516558700`, diagnostics `8516557751` and unsigned Android `8516531963` retain
+the source/CI proof. They are not restored-staging or live deployment evidence.
 
 Production is **NO-GO**: the recurring identity-cleanup scheduler is not
 installed, and the existing migration-history drift, failed clean replay/linked

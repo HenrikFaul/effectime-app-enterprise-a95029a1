@@ -1,6 +1,8 @@
 ## 2026-07-22 — v3.51.8 Fenced identity-cleanup scheduler foundation (unreleased)
 
-**Status:** local stacked source candidate; not deployed.
+**Status:** stacked draft PR
+[#179](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/pull/179)
+at implementation head `1e3d874275c33115e97c0216ef36e5b832edd3f7`; not deployed.
 
 Local release-candidate evidence: the complete Edge suite is 86/86 across 11
 files, all 31/31 Edge entrypoints/configs type-check with 65/65 remote imports
@@ -10,8 +12,11 @@ Edge source identity is
 `5d38e629bc798af9e4536f51b819e2b99cd5378f95250478e09d05c3c26c6bce`
 (89 files / 859,724 canonical bytes). The full frontend coverage run is 76
 files / 992 tests, and typecheck, strict lint ratchet, build, bundle, browser,
-mobile, dependency and current-tree secret gates pass. Hosted evidence is still
-required after publication.
+mobile, dependency and current-tree secret gates pass. Hosted Quality Gate run
+`29885969841` passed all 10/10 jobs; release evidence artifact `8516558700`,
+diagnostics artifact `8516557751` and unsigned Android artifact `8516531963`
+retain the source/CI evidence. They do not prove a database apply, Edge deploy,
+scheduler installation, signed native build or production rollout.
 
 - Replaces the unfenced cleanup-queue worker contract with per-job v2 fencing
   tokens. Prepare preserves the five-minute lease through the Auth side effect;
