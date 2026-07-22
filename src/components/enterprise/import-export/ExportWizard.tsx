@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { EntityConfig } from './config/entity-registry';
 import { fetchEntityRows } from './utils/data-fetcher';
 import { generateCSV, generateExcelXML, downloadFile } from './utils/file-parser';
+import { buildTemplateGuidanceRow } from './utils/validator';
 import { useI18n } from '@/i18n/I18nProvider';
 
 interface Props {
@@ -20,6 +21,14 @@ interface Props {
 }
 
 type FileFormat = 'xlsx' | 'csv';
+
+interface ExportAuditClient {
+  from(table: 'enterprise_audit_events'): {
+    insert(values: Record<string, unknown>): PromiseLike<unknown>;
+  };
+}
+
+const exportAuditClient = supabase as unknown as ExportAuditClient;
 
 export function ExportWizard({ entity, workspaceId, userId, onClose }: Props) {
   const { t } = useI18n();
@@ -71,7 +80,7 @@ export function ExportWizard({ entity, workspaceId, userId, onClose }: Props) {
       const dataRows = rows.map(r => fields.map(f => r[f.key] ?? ''));
 
       const guidanceRow = importCompatible
-        ? fields.map(f => f.templateExample || (f.type === 'date' ? '(YYYY-MM-DD)' : f.type === 'boolean' ? 'true/false' : ''))
+        ? buildTemplateGuidanceRow(fields)
         : undefined;
 
       const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
@@ -92,7 +101,7 @@ export function ExportWizard({ entity, workspaceId, userId, onClose }: Props) {
       }
 
       // Audit
-      await (supabase as any).from('enterprise_audit_events').insert({
+      await exportAuditClient.from('enterprise_audit_events').insert({
         workspace_id: workspaceId,
         actor_id: userId,
         action: 'export.created',
@@ -107,8 +116,8 @@ export function ExportWizard({ entity, workspaceId, userId, onClose }: Props) {
 
       toast.success(t('export_wizard.export_ready', { count: dataRows.length }));
       onClose();
-    } catch (e: any) {
-      toast.error(t('export_wizard.export_error', { msg: e?.message || '?' }));
+    } catch {
+      toast.error(t('export_wizard.export_error'));
     } finally {
       setBusy(false);
     }
@@ -158,7 +167,9 @@ export function ExportWizard({ entity, workspaceId, userId, onClose }: Props) {
       <div className="grid grid-cols-2 gap-3">
         <div>
           <Label className="text-xs">{t('export_wizard.format_label')}</Label>
-          <Select value={format} onValueChange={(v: any) => setFormat(v)}>
+          <Select value={format} onValueChange={(value) => {
+            if (value === 'csv' || value === 'xlsx') setFormat(value);
+          }}>
             <SelectTrigger className="mt-1 h-9 text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="xlsx"><span className="flex items-center gap-2"><FileSpreadsheet className="h-3.5 w-3.5" />Excel (.xls)</span></SelectItem>

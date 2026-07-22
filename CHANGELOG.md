@@ -1,3 +1,73 @@
+## 2026-07-22 — v3.51.22 CSV import client integrity boundary (unreleased)
+
+**Status:** source + hosted candidate on `codex/csv-import-client-boundary`;
+draft PR #193. Production deployment has not been performed. No database
+migration, Edge contract or new dependency is introduced.
+
+- **BIZONYÍTOTT:** the active Import Wizard advanced a selected file from step
+  1 to an auto-skipped step 2 that had no forward action; treated every
+  error-free HTTP 200 body as a completed import without validating its shape
+  or accounting; compressed valid rows before submission and then displayed
+  returned indexes as original file indexes; emitted blank validation indexes
+  in its CSV error report; and displayed raw Functions/data-provider messages.
+  Job-role category and position lookup failures could also be treated as
+  partial or empty export success.
+- Adds a dependency-free, single-attempt client adapter that sends only cleaned
+  row data while retaining source-row identities locally. It accepts a success
+  only when `success`, summary accounting, safe-integer counts, row references
+  and bounded error fields are internally consistent, and remaps server indexes
+  back to the original file. Additive response fields remain compatible.
+- Parses a bounded clone of Supabase `FunctionsHttpError.context` and exposes
+  only an allowlisted status/code and correlation-safe request ID. Only a
+  status/code-matched handler 4xx preflight rejection is definitive; unknown
+  4xx, 5xx, network failure and malformed 200 are
+  explicitly outcome-unknown and never retried automatically. The result UI no
+  longer fabricates zero summaries or synthetic row 0 errors.
+- Adds a two-second/16,384-byte error-body read boundary. A full request timeout
+  remains pending measured 2,000-row latency and transactional/idempotent
+  recovery evidence; no speculative cutoff is introduced.
+- Moves successful upload directly to column mapping and makes asynchronous
+  parsing last-selection-wins. File, mapping and mode changes invalidate prior
+  validation/confirmation/results, while a synchronous guard prevents duplicate
+  submissions. Original row numbers survive versioned guidance-row filtering
+  in validation and server reports; guidance rows no longer consume the
+  2,000-data-row allowance.
+- Rejects empty or case-insensitively duplicate source headers and duplicate
+  target mappings before validation, and uses null-prototype row records so a
+  `__proto__` header cannot mutate parser state. Blank/current/export templates
+  share an exact versioned guidance marker, including reordered-column support.
+- Replaces raw import/export/provider details with localized stable messages in
+  all eight locales. Export data reads now fail closed for every primary query,
+  job-role category resolution, positions, and unknown entity keys. The file
+  removal, import-mode selection and success result also gain explicit accessible
+  names/state/live-region semantics.
+
+Local validation is green: five focused adapter/data-fetcher/guidance/i18n/
+Import Wizard files with 89/89 tests; complete coverage 96 files / 1,190/1,190
+tests (56.50% statements/lines, 80.84% branches, 39.56% functions);
+TypeScript; zero-diagnostic targeted ESLint; and the reduced 1,121-error/
+98-warning lint fingerprint. Production build and the explicitly reviewed
+4,570,199 raw / 1,310,246 gzip clean source-head JavaScript bundle ceiling pass;
+the hosted merge candidate is 4,570,181 / 1,310,205. Largest chunk is
+1,783,491 raw / 567,356 gzip and CSS remains 180,900 / 29,610. Web E2E is 7/7,
+mobile source 228/228,
+deterministic Capacitor sync, mobile release foundation 410/410 and mobile E2E 2/2
+pass. Full Edge is 109/109, entrypoint check 31/31, log safety and ratchet unit
+24/24 pass. All seven isolated PostgreSQL contracts, migration/schema
+provenance, release identity 55/55 and Edge SBOM unit 7/7 pass. Dependency
+audit reports zero vulnerabilities; the hosted current secret scan covers 1,586
+files and the fetched-history scan covers 894 commits / 3,779 blobs /
+222,477,389 bytes with zero findings. Exact Edge identity remains `060c81a…`
+(95 files / 913,321 canonical bytes). Exact source head `15b482e…` and potential
+merge `86d89b3…` passed hosted Quality Gate run `29956363505` with all 12 jobs
+successful and zero annotations. Retained release/diagnostics/unsigned Android
+artifacts are `8544266999` / `8544265085` / `8544223123`.
+
+Rollback is a single source/test/i18n/version/documentation commit revert. The
+request body, Edge response contract and database schema are unchanged.
+Production remains **NO-GO** for inherited migration-history, restored-staging,
+Edge parity, same-SHA live-attestation and transactional-import blockers.
+
 ## 2026-07-22 — v3.51.21 CSV import bounded failure boundary (unreleased)
 
 **Status:** source + hosted candidate on `codex/csv-import-error-boundary`;
