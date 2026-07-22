@@ -44,6 +44,12 @@ mobile source 228/228, deterministic Android/iOS sync and mobile E2E 2/2. The
 clean-worktree-only native release assertion is also 410/410 PASS. The hosted
 Quality Gate will be recorded after the branch push.
 
+The first hosted potential-merge build measured 4,573,875 raw / 1,312,277 gzip
+JavaScript bytes, 93 / 91 bytes above the local release-SHA variant. Eleven of
+twelve jobs passed; only the raw ceiling was 74 bytes too narrow. The reviewed
+baseline now records both artifacts and retains only 128 raw bytes above the
+hosted measurement; the complete hosted gate is being rerun.
+
 Rollback is the source/test/i18n/version/documentation commit revert. It does
 not undo an already downloaded file or audit row. Production remains **NO-GO**
 for the inherited migration-history, staging, server-owned export snapshot,
