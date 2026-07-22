@@ -1165,6 +1165,59 @@ function checkNativeCiSource() {
     assert(start >= 0 && end > start, `Quality CI job ${jobName} must remain discoverable.`);
     return workflow.slice(start, end);
   };
+  const verifyJob = jobSlice("verify", "android-compile");
+  const verifyLines = verifyJob.split(/\r?\n/).map((line) => line.trim());
+  const stepSlice = (job, stepName) => {
+    const marker = `      - name: ${stepName}`;
+    const start = job.indexOf(marker);
+    const next = start >= 0 ? job.indexOf("\n      - name:", start + marker.length) : -1;
+    assert(start >= 0, `Quality CI step ${stepName} must remain discoverable.`);
+    return start >= 0 ? job.slice(start, next >= 0 ? next : job.length) : "";
+  };
+  const checkoutStep = stepSlice(verifyJob, "Check out source");
+  const checkoutFetchDepthCount =
+    checkoutStep.match(/^[ \t]*fetch-depth:[ \t]*0[ \t]*$/gmu)?.length ?? 0;
+  const checkoutFetchDepthKeyCount =
+    checkoutStep.match(/^[ \t]*fetch-depth[ \t]*:/gmu)?.length ?? 0;
+  assert(
+    checkoutStep.includes("uses: actions/checkout@") &&
+      checkoutFetchDepthCount === 1 &&
+      checkoutFetchDepthKeyCount === 1 &&
+      !/^[ \t]*if[ \t]*:/mu.test(checkoutStep) &&
+      !/^[ \t]*continue-on-error[ \t]*:/mu.test(checkoutStep),
+    "The verify job must fetch complete Git history for the fail-closed history secret scan.",
+  );
+  const secretGateSteps = [
+    ["Test current-tree and history secret scanners", "npm run security:secrets:test"],
+    ["Scan current repository source for high-confidence secrets", "npm run security:secrets"],
+    [
+      "Scan complete reachable Git history for high-confidence secrets",
+      "npm run security:secrets:history",
+    ],
+  ];
+  for (const [stepName, command] of secretGateSteps) {
+    const step = stepSlice(verifyJob, stepName);
+    const commandCount = verifyLines.filter((line) => line === `run: ${command}`).length;
+    assert(
+      commandCount === 1 &&
+        step.split(/\r?\n/).some((line) => line.trim() === `run: ${command}`) &&
+        !/^[ \t]*if[ \t]*:/mu.test(step) &&
+        !/^[ \t]*continue-on-error[ \t]*:/mu.test(step),
+      `The verify job must run the unconditional fail-closed ${command} step exactly once; found ${commandCount}.`,
+    );
+  }
+  const secretGateIndices = secretGateSteps.map(([stepName]) =>
+    verifyJob.indexOf(`      - name: ${stepName}`),
+  );
+  const dependencyInstallIndex = verifyJob.indexOf("      - name: Install dependencies from lockfile");
+  assert(
+    secretGateIndices.every((index) => index >= 0) &&
+      secretGateIndices.every(
+        (index, position) => position === 0 || index > secretGateIndices[position - 1],
+      ) &&
+      dependencyInstallIndex > secretGateIndices.at(-1),
+    "The dependency-free secret test/current/history gates must run in order before dependency installation.",
+  );
   const uncachedNodeJobs = [
     ["database-contract", "hr-workflow-database-contract"],
     ["hr-workflow-database-contract", "admin-override-database-contract"],

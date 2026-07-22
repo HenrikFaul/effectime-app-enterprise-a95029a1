@@ -1,3 +1,67 @@
+## 2026-07-22 — v3.51.17 complete Git-history secret gate (unreleased)
+
+**Status:** stacked draft PR #188; implementation head
+`ce7914114a345aafb6b075b399f6edc47853c3b7`; hosted implementation gate
+`29927511094` passed 11/11. No database, API, application dependency, product
+runtime or production deployment change.
+
+- **BIZONYÍTOTT:** the previous high-confidence scanner inspected only the
+  current tracked/untracked working tree. A credential committed and deleted in
+  a later commit therefore remained reachable in Git while the CI gate passed.
+- Extracts one dependency-free detector core shared by current-tree and history
+  scans. It removes the scanner-path exemption, rejects unreadable, unsupported
+  or over-8-MiB current files instead of silently skipping them, prevents
+  symlink traversal outside the checkout, and adds encrypted PKCS#8 plus PGP
+  private-key headers to the existing provider-token/service-role rules.
+- Scans every unique blob, commit and annotated-tag object reachable from all
+  fetched refs with replacement objects disabled, sanitized Git routing
+  environment, SHA-1/SHA-256 discovery, missing-object rejection and bounded
+  per-object streaming. Shallow, malformed, truncated or oversized histories
+  fail closed. Historical filenames are content-scanned independently so a
+  token-bearing filename or binary signing file cannot hide behind a safe-path
+  alias of the same deduplicated blob.
+- Diagnostics contain only escaped path/blob metadata, line and detector; match
+  values and source lines are never retained or printed. Ten deterministic
+  Node tests cover every detector family, anon/service-role JWT separation,
+  committed-then-deleted blob/filename/commit/tag secrets, duplicate binary
+  signing aliases, an unreferenced detached HEAD, process-level exit/redaction,
+  clean SHA-1/SHA-256 history, oversized objects, shallow clones, missing
+  objects and raw Git-error redaction for an attacker-controlled broken ref.
+- The verify job already uses full-history checkout. It now runs scanner tests,
+  current-tree scan and reachable-history scan in that exact order before
+  dependency installation; the fail-closed source contract enforces all three
+  commands and `fetch-depth: 0`.
+
+Local focused validation: scanner tests 10/10; current tree 1,556 text files;
+exact `ce79141…` implementation-head history 884 commit objects, zero annotated
+tag objects, 3,653 unique blobs, 1,618 scanned historical paths, 3,606 text and
+47 binary blobs / 208,967,248 streamed object bytes; mobile/CI source contract 226/226;
+targeted ESLint and diff check PASS. Full local regression also passed: 80 files
+and 1,034/1,034 coverage tests; typecheck; unchanged 1,148-error/98-warning lint
+ratchet; 4,092-module production build; bundle ceiling; web smoke 7/7; mobile
+contract 388/388 plus smoke 2/2 and zero native drift; all six isolated database
+contracts; Edge 31-entrypoint check plus 86/86 suite; release, migration, schema,
+SBOM and source-identity gates; and dependency audit with zero vulnerabilities.
+The exact clean implementation head rebuilt and deterministically synchronized
+the shared Android/iOS artifact with zero native drift; release contract 408/408
+and a 62,910-byte manifest attesting `ee032dc…` PASS. The hosted gate below
+completes the source-candidate evidence.
+
+Hosted validation: run `29927511094` passed all 11 jobs for source head
+`1c1f4bc…` / PR merge candidate `5edb21c…`, with zero annotations. The scanner
+suite passed 10/10; current tree scanned 1,556 files; explicit HEAD + fetched-ref
+history scanned 884 commit objects, zero annotated tags, 3,655 blobs, 1,618
+historical paths, 3,608 text plus 47 binary blobs / 209,574,766 bytes with zero
+findings. Full coverage remained 80 files / 1,034 tests, mobile contract 388/388,
+Android unit/lint/assemble and locked unsigned iOS simulator compile passed.
+Release evidence `8532684019` retains 30 days, diagnostics `8532681136` 14 days,
+and unsigned Android `8532609597` seven days; the hosted 62,981-byte manifest
+attests the merge candidate.
+
+Rollback is a workflow/checker/scanner/version/documentation commit revert.
+Production remains **NO-GO** because migration history, restored staging,
+linked lint, Edge policy/source drift and live same-SHA attestation are unchanged.
+
 ## 2026-07-22 — v3.51.16 GitHub Actions Node 24 runtime hardening (unreleased)
 
 **Status:** stacked draft PR #187; implementation head
@@ -47,7 +111,8 @@ and therefore zero Node 20 deprecations. Setup-node v5 logs prove Node 22.23.1,
 exactly six `package-manager-cache: false` DB jobs and five cached jobs. The
 hosted merge manifest is 62,981 bytes. Release evidence `8529577754` retains 30
 days, diagnostics `8529557269` 14 days, and unsigned Android `8529531692` seven
-days. A final docs-head rerun remains mandatory after recording this evidence.
+days. Final docs-head run `29920515458` also passed 11/11 with zero total and
+zero Node 20 annotations at head `aeb9b9e…`.
 
 Rollback is a workflow/checker/version/documentation commit revert. No data,
 schema, API, package dependency, application bundle or end-user behavior is

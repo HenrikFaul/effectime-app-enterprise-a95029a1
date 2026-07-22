@@ -181,6 +181,15 @@ jobs:
         with:
           deno-version: v2.9.3
 
+      - name: Test current-tree and history secret scanners
+        run: npm run security:secrets:test
+
+      - name: Scan current repository source for high-confidence secrets
+        run: npm run security:secrets
+
+      - name: Scan complete reachable Git history for high-confidence secrets
+        run: npm run security:secrets:history
+
       - name: Pin npm
         run: npm install --global npm@11.13.0
 
@@ -195,9 +204,6 @@ jobs:
 
       - name: Audit all dependencies
         run: npm audit --audit-level=moderate
-
-      - name: Scan repository source for high-confidence secrets
-        run: npm run security:secrets
 
       - name: Enforce recovered migration byte provenance
         run: npm run migration:provenance:test && npm run migration:provenance
