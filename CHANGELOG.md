@@ -1,3 +1,66 @@
+## 2026-07-23 — v3.51.24 Export Wizard authorization and delivery boundary (unreleased)
+
+**Status:** source candidate on `codex/export-wizard-integrity`. Production
+deployment has not been performed. No database migration, Edge wire contract or
+new dependency is introduced.
+
+- **BIZONYÍTOTT:** the Settings path mounted `ImportExportCenter` for every
+  owner/resourceAssistant and defaulted to Export without receiving the exact
+  `export permission × export_center entitlement` decision already calculated
+  by the workspace shell. It now carries independent `canExport` and `canImport`
+  capabilities through every mount, mode, dialog and wizard boundary. Capability
+  loss closes the affected wizard, clears selection and restores focus to the
+  remaining allowed mode; neither capability produces a restricted surface.
+- Mode changes clear stale entity selection, while continue/open/render all
+  recheck the entity's mode-specific `exportEnabled` / `importEnabled` flag. An
+  export-only entity can no longer be carried into the Import Wizard.
+- Replaces the active Export Wizard's download-before-audit flow with a typed,
+  dependency-injected executor: request validation → provider read → artifact →
+  strict audit → browser download. Disabled entities, unsupported runtime
+  formats and invalid leave filters fail before data access. Audit responses
+  without exact `error: null`, rejected transports and malformed envelopes fail
+  closed before download. Legacy `format: xlsx` audit consumers remain
+  compatible while additive `artifact_format: xls` truthfully identifies
+  SpreadsheetML; `browser_download_pending` avoids claiming a browser save that
+  cannot be proven.
+- Adds synchronous symbol-token single-flight, mounted and actor/workspace/entity
+  scope checks, and token-specific cleanup. Once staleness is detected, the
+  request cannot start a new audit. An audit already in flight may still finish
+  with `browser_download_pending`; the subsequent stale check then prevents the
+  download, toast and dialog close, and stale cleanup cannot unlock a newer
+  operation.
+- Hardens every entity export read so only `{ data: array, error: null }` is a
+  success. Successful-but-null, missing, non-array, rejected and synchronously
+  failed provider envelopes now use entity-specific stable errors without raw
+  provider detail; a legitimate empty array remains a valid zero-row export.
+- Makes the actually shipped Excel XML `.xls` format explicit in the UI and
+  specification, guarantees object-URL cleanup when a download click throws,
+  labels format/status controls programmatically, exposes `aria-busy`, localizes
+  Export/Import and outcome-safe error copy in all eight locales.
+
+Local validation is green: focused import/export/UI/i18n contracts 8 files /
+120/120 tests; complete single-worker coverage 101 files / 1,267/1,267 tests
+(57.21% statements/lines, 81.24% branches, 40.99% functions); TypeScript; unchanged
+1,108-error/98-warning lint fingerprint; production build and reviewed bundle
+ceiling (4,578,450 raw / 1,313,642 gzip JavaScript bytes; largest 1,785,150 /
+567,946; unchanged CSS); web E2E 7/7; deterministic Android/iOS sync and mobile
+E2E 2/2 with zero tracked native drift; Edge 109/109 plus 31/31 entrypoint and
+0/0 diagnostic ratchet; 0 dependency vulnerabilities; current/history secret,
+migration/schema provenance and Edge source-identity gates PASS. The clean
+release assertion and hosted Quality Gate are recorded only after a clean
+commit and pushed exact SHA.
+
+Known P1 server blockers remain unchanged: browser RLS is not the authoritative
+exact export permission/entitlement boundary, audit actors are caller-supplied,
+and the multi-query export has neither exact-count pagination nor an atomic
+snapshot/audit receipt. These require a history-reconciled, server-owned RPC/job
+and restored staging; this client package does not claim production readiness.
+
+Rollback is the source/test/i18n/version/documentation commit revert. It cannot
+undo an audit row or a file whose browser download was already requested.
+Production remains **NO-GO** for the inherited staging, migration-history,
+server snapshot/authorization, Edge parity and same-SHA attestation blockers.
+
 ## 2026-07-22 — v3.51.23 export permission and client-integrity boundary (unreleased)
 
 **Status:** source + hosted candidate on `codex/export-permission-integrity`;

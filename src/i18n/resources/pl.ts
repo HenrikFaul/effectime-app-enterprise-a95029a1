@@ -3120,7 +3120,7 @@ const pl = {
     btn_exporting: 'Eksportowanie...',
     btn_download: 'Pobierz',
     export_ready: 'Eksport gotowy — {{count}} wierszy',
-    export_error: 'Nie udało się wczytać danych do eksportu. Spróbuj ponownie.',
+    export_error: 'Nie udało się ukończyć eksportu. Przed ponowną próbą sprawdź pobrane pliki.',
     header_description: 'Wybierz pola do eksportu. Wymagane pola są zablokowane (potrzebne do importu).',
     fields_label: 'Pola',
     btn_select_all: 'Wszystkie',
@@ -3705,6 +3705,8 @@ const pl = {
     error: 'Wystąpił błąd. Spróbuj ponownie później.',
   },
   import_export: {
+    export_label: 'Eksport',
+    import_label: 'Import',
     access_restricted: 'Zarządzanie danymi (import / export) jest dostępne tylko dla ról owner i resourceAssistant.',
     export_description: 'Pobierz dane do Excela / CSV',
     import_description: 'Prześlij dane z szablonu',

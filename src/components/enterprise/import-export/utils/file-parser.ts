@@ -244,6 +244,9 @@ export function downloadFile(content: string, fileName: string, mimeType: string
   const a = document.createElement('a');
   a.href = url;
   a.download = fileName;
-  a.click();
-  URL.revokeObjectURL(url);
+  try {
+    a.click();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }

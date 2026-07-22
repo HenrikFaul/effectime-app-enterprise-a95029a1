@@ -172,7 +172,7 @@ describe('legacy leave export integrity boundary', () => {
         end_date: '2026-07-14',
         row_count: 2,
         format: 'csv',
-        delivery: 'browser_download_requested',
+        delivery: 'browser_download_pending',
       },
     });
   });

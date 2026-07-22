@@ -3147,7 +3147,7 @@ const ro = {
     btn_exporting: 'Exporting...',
     btn_download: 'Download',
     export_ready: 'Export ready — {{count}} rows',
-    export_error: 'Datele pentru export nu au putut fi încărcate. Încercați din nou.',
+    export_error: 'Exportul nu a putut fi finalizat. Verificați descărcările înainte de a încerca din nou.',
     header_description: 'Select the fields you want to export. Required fields are locked (needed for import).',
     fields_label: 'Fields',
     btn_select_all: 'All',
@@ -3874,6 +3874,8 @@ const ro = {
     error: 'An error occurred. Please try again later.',
   },
   import_export: {
+    export_label: 'Export',
+    import_label: 'Import',
     access_restricted: 'Data management (import / export) is only available to owner and resourceAssistant roles.',
     export_description: 'Download data to Excel / CSV',
     import_description: 'Upload data from a template',

@@ -97,15 +97,17 @@ describe('workspace navigation/content entitlement integration', () => {
     expect(dashboard).not.toMatch(/<FeatureGate[^>]+feature="ical_feed"/);
   });
 
-  it('uses one exact fail-closed CSV import decision without restricting export', () => {
+  it('keeps exact export and import capabilities independent on the Settings path', () => {
     expect(dashboard).toMatch(
       /const canImport = isAdmin\s*&&\s*featureAccessAvailable\s*&&\s*isFeatureEnabled\('members_list'\)\s*&&\s*isFeatureEnabled\('csv_import'\);/,
     );
-    expect(dashboard).toMatch(/<WorkspaceSettings[\s\S]*?canImport=\{canImport\}/);
-    expect(dashboard).toMatch(/<ImportExportCenter[\s\S]*?canImport=\{canImport\}/);
-    expect(importExportCenter).toContain("const [mode, setMode] = useState<ActionMode>('export');");
-    expect(importExportCenter).toContain("mode === 'import' && canImport");
-    expect(importExportCenter).toContain("mode === 'export' || canImport");
+    expect(dashboard).toMatch(/<WorkspaceSettings[\s\S]*?canExport=\{canAccessExport\}[\s\S]*?canImport=\{canImport\}/);
+    expect(dashboard).toMatch(/isAdmin && \(canExport \|\| canImport\)[\s\S]*?<ImportExportCenter[\s\S]*?canExport=\{canExport\}[\s\S]*?canImport=\{canImport\}/);
+    expect(importExportCenter).toContain("const [mode, setMode] = useState<ActionMode>(() => canExport ? 'export' : 'import');");
+    expect(importExportCenter).toContain("const modeAllowed = mode === 'export' ? canExport : canImport;");
+    expect(importExportCenter).toContain("mode === 'export' ? entity.exportEnabled : entity.importEnabled");
+    expect(importExportCenter).toContain("{entity && mode === 'export' && canExport && entity.exportEnabled && (");
+    expect(importExportCenter).toContain("{entity && mode === 'import' && canImport && entity.importEnabled && (");
   });
 
   it('mounts a sanitized recovery surface outside every entitlement-gated tab', () => {

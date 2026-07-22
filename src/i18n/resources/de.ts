@@ -3147,7 +3147,7 @@ const de = {
     btn_exporting: 'Exporting...',
     btn_download: 'Download',
     export_ready: 'Export ready — {{count}} rows',
-    export_error: 'Die Exportdaten konnten nicht geladen werden. Bitte versuchen Sie es erneut.',
+    export_error: 'Der Export konnte nicht abgeschlossen werden. Prüfen Sie Ihre Downloads, bevor Sie es erneut versuchen.',
     header_description: 'Select the fields you want to export. Required fields are locked (needed for import).',
     fields_label: 'Fields',
     btn_select_all: 'All',
@@ -3874,6 +3874,8 @@ const de = {
     error: 'An error occurred. Please try again later.',
   },
   import_export: {
+    export_label: 'Export',
+    import_label: 'Import',
     access_restricted: 'Data management (import / export) is only available to owner and resourceAssistant roles.',
     export_description: 'Download data to Excel / CSV',
     import_description: 'Upload data from a template',

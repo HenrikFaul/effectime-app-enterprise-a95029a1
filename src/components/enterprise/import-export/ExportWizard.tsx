@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
@@ -12,6 +12,12 @@ import { fetchEntityRows } from './utils/data-fetcher';
 import { generateCSV, generateExcelXML, downloadFile } from './utils/file-parser';
 import { buildTemplateGuidanceRow } from './utils/validator';
 import { useI18n } from '@/i18n/I18nProvider';
+import {
+  executeEntityExport,
+  type EntityExportAuditClient,
+  type EntityExportDependencies,
+  type EntityExportFormat,
+} from './utils/entity-export';
 
 interface Props {
   entity: EntityConfig;
@@ -20,15 +26,17 @@ interface Props {
   onClose: () => void;
 }
 
-type FileFormat = 'xlsx' | 'csv';
+const exportAuditClient = supabase as unknown as EntityExportAuditClient;
 
-interface ExportAuditClient {
-  from(table: 'enterprise_audit_events'): {
-    insert(values: Record<string, unknown>): PromiseLike<unknown>;
-  };
-}
-
-const exportAuditClient = supabase as unknown as ExportAuditClient;
+const exportDependencies: EntityExportDependencies = {
+  auditClient: exportAuditClient,
+  fetchRows: fetchEntityRows,
+  buildGuidanceRow: buildTemplateGuidanceRow,
+  generateCsv: generateCSV,
+  generateExcelXml: generateExcelXML,
+  download: (artifact) => downloadFile(artifact.content, artifact.fileName, artifact.mimeType),
+  now: () => new Date(),
+};
 
 export function ExportWizard({ entity, workspaceId, userId, onClose }: Props) {
   const { t } = useI18n();
@@ -39,10 +47,30 @@ export function ExportWizard({ entity, workspaceId, userId, onClose }: Props) {
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() =>
     new Set(exportableFields.filter(f => !f.computed).map(f => f.key))
   );
-  const [format, setFormat] = useState<FileFormat>('xlsx');
+  const [format, setFormat] = useState<EntityExportFormat>('xls');
   const [importCompatible, setImportCompatible] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [busy, setBusy] = useState(false);
+  const formatLabelId = useId();
+  const statusFilterLabelId = useId();
+  const activeOperationRef = useRef<symbol | null>(null);
+  const mountedRef = useRef(false);
+  const scopeKey = `${workspaceId}:${userId}:${entity.key}`;
+  const latestScopeRef = useRef(scopeKey);
+  latestScopeRef.current = scopeKey;
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      activeOperationRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    activeOperationRef.current = null;
+    setBusy(false);
+  }, [scopeKey]);
 
   // Group fields
   const groups = useMemo(() => {
@@ -69,64 +97,43 @@ export function ExportWizard({ entity, workspaceId, userId, onClose }: Props) {
   const selectRequiredOnly = () => setSelectedKeys(new Set(requiredKeys));
 
   const handleExport = async () => {
+    if (activeOperationRef.current) return;
+    const operationToken = Symbol('entity-export');
+    const operationScope = scopeKey;
+    activeOperationRef.current = operationToken;
     setBusy(true);
+    const isCurrent = () => (
+      mountedRef.current
+      && activeOperationRef.current === operationToken
+      && latestScopeRef.current === operationScope
+    );
     try {
-      const filters = entity.key === 'leave' ? { statusFilter } : undefined;
-      const rows = await fetchEntityRows(entity, workspaceId, filters);
-
-      const fields = exportableFields.filter(f => selectedKeys.has(f.key));
-      // Headers: machine keys + asterisk for required
-      const headers = fields.map(f => importCompatible && f.required ? `${f.key} *` : f.key);
-      const dataRows = rows.map(r => fields.map(f => r[f.key] ?? ''));
-
-      const guidanceRow = importCompatible
-        ? buildTemplateGuidanceRow(fields)
-        : undefined;
-
-      const dateStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-      const fileName = `effectime_${entity.key}_${dateStr}`;
-
-      if (format === 'csv') {
-        const allRows = guidanceRow ? [guidanceRow, ...dataRows] : dataRows;
-        const csv = generateCSV(headers, allRows);
-        downloadFile(csv, `${fileName}.csv`, 'text/csv;charset=utf-8');
-      } else {
-        const requiredFlags = fields.map(f => f.required && f.importable);
-        const xml = generateExcelXML(headers, dataRows, {
-          requiredFlags,
-          guidanceRow,
-          sheetName: entity.label,
-        });
-        downloadFile(xml, `${fileName}.xls`, 'application/vnd.ms-excel');
-      }
-
-      // Audit
-      await exportAuditClient.from('enterprise_audit_events').insert({
-        workspace_id: workspaceId,
-        actor_id: userId,
-        action: 'export.created',
-        metadata: {
-          entity: entity.key,
-          field_count: fields.length,
-          row_count: dataRows.length,
-          format,
-          import_compatible: importCompatible,
-        },
-      });
-
-      toast.success(t('export_wizard.export_ready', { count: dataRows.length }));
+      const result = await executeEntityExport({
+        entity,
+        workspaceId,
+        userId,
+        selectedKeys: [...selectedKeys],
+        format,
+        importCompatible,
+        statusFilter,
+      }, exportDependencies, isCurrent);
+      if (!isCurrent()) return;
+      toast.success(t('export_wizard.export_ready', { count: result.rowCount }));
       onClose();
     } catch {
-      toast.error(t('export_wizard.export_error'));
+      if (isCurrent()) toast.error(t('export_wizard.export_error'));
     } finally {
-      setBusy(false);
+      if (activeOperationRef.current === operationToken) {
+        activeOperationRef.current = null;
+        if (mountedRef.current) setBusy(false);
+      }
     }
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" aria-busy={busy}>
       <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-1">
-        <p className="font-medium">Export — {entity.label}</p>
+        <p className="font-medium">{t('import_export.export_label')} — {entity.label}</p>
         <p className="text-muted-foreground">{t('export_wizard.header_description')}</p>
       </div>
 
@@ -166,22 +173,22 @@ export function ExportWizard({ entity, workspaceId, userId, onClose }: Props) {
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <Label className="text-xs">{t('export_wizard.format_label')}</Label>
+          <Label id={formatLabelId} className="text-xs">{t('export_wizard.format_label')}</Label>
           <Select value={format} onValueChange={(value) => {
-            if (value === 'csv' || value === 'xlsx') setFormat(value);
+            if (value === 'csv' || value === 'xls') setFormat(value);
           }}>
-            <SelectTrigger className="mt-1 h-9 text-xs"><SelectValue /></SelectTrigger>
+            <SelectTrigger aria-labelledby={formatLabelId} className="mt-1 h-9 text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="xlsx"><span className="flex items-center gap-2"><FileSpreadsheet className="h-3.5 w-3.5" />Excel (.xls)</span></SelectItem>
+              <SelectItem value="xls"><span className="flex items-center gap-2"><FileSpreadsheet className="h-3.5 w-3.5" />Excel (.xls)</span></SelectItem>
               <SelectItem value="csv"><span className="flex items-center gap-2"><FileText className="h-3.5 w-3.5" />CSV (UTF-8)</span></SelectItem>
             </SelectContent>
           </Select>
         </div>
         {entity.key === 'leave' && (
           <div>
-            <Label className="text-xs">{t('export_wizard.status_filter_label')}</Label>
+            <Label id={statusFilterLabelId} className="text-xs">{t('export_wizard.status_filter_label')}</Label>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="mt-1 h-9 text-xs"><SelectValue /></SelectTrigger>
+              <SelectTrigger aria-labelledby={statusFilterLabelId} className="mt-1 h-9 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{t('export_wizard.status_all')}</SelectItem>
                 <SelectItem value="approved">{t('export_wizard.status_approved')}</SelectItem>

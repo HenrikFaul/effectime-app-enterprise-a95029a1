@@ -756,7 +756,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
 
             {canViewWorkspaceSettings && hasTabEntitlement('settings') && (
               <TabsContent value="settings" data-help-region="workspace.settings">
-                <WorkspaceSettings workspace={workspace} userRole={userRole} userId={userId} onRefresh={onRefresh} canUseIcalFeed={canUseIcalFeed} canImport={canImport} canViewPermissionConfig={userRole === 'owner' || canView('permission_config')} canViewLayoutSetting={userRole === 'owner' || canView('layout_setting')} />
+                <WorkspaceSettings workspace={workspace} userRole={userRole} userId={userId} onRefresh={onRefresh} canUseIcalFeed={canUseIcalFeed} canExport={canAccessExport} canImport={canImport} canViewPermissionConfig={userRole === 'owner' || canView('permission_config')} canViewLayoutSetting={userRole === 'owner' || canView('layout_setting')} />
                 {/* Recovery remains available to the exact workspace owner after
                     a tier downgrade or catalog archival. The backend uninstall
                     RPC is still the authoritative tenant boundary. */}
@@ -1094,7 +1094,7 @@ function InvitationList({ workspaceId, isAdmin }: { workspaceId: string; isAdmin
 }
 
 // ===== Workspace Settings =====
-function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canUseIcalFeed, canImport, canViewPermissionConfig = true, canViewLayoutSetting = false }: { workspace: Workspace; userRole?: string; userId: string; onRefresh: () => void; canUseIcalFeed: boolean; canImport: boolean; canViewPermissionConfig?: boolean; canViewLayoutSetting?: boolean }) {
+function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canUseIcalFeed, canExport, canImport, canViewPermissionConfig = true, canViewLayoutSetting = false }: { workspace: Workspace; userRole?: string; userId: string; onRefresh: () => void; canUseIcalFeed: boolean; canExport: boolean; canImport: boolean; canViewPermissionConfig?: boolean; canViewLayoutSetting?: boolean }) {
   const { t } = useI18n();
   const persistedSettings = workspace.settings && typeof workspace.settings === 'object'
     ? workspace.settings
@@ -1263,9 +1263,9 @@ function WorkspaceSettings({ workspace, userRole, userId, onRefresh, canUseIcalF
         </SettingsSection>
       )}
 
-      {isAdmin && (
+      {isAdmin && (canExport || canImport) && (
         <SettingsSection workspaceId={workspace.id} sectionKey="settings.import_export" icon={<Inbox className="h-4 w-4" />} title={t('settings_sections.import_export')}>
-          <ImportExportCenter workspaceId={workspace.id} userId={userId} isAdmin={isAdmin} canImport={canImport} />
+          <ImportExportCenter workspaceId={workspace.id} userId={userId} isAdmin={isAdmin} canExport={canExport} canImport={canImport} />
         </SettingsSection>
       )}
 

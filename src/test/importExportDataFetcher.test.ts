@@ -32,7 +32,7 @@ interface QueryResult {
   error: unknown;
 }
 
-function query(result: QueryResult) {
+function query(result: QueryResult | PromiseLike<QueryResult>) {
   const promise = Promise.resolve(result);
   const builder = {
     select: vi.fn(),
@@ -90,6 +90,47 @@ describe('fetchEntityRows data safety boundary', () => {
   );
 
   it.each([
+    ['members', 'MEMBERS_QUERY_FAILED', 'rpc'],
+    ['leave', 'LEAVE_QUERY_FAILED', 'rpc'],
+    ['offices', 'OFFICES_QUERY_FAILED', 'table'],
+    ['work_categories', 'WORK_CATEGORIES_QUERY_FAILED', 'table'],
+    ['job_roles', 'JOB_ROLES_QUERY_FAILED', 'table'],
+    ['positions', 'POSITIONS_QUERY_FAILED', 'table'],
+    ['skills', 'SKILLS_QUERY_FAILED', 'table'],
+  ] as const)(
+    'rejects a successful-but-null %s response instead of auditing an empty export',
+    async (entityKey, expectedCode, source) => {
+      const result = { data: null, error: null };
+      if (source === 'rpc') mocks.rpc.mockResolvedValue(result);
+      else mocks.from.mockReturnValue(query(result));
+
+      await expectSafeFailure(fetchEntityRows(entity(entityKey), WORKSPACE_ID), expectedCode);
+    },
+  );
+
+  it('sanitizes malformed and rejected query envelopes', async () => {
+    mocks.rpc.mockResolvedValue({ error: null });
+    await expectSafeFailure(
+      fetchEntityRows(entity('members'), WORKSPACE_ID),
+      'MEMBERS_QUERY_FAILED',
+    );
+
+    mocks.from.mockReturnValue(query(Promise.reject(new Error(MALICIOUS_PROVIDER_DETAIL))));
+    await expectSafeFailure(
+      fetchEntityRows(entity('offices'), WORKSPACE_ID),
+      'OFFICES_QUERY_FAILED',
+    );
+
+    mocks.from.mockImplementation(() => {
+      throw new Error(MALICIOUS_PROVIDER_DETAIL);
+    });
+    await expectSafeFailure(
+      fetchEntityRows(entity('skills'), WORKSPACE_ID),
+      'SKILLS_QUERY_FAILED',
+    );
+  });
+
+  it.each([
     ['offices', 'enterprise_offices', 'OFFICES_QUERY_FAILED'],
     ['work_categories', 'enterprise_workspace_role_categories', 'WORK_CATEGORIES_QUERY_FAILED'],
     ['job_roles', 'enterprise_workspace_roles', 'JOB_ROLES_QUERY_FAILED'],
@@ -129,6 +170,26 @@ describe('fetchEntityRows data safety boundary', () => {
     );
     expect(mocks.from).toHaveBeenNthCalledWith(1, 'enterprise_workspace_roles');
     expect(mocks.from).toHaveBeenNthCalledWith(2, 'enterprise_workspace_role_categories');
+  });
+
+  it('fails closed when the secondary job-role category lookup returns null data', async () => {
+    mocks.from
+      .mockReturnValueOnce(query({
+        data: [{ id: 'role-1', name: 'Engineer', is_active: true, category_id: 'category-1' }],
+        error: null,
+      }))
+      .mockReturnValueOnce(query({ data: null, error: null }));
+
+    await expectSafeFailure(
+      fetchEntityRows(entity('job_roles'), WORKSPACE_ID),
+      'JOB_ROLE_CATEGORIES_QUERY_FAILED',
+    );
+  });
+
+  it('preserves a legitimate empty result set', async () => {
+    mocks.rpc.mockResolvedValue({ data: [], error: null });
+
+    await expect(fetchEntityRows(entity('members'), WORKSPACE_ID)).resolves.toEqual([]);
   });
 
   it('rejects an unsupported entity instead of reporting an empty successful export', async () => {

@@ -148,16 +148,18 @@ Selecting an entity + clicking "Tovább" opens the Dialog and starts the flow.
 - "Mentett profil" dropdown: save/load field presets per entity (localStorage)
 
 **Step 2 — Format & Options**
-- Format: XLSX (default), CSV
-- Filename preview: `effectime_tagok_20260510.xlsx`
+- Current format: Excel XML / SpreadsheetML `.xls` (default), CSV
+- Filename preview: `effectime_members_20260510.xls`
 - "Import-kompatibilis sablon" toggle (default ON): adds a guidance row below header explaining formats; marks required columns with asterisk in header
 - For Leave entity: date range picker (start/end)
 - For Members: status filter (active only / all)
 
 **Step 3 — Download**
-- Download button triggers generation and immediate browser download
+- Download builds the artifact, requires a successful audit insert, then requests
+  the browser download
 - Shows row count and column count
-- Audit event logged
+- Audit failure, stale actor/workspace/entity scope, malformed provider response
+  or artifact/download exception is fail-closed with a localized stable error
 
 ### 4.5 Import Flow (Inside Dialog)
 
@@ -224,13 +226,19 @@ One entity at a time. The "multi-entity batch" (exporting Members + Skills + Pos
 
 ### 5.2 Format
 
-**Primary**: XLSX (Excel Open XML, `.xlsx`), generated via the `exceljs` library (or a lightweight XML-based approach matching current pattern). Human-readable, styled header row, column widths optimized.
+**Current primary implementation**: XML Spreadsheet 2003 (`.xls`). It is generated
+without a new dependency, is human-readable, has styled headers and column widths,
+and is accepted by the current importer. The UI, filename and additive
+`artifact_format` audit metadata must truthfully identify it as `xls`.
 
 **Secondary**: CSV (UTF-8 with BOM, RFC 4180 compliant, supports embedded commas/quotes). No library needed.
 
 Both formats must produce identical data; only the file format differs.
 
-**Recommendation**: Default to XLSX. Reason: XLSX supports styled headers, column widths, data validation dropdowns (for enum fields), and protects header rows from accidental editing — all critical for import-compatible templates.
+Native XLSX (Open XML zip) remains a documented future format. It must not be
+advertised or accepted until a real parser/generator, dependency review and
+round-trip tests exist; changing an extension does not convert SpreadsheetML to
+XLSX.
 
 ### 5.3 Field Selection
 
@@ -285,6 +293,43 @@ before RFC 4180 escaping. Safe values remain byte-for-byte unchanged. This
 v3.51.21 boundary applies to CSV generation; it must be preserved for current
 data exports, blank templates and downloaded row-error reports.
 
+### 5.8 Export Authorization and Delivery Integrity
+
+Every active Export Wizard entry point intersects the exact export RBAC
+permission with the `export_center` entitlement. Export and import capabilities
+are independent; losing either capability closes and unmounts only its active
+wizard, clears the entity selection and restores focus to the remaining allowed
+mode. Mode changes always clear selection, and the runtime rechecks the selected
+entity's `exportEnabled` / `importEnabled` flag before opening or mounting a
+wizard.
+
+The client execution order is: validate request → fetch complete provider
+envelope → build artifact → insert `export.created` audit → request browser
+download. Only an object response with `error: null` and array `data` is a
+successful data read; rejected, null, missing or non-array envelopes fail with a
+stable code and no raw provider detail. The audit must return an object with an
+explicit `error: null` field. Audit metadata retains the legacy logical
+`format` value for consumers, adds truthful `artifact_format`, and records
+`delivery: browser_download_pending` because the browser cannot prove that a
+user saved the file.
+
+Request validation runs before data access: the workspace and actor identifiers,
+non-empty unique field selection, well-formed fields declared exportable by the
+supplied entity configuration, its enabled flag, `csv`/`xls` artifact format and
+the bounded leave-status vocabulary must all be valid. Runtime-invalid requests
+fail closed with a stable code. This is input integrity for the registry-derived
+client configuration, not proof that an arbitrary object was re-resolved from a
+server-owned registry.
+
+A synchronous token prevents same-tick duplicate exports. Actor, workspace,
+entity and mounted-scope checks prevent a request from starting a new audit once
+staleness is detected. An audit already in flight cannot be cancelled and may
+finish with `browser_download_pending`; the post-audit stale check then prevents
+download/toast/close effects, and stale cleanup cannot unlock a newer operation.
+These are client integrity controls, not a server authorization claim: exact
+permission, entitlement, `auth.uid()` actor derivation, atomic snapshot/audit
+and exact-count pagination remain server-owned P1 requirements.
+
 ---
 
 ## 6. IMPORT DESIGN
@@ -295,7 +340,7 @@ data exports, blank templates and downloaded row-error reports.
 |--------|-----------|----------|-------|
 | CSV | `.csv` | UTF-8 with BOM preferred; UTF-8 fallback; detect CP-1250 for legacy Windows exports | RFC 4180 compliant parser; handles embedded commas and quotes |
 | Excel XML | `.xls` | n/a | Current format generated by ExportCenter; must remain importable |
-| Excel Open XML | `.xlsx` | n/a | Primary recommended format |
+| Excel Open XML | `.xlsx` | n/a | Future format; current browser parser rejects it fail-closed |
 
 Max file size: 5 MB. Max data rows: 2,000 per import after an authenticated
 guidance row is removed. If larger, show guidance to split into batches.
@@ -900,7 +945,7 @@ interface ImportExportState {
   step: number;
   // Export state
   selectedFields: string[];
-  exportFormat: 'xlsx' | 'csv';
+  exportFormat: 'xls' | 'csv';
   // Import state
   uploadedFile: File | null;
   parsedRows: Record<string, string>[];
@@ -1147,9 +1192,9 @@ Importing data from workspace A into workspace B is not supported. If needed in 
 
 IF Export:
   6a. Field picker: checks/unchecks fields; uses "Kötelező mezők" preset
-  7a. Format picker: XLSX (default); "Import-kompatibilis sablon" toggle ON
-  8a. Clicks "Letöltés" → file downloads → dialog closes
-  9a. Audit event logged
+  7a. Format picker: Excel XML .xls (default); "Import-kompatibilis sablon" toggle ON
+  8a. Clicks "Letöltés" → artifact generated → audit required
+  9a. Browser download requested → dialog closes only on current-scope success
 
 IF Import:
   6b. Instructions screen: reads note; optionally downloads blank template or
@@ -1178,7 +1223,7 @@ IF Import:
 2. Implement `ENTITY_REGISTRY` config with `members` and `leave` entities
 3. Implement `EntitySelector` card grid
 4. Implement `ExportWizard` with field picker (Members: all current member fields; Leave: all current leave fields)
-5. Generate import-compatible XLSX templates with guidance row and required column markers
+5. Generate import-compatible Excel XML `.xls` templates with guidance row and required column markers
 6. Implement `ImportWizard` Steps 1–3 (Instructions, Upload, Column Mapping) — replacing current blind CSV upload
 7. Implement Step 4 (Validation Preview) — replaces current inline error list
 8. Implement Steps 5–7 (Options, Confirm, Result)
@@ -1216,7 +1261,7 @@ IF Import:
 
 | Decision | Recommendation | Rationale |
 |---|---|---|
-| **File formats** | XLSX primary, CSV secondary; both accepted on import | XLSX enables styled templates, dropdown validation, column protection. CSV remains for CI/integrations. |
+| **File formats** | Current: Excel XML `.xls` primary, CSV secondary; native XLSX is future work | `.xls` matches the dependency-free generator/parser actually shipped. CSV remains for CI/integrations; XLSX requires a real zip parser/generator and round-trip validation. |
 | **Single vs multi-sheet export** | Single sheet per entity in Phase 1–2; optional multi-sheet workbook in Phase 3 | Reduces complexity; multi-entity exports confuse mapping and validation |
 | **One entity vs batch export** | One entity at a time for both import and export | Clearer UX, safer validation, lower regression risk |
 | **Update existing rows** | Yes, via explicit opt-in "Upsert" mode | Historical data migrations and reorg updates require update capability; opt-in prevents accidental overwrites |
