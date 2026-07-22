@@ -97,7 +97,16 @@ import { LockedFeatureNotice } from '@/components/feature-gate/LockedFeatureNoti
 import { WellbeingScoreCard } from './wellbeing/WellbeingScoreCard';
 import { SecurityCenter } from './security/SecurityCenter';
 import { useEnabledFeatures } from '@/hooks/useFeature';
-import { isWorkspaceTabEntitled, type WorkspaceTab } from '@/lib/workspaceTabs';
+import {
+  resolveEntitlementSurfaceState,
+  useEntitlementRecoveryFocus,
+} from '@/hooks/useEntitlementRecoveryFocus';
+import {
+  isWorkspaceTabEntitled,
+  type WorkspaceTab,
+  type WorkspaceTabChangeOptions,
+} from '@/lib/workspaceTabs';
+import { EntitlementRecoveryPanel } from './EntitlementRecoveryPanel';
 
 interface Workspace {
   id: string;
@@ -117,7 +126,7 @@ interface Props {
   onBack: () => void;
   onRefresh: () => void;
   activeTab?: string;
-  onTabChange?: (tab: string) => void;
+  onTabChange?: (tab: string, options?: WorkspaceTabChangeOptions) => void;
 }
 
 const WORKSPACE_TOP_NAV_ITEMS = [
@@ -136,6 +145,71 @@ const WORKSPACE_TOP_NAV_ITEMS = [
   { value: 'settings', i18nKey: 'ws_nav.settings', icon: Settings },
 ] as const;
 
+type EntitlementRefetch = () => unknown | Promise<unknown>;
+
+interface EntitlementRetryState {
+  contextKey: string;
+  requestId: symbol | null;
+  pending: boolean;
+}
+
+// Kept in this module so the dashboard and its race regression test exercise the same state machine.
+// eslint-disable-next-line react-refresh/only-export-components
+export function useEntitlementRetryController(
+  contextKey: string,
+  refetchFeatures: EntitlementRefetch,
+) {
+  const retryRef = useRef<{
+    contextKey: string;
+    requestId: symbol;
+    promise: Promise<void>;
+  } | null>(null);
+  const mountedRef = useRef(true);
+  const [state, setState] = useState<EntitlementRetryState>({
+    contextKey,
+    requestId: null,
+    pending: false,
+  });
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  const retry = useCallback(async () => {
+    const existing = retryRef.current;
+    if (existing?.contextKey === contextKey) return existing.promise;
+
+    const requestId = Symbol('entitlement-retry');
+    const promise = (async () => {
+      setState({ contextKey, requestId, pending: true });
+      try {
+        await Promise.resolve().then(() => refetchFeatures());
+      } finally {
+        if (retryRef.current?.requestId === requestId) {
+          retryRef.current = null;
+        }
+        if (mountedRef.current) {
+          setState((current) => (
+            current.contextKey === contextKey && current.requestId === requestId
+              ? { contextKey, requestId: null, pending: false }
+              : current
+          ));
+        }
+      }
+    })();
+    retryRef.current = { contextKey, requestId, promise };
+    return promise;
+  }, [contextKey, refetchFeatures]);
+
+  return {
+    isRetrying: state.contextKey === contextKey && state.pending,
+    retry,
+  };
+}
+
 export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefresh, activeTab: externalTab, onTabChange }: Props) {
   const { signOut } = useAuth();
   const { loadWorkspaceOverrides, t } = useI18n();
@@ -144,6 +218,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   const [myMembership, setMyMembership] = useState<any>(null);
   const [allMembers, setAllMembers] = useState<any[]>([]);
   const membershipLoadGenerationRef = useRef(0);
+  const mainContentRef = useRef<HTMLDivElement>(null);
   const [timelineReport, setTimelineReport] = useState<{ userIds: string[]; range: { from: Date; to: Date } } | null>(null);
   // Stable callback reference — prevents infinite re-render loop in TimelineView
   const handleFilteredUsersChange = useCallback(
@@ -155,10 +230,10 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   const [plannerOfficeId, setPlannerOfficeId] = useState<string | null>(null);
   const [plannerOfficeDialogOpen, setPlannerOfficeDialogOpen] = useState(false);
   const activeTab = externalTab || internalTab;
-  const setActiveTab = (tab: string) => {
-    if (onTabChange) onTabChange(tab);
+  const setActiveTab = useCallback((tab: string, options?: WorkspaceTabChangeOptions) => {
+    if (onTabChange) onTabChange(tab, options);
     else setInternalTab(tab);
-  };
+  }, [onTabChange]);
   const handleNavigateToOffice = useCallback((officeId: string) => {
     setPlannerOfficeId(officeId);
     setPlannerOfficeDialogOpen(true);
@@ -168,16 +243,28 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   const { layout } = useWorkspaceNavLayout(workspace.id);
   const {
     isEnabled: isFeatureEnabled,
-    isLoading: featuresLoading,
     isError: featuresError,
+    isSuccess: featuresSuccess,
+    isFetching: featuresFetching,
+    refetch: refetchFeatures,
   } = useEnabledFeatures(workspace.id);
+  const entitlementContextKey = `${workspace.id}:${userId}`;
+  const {
+    isRetrying: entitlementRetrying,
+    retry: retryEntitlements,
+  } = useEntitlementRetryController(entitlementContextKey, refetchFeatures);
+  const {
+    featureAccessAvailable,
+    showRecovery: showEntitlementRecovery,
+  } = resolveEntitlementSurfaceState(featuresSuccess, featuresError, entitlementRetrying);
+
   const hasTabEntitlement = (tab: WorkspaceTab) => (
-    !featuresLoading && !featuresError && isWorkspaceTabEntitled(tab, isFeatureEnabled)
+    featureAccessAvailable && isWorkspaceTabEntitled(tab, isFeatureEnabled)
   );
-  const canUseAdminOverride = canEdit('admin_override') && !featuresLoading && !featuresError && isFeatureEnabled('admin_override');
-  const canUseIcalFeed = !featuresLoading && !featuresError && isFeatureEnabled('ical_feed');
-  const canUseBirthdayWidget = canView('members') && !featuresLoading && !featuresError && isFeatureEnabled('birthday_widget') && isFeatureEnabled('members_list');
-  const canEditMemberProfiles = !permissionsLoading && canEdit('members') && !featuresLoading && !featuresError && isFeatureEnabled('members_list');
+  const canUseAdminOverride = canEdit('admin_override') && featureAccessAvailable && isFeatureEnabled('admin_override');
+  const canUseIcalFeed = featureAccessAvailable && isFeatureEnabled('ical_feed');
+  const canUseBirthdayWidget = canView('members') && featureAccessAvailable && isFeatureEnabled('birthday_widget') && isFeatureEnabled('members_list');
+  const canEditMemberProfiles = !permissionsLoading && canEdit('members') && featureAccessAvailable && isFeatureEnabled('members_list');
 
   // Map active tab → help anchor
   const helpAnchorId =
@@ -288,6 +375,24 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
       false;
     return visible && hasTabEntitlement(item.value);
   });
+  const activeTabIsVisible = visibleTopNavItems.some((item) => item.value === activeTab);
+  const firstVisibleTab = visibleTopNavItems[0]?.value;
+  const requestEntitlementRecoveryFocus = useEntitlementRecoveryFocus(
+    entitlementContextKey,
+    featureAccessAvailable,
+    showEntitlementRecovery,
+    mainContentRef,
+  );
+  const handleRetryEntitlements = useCallback(() => {
+    requestEntitlementRecoveryFocus();
+    return retryEntitlements();
+  }, [requestEntitlementRecoveryFocus, retryEntitlements]);
+
+  useEffect(() => {
+    if (featureAccessAvailable && firstVisibleTab && !activeTabIsVisible) {
+      setActiveTab(firstVisibleTab, { replace: true });
+    }
+  }, [activeTabIsVisible, featureAccessAvailable, firstVisibleTab, setActiveTab]);
 
   return (
     <SidebarProvider>
@@ -345,12 +450,12 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               {/* Action cluster — icon-first, text only on larger screens */}
               <div className="flex items-center gap-1 shrink-0">
                 <HelpButton />
-                {isAdmin && <CommandCenterButton workspaceId={workspace.id} onOpenTab={setActiveTab} recoveryMode={recoveryMode} />}
-                {isAdmin && <OrgPulseButton workspaceId={workspace.id} />}
+                {isAdmin && featureAccessAvailable && <CommandCenterButton workspaceId={workspace.id} onOpenTab={setActiveTab} recoveryMode={recoveryMode} />}
+                {isAdmin && featureAccessAvailable && <OrgPulseButton workspaceId={workspace.id} />}
                 <NotificationBell workspaceId={workspace.id} userId={userId} />
                 <DensityToggle workspaceId={workspace.id} />
                 <div className="w-px h-5 bg-border/60 mx-0.5 hidden md:block" aria-hidden />
-                {isAdmin && (
+                {isAdmin && featureAccessAvailable && hasTabEntitlement('members') && (
                   <Button size="sm" variant="outline" onClick={() => setShowInvite(true)} className="hidden sm:flex h-7 text-xs gap-1 px-2.5">
                     <UserPlus className="h-3.5 w-3.5" /> {t('ws_nav.invite_btn')}
                   </Button>
@@ -369,7 +474,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
           </header>
 
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className={layout === 'sidebar' ? 'sr-only' : 'sticky top-[var(--ws-header-h)] z-20 flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-border/60 !bg-background/96 backdrop-blur-sm shadow-subtle px-[var(--shell-pad-x,1rem)] py-2'}>
+            {featureAccessAvailable && <TabsList className={layout === 'sidebar' ? 'sr-only' : 'sticky top-[var(--ws-header-h)] z-20 flex h-auto w-full justify-start gap-1 overflow-x-auto rounded-none border-b border-border/60 !bg-background/96 backdrop-blur-sm shadow-subtle px-[var(--shell-pad-x,1rem)] py-2'}>
               {visibleTopNavItems.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -383,11 +488,24 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                   </TabsTrigger>
                 );
               })}
-            </TabsList>
+            </TabsList>}
 
-            <div id="main-content" className="w-full px-[var(--shell-pad-x,1rem)] py-[var(--shell-pad-y,1rem)]">
+            <div
+              id="main-content"
+              ref={mainContentRef}
+              tabIndex={-1}
+              className="w-full px-[var(--shell-pad-x,1rem)] py-[var(--shell-pad-y,1rem)]"
+            >
               <div className="space-y-4 w-full">
-            {null}
+            {showEntitlementRecovery && (
+              <EntitlementRecoveryPanel
+                key={entitlementContextKey}
+                workspaceId={workspace.id}
+                userId={userId}
+                isRetrying={entitlementRetrying || (featuresError && featuresFetching)}
+                onRetry={handleRetryEntitlements}
+              />
+            )}
             {hasTabEntitlement('my-portal') && <TabsContent value="my-portal" className="space-y-3">
               <EmployeeDashboard
                 workspaceId={workspace.id}
@@ -640,14 +758,14 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
         </SidebarInset>
       </div>
 
-      <InviteMemberDialog
+      {isAdmin && featureAccessAvailable && hasTabEntitlement('members') && <InviteMemberDialog
         open={showInvite}
         onOpenChange={setShowInvite}
         workspaceId={workspace.id}
         invitedBy={userId}
         actorRole={userRole}
         onInvited={() => {}}
-      />
+      />}
 
       {myMembership && (
         <MemberProfileSheet
@@ -666,12 +784,12 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
         />
       )}
 
-      <OfficeEditorDialog
+      {featureAccessAvailable && hasTabEntitlement('calendar') && <OfficeEditorDialog
         workspaceId={workspace.id}
         officeId={plannerOfficeId}
         open={plannerOfficeDialogOpen}
         onOpenChange={setPlannerOfficeDialogOpen}
-      />
+      />}
     </SidebarProvider>
   );
 }

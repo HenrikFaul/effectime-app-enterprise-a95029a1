@@ -1,3 +1,65 @@
+## 2026-07-22 — v3.51.18 fail-closed entitlement outage recovery (unreleased)
+
+**Status:** source + hosted candidate on `codex/entitlement-outage-recovery`;
+draft PR #189. Production deployment has not been performed. No database, API,
+migration or dependency change.
+
+- **BIZONYÍTOTT:** TanStack Query retains the last successful feature payload
+  after a failed refetch. The shared hook previously rebuilt `isEnabled` from
+  that stale payload, so nested `useFeature` consumers could continue to render
+  paid UI during an entitlement RPC outage even though the top-level workspace
+  tabs already failed closed. Entitlement cache identity also omitted the
+  authenticated actor.
+- Entitlements now expose data and `true` decisions only from the current
+  actor/workspace query's successful result. Error, loading, missing actor and
+  actor-switch states return an empty feature set. A failed refetch can retain
+  TanStack's internal cache for diagnostics, but no public gate can consume it.
+- Validates the entitlement RPC payload at runtime. Non-array responses,
+  malformed rows, blank feature keys and unknown sources enter the same
+  sanitized fail-closed recovery state instead of reaching a render crash.
+- Adds an accessible, localized, entitlement-independent recovery panel with a
+  request-owned, deduplicated manual retry. Paid navigation,
+  command-center/org-pulse/invite actions and already-open business dialogs
+  remain unmounted until a fresh authoritative result succeeds. Recovery and
+  business content are mutually exclusive, A→B→A retry completion cannot clear
+  a newer request, an unauthorized deep link is repaired with history replace,
+  and focus moves from the removed Retry control to the existing main landmark.
+- Adds a separate current-user iCal revocation list whose browser projection is
+  exactly `id, scope`. It cannot create/copy feeds or construct/read bearer
+  URLs, scopes DELETE by exact token/workspace/user, treats zero rows as a
+  fail-visible uncertain result, rejects a malformed inventory without hiding
+  rows, keeps concurrent revoke failures sticky per token, sanitizes diagnostics
+  and ignores stale tenant responses. Unknown legacy scopes remain generic and
+  revocable.
+- The regular iCal card also stops using `select('*')`: entitlement-enabled
+  mode requests `id, token, scope`, while downgrade/revoke-only mode requests
+  only `id, scope` and clears the old exposure context immediately.
+- Adds localized recovery/revocation strings for EN/HU/CS/SK/PL/DE/AT/RO and
+  enforces their non-empty presence in the localization contract.
+
+Local validation: the exact entitlement/recovery set is 9 files / 68 tests
+PASS. The coverage run is 86 files / 1,074 tests PASS (55.47% statements/lines,
+80.71% branches, 35.76% functions), followed by a final post-a11y full run of
+86 files / 1,076 tests PASS. Typecheck, targeted ESLint and the unchanged
+1,148-error / 98-warning lint fingerprint PASS. The 4,095-module web build,
+clean-HEAD reviewed bundle (4,553,895 raw / 1,304,480 gzip JavaScript; largest
+1,775,966 / 564,885; CSS 180,900 / 29,610), public smoke 7/7, dependency audit
+(0 vulnerabilities), 1,565-file secret scan, Edge entrypoint/import/test gates,
+all six isolated PostgreSQL contracts, mobile source 226/226, shared artifact
+388/388, native CSP smoke 2/2, deterministic Android/iOS sync, clean-HEAD mobile
+release contract 408/408 and 62,918-byte local manifest PASS. The exact
+`76f3c8406ca45791b5f521c683123afd3e83ba22` implementation head passed draft PR
+#189 run `29934837022` in all 11 jobs with zero annotations. Its potential merge
+SHA is `9e7f5a9045d9d63f9876f4e4af5393a4b9d42e93`; hosted release evidence
+`8535733292`, diagnostics `8535731033` and unsigned Android `8535674674` were
+retained. The hosted 62,981-byte manifest attests that potential merge SHA.
+
+Rollback is the frontend/hook/i18n/test/version/documentation commit revert.
+User-confirmed successful feed revocations are external destructive actions and
+cannot be restored by a code rollback. Production remains **NO-GO** because the
+linked migration/source drift and same-SHA live attestation blockers are
+unchanged.
+
 ## 2026-07-22 — v3.51.17 complete Git-history secret gate (unreleased)
 
 **Status:** stacked draft PR #188; implementation head

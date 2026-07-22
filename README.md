@@ -492,6 +492,31 @@ mailbox-verified. Restoring the documented `instant_member_create` capability
 requires an explicit product/security choice between managed-domain/SCIM
 provisioning and a user-completed activation flow; see `PROJECT_AUDIT.md`.
 
+### Feature-access outage recovery
+
+Feature entitlements are cached per authenticated actor and workspace, but are
+usable only while the current query has an authoritative successful result. A
+failed refresh never falls back to the previous paid-feature payload. During an
+entitlement lookup failure the workspace keeps only its safe shell controls and
+shows a localized manual-retry panel; paid navigation, content and admin actions
+remain unmounted until a fresh lookup succeeds. Malformed RPC payloads fail the
+same way instead of reaching rendering code. Retry ownership is bound to the
+actor/workspace request, recovery and business content never co-mount, automatic
+tab repair replaces the unauthorized history entry, and successful manual retry
+restores keyboard focus to the existing main workspace landmark.
+
+The recovery panel can list and revoke only the signed-in user's existing iCal
+feed summaries. That query projects exactly `id, scope`: it never downloads or
+constructs a bearer URL and cannot create or copy a feed. Revocation remains
+available by design after an entitlement loss, is scoped to the exact token,
+workspace and user, and a zero-row/ambiguous result is surfaced without an
+automatic destructive retry. A malformed summary response is fail-visible and
+concurrent failures remain attached to the affected token instead of being
+cleared by another token's successful revoke. A successful entitlement refresh
+restores only the newly authorized tab model. These rules are shared by web,
+Android and iOS because all three clients use the same
+React/TanStack/Supabase data path.
+
 ### Payroll compatibility note
 
 Payroll calculate, lock and CSV export now use the typed Edge Function contract

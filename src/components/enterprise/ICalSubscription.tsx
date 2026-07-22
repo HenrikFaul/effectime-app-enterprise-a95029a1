@@ -19,8 +19,8 @@ interface Props {
 
 interface ICalToken {
   id: string;
-  token: string;
-  scope: 'own' | 'team';
+  token?: string;
+  scope: string;
 }
 
 interface ICalTokenState {
@@ -34,7 +34,8 @@ const iCalClient = supabase as unknown as SupabaseClient;
 
 export function ICalSubscription({ workspaceId, userId, canUseIcalFeed, canCreateTeamFeed }: Props) {
   const { t } = useI18n();
-  const contextKey = `${workspaceId}:${userId}`;
+  const canExposeFeed = canUseIcalFeed;
+  const contextKey = `${workspaceId}:${userId}:${canExposeFeed ? 'full' : 'summary'}`;
   const [tokenState, setTokenState] = useState<ICalTokenState>(() => ({ contextKey, tokens: [] }));
   const tokens = tokenState.contextKey === contextKey ? tokenState.tokens : [];
   const requestSequenceRef = useRef(0);
@@ -47,7 +48,7 @@ export function ICalSubscription({ workspaceId, userId, canUseIcalFeed, canCreat
     if (clearExisting) setTokenState({ contextKey: requestContext, tokens: [] });
     const { data, error } = await iCalClient
       .from('enterprise_ical_tokens')
-      .select('*')
+      .select(canExposeFeed ? 'id, token, scope' : 'id, scope')
       .eq('workspace_id', workspaceId)
       .eq('user_id', userId);
     if (requestSequence !== requestSequenceRef.current || activeContextRef.current !== requestContext) return;
@@ -56,8 +57,8 @@ export function ICalSubscription({ workspaceId, userId, canUseIcalFeed, canCreat
       toast.error(t('ical_subscription.error_generic'));
       return;
     }
-    setTokenState({ contextKey: requestContext, tokens: (data ?? []) as ICalToken[] });
-  }, [contextKey, t, userId, workspaceId]);
+    setTokenState({ contextKey: requestContext, tokens: (data ?? []) as unknown as ICalToken[] });
+  }, [canExposeFeed, contextKey, t, userId, workspaceId]);
 
   useEffect(() => {
     activeContextRef.current = contextKey;
@@ -69,7 +70,7 @@ export function ICalSubscription({ workspaceId, userId, canUseIcalFeed, canCreat
   }, [contextKey, load]);
 
   const create = async (scope: 'own' | 'team') => {
-    if (!canUseIcalFeed || (scope === 'team' && !canCreateTeamFeed)) return;
+    if (!canExposeFeed || (scope === 'team' && !canCreateTeamFeed)) return;
     const mutationContext = contextKey;
     const { error } = await iCalClient.from('enterprise_ical_tokens').insert({
       workspace_id: workspaceId, user_id: userId, scope,
@@ -82,7 +83,12 @@ export function ICalSubscription({ workspaceId, userId, canUseIcalFeed, canCreat
 
   const remove = async (id: string) => {
     const mutationContext = contextKey;
-    const { error } = await iCalClient.from('enterprise_ical_tokens').delete().eq('id', id);
+    const { error } = await iCalClient
+      .from('enterprise_ical_tokens')
+      .delete()
+      .eq('id', id)
+      .eq('workspace_id', workspaceId)
+      .eq('user_id', userId);
     if (activeContextRef.current !== mutationContext) return;
     if (error) {
       toast.error(t('ical_subscription.error_generic'));
@@ -92,7 +98,7 @@ export function ICalSubscription({ workspaceId, userId, canUseIcalFeed, canCreat
   };
 
   const copy = async (token: string, scope: string) => {
-    if (!canUseIcalFeed) return;
+    if (!canExposeFeed) return;
     const mutationContext = contextKey;
     const url = `${baseUrl}?token=${token}&scope=${scope}`;
     try {
@@ -114,9 +120,9 @@ export function ICalSubscription({ workspaceId, userId, canUseIcalFeed, canCreat
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-xs text-muted-foreground">
-          {t(canUseIcalFeed ? 'ical_subscription.description' : 'ical_subscription.disabled_description')}
+          {t(canExposeFeed ? 'ical_subscription.description' : 'ical_subscription.disabled_description')}
         </p>
-        {canUseIcalFeed && (
+        {canExposeFeed && (
           <div className="flex gap-2">
             <Button size="sm" variant="outline" onClick={() => void create('own')}>{t('ical_subscription.btn_own')}</Button>
             {canCreateTeamFeed && (
@@ -125,11 +131,15 @@ export function ICalSubscription({ workspaceId, userId, canUseIcalFeed, canCreat
           </div>
         )}
         {tokens.map((tok) => {
-          const scopeLabel = tok.scope === 'team' ? t('ical_subscription.scope_team') : t('ical_subscription.scope_own');
+          const scopeLabel = tok.scope === 'team'
+            ? t('ical_subscription.scope_team')
+            : tok.scope === 'own'
+              ? t('ical_subscription.scope_own')
+              : t('ical_subscription.scope_unknown');
           return (
             <div key={tok.id} className="flex items-center gap-2 border rounded-md p-2">
               <Badge variant={tok.scope === 'team' ? 'default' : 'secondary'} className="text-xs">{scopeLabel}</Badge>
-              {canUseIcalFeed && (
+              {canExposeFeed && typeof tok.token === 'string' && tok.token.length > 0 && (
                 <>
                   <Input
                     readOnly
@@ -150,7 +160,7 @@ export function ICalSubscription({ workspaceId, userId, canUseIcalFeed, canCreat
               <Button
                 size="sm"
                 variant="ghost"
-                className={canUseIcalFeed ? undefined : 'ml-auto'}
+                className={canExposeFeed ? undefined : 'ml-auto'}
                 aria-label={t('ical_subscription.delete_feed', { scope: scopeLabel })}
                 onClick={() => void remove(tok.id)}
               >

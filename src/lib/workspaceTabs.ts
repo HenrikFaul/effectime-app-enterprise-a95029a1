@@ -18,6 +18,15 @@ export const WORKSPACE_TAB_VALUES = [
 
 export type WorkspaceTab = (typeof WORKSPACE_TAB_VALUES)[number];
 
+export interface WorkspaceTabChangeOptions {
+  replace?: boolean;
+}
+
+type WorkspaceSearchParamsSetter = (
+  nextParams: URLSearchParams,
+  options?: { replace?: boolean },
+) => void;
+
 /** Representative top-level entitlement(s) for each mounted workspace module. */
 export const WORKSPACE_TAB_FEATURES: Record<WorkspaceTab, readonly string[]> = {
   'my-portal': ['leave_my_view'],
@@ -51,6 +60,25 @@ export function normalizeWorkspaceTab(
   fallback: WorkspaceTab = 'members',
 ): WorkspaceTab {
   return isWorkspaceTab(value) ? value : fallback;
+}
+
+/**
+ * Applies a workspace-tab URL change while preserving unrelated query state.
+ * User navigation pushes history by default; automatic authorization repair
+ * explicitly replaces the invalid deep link so Back cannot re-enter it.
+ */
+export function setWorkspaceTabSearchParam(
+  currentParams: URLSearchParams,
+  setSearchParams: WorkspaceSearchParamsSetter,
+  workspaceId: string | null | undefined,
+  tab: string,
+  options: WorkspaceTabChangeOptions = {},
+): void {
+  if (!workspaceId) return;
+  const nextParams = new URLSearchParams(currentParams);
+  nextParams.set('tab', normalizeWorkspaceTab(tab));
+  nextParams.delete('ws');
+  setSearchParams(nextParams, { replace: options.replace === true });
 }
 
 export function isWorkspaceTabEntitled(

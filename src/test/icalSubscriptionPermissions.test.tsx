@@ -2,11 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ICalSubscription } from '@/components/enterprise/ICalSubscription';
 
-const { deleteToken, from, insertToken, loadRows, t, toastError, toastSuccess } = vi.hoisted(() => ({
+const { deleteEqCalls, deleteToken, from, insertToken, loadRows, selectColumns, t, toastError, toastSuccess } = vi.hoisted(() => ({
+  deleteEqCalls: [] as Array<[string, string]>,
   deleteToken: vi.fn(),
   from: vi.fn(),
   insertToken: vi.fn(),
   loadRows: { current: [] as Array<{ id: string; token: string; scope: 'own' | 'team' }> },
+  selectColumns: [] as string[],
   t: (key: string) => key,
   toastError: vi.fn(),
   toastSuccess: vi.fn(),
@@ -25,11 +27,14 @@ vi.mock('sonner', () => ({
 }));
 
 beforeEach(() => {
+  deleteEqCalls.length = 0;
   loadRows.current = [];
+  selectColumns.length = 0;
   insertToken.mockResolvedValue({ error: null });
   deleteToken.mockResolvedValue({ error: null });
   from.mockImplementation(() => ({
-    select: vi.fn(() => {
+    select: vi.fn((columns: string) => {
+      selectColumns.push(columns);
       let equalityCount = 0;
       const query = {
         eq: vi.fn(() => {
@@ -42,7 +47,17 @@ beforeEach(() => {
       return query;
     }),
     insert: insertToken,
-    delete: vi.fn(() => ({ eq: deleteToken })),
+    delete: vi.fn(() => {
+      let equalityCount = 0;
+      const query = {
+        eq: vi.fn((column: string, value: string) => {
+          deleteEqCalls.push([column, value]);
+          equalityCount += 1;
+          return equalityCount === 3 ? deleteToken() : query;
+        }),
+      };
+      return query;
+    }),
   }));
 });
 
@@ -77,6 +92,7 @@ describe('iCal subscription role boundary', () => {
     expect(screen.getByRole('button', { name: 'ical_subscription.copy_url' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'ical_subscription.delete_feed' })).toBeInTheDocument();
     await waitFor(() => expect(from).toHaveBeenCalledWith('enterprise_ical_tokens'));
+    expect(selectColumns).toContain('id, token, scope');
   });
 
   it('shows the team feed action to a workspace administrator', async () => {
@@ -119,9 +135,14 @@ describe('iCal subscription role boundary', () => {
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'ical_subscription.copy_url' })).not.toBeInTheDocument();
     expect(screen.queryByDisplayValue(/secret-team-token/)).not.toBeInTheDocument();
+    expect(selectColumns).toEqual(['id, scope']);
 
     fireEvent.click(revoke);
-    await waitFor(() => expect(deleteToken).toHaveBeenCalledWith('id', 'team-token'));
+    await waitFor(() => expect(deleteEqCalls).toEqual([
+      ['id', 'team-token'],
+      ['workspace_id', 'workspace-a'],
+      ['user_id', 'member-a'],
+    ]));
   });
 
   it('hides an existing bearer immediately when the entitlement is downgraded', async () => {
@@ -147,6 +168,7 @@ describe('iCal subscription role boundary', () => {
 
     expect(screen.queryByDisplayValue(/downgrade-secret/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'ical_subscription.copy_url' })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'ical_subscription.delete_feed' })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'ical_subscription.delete_feed' })).toBeInTheDocument();
+    await waitFor(() => expect(selectColumns).toEqual(['id, token, scope', 'id, scope']));
   });
 });

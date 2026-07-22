@@ -31,7 +31,11 @@ import { useT } from '@/i18n/I18nProvider';
 import { AppShell, SkipToContent } from '@/components/shell/AppShell';
 import { PageHeader } from '@/components/shell/PageHeader';
 import { DensityToggle } from '@/components/shell/DensityToggle';
-import { normalizeWorkspaceTab } from '@/lib/workspaceTabs';
+import {
+  normalizeWorkspaceTab,
+  setWorkspaceTabSearchParam,
+  type WorkspaceTabChangeOptions,
+} from '@/lib/workspaceTabs';
 
 interface Workspace {
   id: string;
@@ -105,14 +109,15 @@ export default function Enterprise() {
     setSearchParams(nextParams, { replace: true });
   }, [activeTab, searchParams, setSearchParams, workspaceIdFromUrl]);
 
-  const setActiveTab = (tab: string) => {
-    if (!selectedWorkspaceId) return;
-    const nextParams = new URLSearchParams(searchParams);
-    nextParams.set('tab', normalizeWorkspaceTab(tab));
-    nextParams.delete('ws');
-    // push (not replace) so the browser Back button traverses tab history
-    setSearchParams(nextParams);
-  };
+  const setActiveTab = useCallback((tab: string, options?: WorkspaceTabChangeOptions) => {
+    setWorkspaceTabSearchParam(
+      searchParams,
+      setSearchParams,
+      selectedWorkspaceId,
+      tab,
+      options,
+    );
+  }, [searchParams, selectedWorkspaceId, setSearchParams]);
 
   // Workspace pick from the picker grid. Use navigate() (push, NOT replace) so
   // the picker step earns its own history entry — pressing Back from a tab
