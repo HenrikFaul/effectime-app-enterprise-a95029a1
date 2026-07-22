@@ -1,7 +1,7 @@
 {
   "name": "effectime-app-enterprise",
   "private": true,
-  "version": "3.51.22",
+  "version": "3.51.23",
   "type": "module",
   "packageManager": "npm@11.13.0",
   "engines": {

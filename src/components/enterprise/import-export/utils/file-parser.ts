@@ -162,8 +162,24 @@ export function generateCSV(headers: string[], rows: string[][]): string {
   return BOM + lines.join('\r\n');
 }
 
-function xmlEscape(s: string): string {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+/** Replaces code points forbidden by XML 1.0 and escapes text-node markup. */
+export function escapeXmlText(value: string): string {
+  let sanitized = '';
+  for (const character of value) {
+    const codePoint = character.codePointAt(0) ?? -1;
+    const isAllowed = codePoint === 0x09
+      || codePoint === 0x0a
+      || codePoint === 0x0d
+      || (codePoint >= 0x20 && codePoint <= 0xd7ff)
+      || (codePoint >= 0xe000 && codePoint <= 0xfffd)
+      || (codePoint >= 0x10000 && codePoint <= 0x10ffff);
+    sanitized += isAllowed ? character : '\uFFFD';
+  }
+  return sanitized
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
 
 /**
@@ -194,15 +210,15 @@ export function generateExcelXML(
   </Styles>`;
 
   const headerCells = headers
-    .map((h, i) => `<Cell ss:StyleID="${required[i] ? 'hdrReq' : 'hdrOpt'}"><Data ss:Type="String">${xmlEscape(h)}</Data></Cell>`)
+    .map((h, i) => `<Cell ss:StyleID="${required[i] ? 'hdrReq' : 'hdrOpt'}"><Data ss:Type="String">${escapeXmlText(h)}</Data></Cell>`)
     .join('');
 
   const guidanceRow = options?.guidanceRow
-    ? `<Row>${options.guidanceRow.map(g => `<Cell ss:StyleID="guide"><Data ss:Type="String">${xmlEscape(g)}</Data></Cell>`).join('')}</Row>`
+    ? `<Row>${options.guidanceRow.map(g => `<Cell ss:StyleID="guide"><Data ss:Type="String">${escapeXmlText(g)}</Data></Cell>`).join('')}</Row>`
     : '';
 
   const dataRows = rows
-    .map(r => `<Row>${r.map(c => `<Cell><Data ss:Type="String">${xmlEscape(c ?? '')}</Data></Cell>`).join('')}</Row>`)
+    .map(r => `<Row>${r.map(c => `<Cell><Data ss:Type="String">${escapeXmlText(c ?? '')}</Data></Cell>`).join('')}</Row>`)
     .join('\n');
 
   const columns = headers.map(() => '<Column ss:Width="140"/>').join('');
@@ -211,7 +227,7 @@ export function generateExcelXML(
 <?mso-application progid="Excel.Sheet"?>
 <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">${styles}
-<Worksheet ss:Name="${xmlEscape(sheetName)}">
+<Worksheet ss:Name="${escapeXmlText(sheetName)}">
 <Table>
 ${columns}
 <Row>${headerCells}</Row>

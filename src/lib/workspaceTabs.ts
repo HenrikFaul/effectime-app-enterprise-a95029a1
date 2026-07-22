@@ -87,3 +87,30 @@ export function isWorkspaceTabEntitled(
 ): boolean {
   return WORKSPACE_TAB_FEATURES[tab].some(isEnabled);
 }
+
+export interface ReportsAuditAccessInput {
+  featureAccessAvailable: boolean;
+  canViewReports: boolean;
+  canViewAudit: boolean;
+  canViewExport: boolean;
+  isEnabled: (feature: string) => boolean;
+}
+
+/**
+ * Resolves the three independently licensed and permissioned capabilities that
+ * share the Reports tab shell. An umbrella tab entitlement must never broaden
+ * access to a sibling capability.
+ */
+export function resolveReportsAuditAccess({
+  featureAccessAvailable,
+  canViewReports,
+  canViewAudit,
+  canViewExport,
+  isEnabled,
+}: ReportsAuditAccessInput) {
+  return {
+    canAccessReports: featureAccessAvailable && canViewReports && isEnabled('run_report'),
+    canAccessAudit: featureAccessAvailable && canViewAudit && isEnabled('audit_log'),
+    canAccessExport: featureAccessAvailable && canViewExport && isEnabled('export_center'),
+  };
+}

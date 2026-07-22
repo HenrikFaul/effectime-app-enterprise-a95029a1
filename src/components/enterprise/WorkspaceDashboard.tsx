@@ -4,16 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { NPSSurvey } from '@/components/customer-success/NPSSurvey';
-import { ComplianceDashboard } from '@/components/compliance/ComplianceDashboard';
-import { DocumentGeneratorPanel } from '@/components/documents/DocumentGeneratorPanel';
-import { RecruitingPanel } from '@/components/candidates/RecruitingPanel';
 import { CopilotPanel } from '@/components/ai-copilot/CopilotPanel';
 import { PluginMarketplacePanel } from '@/components/marketplace/PluginMarketplacePanel';
 import { InstalledPluginCleanupPanel } from '@/components/marketplace/InstalledPluginCleanupPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { CollapsibleCardTrigger } from '@/components/ui/collapsible-card-trigger';
-import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, Download, History, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft, LogOut, Building2, GitMerge, CircleHelp, Clock, LayoutDashboard, TrendingUp, Code2, CreditCard, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Users, UserPlus, Shield, Settings, Trash2, FileText, ShieldAlert, BarChart3, Bell, CalendarDays, ChevronDown, Plus, User, Briefcase, Wallet, Plug, Rss, Inbox, LayoutPanelLeft, LogOut, Building2, GitMerge, CircleHelp, Clock, LayoutDashboard, TrendingUp, Code2, CreditCard, ShieldCheck } from 'lucide-react';
 import { useWorkspaceTier } from '@/hooks/useWorkspaceTier';
 import { tierName } from '@/lib/tiering/labels';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -29,12 +26,8 @@ import { HolidayManager } from './HolidayManager';
 import { BlockedDateManager } from './BlockedDateManager';
 import { DailyRuleManager } from './DailyRuleManager';
 import { ApprovalChainManager } from './ApprovalChainManager';
-import { AuditLog } from './AuditLog';
 import { EnterpriseNotifications } from './EnterpriseNotifications';
-import { ExportCenter } from './ExportCenter';
-import { ReportingDashboard } from './ReportingDashboard';
-import { ReportLibrary } from './reports/ReportLibrary';
-import { PinnedReportsWidget } from './reports/PinnedReportsWidget';
+import { ReportsAndAuditTab } from './ReportsAndAuditTab';
 import { RuleTemplateLibrary } from './RuleTemplateLibrary';
 import { LeaveCalendar } from './LeaveCalendar';
 import { OfficeManager } from './OfficeManager';
@@ -103,6 +96,7 @@ import {
 } from '@/hooks/useEntitlementRecoveryFocus';
 import {
   isWorkspaceTabEntitled,
+  resolveReportsAuditAccess,
   type WorkspaceTab,
   type WorkspaceTabChangeOptions,
 } from '@/lib/workspaceTabs';
@@ -388,6 +382,21 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   // Check if any calendar sub-permission is available
   const hasCalendarAccess = canView('calendar');
   const canViewWorkspaceSettings = canView('settings');
+  const canViewReports = canView('reports');
+  const canViewAudit = canView('audit');
+  const canViewExport = canView('export');
+  const {
+    canAccessReports,
+    canAccessAudit,
+    canAccessExport,
+  } = resolveReportsAuditAccess({
+    featureAccessAvailable,
+    canViewReports,
+    canViewAudit,
+    canViewExport,
+    isEnabled: isFeatureEnabled,
+  });
+  const hasReportsAuditAccess = canAccessReports || canAccessAudit || canAccessExport;
   // Check if any requests permission is available
   const hasRequestsAccess = canView('requests_own')
     || canView('requests_team')
@@ -403,13 +412,15 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
       item.value === 'requests' ? hasRequestsAccess :
       item.value === 'workflows' ? canView('members') :
       item.value === 'resources' ? true :
-      item.value === 'reports-audit' ? (canView('reports') || canView('audit') || canView('export')) :
+      item.value === 'reports-audit' ? hasReportsAuditAccess :
       item.value === 'analytics' ? isAdmin :
       item.value === 'developer' ? isAdmin :
       item.value === 'security' ? isAdmin :
       item.value === 'settings' ? canViewWorkspaceSettings :
       false;
-    return visible && hasTabEntitlement(item.value);
+    return visible && (
+      item.value === 'reports-audit' ? hasReportsAuditAccess : hasTabEntitlement(item.value)
+    );
   });
   const activeTabIsVisible = visibleTopNavItems.some((item) => item.value === activeTab);
   const firstVisibleTab = visibleTopNavItems[0]?.value;
@@ -695,40 +706,15 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
               </FeatureGate>
             </TabsContent>}
 
-            {(canView('reports') || canView('audit') || canView('export')) && hasTabEntitlement('reports-audit') && (
+            {hasReportsAuditAccess && (
               <TabsContent value="reports-audit" data-help-region="workspace.reports">
-                <ReportsAndAuditTab workspaceId={workspace.id} userId={userId} />
-                {/* Compliance dashboard (Top-20 Rank 13, v3.20.0) — Pro+ feature,
-                    rendered inside the Reports tab so owners can run WTD checks
-                    alongside other reporting. Gated by feature_key so Freemium
-                    workspaces see a locked-feature notice. */}
-                <FeatureGate
+                <ReportsAndAuditTab
                   workspaceId={workspace.id}
-                  feature="compliance_engine"
-                  fallback={<LockedFeatureNotice feature="compliance_engine" />}
-                >
-                  <ComplianceDashboard workspaceId={workspace.id} />
-                </FeatureGate>
-                {/* Document generator (Top-20 Rank 18, v3.26.0). Gated by
-                    document_generator feature_key so Freemium sees a locked
-                    notice. The optional Claude polish further degrades
-                    gracefully when ANTHROPIC_API_KEY isn't configured. */}
-                <FeatureGate
-                  workspaceId={workspace.id}
-                  feature="document_generator"
-                  fallback={<LockedFeatureNotice feature="document_generator" />}
-                >
-                  <DocumentGeneratorPanel workspaceId={workspace.id} />
-                </FeatureGate>
-                {/* Candidate / ATS (Top-20 Rank 20, v3.31.0). Gated by
-                    candidate_pipeline feature_key. */}
-                <FeatureGate
-                  workspaceId={workspace.id}
-                  feature="candidate_pipeline"
-                  fallback={<LockedFeatureNotice feature="candidate_pipeline" />}
-                >
-                  <RecruitingPanel workspaceId={workspace.id} />
-                </FeatureGate>
+                  userId={userId}
+                  canAccessReports={canAccessReports}
+                  canAccessAudit={canAccessAudit}
+                  canAccessExport={canAccessExport}
+                />
               </TabsContent>
             )}
 
@@ -1036,71 +1022,6 @@ function RequestsAndApprovalsTab({ workspaceId, userId, userRole, isAdmin, canVi
           </CollapsibleContent>
         </Collapsible>
       )}
-    </div>
-  );
-}
-
-// ===== Combined Reports + Audit + Export Tab =====
-function ReportsAndAuditTab({ workspaceId, userId }: { workspaceId: string; userId: string }) {
-  const { t } = useI18n();
-  const [auditOpen, setAuditOpen] = useState(false);
-  const [exportOpen, setExportOpen] = useState(false);
-  const [reportsOpen, setReportsOpen] = useState(true);
-
-  return (
-    <div className="space-y-4">
-      <Collapsible open={auditOpen} onOpenChange={setAuditOpen}>
-        <CollapsibleCardTrigger
-          label={t('ws_nav.section_audit')}
-          className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden"
-          contentClassName="flex items-center justify-between py-3 px-4"
-        >
-          <div className="flex items-center gap-2">
-            <History className="h-4 w-4 text-primary" />
-            <span className="font-medium text-sm">{t('ws_nav.section_audit')}</span>
-          </div>
-          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${auditOpen ? 'rotate-180' : ''}`} />
-        </CollapsibleCardTrigger>
-        <CollapsibleContent className="mt-2">
-          <AuditLog workspaceId={workspaceId} />
-        </CollapsibleContent>
-      </Collapsible>
-
-      <Collapsible open={exportOpen} onOpenChange={setExportOpen}>
-        <CollapsibleCardTrigger
-          label={t('ws_nav.section_export')}
-          className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden"
-          contentClassName="flex items-center justify-between py-3 px-4"
-        >
-          <div className="flex items-center gap-2">
-            <Download className="h-4 w-4 text-primary" />
-            <span className="font-medium text-sm">{t('ws_nav.section_export')}</span>
-          </div>
-          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${exportOpen ? 'rotate-180' : ''}`} />
-        </CollapsibleCardTrigger>
-        <CollapsibleContent className="mt-2">
-          <ExportCenter workspaceId={workspaceId} userId={userId} />
-        </CollapsibleContent>
-      </Collapsible>
-
-      <Collapsible open={reportsOpen} onOpenChange={setReportsOpen}>
-        <CollapsibleCardTrigger
-          label={t('ws_nav.section_reports')}
-          className="cursor-pointer hover:bg-accent/40 transition-colors duration-150 overflow-hidden"
-          contentClassName="flex items-center justify-between py-3 px-4"
-        >
-          <div className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-primary" />
-            <span className="font-medium text-sm">{t('ws_nav.section_reports')}</span>
-          </div>
-          <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${reportsOpen ? 'rotate-180' : ''}`} />
-        </CollapsibleCardTrigger>
-        <CollapsibleContent className="mt-2 space-y-3">
-          <PinnedReportsWidget workspaceId={workspaceId} />
-          <ReportingDashboard workspaceId={workspaceId} />
-          <ReportLibrary workspaceId={workspaceId} userId={userId} />
-        </CollapsibleContent>
-      </Collapsible>
     </div>
   );
 }

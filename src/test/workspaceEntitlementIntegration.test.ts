@@ -23,7 +23,8 @@ describe('workspace navigation/content entitlement integration', () => {
 
   it('uses the same top-level entitlement helper for nav and mounted content', () => {
     expect(dashboard).toContain('isWorkspaceTabEntitled(tab, isFeatureEnabled)');
-    expect(dashboard).toContain('return visible && hasTabEntitlement(item.value);');
+    expect(dashboard).toContain('return visible && (');
+    expect(dashboard).toContain("item.value === 'reports-audit' ? hasReportsAuditAccess : hasTabEntitlement(item.value)");
     for (const tab of [
       'my-portal',
       'members',
@@ -31,7 +32,6 @@ describe('workspace navigation/content entitlement integration', () => {
       'time-attendance',
       'requests',
       'resources',
-      'reports-audit',
       'analytics',
       'developer',
       'security',
@@ -39,6 +39,11 @@ describe('workspace navigation/content entitlement integration', () => {
     ]) {
       expect(dashboard).toContain(`hasTabEntitlement('${tab}')`);
     }
+    expect(dashboard).toContain('resolveReportsAuditAccess({');
+    expect(dashboard).toContain("isEnabled: isFeatureEnabled");
+    expect(dashboard).toContain("item.value === 'reports-audit' ? hasReportsAuditAccess");
+    expect(dashboard).toContain('{hasReportsAuditAccess && (');
+    expect(dashboard).not.toContain("hasTabEntitlement('reports-audit')");
   });
 
   it('does not mount Microsoft 365 settings outside its paid feature gate', () => {

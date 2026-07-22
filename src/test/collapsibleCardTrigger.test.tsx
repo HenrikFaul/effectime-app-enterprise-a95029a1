@@ -92,7 +92,8 @@ function collectTsxFiles(directory: string): string[] {
 describe('collapsible card trigger source contract', () => {
   const componentsRoot = resolve(process.cwd(), 'src/components');
   const expectedSites = [
-    ['enterprise/WorkspaceDashboard.tsx', 13],
+    ['enterprise/WorkspaceDashboard.tsx', 10],
+    ['enterprise/ReportsAndAuditTab.tsx', 3],
     ['enterprise/InvitationsPanel.tsx', 1],
     ['enterprise/MemberList.tsx', 1],
     ['enterprise/workflows/OnboardingTemplates.tsx', 1],
