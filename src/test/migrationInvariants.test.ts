@@ -172,7 +172,6 @@ describe('Migration invariants — search_path hygiene on v3.33.x functions', ()
     'document_substitute',
     'enforce_data_retention',
     'enterprise_decision_memory_set_due',
-    'haversine_km',
     'set_hr_workflow_updated_at',
     'set_webhook_updated_at',
     'update_office_equipment_updated_at',
@@ -186,4 +185,73 @@ describe('Migration invariants — search_path hygiene on v3.33.x functions', ()
       expect(body!).toMatch(/SET\s+search_path\s+TO\s+'public'/i);
     });
   }
+});
+
+describe('Migration invariants — v3.51.10 recovered-surface hardening', () => {
+  const migrations = loadMigrations();
+  const hardening = migrations.find(
+    ({ filename }) =>
+      filename === '20260722054500_v3_51_10_recovered_surface_acl_hardening.sql',
+  )?.content;
+
+  it('uses pg_catalog-only search paths and an exact pgcrypto QR call', () => {
+    expect(hardening).toBeDefined();
+    expect(hardening!).toMatch(
+      /CREATE OR REPLACE FUNCTION public\.clock_generate_qr[\s\S]*?SET search_path = pg_catalog[\s\S]*?extensions\.gen_random_bytes\(16\)/i,
+    );
+
+    for (const signature of [
+      'haversine_km\\(numeric, numeric, numeric, numeric\\)',
+      'clock_event\\(uuid, text, text, numeric, numeric, text, text, uuid\\)',
+      'marketplace_submit_plugin\\(text, text, text, text, jsonb, text, text\\)',
+      'marketplace_set_plugin_status\\(uuid, text\\)',
+      'marketplace_install_plugin\\(uuid, uuid, jsonb\\)',
+      'marketplace_uninstall_plugin\\(uuid\\)',
+    ]) {
+      expect(hardening!).toMatch(
+        new RegExp(
+          `ALTER FUNCTION public\\.${signature}\\s+SET search_path = pg_catalog;`,
+          'i',
+        ),
+      );
+    }
+  });
+
+  it('replaces only the QR body that needs an exact extension binding', () => {
+    expect(hardening).toBeDefined();
+    expect(hardening!).not.toMatch(
+      /CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+public\.(?:haversine_km|clock_event|marketplace_)/i,
+    );
+  });
+
+  it('fails closed on recovered source, policy, owner and configuration drift', () => {
+    expect(hardening).toBeDefined();
+    expect(hardening!).toContain("relation.relkind = 'r'");
+    expect(hardening!).toContain('relation.relowner = v_expected_owner');
+    expect(hardening!).toContain('Recovered surface RLS policy set is incompatible');
+    expect(hardening!).toContain('policy.polpermissive');
+    expect(hardening!).toContain('pg_catalog.pg_get_expr(policy.polqual');
+    expect(hardening!).toContain('procedure.proconfig IN');
+    expect(hardening!).toContain('extension.extowner');
+    expect(hardening!).toContain('procedure.proowner');
+    expect(hardening!).toContain('extensions.digest(bytea,text)');
+    expect(hardening!).toContain('Recovered surface routine source attestation failed');
+
+    const sourceAttestation = hardening!.indexOf(
+      'Recovered surface routine source attestation failed',
+    );
+    const firstMutation = hardening!.indexOf(
+      'ALTER FUNCTION public.haversine_km',
+    );
+    expect(sourceAttestation).toBeGreaterThanOrEqual(0);
+    expect(firstMutation).toBeGreaterThan(sourceAttestation);
+  });
+
+  it('checks effective browser column ACLs and PostgreSQL 17 MAINTAIN rights', () => {
+    expect(hardening).toBeDefined();
+    expect(hardening!).toContain('pg_catalog.has_column_privilege(');
+    expect(hardening!).toContain("'anon',");
+    expect(hardening!).toContain("'authenticated',");
+    expect(hardening!).toContain("'MAINTAIN'");
+  });
 });

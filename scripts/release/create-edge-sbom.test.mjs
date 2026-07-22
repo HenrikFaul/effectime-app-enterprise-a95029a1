@@ -8,9 +8,12 @@ import { fileURLToPath } from "node:url";
 import { DENO_VERSION } from "../ci/deno-runtime.mjs";
 import {
   buildEdgeSbom,
+  buildEdgeSbomWithRemoteRetry,
+  DEFAULT_DENO_GRAPH_ATTEMPTS,
   DEFAULT_EXPECTED_EDGE_ENTRYPOINTS,
   DENO_INFO_FLAGS,
   discoverEntrypoints,
+  isRetryableRemoteGraphError,
 } from "./create-edge-sbom.mjs";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -130,8 +133,9 @@ test("buildEdgeSbom records direct and transitive npm, JSR and HTTP components",
       Object.fromEntries(
         ["npm", "jsr", "http"].map((kind) => [
           kind,
-          sbom.components.filter((component) => property(component, "effectime:source-kind") === kind)
-            .length,
+          sbom.components.filter(
+            (component) => property(component, "effectime:source-kind") === kind,
+          ).length,
         ]),
       ),
       { npm: 2, jsr: 1, http: 1 },
@@ -140,12 +144,16 @@ test("buildEdgeSbom records direct and transitive npm, JSR and HTTP components",
     const direct = sbom.components.filter(
       (component) => property(component, "effectime:dependency-scope") === "direct",
     );
-    assert.deepEqual(
-      direct.map((component) => component.name).sort(),
-      ["direct", "mod.ts", "path"],
-    );
+    assert.deepEqual(direct.map((component) => component.name).sort(), [
+      "direct",
+      "mod.ts",
+      "path",
+    ]);
     assert.equal(
-      property(sbom.components.find((component) => component.name === "transitive"), "effectime:dependency-scope"),
+      property(
+        sbom.components.find((component) => component.name === "transitive"),
+        "effectime:dependency-scope",
+      ),
       "transitive",
     );
 
@@ -183,5 +191,123 @@ test("buildEdgeSbom fails closed when a resolved npm dependency is missing", () 
         },
       ),
     /unresolved dependency/,
+  );
+});
+
+test("remote Deno graph resolution is retried with a bounded attempt count", () => {
+  const entrypoint = "file:///repo/supabase/functions/example/index.ts";
+  let attempts = 0;
+  const retries = [];
+
+  const sbom = buildEdgeSbomWithRemoteRetry(
+    () => {
+      attempts += 1;
+      return attempts === 1
+        ? {
+            version: 1,
+            modules: [
+              { kind: "esm", specifier: entrypoint, dependencies: [] },
+              {
+                kind: "error",
+                specifier: "https://esm.sh/@supabase/supabase-js@2.39.0",
+              },
+            ],
+          }
+        : {
+            version: 1,
+            modules: [{ kind: "esm", specifier: entrypoint, dependencies: [] }],
+          };
+    },
+    {
+      applicationName: "example",
+      applicationVersion: "1.0.0",
+      entrypointUrls: [entrypoint],
+    },
+    { onRetry: (retry) => retries.push(retry) },
+  );
+
+  assert.equal(attempts, 2);
+  assert.equal(retries.length, 1);
+  assert.equal(retries[0].attempt, 1);
+  assert.equal(retries[0].maxAttempts, DEFAULT_DENO_GRAPH_ATTEMPTS);
+  assert.equal(sbom.metadata.component.name, "example-edge-functions");
+});
+
+test("persistent remote Deno graph failures remain fail-closed", () => {
+  const entrypoint = "file:///repo/supabase/functions/example/index.ts";
+  let attempts = 0;
+
+  assert.throws(
+    () =>
+      buildEdgeSbomWithRemoteRetry(
+        () => {
+          attempts += 1;
+          return {
+            version: 1,
+            modules: [
+              { kind: "esm", specifier: entrypoint, dependencies: [] },
+              { kind: "error", specifier: "https://example.test/unavailable.ts" },
+            ],
+          };
+        },
+        {
+          applicationName: "example",
+          applicationVersion: "1.0.0",
+          entrypointUrls: [entrypoint],
+        },
+      ),
+    /unresolved module/,
+  );
+  assert.equal(attempts, DEFAULT_DENO_GRAPH_ATTEMPTS);
+});
+
+test("local graph errors are never retried", () => {
+  const entrypoint = "file:///repo/supabase/functions/example/index.ts";
+  let attempts = 0;
+
+  assert.throws(
+    () =>
+      buildEdgeSbomWithRemoteRetry(
+        () => {
+          attempts += 1;
+          return {
+            version: 1,
+            modules: [
+              { kind: "esm", specifier: entrypoint, dependencies: [] },
+              { kind: "error", specifier: "file:///repo/missing.ts" },
+            ],
+          };
+        },
+        {
+          applicationName: "example",
+          applicationVersion: "1.0.0",
+          entrypointUrls: [entrypoint],
+        },
+      ),
+    /unresolved module/,
+  );
+  assert.equal(attempts, 1);
+  assert.equal(
+    isRetryableRemoteGraphError(new Error("Deno graph contains an unresolved module: file:///x")),
+    false,
+  );
+});
+
+test("retry classification follows the unresolved target rather than its source", () => {
+  assert.equal(
+    isRetryableRemoteGraphError(
+      new Error(
+        "Deno graph contains an unresolved dependency from file:///repo/index.ts to https://example.test/module.ts: unavailable",
+      ),
+    ),
+    true,
+  );
+  assert.equal(
+    isRetryableRemoteGraphError(
+      new Error(
+        "Deno graph contains an unresolved dependency from https://example.test/remote.ts to file:///repo/missing.ts: not found",
+      ),
+    ),
+    false,
   );
 });
