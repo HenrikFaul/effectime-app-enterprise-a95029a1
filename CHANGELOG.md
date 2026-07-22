@@ -1,8 +1,8 @@
 ## 2026-07-22 — v3.51.18 fail-closed entitlement outage recovery (unreleased)
 
-**Status:** local source candidate on `codex/entitlement-outage-recovery`;
-hosted CI, PR and production deployment have not yet been claimed. No database,
-API, migration or dependency change.
+**Status:** source + hosted candidate on `codex/entitlement-outage-recovery`;
+draft PR #189. Production deployment has not been performed. No database, API,
+migration or dependency change.
 
 - **BIZONYÍTOTT:** TanStack Query retains the last successful feature payload
   after a failed refetch. The shared hook previously rebuilt `isEnabled` from
@@ -42,13 +42,17 @@ PASS. The coverage run is 86 files / 1,074 tests PASS (55.47% statements/lines,
 80.71% branches, 35.76% functions), followed by a final post-a11y full run of
 86 files / 1,076 tests PASS. Typecheck, targeted ESLint and the unchanged
 1,148-error / 98-warning lint fingerprint PASS. The 4,095-module web build,
-reviewed bundle (4,553,784 raw / 1,304,422 gzip JavaScript; largest
-1,775,966 / 564,888; CSS 180,900 / 29,610), public smoke 7/7, dependency audit
+clean-HEAD reviewed bundle (4,553,895 raw / 1,304,480 gzip JavaScript; largest
+1,775,966 / 564,885; CSS 180,900 / 29,610), public smoke 7/7, dependency audit
 (0 vulnerabilities), 1,565-file secret scan, Edge entrypoint/import/test gates,
 all six isolated PostgreSQL contracts, mobile source 226/226, shared artifact
-388/388, native CSP smoke 2/2 and deterministic Android/iOS sync PASS. Hosted
-CI, PR, clean-HEAD mobile release identity and production artifact evidence are
-still pending.
+388/388, native CSP smoke 2/2, deterministic Android/iOS sync, clean-HEAD mobile
+release contract 408/408 and 62,918-byte local manifest PASS. The exact
+`76f3c8406ca45791b5f521c683123afd3e83ba22` implementation head passed draft PR
+#189 run `29934837022` in all 11 jobs with zero annotations. Its potential merge
+SHA is `9e7f5a9045d9d63f9876f4e4af5393a4b9d42e93`; hosted release evidence
+`8535733292`, diagnostics `8535731033` and unsigned Android `8535674674` were
+retained. The hosted 62,981-byte manifest attests that potential merge SHA.
 
 Rollback is the frontend/hook/i18n/test/version/documentation commit revert.
 User-confirmed successful feed revocations are external destructive actions and
