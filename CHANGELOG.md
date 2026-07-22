@@ -41,8 +41,8 @@ coverage 99 files / 1,223/1,223 tests (56.92% statements/lines, 80.63%
 branches, 40.45% functions); TypeScript; the reduced 1,108-error/98-warning
 lint fingerprint; production build and reviewed bundle ceiling; web E2E 7/7;
 mobile source 228/228, deterministic Android/iOS sync and mobile E2E 2/2. The
-clean-worktree-only native release assertion and hosted Quality Gate will be
-recorded after the source commit.
+clean-worktree-only native release assertion is also 410/410 PASS. The hosted
+Quality Gate will be recorded after the branch push.
 
 Rollback is the source/test/i18n/version/documentation commit revert. It does
 not undo an already downloaded file or audit row. Production remains **NO-GO**
