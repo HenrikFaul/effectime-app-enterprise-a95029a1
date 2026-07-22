@@ -10,6 +10,7 @@ import {
   buildOwnershipInspectArgs,
   buildPostgresReadinessArgs,
   buildPsqlFileArgs,
+  buildPsqlPluginSecretTamperArgs,
   buildPsqlTamperArgs,
   cleanupOwnedContainer,
   CLOCK_MIGRATION_SQL_PATH,
@@ -21,6 +22,10 @@ import {
   MARKETPLACE_MIGRATION_SQL_PATH,
   OWNERSHIP_LABEL_KEY,
   parseCreatedContainerId,
+  PLUGIN_SECRET_ASSERTIONS_SQL_PATH,
+  PLUGIN_SECRET_MIGRATION_SQL_PATH,
+  PLUGIN_SECRET_SEED_SQL_PATH,
+  PLUGIN_SECRET_TAMPER_CASES,
   POSTGRES_IMAGE,
   resolveOwnedCleanupTarget,
   SETUP_SQL_PATH,
@@ -72,7 +77,7 @@ test("rejects injected names and accepts only exact Docker creation IDs", () => 
   );
 });
 
-test("pins PostgreSQL 17.6 and mounts only the six exact inputs read-only", () => {
+test("pins PostgreSQL 17.6 and mounts only the nine exact inputs read-only", () => {
   const repoRoot = "C:\\Work\\Effectime Fixture";
   const args = buildDockerRunArgs({
     containerName,
@@ -117,6 +122,18 @@ test("pins PostgreSQL 17.6 and mounts only the six exact inputs read-only", () =
       repoRoot,
       "scripts/ci/recovered-surface-acl-assertions.test.sql",
     )},target=${ASSERTIONS_SQL_PATH},readonly`,
+    `type=bind,source=${resolve(
+      repoRoot,
+      "scripts/ci/plugin-config-secret-seed.test.sql",
+    )},target=${PLUGIN_SECRET_SEED_SQL_PATH},readonly`,
+    `type=bind,source=${resolve(
+      repoRoot,
+      "supabase/migrations/20260722060000_v3_51_11_plugin_config_secret_boundary.sql",
+    )},target=${PLUGIN_SECRET_MIGRATION_SQL_PATH},readonly`,
+    `type=bind,source=${resolve(
+      repoRoot,
+      "scripts/ci/plugin-config-secret-assertions.test.sql",
+    )},target=${PLUGIN_SECRET_ASSERTIONS_SQL_PATH},readonly`,
   ]);
   assert.equal(
     args.some((argument) => argument.includes("target=/workspace")),
@@ -140,6 +157,14 @@ test("psql entry points are isolated, fail closed, and file-allowlisted", () => 
   });
   assert.ok(migrationArgs.includes("--single-transaction"));
   assert.equal(migrationArgs.at(-1), HARDENING_MIGRATION_SQL_PATH);
+
+  const pluginSecretMigrationArgs = buildPsqlFileArgs(
+    containerName,
+    PLUGIN_SECRET_MIGRATION_SQL_PATH,
+    { singleTransaction: true },
+  );
+  assert.ok(pluginSecretMigrationArgs.includes("--single-transaction"));
+  assert.equal(pluginSecretMigrationArgs.at(-1), PLUGIN_SECRET_MIGRATION_SQL_PATH);
 
   assert.throws(
     () => buildPsqlFileArgs(containerName, CLOCK_MIGRATION_SQL_PATH),
@@ -167,6 +192,21 @@ test("psql entry points are isolated, fail closed, and file-allowlisted", () => 
   assert.equal(tamperArgs.at(-1), HARDENING_MIGRATION_SQL_PATH);
   assert.throws(
     () => buildPsqlTamperArgs(containerName, "DROP DATABASE postgres;"),
+    /tamper SQL is not allowlisted/,
+  );
+
+  const pluginTamperArgs = buildPsqlPluginSecretTamperArgs(
+    containerName,
+    PLUGIN_SECRET_TAMPER_CASES[0].sql,
+  );
+  assert.deepEqual(pluginTamperArgs.slice(0, 3), ["exec", containerName, "psql"]);
+  assert.equal(
+    pluginTamperArgs[pluginTamperArgs.indexOf("--command") + 1],
+    `BEGIN; ${PLUGIN_SECRET_TAMPER_CASES[0].sql}`,
+  );
+  assert.equal(pluginTamperArgs.at(-1), PLUGIN_SECRET_MIGRATION_SQL_PATH);
+  assert.throws(
+    () => buildPsqlPluginSecretTamperArgs(containerName, "DROP DATABASE postgres;"),
     /tamper SQL is not allowlisted/,
   );
 });

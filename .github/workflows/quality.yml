@@ -129,7 +129,7 @@ jobs:
         run: npm run db:member-profile-save:test
 
   recovered-surface-acl-database-contract:
-    name: PostgreSQL recovered surface ACL contract
+    name: PostgreSQL recovered ACL and plugin secret contract
     runs-on: ubuntu-24.04
     timeout-minutes: 10
 
@@ -147,7 +147,7 @@ jobs:
       - name: Prove Docker runner isolation and cleanup contract
         run: node --test scripts/ci/recovered-surface-acl-db-contract.test.mjs
 
-      - name: Run PostgreSQL 17.6 recovered surface ACL contract
+      - name: Run PostgreSQL 17.6 recovered ACL and plugin secret contract
         run: npm run db:recovered-surface-acl:test
 
   verify:

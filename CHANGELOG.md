@@ -1,3 +1,53 @@
+## 2026-07-22 — v3.51.11 Plugin configuration secret boundary (unreleased)
+
+**Status:** local source candidate; linked database and production not deployed.
+
+- Moves every historical `workspace_installed_plugins.config` JSON value into
+  `effectime_private.workspace_plugin_configs` in one locked transaction. The
+  browser-readable compatibility column remains present but is permanently
+  constrained to `{}`, so older web/PWA/Android/iOS projections keep their
+  response shape without receiving raw webhook or credential material.
+- Preserves the existing install/uninstall RPC signatures, defaults, return
+  values, owner-only install authorization, approved/published behavior and
+  install-count semantics. New installs and reinstalls write the public marker
+  and private value atomically; uninstall and parent cascades remove the private
+  row through the exact FK.
+- Adds a narrow `service_role`-only getter that requires the exact workspace +
+  installation pair and an enabled installation. Browser roles and
+  `service_role` retain no direct private table or column privileges. A shared
+  browser-caller AST gate prevents the React data plane used by web, Android and
+  iOS from selecting `config` or mutating the installation table directly.
+- Fails closed on incompatible catalog/source/trigger/ACL state, missing private
+  rows, non-redacted public values or partial installation. Reapply repairs
+  explicit column/function ACL drift but never reconstructs an already-lost
+  secret from the redacted marker. Pre-existing `effectime_private` schema ACLs
+  and unrelated helper objects are preserved.
+- Extends the pinned PostgreSQL 17.6 contract with object/array/scalar/JSON-null
+  legacy values, seven preflight tamper cases, three fail-closed reapply tamper
+  cases and explicit known-role ACL repair. Schema `CREATE`, table, column and
+  all four function ACLs reject unknown grantees; member/assistant/admin/
+  outsider/owner-B and service-role tenant denial, disabled-install denial,
+  atomic rollback, reinstall identity, uninstall cascade and repeated apply are
+  exercised against the real catalog.
+
+This is a browser/PostgREST secret boundary, not Vault or application-level
+encryption at rest: DB owners and authorized backup/dump operators can still
+read private JSONB. A Vault lifecycle/restore/rotation wave remains open. The
+database rollback is forward-only: never restore the historical install body or
+copy private config back into the public column; pause plugin installation and
+ship a forward repair instead. Migration-history reconciliation, restored-
+staging acceptance and an authenticated Lovable production channel remain
+release blockers.
+
+Local candidate validation: runner unit 11/11; pinned PostgreSQL 17.6 contract
+with 15 recovered-surface and 7 new preflight tamper cases plus 3 reapply tamper
+cases; browser caller 1/1; migration invariants 34/34; full coverage 77 files /
+996 tests; typecheck, schema/migration provenance, lint ratchet, dependency audit
+(0 known vulnerabilities), 1,539-file secret scan, production build, exact
+bundle budget, web smoke 7/7, Edge 86/86 + 31/31 diagnostic inventory, mobile
+source 183/183, synchronized artifact 345/345 and bridge smoke 2/2 PASS. Native
+release clean-tree and hosted Android/iOS compilation are commit/CI gates.
+
 ## 2026-07-22 — v3.51.10 Recovered surface ACL hardening (unreleased)
 
 **Status:** stacked draft PR

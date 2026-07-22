@@ -12,9 +12,14 @@ export const MARKETPLACE_MIGRATION_SQL_PATH = "/contract/marketplace-migration.s
 export const CLOCKOUT_MIGRATION_SQL_PATH = "/contract/clockout-migration.sql";
 export const HARDENING_MIGRATION_SQL_PATH = "/contract/hardening-migration.sql";
 export const ASSERTIONS_SQL_PATH = "/contract/assertions.sql";
+export const PLUGIN_SECRET_SEED_SQL_PATH = "/contract/plugin-secret-seed.sql";
+export const PLUGIN_SECRET_MIGRATION_SQL_PATH = "/contract/plugin-secret-migration.sql";
+export const PLUGIN_SECRET_ASSERTIONS_SQL_PATH = "/contract/plugin-secret-assertions.sql";
 export const OWNERSHIP_LABEL_KEY = "com.effectime.ci.recovered-surface-acl-contract";
 export const VERIFY_FAILED_PREFLIGHT_SQL =
   "SELECT contract.assert_preflight_left_no_partial_mutation();";
+export const VERIFY_PLUGIN_SECRET_FAILED_PREFLIGHT_SQL =
+  "SELECT contract.assert_core_unchanged(true); DO $$ BEGIN IF pg_catalog.to_regclass('effectime_private.workspace_plugin_configs') IS NOT NULL OR pg_catalog.to_regprocedure('effectime_private.ensure_workspace_plugin_config_v1()') IS NOT NULL OR pg_catalog.to_regprocedure('public.marketplace_get_plugin_config_service_v1(uuid,uuid)') IS NOT NULL THEN RAISE EXCEPTION 'Failed plugin secret preflight left partial mutation'; END IF; END $$;";
 export const CAPTURE_HARDENED_STATE_SQL =
   "INSERT INTO contract.state_baseline (state_name, state_value) VALUES ('hardened_mutable', contract.mutable_surface_state()), ('hardened_qr_source', (SELECT pg_catalog.jsonb_build_object('prosrc', procedure.prosrc) FROM pg_catalog.pg_proc AS procedure WHERE procedure.oid = 'public.clock_generate_qr(uuid,integer)'::pg_catalog.regprocedure::oid)) ON CONFLICT (state_name) DO UPDATE SET state_value = EXCLUDED.state_value;";
 export const SEED_REAPPLY_DRIFT_SQL =
@@ -23,6 +28,13 @@ export const SEED_REAPPLY_DRIFT_SQL =
     "GRANT UPDATE (payload) ON TABLE public.plugin_webhook_events TO anon, authenticated",
     "GRANT EXECUTE ON FUNCTION public.haversine_km(numeric,numeric,numeric,numeric) TO PUBLIC, anon, authenticated",
     "ALTER FUNCTION public.clock_event(uuid,text,text,numeric,numeric,text,text,uuid) SET search_path = public",
+  ].join("; ") + ";";
+export const SEED_PLUGIN_SECRET_REAPPLY_DRIFT_SQL =
+  [
+    "GRANT SELECT (raw_config) ON TABLE effectime_private.workspace_plugin_configs TO PUBLIC",
+    "GRANT UPDATE (raw_config) ON TABLE effectime_private.workspace_plugin_configs TO authenticated",
+    "GRANT REFERENCES (raw_config) ON TABLE effectime_private.workspace_plugin_configs TO service_role",
+    "GRANT EXECUTE ON FUNCTION public.marketplace_get_plugin_config_service_v1(uuid,uuid) TO authenticated",
   ].join("; ") + ";";
 
 export const TAMPER_CASES = Object.freeze([
@@ -118,6 +130,62 @@ export const TAMPER_CASES = Object.freeze([
   }),
 ]);
 
+export const PLUGIN_SECRET_TAMPER_CASES = Object.freeze([
+  Object.freeze({
+    label: "private schema CREATE grant",
+    sql: "GRANT CREATE ON SCHEMA effectime_private TO contract_acl_parent;",
+    expectedFailure: /Private schema CREATE privilege contract is unsafe/i,
+  }),
+  Object.freeze({
+    label: "public config column write grant",
+    sql: "GRANT UPDATE (config) ON public.workspace_installed_plugins TO authenticated;",
+    expectedFailure: /Plugin installation browser ACL contract is incompatible/i,
+  }),
+  Object.freeze({
+    label: "plugin installation table owner drift",
+    sql: "ALTER TABLE public.workspace_installed_plugins OWNER TO contract_untrusted_owner;",
+    expectedFailure: /Plugin installation table contract is incompatible/i,
+  }),
+  Object.freeze({
+    label: "plugin updated-at trigger disabled",
+    sql: "ALTER TABLE public.workspace_installed_plugins DISABLE TRIGGER trg_workspace_installed_plugins_updated_at;",
+    expectedFailure: /Plugin installation updated-at trigger is incompatible/i,
+  }),
+  Object.freeze({
+    label: "plugin install routine source drift",
+    sql: "UPDATE pg_catalog.pg_proc SET prosrc = prosrc || E'\\n-- contract plugin-source tamper' WHERE oid = 'public.marketplace_install_plugin(uuid,uuid,jsonb)'::pg_catalog.regprocedure::oid;",
+    expectedFailure: /Plugin install RPC source attestation failed/i,
+  }),
+  Object.freeze({
+    label: "plugin mutation RPC custom-role grant",
+    sql: "GRANT EXECUTE ON FUNCTION public.marketplace_install_plugin(uuid,uuid,jsonb) TO contract_acl_parent;",
+    expectedFailure: /Plugin mutation RPC ACL contract is incompatible/i,
+  }),
+  Object.freeze({
+    label: "private plugin config table collision",
+    sql: "CREATE TABLE effectime_private.workspace_plugin_configs (unexpected text);",
+    expectedFailure: /Private plugin config table contract is incompatible/i,
+  }),
+]);
+
+export const PLUGIN_SECRET_REAPPLY_TAMPER_CASES = Object.freeze([
+  Object.freeze({
+    label: "missing private config row",
+    sql: "DELETE FROM effectime_private.workspace_plugin_configs WHERE installed_plugin_id = '52000000-0000-4000-8000-000000000001'::uuid;",
+    expectedFailure: /Plugin config boundary totality drift detected/i,
+  }),
+  Object.freeze({
+    label: "private config custom-role column grant",
+    sql: "GRANT SELECT (raw_config) ON TABLE effectime_private.workspace_plugin_configs TO contract_acl_parent;",
+    expectedFailure: /Private plugin config direct ACL contract is incompatible/i,
+  }),
+  Object.freeze({
+    label: "service getter custom-role grant",
+    sql: "GRANT EXECUTE ON FUNCTION public.marketplace_get_plugin_config_service_v1(uuid,uuid) TO contract_acl_parent;",
+    expectedFailure: /Plugin config companion function ACL contract is incompatible/i,
+  }),
+]);
+
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const containerNamePattern = /^effectime-recovered-surface-acl-pg17-[1-9][0-9]*-[0-9a-f]{12}$/;
 const containerIdPattern = /^[0-9a-f]{64}$/;
@@ -126,8 +194,16 @@ const allowedContractSqlPaths = new Set([
   SETUP_SQL_PATH,
   HARDENING_MIGRATION_SQL_PATH,
   ASSERTIONS_SQL_PATH,
+  PLUGIN_SECRET_SEED_SQL_PATH,
+  PLUGIN_SECRET_MIGRATION_SQL_PATH,
+  PLUGIN_SECRET_ASSERTIONS_SQL_PATH,
 ]);
 const allowedTamperSql = new Set(TAMPER_CASES.map((tamperCase) => tamperCase.sql));
+const allowedPluginSecretTamperSql = new Set(
+  [...PLUGIN_SECRET_TAMPER_CASES, ...PLUGIN_SECRET_REAPPLY_TAMPER_CASES].map(
+    (tamperCase) => tamperCase.sql,
+  ),
+);
 
 function assertContainerName(containerName) {
   if (!containerNamePattern.test(containerName)) {
@@ -207,6 +283,21 @@ export function buildDockerRunArgs({ containerName, repoRoot, password, ownershi
       resolve(repoRoot, "scripts/ci/recovered-surface-acl-assertions.test.sql"),
       ASSERTIONS_SQL_PATH,
     ],
+    [
+      resolve(repoRoot, "scripts/ci/plugin-config-secret-seed.test.sql"),
+      PLUGIN_SECRET_SEED_SQL_PATH,
+    ],
+    [
+      resolve(
+        repoRoot,
+        "supabase/migrations/20260722060000_v3_51_11_plugin_config_secret_boundary.sql",
+      ),
+      PLUGIN_SECRET_MIGRATION_SQL_PATH,
+    ],
+    [
+      resolve(repoRoot, "scripts/ci/plugin-config-secret-assertions.test.sql"),
+      PLUGIN_SECRET_ASSERTIONS_SQL_PATH,
+    ],
   ];
 
   return [
@@ -270,6 +361,29 @@ export function buildPsqlTamperArgs(containerName, tamperSql) {
     `BEGIN; ${tamperSql}`,
     "--file",
     HARDENING_MIGRATION_SQL_PATH,
+  ];
+}
+
+export function buildPsqlPluginSecretTamperArgs(containerName, tamperSql) {
+  assertContainerName(containerName);
+  if (!allowedPluginSecretTamperSql.has(tamperSql)) {
+    throw new Error("Plugin secret-boundary tamper SQL is not allowlisted");
+  }
+  return [
+    "exec",
+    containerName,
+    "psql",
+    "-X",
+    "--username",
+    "postgres",
+    "--dbname",
+    CONTRACT_DATABASE,
+    "--set",
+    "ON_ERROR_STOP=1",
+    "--command",
+    `BEGIN; ${tamperSql}`,
+    "--file",
+    PLUGIN_SECRET_MIGRATION_SQL_PATH,
   ];
 }
 
@@ -486,7 +600,68 @@ export async function runRecoveredSurfaceAclDatabaseContract({
     executeDockerSync(buildPsqlFileArgs(containerName, ASSERTIONS_SQL_PATH), {
       stdio: "inherit",
     });
-    console.log("Recovered surface ACL PostgreSQL 17.6 contract passed.");
+
+    for (const tamperCase of PLUGIN_SECRET_TAMPER_CASES) {
+      const expectedFailure = executeDockerSync(
+        buildPsqlPluginSecretTamperArgs(containerName, tamperCase.sql),
+        { allowFailure: true, stdio: "pipe" },
+      );
+      assertExpectedPsqlFailure(expectedFailure, tamperCase.expectedFailure);
+      executeDockerSync(
+        buildPsqlCommandArgs(
+          containerName,
+          VERIFY_PLUGIN_SECRET_FAILED_PREFLIGHT_SQL,
+        ),
+        { stdio: "inherit" },
+      );
+      console.log(`Fail-closed plugin secret tamper passed: ${tamperCase.label}`);
+    }
+
+    executeDockerSync(buildPsqlFileArgs(containerName, PLUGIN_SECRET_SEED_SQL_PATH), {
+      stdio: "inherit",
+    });
+    executeDockerSync(
+      buildPsqlFileArgs(containerName, PLUGIN_SECRET_MIGRATION_SQL_PATH, {
+        singleTransaction: true,
+      }),
+      { stdio: "inherit" },
+    );
+    executeDockerSync(buildPsqlFileArgs(containerName, PLUGIN_SECRET_ASSERTIONS_SQL_PATH), {
+      stdio: "inherit",
+    });
+
+    for (const tamperCase of PLUGIN_SECRET_REAPPLY_TAMPER_CASES) {
+      const expectedFailure = executeDockerSync(
+        buildPsqlPluginSecretTamperArgs(containerName, tamperCase.sql),
+        { allowFailure: true, stdio: "pipe" },
+      );
+      assertExpectedPsqlFailure(expectedFailure, tamperCase.expectedFailure);
+      executeDockerSync(
+        buildPsqlFileArgs(containerName, PLUGIN_SECRET_ASSERTIONS_SQL_PATH),
+        { stdio: "inherit" },
+      );
+      console.log(`Fail-closed plugin secret reapply tamper passed: ${tamperCase.label}`);
+    }
+
+    // A forward migration reapply must preserve private config values and the
+    // original installation timestamps while repairing column/function ACL
+    // drift and remaining catalog-idempotent.
+    executeDockerSync(
+      buildPsqlCommandArgs(containerName, SEED_PLUGIN_SECRET_REAPPLY_DRIFT_SQL),
+      { stdio: "inherit" },
+    );
+    executeDockerSync(
+      buildPsqlFileArgs(containerName, PLUGIN_SECRET_MIGRATION_SQL_PATH, {
+        singleTransaction: true,
+      }),
+      { stdio: "inherit" },
+    );
+    executeDockerSync(buildPsqlFileArgs(containerName, PLUGIN_SECRET_ASSERTIONS_SQL_PATH), {
+      stdio: "inherit",
+    });
+    console.log(
+      "Recovered surface ACL and plugin secret-boundary PostgreSQL 17.6 contracts passed.",
+    );
   } catch (error) {
     contractError = error;
   } finally {
