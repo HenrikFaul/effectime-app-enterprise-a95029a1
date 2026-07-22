@@ -110,6 +110,29 @@ jobs:
       - name: Run PostgreSQL 18.4 profiles tenant privacy contract
         run: npm run db:profiles-tenant:test
 
+  invitation-entitlement-database-contract:
+    name: PostgreSQL invitation entitlement contract
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Prove Docker runner isolation and cleanup contract
+        run: node --test scripts/ci/invitation-entitlement-db-contract.test.mjs
+
+      - name: Run PostgreSQL 18.4 invitation entitlement contract
+        run: npm run db:invitation-entitlement:test
+
   member-profile-save-database-contract:
     name: PostgreSQL atomic member profile save contract
     runs-on: ubuntu-24.04

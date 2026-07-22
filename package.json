@@ -1,7 +1,7 @@
 {
   "name": "effectime-app-enterprise",
   "private": true,
-  "version": "3.51.18",
+  "version": "3.51.19",
   "type": "module",
   "packageManager": "npm@11.13.0",
   "engines": {
@@ -48,6 +48,7 @@
     "db:hr-workflow:test": "node scripts/ci/hr-workflow-tenant-db-contract.mjs",
     "db:admin-override:test": "node scripts/ci/admin-leave-override-db-contract.mjs",
     "db:profiles-tenant:test": "node scripts/ci/profiles-tenant-db-contract.mjs",
+    "db:invitation-entitlement:test": "node scripts/ci/invitation-entitlement-db-contract.mjs",
     "db:member-profile-save:test": "node scripts/ci/member-profile-save-db-contract.mjs",
     "db:recovered-surface-acl:test": "node scripts/ci/recovered-surface-acl-db-contract.mjs",
     "security:secrets": "node scripts/ci/secret-scan.mjs",

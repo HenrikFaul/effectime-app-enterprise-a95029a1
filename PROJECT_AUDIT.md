@@ -4,7 +4,7 @@ Audit dátuma: 2026-07-17–22
 Repository: `C:\Work\Github\effectime-app-enterprise-a95029a1`
 Remote: `HenrikFaul/effectime-app-enterprise-a95029a1`
 Auditált main HEAD: `f52671880748c58802d94e0705204d846f4b5928`
-Munkabranch: `codex/entitlement-outage-recovery`
+Munkabranch: `codex/invitation-entitlement-parity`
 
 ## 1. Átvételi összkép
 
@@ -67,6 +67,13 @@ install/uninstall számlálórace-t friss statement-snapshotra épülő lock-pro
   készült; a célzott 9 fájl / 68 teszt, teljes 86/1076, type/lint/build/bundle,
   web/mobile, Edge/security és hat izolált DB-contract lokálisan zöld. Hosted
   kapu és production deploy még nincs állítva.
+  Az I-41 v3.51.19 candidate az invitation UI, a bulk-import service-role ág,
+  az issue/reissue RPC és a közvetlen authenticated INSERT/UPDATE határ számára
+  ugyanazt az exact `members_invite` entitlementet teszi kötelezővé. A változatlan
+  RPC/accept/cleanup szerződést pinned PostgreSQL 18.4 contract, a UI/Edge ágat
+  célzott tesztek és külön hosted DB job védi. A teljes lokális 88 fájl /
+  1083 teszt, build, web/mobile, Edge/security/provenance és mind a hét izolált
+  DB-contract zöld; linked apply és production deploy nem történt.
 A generált
 public sémából 25 tábla, 1 view, 41 függvény és 2 enum eredete továbbra sem
 bizonyítható migrációval, és a dokumentált többlépcsős approval chain nincs
@@ -193,6 +200,7 @@ adatbázis-objektumot nem töröltünk.
 | R-046 | GitHub Actions Node 24 runtime és változatlan cache/artifact szerződés | hosted run `29917203882` 11/11 zöld, de 11/11 Node 20 deprecation annotáció + hivatalos action release-ek | BIZONYÍTOTT source + hosted candidate | `quality.yml`, `check-mobile-foundation.mjs`; checkout v5.1.0, setup-node v5.0.0, upload-artifact v6.0.0, setup-java v5.2.0 és setup-deno v2.0.5 immutable SHA-val | igen; app runtime és deploy útvonal változatlan | local source 216/216 és teljes regresszió PASS; implementation run `29920014033` és docs-head `29920515458` 11/11, 0 összes/Node 20 annotáció; logban 6 no-cache / 5 cache és Node 22.23.1 | igen | draft PR #187, final head `aeb9b9e…`; production nincs deployolva | production history/staging/same-SHA blokkerek feloldása |
 | R-047 | Teljes fetched Git-előzmény magas bizonyosságú secret kapuja | korábbi current-tree-only scanner + auditban nyitott history scan | BIZONYÍTOTT source + local/hosted contract | közös detector core; current-tree és explicit HEAD + all-ref blob/commit/tag scanner; külön, tartalmilag vizsgált történeti path inventory; CI a dependency install előtt | igen a candidate-ben | scanner 10/10; current 1 556; exact `ce79141…` local history 884 commitobjektum / 0 tag / 3 653 blob / 208 967 248 byte; hosted merge 884 / 0 / 3 655 / 209 574 766; source 226/226; hosted 11/11 | igen | draft PR #188; run `29927511094` 11/11, 0 annotáció | production rollout-blokkerek változatlanok |
 | R-048 | Feature-entitlement outage fail-closed recovery és tokenminimalizált iCal-visszavonás | dokumentált P2 gap + TanStack stale-data reprodukció + hook/dashboard/iCal runtime call path | BIZONYÍTOTT source + local/hosted candidate | actor/workspace query key; runtime payload parser; csak sikeres queryből publikus feature set; request-owned sanitized retry; kizárólagos recovery/content; history-replace + fókusz; token nélküli `id, scope` summary; exact ID/workspace/user revoke és per-token sticky hiba | igen a candidate-ben; DB/API/dependency változatlan | focused 9 fájl / 68/68; full coverage 86/1074 + final full 86/1076; type/lint/build/bundle; web 7/7; mobile 226/388/2/408; audit/secrets/Edge és 6 DB-contract; hosted 11/11, 0 annotáció PASS | igen | draft PR #189, implementation `76f3c84…`, run `29934837022`; production NO-GO | authenticated outage→recovery acceptance; ugyanazon SHA publish csak rollout-blokker feloldása után |
+| R-049 | Exact `members_invite` entitlement minden meghívási íráshatáron | feature catalog + Dashboard/MemberList + bulk import + issue RPC/RLS/trigger runtime inventory | BIZONYÍTOTT source candidate | közös fail-closed UI-döntés; Edge tenant-feature preflight; változatlan RPC mögötti direct entitlement; INSERT/UPDATE RLS+trigger; külön PG18 CI contract | igen a candidate-ben; accept/DELETE változatlan | focused Vitest 18/18; Deno target 7/7 és Edge 93/93; runner 10/10 + pinned PG18; full 88/1083; type/lint/build/bundle/web/mobile/security/provenance és 7 DB-contract PASS | igen | v3.51.19 local candidate; production NO-GO | hosted gate; linked DB-first staging csak history reconcile után |
 
 ## 4. Megtalált és kijavított hiányok
 
@@ -504,7 +512,7 @@ státuszoszlopai jelzik:
 | Chain config RBAC drift             | docs RA konfigurációt sejtet, a chain RLS owner-only; runtime chain amúgy is nyitott P1                                              | S/M   | approval-chain tervezésben egységes permission contract             |
 | iCal credential lifecycle           | Demotion/inaktiválás/tier downgrade esetén az Edge 403-at ad, de a bearer token nem rotálódik vagy törlődik; későbbi reenable újraaktiválja. Owner más RA team tokenjét nem tudja inventoryzni/revokálni. | M | forward revoke/expiry modell, role/tier transition teszt, owner admin inventory |
 | Feature-entitlement outage UX       | Az I-40 candidate a stale és malformált hook-választ központilag fail-closed állítja, a core shellben request-owned sanitized retryt és token nélküli saját iCal revoke-listát tart meg, majd history-replace és fókusz-helyreállítás mellett csak az új authoritative navmodellre áll vissza. **BIZONYÍTOTT local candidate:** 9/68 focused, full 86/1076, type/lint/build/bundle/web/mobile/Edge/security/DB PASS. Authenticated böngészős outage→retry→success és production acceptance még nincs. | S | hosted gate; authenticated web/mobile acceptance; ugyanazon SHA production smoke |
-| Meghívási entitlement-paritás       | A Dashboard Invite kontrollja jelenleg `members_list` alapján mountol, nem az exact `members_invite` feature alapján; az invitation RPC-kben sem bizonyított ugyanez az entitlement recheck. A szerepkör/RLS határ ettől külön megmarad, de tier/add-on/override policy drift lehetséges. **BIZONYÍTOTT source finding; nem az I-40 regressziója.** | M | UI exact gate; szerveroldali `members_invite` recheck változatlan API mögött; negatív tier/override és authenticated contract |
+| Meghívási entitlement-paritás       | Az I-41 candidate a Dashboard és MemberList kontrollját ugyanarra az exact, outage-kor fail-closed `members_invite` döntésre köti; az Edge bulk import, az issue/reissue RPC és a közvetlen INSERT/UPDATE RLS+trigger ugyanezt a tenant tier/add-on/override uniont ellenőrzi. RPC metadata, accept és owner DELETE cleanup változatlan. **BIZONYÍTOTT local candidate:** focused 18/18, Edge 92/92, runner 10/10 és pinned PG18 contract PASS. | M | teljes release gate; hosted 12-jobos CI; history reconcile után linked DB-first staging és authenticated acceptance |
 | Admin-override role szerződés       | backend bármely explicit `admin_override=edit` active role-t elfogad, a UI továbbra is admin szerepre szűkít; default member permission none | S | termékdöntés: hard admin role vagy teljesen konfigurálható permission |
 | Collapsible trigger production acceptance | Az I-24 mind a 17 div-backed `CollapsibleTrigger`/`Card` kontrollt shared native-button overlayre váltotta (WorkspaceDashboard 13, Invitations 1, MemberList 1, Onboarding 1, Access 1), explicit accessible labellel és `aria-hidden` vizuális tartalommal; callback/state/API/DB változatlan. PR #173 mainen, hosted Quality Gate 7/7 PASS; a live release marker és production billentyűzetes acceptance még hiányzik. | S | authenticated Lovable publish; live SHA-marker; production keyboard/AT smoke |
 | Admin dialog/select a11y candidate  | Az I-25 candidate egyedi ID+label/required szerződést, lokalizált busy/error állapotot, natively disabled close-t, explicit return focus-t, submit alatti dismissal/control lockot és stale RPC scope guardot ad. 28 admin + 4 valós Dialog teszt, 63/63 célzott, 616/616 coverage és a teljes lokális gate PASS. | S/M | hosted/PR; merge után production keyboard/AT smoke |
@@ -561,6 +569,7 @@ státuszoszlopai jelzik:
 | I-38   | GitHub Actions Node 24 runtime hardening | checkout v5.1.0, setup-node v5.0.0 és upload-artifact v6.0.0 signed release teljes SHA-n; meglévő setup-java v5.2.0/setup-deno v2.0.5 exact contract; Node 22 command runtime; hat DB-jobban automatic cache tiltás, öt jobban változatlan explicit npm cache | YAML/actionlint PASS; mobile/CI source 216/216; full local regresszió; hosted 11/11, 0 annotáció, exact 6/5 cache split, Android/iOS compile és artifact contract PASS | nincs DB/API/app dependency/bundle/runtime vagy artifact-shape változás; egy workflow/checker commit reverttel visszaállítható | draft PR #187, final head `aeb9b9e…`, final run `29920515458`; production NO-GO |
 | I-39   | Current-tree + teljes fetched Git-history secret gate | közös dependency-free detector core; scanner-path kivétel nélkül; unreadable/unsupported/8 MiB felett fail-closed; explicit HEAD + all-ref blob/commit/tag stream replacement/env izolációval; külön path-content/signing-alias inventory; SHA-1/SHA-256 és shallow/missing/malformed tiltás; process-szinten redaktált diagnosztika | scanner 10/10; current 1 556; exact `ce79141…` history 884 commitobjektum / 0 tag / 3 653 blob / 1 618 path / 208 967 248 byte; source 226/226; teljes 80 fájl / 1 034 teszt; web 7/7; mobile 388/388 + 2/2; clean release 408/408; Edge 86/86; hat DB contract; build/type/lint-ratchet/audit/provenance; hosted 11/11 és 0 annotáció PASS | nincs DB/API/app dependency/runtime változás; CI/scanner/version/docs revert; a gate magas bizonyosságú pattern scan, nem teljes DLP | draft PR #188; implementation `ce79141…`; merge `5edb21c…`; run `29927511094`; production NO-GO |
 | I-40   | Actor-scoped fail-closed entitlement outage recovery | stale TanStack data publikus nullázása; actor/workspace cache; deduplikált sanitized retry; paid header/dialog/nav/content lezárás; első authoritative tabra deep-link repair; külön tokenmentes saját iCal summary és exact scoped revoke; nyolc locale | focused 9 fájl / 68/68; full coverage 86/1074 + final 86/1076; type/lint/build/bundle/web/mobile/release/security/Edge/hat DB contract lokálisan PASS; hosted 11/11, 0 annotáció | nincs DB/API/migration/dependency változás; frontend commit revert; végrehajtott feed-revoke nem állítható vissza kódreverttel; inaktív/suspended token inventory külön policy | draft PR #189; implementation `76f3c84…`; potential merge `9e7f5a9…`; run `29934837022`; release `8535733292`, diagnostics `8535731033`, Android `8535674674`; production NO-GO |
+| I-41   | Invitation entitlement parity | exact fail-closed UI gate; bulk-import tenant-feature preflight; unchanged issue/reissue API behind authoritative tenant lookup; direct authenticated INSERT/UPDATE RLS+trigger; preserved accept/SELECT/DELETE; pinned PG18 contract and independent CI job | focused UI/import 18/18; Deno target 6/6; Edge 92/92; runner 10/10; PG18 tier/add-on/override/RBAC/service/direct-write/reapply contract; type/lint/source/identity PASS | forward-only migration; DB-first rollout after history reconcile; code rollback is a commit revert, applied migration requires reviewed forward repair; no new dependency | v3.51.19 local candidate; linked apply, hosted final gate and production deploy not yet performed |
 
 ## 7. Ellenőrzések és eredmények
 
@@ -646,6 +655,7 @@ iOS. Release `8524406237`, diagnostics `8524404239`, unsigned Android
 | `npm ci --no-audit --no-fund`           | PASS                    | lockfile-ból determinisztikus install                                                                                                                              |
 | `npm run typecheck`                     | I-35 LOKÁLIS + HOSTED PASS | A v3.51.13 current-tree typecheck minden web/mobile mounttal PASS; run `29907202609`. |
 | Entitlement recovery I-40 focused gate  | LOKÁLIS PASS            | 8 fájl / 52/52: stale success→error→recovery, actor cache-isolation, retry dedupe/busy/sanitization, tokenmentes `id, scope` summary, exact actor/workspace/token revoke, zero-row fail-visible, workspace/tenant race, FeatureGate/legacy iCal és nyolclocale contract. Current typecheck és az új/kis érintett fájlok ESLintje PASS; a nagy Dashboard történeti lint baseline-ját a teljes ratchet ellenőrzi. |
+| Invitation entitlement I-41 focused gate | LOKÁLIS PASS | UI/import Vitest 18/18; Deno helper 7/7; teljes Edge 93/93; runner unit 10/10; pinned PostgreSQL 18.4 issue/reissue/RLS/trigger/metadata/reapply contract PASS; typecheck, 228/228 CI/mobile source, 1 148/98 változatlan lint fingerprint és Edge identity 91 fájl / 875 652 byte PASS. A széles kapu 88 fájl / 1083/1083, build, bundle, web 7/7, mobile 390/390 + 2/2, 7 DB-contract, 0 vulnerability és 1573-fájlos / 0 találatos current secret scan PASS. Ez local source evidence, nem linked apply vagy production acceptance. |
 | Admin override I-22 célzott regresszió  | PASS KORLÁTTAL          | 16 admin-flow + 7 lista-race + 32 conflict-i18n + 20 runtime contract = 75/75; typecheck és diff check PASS. A dinamikus PG18 szerver acceptance még nyitott. |
 | Admin override I-25 a11y/fókusz/race    | PASS                    | 28/28 admin komponens + 4/4 valós Radix Dialog + 11 i18n + 20 runtime contract = 63/63; PR #174 és main hosted 7/7. Production keyboard/AT acceptance nyitott; profile privacy production rollout I-27 P0. |
 | Admin override I-26 kliens/outbox       | LOKÁLIS PASS            | 16 outbox + 30 adapter + 32 komponens + 4 Dialog = 82/82; process-restart key restore, scope-onként egy unresolved művelet, eltérő payload blokkolása, minden hibaválasz evidence retentionje, bizonytalan/lejárt/sérült bizonyíték megtartása, Web Locks nélküli RPC előtti fail-closed, WebCrypto, strict storage, preflight UUID/timeout, actor-scope reset, HTTP 408/499/5xx/status `0`/malformed receipt `outcome_uncertain`, timeout/abort és stale-scope tesztelt. Fizikai WebView smoke nyitott. |
@@ -756,20 +766,26 @@ vagy forráskódhibaként van lezárva, mert a tényleges production build PASS.
    max-20/exact-100/exact-one-priority, tenant/RBAC/entitlement, konkurens delete/
    save, audit és régi kliens fail-closed; utána a site priority/goals tenant FK
    és szerveroldali authorization P1 csomag.
-10. Multi-step approval chain runtime és concurrency/E2E.
-11. Staging deploy azonos commitból: DB, Edge, frontend; adversarial RBAC/tier,
+10. A következő bizonyított P1 source csomag az exact `csv_import` entitlement
+    bekötése az Import módba és az `import-entity-data` service-role íráshatárába.
+    A kapunak auth/RBAC után, de `import.started`, dry-run eredmény vagy bármely
+    mutáció előtt kell futnia; lookup/malformed állapotban 503, letiltott
+    entitlementnél 403 szükséges. Az Export mód és a meglévő export-jogosultság
+    változatlan marad.
+11. Multi-step approval chain runtime és concurrency/E2E.
+12. Staging deploy azonos commitból: DB, Edge, frontend; adversarial RBAC/tier,
     invite, leave, access, payroll, API/webhook és integration smoke.
-12. Biztonságos instant provisioning termékdöntése és implementációja.
-13. Account deletion retention/kompenzáció, data migration resumability.
-14. A hosted quality gate required-checkként való fenntartása; a zero-diagnostic
+13. Biztonságos instant provisioning termékdöntése és implementációja.
+14. Account deletion retention/kompenzáció, data migration resumability.
+15. A hosted quality gate required-checkként való fenntartása; a zero-diagnostic
     és zero-unpinned Edge baseline, a schema-provenance ratchet, valamint a
     current-tree + teljes fetched-history secret kapu őrzése. A magas
     bizonyosságú pattern gate későbbi entropy/DLP kiterjesztése csak mérhető
     hamispozitív-baseline és provider-fixture után történhet.
-15. Store/app-ID/signing ownership és verified links; Android CI + macOS/Xcode
+16. Store/app-ID/signing ownership és verified links; Android CI + macOS/Xcode
     CI; kétplatformos secure-storage/CSP/tenant/RBAC/auth fizikai smoke és csak
     ezután internal TestFlight/Play rollout.
-16. Fokozatos lint-, coverage-, E2E- és bundle-adósság csökkentés.
+17. Fokozatos lint-, coverage-, E2E- és bundle-adósság csökkentés.
 
 Az I-34–I-36 következő kontrollált hulláma csak history reconcile után a restored-
 staging DB-first acceptance. Az I-35 a count-race-t, az I-36 a bounded lock-waitet,
@@ -930,3 +946,12 @@ JWT-t enged, oversized, shallow vagy hiányos object store esetén fail-closed,
 A valós, exact `ce79141…` HEAD + all-ref leltár 884 commitobjektum / 0 tag /
 3 653 blob / 208 967 248 byte, találat nélkül; a CI source contract 226/226. Ez source/CI hardening, nem runtime
 vagy deploy, és nem oldja fel a production history/staging/same-SHA **NO-GO**-t.
+
+A v3.51.19 I-41 lokális source candidate ugyanazt az exact `members_invite`
+entitlementet érvényesíti a két UI belépési ponton, a bulk-import service-role
+ágon, az issue/reissue RPC-ben és a közvetlen authenticated INSERT/UPDATE
+határon. A focused 18/18, Edge 93/93, pinned PostgreSQL 18.4 invitation contract,
+teljes 88 fájl / 1083/1083, type/lint/build/bundle, web 7/7, mobile 390/390 +
+2/2, security/provenance és mind a hét DB-contract PASS. Ez nem linked DB-apply
+vagy production deploy; a history/staging/same-SHA blokkerek miatt a kiadási
+döntés továbbra **NO-GO**.

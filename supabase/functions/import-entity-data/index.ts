@@ -7,6 +7,12 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.0';
 import {
+  hasMemberInvitationCandidate,
+  planMembersInviteInvitation,
+  resolveMembersInviteEntitlement,
+  type MembersInviteEntitlement,
+} from './entitlement.ts';
+import {
   parseEnterpriseRole,
   parseMembershipStatus,
   validateExistingMemberAccess,
@@ -219,6 +225,26 @@ async function importMembers(
   const authUsers = await resolveAuthUsersByEmail(client, emails);
   const userIdByEmail = new Map((authUsers || []).map((u: any) => [u.email.toLowerCase(), u.user_id]));
 
+  // Resolve the paid invitation capability before processing any row that can
+  // create an invitation. A valid disabled result blocks invitation rows only;
+  // existing-member updates remain independent from members_invite.
+  const hasInvitationCandidate = hasMemberInvitationCandidate(
+    rows,
+    userIdByEmail,
+    existingUserIds,
+  );
+  let membersInviteEntitlement: MembersInviteEntitlement | null = null;
+  if (hasInvitationCandidate) {
+    membersInviteEntitlement = await resolveMembersInviteEntitlement(client, workspaceId);
+    if (!membersInviteEntitlement.enabled && membersInviteEntitlement.reason === 'lookup_error') {
+      console.error('members_invite entitlement lookup failed', {
+        workspaceId,
+        step: membersInviteEntitlement.step,
+      });
+      throw new ImportDependencyError('members_invite entitlement lookup failed');
+    }
+  }
+
   for (let i = 0; i < rows.length; i++) {
     const r = rows[i];
     const email = String(r.email || '').toLowerCase();
@@ -280,7 +306,25 @@ async function importMembers(
         summary.failed++;
         return;
       }
-      if (dryRun) {
+      if (!membersInviteEntitlement) {
+        throw new ImportDependencyError('members_invite entitlement was not preflighted');
+      }
+      const invitationPlan = planMembersInviteInvitation(
+        membersInviteEntitlement,
+        dryRun === true,
+      );
+      if (invitationPlan.kind === 'blocked') {
+        errors.push({
+          row_index: i,
+          field: 'email',
+          value: email,
+          code: invitationPlan.code,
+          message: invitationPlan.message,
+        });
+        summary.failed++;
+        return;
+      }
+      if (invitationPlan.kind === 'dry_run') {
         summary.created++;
         return;
       }
@@ -293,7 +337,21 @@ async function importMembers(
         _actor_id: actorId,
       });
       if (error) {
-        errors.push({ row_index: i, field: 'email', value: email, code: 'DB_ERROR', message: error.message });
+        const errorCode = typeof error.code === 'string' && /^[a-z0-9_]{1,32}$/i.test(error.code)
+          ? error.code
+          : 'UNKNOWN';
+        console.error('Bulk member invitation RPC failed', {
+          workspaceId,
+          rowIndex: i,
+          errorCode,
+        });
+        errors.push({
+          row_index: i,
+          field: 'email',
+          value: email,
+          code: 'DB_ERROR',
+          message: 'Invitation could not be issued',
+        });
         summary.failed++;
       } else if (data?.ok === true) summary.created++;
       else if (data?.code === 'ALREADY_MEMBER') summary.skipped++;

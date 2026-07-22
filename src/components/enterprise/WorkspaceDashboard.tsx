@@ -153,6 +153,28 @@ interface EntitlementRetryState {
   pending: boolean;
 }
 
+interface MemberInviteAccess {
+  isAdmin: boolean;
+  featureAccessAvailable: boolean;
+  membersTabEntitled: boolean;
+  membersInviteEnabled: boolean;
+}
+
+// Kept in this module so every invitation entry point and its regression test
+// exercise the same fail-closed access decision.
+// eslint-disable-next-line react-refresh/only-export-components
+export function resolveCanInviteMembers({
+  isAdmin,
+  featureAccessAvailable,
+  membersTabEntitled,
+  membersInviteEnabled,
+}: MemberInviteAccess): boolean {
+  return isAdmin
+    && featureAccessAvailable
+    && membersTabEntitled
+    && membersInviteEnabled;
+}
+
 // Kept in this module so the dashboard and its race regression test exercise the same state machine.
 // eslint-disable-next-line react-refresh/only-export-components
 export function useEntitlementRetryController(
@@ -265,6 +287,16 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
   const canUseIcalFeed = featureAccessAvailable && isFeatureEnabled('ical_feed');
   const canUseBirthdayWidget = canView('members') && featureAccessAvailable && isFeatureEnabled('birthday_widget') && isFeatureEnabled('members_list');
   const canEditMemberProfiles = !permissionsLoading && canEdit('members') && featureAccessAvailable && isFeatureEnabled('members_list');
+  const canInviteMembers = resolveCanInviteMembers({
+    isAdmin,
+    featureAccessAvailable,
+    membersTabEntitled: hasTabEntitlement('members'),
+    membersInviteEnabled: isFeatureEnabled('members_invite'),
+  });
+
+  useEffect(() => {
+    if (!canInviteMembers) setShowInvite(false);
+  }, [canInviteMembers]);
 
   // Map active tab → help anchor
   const helpAnchorId =
@@ -455,7 +487,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                 <NotificationBell workspaceId={workspace.id} userId={userId} />
                 <DensityToggle workspaceId={workspace.id} />
                 <div className="w-px h-5 bg-border/60 mx-0.5 hidden md:block" aria-hidden />
-                {isAdmin && featureAccessAvailable && hasTabEntitlement('members') && (
+                {canInviteMembers && (
                   <Button size="sm" variant="outline" onClick={() => setShowInvite(true)} className="hidden sm:flex h-7 text-xs gap-1 px-2.5">
                     <UserPlus className="h-3.5 w-3.5" /> {t('ws_nav.invite_btn')}
                   </Button>
@@ -529,6 +561,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
                   userId={userId}
                   userRole={userRole}
                   canEditMemberProfiles={canEditMemberProfiles}
+                  canInviteMembers={canInviteMembers}
                   onNavigateTab={setActiveTab}
                 />
               </TabsContent>
@@ -758,7 +791,7 @@ export function WorkspaceDashboard({ workspace, userRole, userId, onBack, onRefr
         </SidebarInset>
       </div>
 
-      {isAdmin && featureAccessAvailable && hasTabEntitlement('members') && <InviteMemberDialog
+      {canInviteMembers && <InviteMemberDialog
         open={showInvite}
         onOpenChange={setShowInvite}
         workspaceId={workspace.id}

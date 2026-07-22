@@ -72,6 +72,7 @@ npm run db:payroll:test
 npm run db:hr-workflow:test
 npm run db:admin-override:test
 npm run db:profiles-tenant:test
+npm run db:invitation-entitlement:test
 npm run db:member-profile-save:test
 npm run edge:check
 npm run edge:log-safety
