@@ -232,16 +232,22 @@ test("missing TypeScript parser fails with an actionable lockfile-install instru
   );
 });
 
-test("hosted edge-safety installs the lockfile before invoking the AST gate", () => {
+test("hosted Edge jobs install the lockfile before invoking every AST gate", () => {
   const workflow = readRepositoryFile(".github/workflows/quality.yml");
   const edgeSafety = workflow.slice(
     workflow.indexOf("  edge-safety:"),
     workflow.indexOf("  edge-check:"),
   );
-  const install = edgeSafety.indexOf("npm ci --no-audit --no-fund");
-  const gate = edgeSafety.indexOf("npm run edge:log-safety");
-  assert(
-    install >= 0 && gate > install,
-    "edge-safety must install pinned dependencies before AST analysis",
-  );
+  const edgeCheck = workflow.slice(workflow.indexOf("  edge-check:"));
+  for (const [job, gateCommand] of [
+    [edgeSafety, "npm run edge:log-safety"],
+    [edgeCheck, "npm run edge:ratchet:test"],
+  ]) {
+    const install = job.indexOf("npm ci --no-audit --no-fund");
+    const gate = job.indexOf(gateCommand);
+    assert(
+      install >= 0 && gate > install,
+      `${gateCommand} must run after lockfile installation`,
+    );
+  }
 });
