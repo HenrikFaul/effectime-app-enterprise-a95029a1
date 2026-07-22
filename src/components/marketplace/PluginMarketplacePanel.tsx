@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,6 +11,7 @@ import {
   useInstalledPlugins,
   installPlugin,
   uninstallPlugin,
+  PluginMarketplaceMutationError,
   type MarketplacePlugin,
 } from '@/hooks/usePluginMarketplace';
 
@@ -30,7 +31,41 @@ export function PluginMarketplacePanel({ workspaceId }: Props) {
   const { data: installed, refetch: refetchInstalled } = useInstalledPlugins(workspaceId);
   const [filter, setFilter] = useState('');
   const [category, setCategory] = useState<MarketplacePlugin['category'] | 'all'>('all');
-  const [pendingId, setPendingId] = useState<string | null>(null);
+  const [pendingIds, setPendingIds] = useState<Set<string>>(() => new Set());
+  const [retryableInstallIds, setRetryableInstallIds] = useState<Set<string>>(() => new Set());
+  const pendingIdsRef = useRef<Set<string>>(new Set());
+  const latestWorkspaceIdRef = useRef(workspaceId);
+  const mountedRef = useRef(false);
+  latestWorkspaceIdRef.current = workspaceId;
+
+  useLayoutEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    pendingIdsRef.current = new Set();
+    setPendingIds(new Set());
+    setRetryableInstallIds(new Set());
+  }, [workspaceId]);
+
+  const beginOperation = (id: string) => {
+    if (pendingIdsRef.current.has(id)) return false;
+    const next = new Set(pendingIdsRef.current);
+    next.add(id);
+    pendingIdsRef.current = next;
+    setPendingIds(next);
+    return true;
+  };
+
+  const finishOperation = (id: string) => {
+    const next = new Set(pendingIdsRef.current);
+    next.delete(id);
+    pendingIdsRef.current = next;
+    setPendingIds(next);
+  };
 
   const installedByPluginId = useMemo(() => {
     const m = new Map<string, string>();
@@ -48,28 +83,48 @@ export function PluginMarketplacePanel({ workspaceId }: Props) {
   }, [plugins, category, filter]);
 
   const handleInstall = async (plugin: MarketplacePlugin) => {
-    setPendingId(plugin.id);
+    if (!beginOperation(plugin.id)) return;
+    const operationWorkspaceId = workspaceId;
+    setRetryableInstallIds((current) => {
+      const next = new Set(current);
+      next.delete(plugin.id);
+      return next;
+    });
     try {
       await installPlugin(workspaceId, plugin.id);
+      if (!mountedRef.current || operationWorkspaceId !== latestWorkspaceIdRef.current) return;
       toast.success(t('marketplace.install_success', { name: plugin.name }));
       await refetchInstalled();
     } catch (e: unknown) {
-      toast.error(t('marketplace.install_error') + ': ' + (e instanceof Error ? e.message : String(e)));
+      if (!mountedRef.current || operationWorkspaceId !== latestWorkspaceIdRef.current) return;
+      if (e instanceof PluginMarketplaceMutationError && e.code === 'retryable-conflict') {
+        setRetryableInstallIds((current) => new Set(current).add(plugin.id));
+        toast.error(t('marketplace.install_retryable'));
+      } else {
+        toast.error(t('marketplace.install_error'));
+      }
     } finally {
-      setPendingId(null);
+      if (mountedRef.current && operationWorkspaceId === latestWorkspaceIdRef.current) {
+        finishOperation(plugin.id);
+      }
     }
   };
 
   const handleUninstall = async (plugin: MarketplacePlugin, installedId: string) => {
-    setPendingId(installedId);
+    if (!beginOperation(installedId)) return;
+    const operationWorkspaceId = workspaceId;
     try {
       await uninstallPlugin(installedId);
+      if (!mountedRef.current || operationWorkspaceId !== latestWorkspaceIdRef.current) return;
       toast.success(t('marketplace.uninstall_success', { name: plugin.name }));
       await refetchInstalled();
-    } catch (e: unknown) {
-      toast.error(t('marketplace.uninstall_error') + ': ' + (e instanceof Error ? e.message : String(e)));
+    } catch {
+      if (!mountedRef.current || operationWorkspaceId !== latestWorkspaceIdRef.current) return;
+      toast.error(t('marketplace.uninstall_error'));
     } finally {
-      setPendingId(null);
+      if (mountedRef.current && operationWorkspaceId === latestWorkspaceIdRef.current) {
+        finishOperation(installedId);
+      }
     }
   };
 
@@ -122,6 +177,9 @@ export function PluginMarketplacePanel({ workspaceId }: Props) {
             {filtered.map((p) => {
               const installedId = installedByPluginId.get(p.id);
               const isInstalled = !!installedId;
+              const installIsPending = pendingIds.has(p.id);
+              const uninstallIsPending = installedId ? pendingIds.has(installedId) : false;
+              const installIsRetryable = retryableInstallIds.has(p.id);
               return (
                 <div key={p.id} className="rounded-lg border bg-background/60 p-3 space-y-2">
                   <div className="flex items-start justify-between gap-2">
@@ -151,9 +209,9 @@ export function PluginMarketplacePanel({ workspaceId }: Props) {
                       <Button
                         variant="outline" size="sm"
                         onClick={() => handleUninstall(p, installedId!)}
-                        disabled={pendingId === installedId}
+                        disabled={uninstallIsPending}
                       >
-                        {pendingId === installedId ? (
+                        {uninstallIsPending ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         ) : (
                           <><Trash2 className="h-3.5 w-3.5 mr-1" /> {t('marketplace.uninstall')}</>
@@ -163,12 +221,15 @@ export function PluginMarketplacePanel({ workspaceId }: Props) {
                       <Button
                         size="sm"
                         onClick={() => handleInstall(p)}
-                        disabled={pendingId === p.id}
+                        disabled={installIsPending}
                       >
-                        {pendingId === p.id ? (
+                        {installIsPending ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
                         ) : (
-                          <><Download className="h-3.5 w-3.5 mr-1" /> {t('marketplace.install')}</>
+                          <>
+                            <Download className="h-3.5 w-3.5 mr-1" />
+                            {t(installIsRetryable ? 'marketplace.retry_install' : 'marketplace.install')}
+                          </>
                         )}
                       </Button>
                     )}

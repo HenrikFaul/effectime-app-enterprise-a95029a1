@@ -31,6 +31,44 @@ export interface WorkspaceInstalledPlugin {
   installed_at: string;
 }
 
+export type PluginMarketplaceApiErrorCode = 'retryable-conflict' | 'request-failed';
+
+export class PluginMarketplaceMutationError extends Error {
+  readonly code: PluginMarketplaceApiErrorCode;
+
+  constructor(code: PluginMarketplaceApiErrorCode) {
+    super('Plugin marketplace mutation failed');
+    this.name = 'PluginMarketplaceMutationError';
+    this.code = code;
+  }
+}
+
+const RETRYABLE_CONFLICT_CODES = new Set(['40001', '40P01', '55P03']);
+
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
+}
+
+function getStructuralErrorCode(error: unknown): unknown {
+  try {
+    if (!isPlainRecord(error)) return undefined;
+    const descriptor = Object.getOwnPropertyDescriptor(error, 'code');
+    return descriptor && 'value' in descriptor ? descriptor.value : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function toPluginMarketplaceMutationError(error: unknown): PluginMarketplaceMutationError {
+  const backendCode = getStructuralErrorCode(error);
+  const code = typeof backendCode === 'string' && RETRYABLE_CONFLICT_CODES.has(backendCode)
+    ? 'retryable-conflict'
+    : 'request-failed';
+  return new PluginMarketplaceMutationError(code);
+}
+
 export function useMarketplacePlugins() {
   return useQuery({
     queryKey: ['marketplace', 'plugins'],
@@ -80,17 +118,33 @@ export async function submitPlugin(args: {
 }
 
 export async function installPlugin(workspaceId: string, pluginId: string, config: Record<string, unknown> = {}) {
-  const { data, error } = await supabase.rpc('marketplace_install_plugin', {
-    _workspace_id: workspaceId, _plugin_id: pluginId, _config: config as never,
-  });
-  if (error) throw error;
+  let data: unknown;
+  let rpcError: unknown;
+  try {
+    const response = await supabase.rpc('marketplace_install_plugin', {
+      _workspace_id: workspaceId, _plugin_id: pluginId, _config: config as never,
+    });
+    data = response.data;
+    rpcError = response.error;
+  } catch (error) {
+    throw toPluginMarketplaceMutationError(error);
+  }
+  if (rpcError) throw toPluginMarketplaceMutationError(rpcError);
   return data as string;
 }
 
 export async function uninstallPlugin(installedId: string) {
-  const { data, error } = await supabase.rpc('marketplace_uninstall_plugin', {
-    _installed_id: installedId,
-  });
-  if (error) throw error;
+  let data: unknown;
+  let rpcError: unknown;
+  try {
+    const response = await supabase.rpc('marketplace_uninstall_plugin', {
+      _installed_id: installedId,
+    });
+    data = response.data;
+    rpcError = response.error;
+  } catch (error) {
+    throw toPluginMarketplaceMutationError(error);
+  }
+  if (rpcError) throw toPluginMarketplaceMutationError(rpcError);
   return data as { ok: boolean };
 }

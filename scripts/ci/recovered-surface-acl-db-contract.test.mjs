@@ -13,6 +13,7 @@ import {
   buildPostgresReadinessArgs,
   buildPsqlFileArgs,
   buildPsqlPluginInstallCountTamperArgs,
+  buildPsqlPluginInstallLockTimeoutTamperArgs,
   buildPsqlPluginInstallPolicyTamperArgs,
   buildPsqlPluginSecretTamperArgs,
   buildPsqlTamperArgs,
@@ -37,6 +38,22 @@ import {
   PLUGIN_INSTALL_COUNT_SEED_SQL_PATH,
   PLUGIN_INSTALL_COUNT_STATEMENT_TIMEOUT_SECONDS,
   PLUGIN_INSTALL_COUNT_TAMPER_CASES,
+  PLUGIN_INSTALL_LOCK_TIMEOUT_ASSERTIONS_SQL_PATH,
+  PLUGIN_INSTALL_LOCK_TIMEOUT_BARRIER_APPLICATION_NAME,
+  PLUGIN_INSTALL_LOCK_TIMEOUT_BARRIER_SECONDS,
+  PLUGIN_INSTALL_LOCK_TIMEOUT_CLIENT_SQL,
+  PLUGIN_INSTALL_LOCK_TIMEOUT_CLIENT_READY_SQL,
+  PLUGIN_INSTALL_LOCK_TIMEOUT_HOLDER_SQL,
+  PLUGIN_INSTALL_LOCK_TIMEOUT_HOLDER_READY_SQL,
+  PLUGIN_INSTALL_LOCK_TIMEOUT_MIGRATION_SQL_PATH,
+  PLUGIN_INSTALL_LOCK_TIMEOUT_READINESS_ATTEMPTS,
+  PLUGIN_INSTALL_LOCK_TIMEOUT_READINESS_INTERVAL_MILLISECONDS,
+  PLUGIN_INSTALL_LOCK_TIMEOUT_SEED_SQL_PATH,
+  PLUGIN_INSTALL_LOCK_TIMEOUT_STATEMENT_TIMEOUT_SECONDS,
+  PLUGIN_INSTALL_LOCK_TIMEOUT_TAMPER_CASES,
+  RETRY_PLUGIN_INSTALL_AFTER_LOCK_TIMEOUT_SQL,
+  VERIFY_PLUGIN_INSTALL_LOCK_TIMEOUT_RETRY_SQL,
+  VERIFY_PLUGIN_INSTALL_LOCK_TIMEOUT_ROLLBACK_SQL,
   PLUGIN_INSTALL_POLICY_ASSERTIONS_SQL_PATH,
   PLUGIN_INSTALL_POLICY_LOCK_HOLDER_READY_SQL,
   PLUGIN_INSTALL_POLICY_MIGRATION_SQL_PATH,
@@ -54,7 +71,6 @@ import {
   waitForPostgres,
   waitForPluginInstallPolicyLockHolder,
   buildTerminatePluginConcurrencyApplicationSql,
-  PLUGIN_INSTALL_COUNT_LEGACY_BARRIER_APPLICATION_NAME,
 } from "./recovered-surface-acl-db-contract.mjs";
 
 const containerName = "effectime-recovered-surface-acl-pg17-42-001122aabbcc";
@@ -101,7 +117,7 @@ test("rejects injected names and accepts only exact Docker creation IDs", () => 
   );
 });
 
-test("pins PostgreSQL 17.6 and mounts only the fifteen exact inputs read-only", () => {
+test("pins PostgreSQL 17.6 and mounts only the eighteen exact inputs read-only", () => {
   const repoRoot = "C:\\Work\\Effectime Fixture";
   const args = buildDockerRunArgs({
     containerName,
@@ -182,6 +198,18 @@ test("pins PostgreSQL 17.6 and mounts only the fifteen exact inputs read-only", 
       repoRoot,
       "scripts/ci/plugin-install-count-concurrency-assertions.test.sql",
     )},target=${PLUGIN_INSTALL_COUNT_ASSERTIONS_SQL_PATH},readonly`,
+    `type=bind,source=${resolve(
+      repoRoot,
+      "scripts/ci/plugin-install-lock-timeout-seed.test.sql",
+    )},target=${PLUGIN_INSTALL_LOCK_TIMEOUT_SEED_SQL_PATH},readonly`,
+    `type=bind,source=${resolve(
+      repoRoot,
+      "supabase/migrations/20260722083000_v3_51_14_plugin_install_lock_timeout.sql",
+    )},target=${PLUGIN_INSTALL_LOCK_TIMEOUT_MIGRATION_SQL_PATH},readonly`,
+    `type=bind,source=${resolve(
+      repoRoot,
+      "scripts/ci/plugin-install-lock-timeout-assertions.test.sql",
+    )},target=${PLUGIN_INSTALL_LOCK_TIMEOUT_ASSERTIONS_SQL_PATH},readonly`,
   ]);
   assert.equal(
     args.some((argument) => argument.includes("target=/workspace")),
@@ -234,6 +262,17 @@ test("psql entry points are isolated, fail closed, and file-allowlisted", () => 
   assert.equal(
     pluginInstallCountMigrationArgs.at(-1),
     PLUGIN_INSTALL_COUNT_MIGRATION_SQL_PATH,
+  );
+
+  const pluginInstallLockTimeoutMigrationArgs = buildPsqlFileArgs(
+    containerName,
+    PLUGIN_INSTALL_LOCK_TIMEOUT_MIGRATION_SQL_PATH,
+    { singleTransaction: true },
+  );
+  assert.ok(pluginInstallLockTimeoutMigrationArgs.includes("--single-transaction"));
+  assert.equal(
+    pluginInstallLockTimeoutMigrationArgs.at(-1),
+    PLUGIN_INSTALL_LOCK_TIMEOUT_MIGRATION_SQL_PATH,
   );
 
   assert.throws(
@@ -327,6 +366,35 @@ test("psql entry points are isolated, fail closed, and file-allowlisted", () => 
     () => buildPsqlPluginInstallCountTamperArgs(containerName, "DROP DATABASE postgres;"),
     /tamper SQL is not allowlisted/,
   );
+
+  const pluginInstallLockTimeoutTamperArgs =
+    buildPsqlPluginInstallLockTimeoutTamperArgs(
+      containerName,
+      PLUGIN_INSTALL_LOCK_TIMEOUT_TAMPER_CASES[0].sql,
+    );
+  assert.deepEqual(pluginInstallLockTimeoutTamperArgs.slice(0, 3), [
+    "exec",
+    containerName,
+    "psql",
+  ]);
+  assert.equal(
+    pluginInstallLockTimeoutTamperArgs[
+      pluginInstallLockTimeoutTamperArgs.indexOf("--command") + 1
+    ],
+    `BEGIN; ${PLUGIN_INSTALL_LOCK_TIMEOUT_TAMPER_CASES[0].sql}`,
+  );
+  assert.equal(
+    pluginInstallLockTimeoutTamperArgs.at(-1),
+    PLUGIN_INSTALL_LOCK_TIMEOUT_MIGRATION_SQL_PATH,
+  );
+  assert.throws(
+    () =>
+      buildPsqlPluginInstallLockTimeoutTamperArgs(
+        containerName,
+        "DROP DATABASE postgres;",
+      ),
+    /tamper SQL is not allowlisted/,
+  );
 });
 
 test("expected-failure matcher accepts only the exact preflight failure", () => {
@@ -411,6 +479,41 @@ test("plugin lock barriers require exact blocker relationships", async () => {
     PLUGIN_INSTALL_COUNT_LEGACY_UNINSTALLER_READY_SQL,
     /pg_blocking_pids\(uninstaller\.pid\).*ARRAY\[installer\.pid\]/,
   );
+  assert.match(
+    PLUGIN_INSTALL_LOCK_TIMEOUT_HOLDER_READY_SQL,
+    /pg_blocking_pids\(holder\.pid\).*ARRAY\[barrier\.pid\]/,
+  );
+  assert.match(
+    PLUGIN_INSTALL_LOCK_TIMEOUT_CLIENT_READY_SQL,
+    /pg_blocking_pids\(client\.pid\).*ARRAY\[holder\.pid\]/,
+  );
+  assert.doesNotMatch(PLUGIN_INSTALL_LOCK_TIMEOUT_CLIENT_READY_SQL, /PgSleep/);
+  assert.match(PLUGIN_INSTALL_LOCK_TIMEOUT_HOLDER_SQL, /FOR NO KEY UPDATE/);
+  assert.doesNotMatch(PLUGIN_INSTALL_LOCK_TIMEOUT_HOLDER_SQL, /UPDATE public/);
+  assert.match(PLUGIN_INSTALL_LOCK_TIMEOUT_CLIENT_SQL, /WHEN lock_not_available/);
+  assert.match(
+    PLUGIN_INSTALL_LOCK_TIMEOUT_CLIENT_SQL,
+    /SQLSTATE IS DISTINCT FROM '55P03'/,
+  );
+  assert.match(PLUGIN_INSTALL_LOCK_TIMEOUT_CLIENT_SQL, /v_elapsed_ms < 4500/);
+  assert.match(PLUGIN_INSTALL_LOCK_TIMEOUT_CLIENT_SQL, /v_elapsed_ms >= 8000/);
+  assert.match(
+    VERIFY_PLUGIN_INSTALL_LOCK_TIMEOUT_ROLLBACK_SQL,
+    /assert_plugin_install_lock_timeout_runtime_baseline/,
+  );
+  assert.match(
+    RETRY_PLUGIN_INSTALL_AFTER_LOCK_TIMEOUT_SQL,
+    /SELECT public\.marketplace_install_plugin/,
+  );
+  assert.doesNotMatch(RETRY_PLUGIN_INSTALL_AFTER_LOCK_TIMEOUT_SQL, /contract\./);
+  assert.match(
+    VERIFY_PLUGIN_INSTALL_LOCK_TIMEOUT_RETRY_SQL,
+    /installation_state ->> 'id'/,
+  );
+  assert.match(
+    VERIFY_PLUGIN_INSTALL_LOCK_TIMEOUT_RETRY_SQL,
+    /"lock_timeout":"fresh-retry"/,
+  );
   assert.ok(calls[0].includes("--tuples-only"));
   assert.ok(calls[0].includes("--no-align"));
 
@@ -431,6 +534,13 @@ test("async concurrency execution is bounded and backend cleanup is allowlisted"
   assert.equal(PLUGIN_INSTALL_COUNT_STATEMENT_TIMEOUT_SECONDS, 42);
   assert.equal(PLUGIN_INSTALL_COUNT_READINESS_ATTEMPTS, 131);
   assert.equal(PLUGIN_INSTALL_COUNT_READINESS_INTERVAL_MILLISECONDS, 100);
+  assert.equal(PLUGIN_INSTALL_LOCK_TIMEOUT_BARRIER_SECONDS, 35);
+  assert.equal(PLUGIN_INSTALL_LOCK_TIMEOUT_STATEMENT_TIMEOUT_SECONDS, 42);
+  assert.equal(PLUGIN_INSTALL_LOCK_TIMEOUT_READINESS_ATTEMPTS, 131);
+  assert.equal(
+    PLUGIN_INSTALL_LOCK_TIMEOUT_READINESS_INTERVAL_MILLISECONDS,
+    100,
+  );
   assert.ok(
     PLUGIN_INSTALL_COUNT_BARRIER_SECONDS * 1_000 >
       2 *
@@ -440,6 +550,16 @@ test("async concurrency execution is bounded and backend cleanup is allowlisted"
   assert.ok(
     ASYNC_DOCKER_TIMEOUT_MILLISECONDS >
       PLUGIN_INSTALL_COUNT_STATEMENT_TIMEOUT_SECONDS * 1_000,
+  );
+  assert.ok(
+    PLUGIN_INSTALL_LOCK_TIMEOUT_BARRIER_SECONDS * 1_000 >
+      2 *
+        PLUGIN_INSTALL_LOCK_TIMEOUT_READINESS_ATTEMPTS *
+        PLUGIN_INSTALL_LOCK_TIMEOUT_READINESS_INTERVAL_MILLISECONDS,
+  );
+  assert.ok(
+    ASYNC_DOCKER_TIMEOUT_MILLISECONDS >
+      PLUGIN_INSTALL_LOCK_TIMEOUT_STATEMENT_TIMEOUT_SECONDS * 1_000,
   );
 
   const child = new EventEmitter();
@@ -461,12 +581,12 @@ test("async concurrency execution is bounded and backend cleanup is allowlisted"
   assert.equal(killCount, 1);
 
   const terminationSql = buildTerminatePluginConcurrencyApplicationSql(
-    PLUGIN_INSTALL_COUNT_LEGACY_BARRIER_APPLICATION_NAME,
+    PLUGIN_INSTALL_LOCK_TIMEOUT_BARRIER_APPLICATION_NAME,
   );
   assert.match(terminationSql, /pg_terminate_backend/);
   assert.match(
     terminationSql,
-    new RegExp(PLUGIN_INSTALL_COUNT_LEGACY_BARRIER_APPLICATION_NAME),
+    new RegExp(PLUGIN_INSTALL_LOCK_TIMEOUT_BARRIER_APPLICATION_NAME),
   );
   assert.throws(
     () => buildTerminatePluginConcurrencyApplicationSql("attacker'; SELECT 1; --"),
