@@ -1,11 +1,26 @@
 import assert from "node:assert/strict";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import { DENO_VERSION } from "../ci/deno-runtime.mjs";
-import { buildEdgeSbom, DENO_INFO_FLAGS } from "./create-edge-sbom.mjs";
+import {
+  buildEdgeSbom,
+  DEFAULT_EXPECTED_EDGE_ENTRYPOINTS,
+  DENO_INFO_FLAGS,
+  discoverEntrypoints,
+} from "./create-edge-sbom.mjs";
+
+const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+
+test("default Edge SBOM inventory matches every current entrypoint", () => {
+  assert.equal(
+    discoverEntrypoints(resolve(repositoryRoot, "supabase/functions")).length,
+    DEFAULT_EXPECTED_EDGE_ENTRYPOINTS,
+  );
+});
 
 function property(component, name) {
   return component.properties.find((entry) => entry.name === name)?.value;

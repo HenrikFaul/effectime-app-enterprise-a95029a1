@@ -4,7 +4,7 @@ Audit dátuma: 2026-07-17–22
 Repository: `C:\Work\Github\effectime-app-enterprise-a95029a1`
 Remote: `HenrikFaul/effectime-app-enterprise-a95029a1`
 Auditált main HEAD: `f52671880748c58802d94e0705204d846f4b5928`
-Munkabranch: `codex/atomic-business-role-allocations`
+Munkabranch: `codex/created-identity-cleanup-scheduler`
 
 ## 1. Átvételi összkép
 
@@ -15,9 +15,9 @@ felhasználó által megadott `C:\Work\Github\effectime-app-enterprise-a95029a1`
 repositoryra vonatkozik.
 
 **BIZONYÍTOTT:** a helyes repository a teljes Effectime Enterprise terméket
-tartalmazza: 846 elérhető alapcommit, a candidate-del több mint 1 500 követett vagy új
-fájl, 149 jelenlegi enterprise UI-fájl, az I-29 candidate-del 130 helyi SQL-
-migráció és 30 Edge Function-könyvtár. A publikus oldal,
+tartalmazza: több mint 846 elérhető alapcommit, a candidate-del több mint 1 500
+követett vagy új fájl, 149 jelenlegi enterprise UI-fájl, az I-30 candidate-del
+131 helyi SQL-migráció és 31 Edge Function-könyvtár. A publikus oldal,
 auth, workspace shell, tagság/RBAC, naptár, szabadság, jóváhagyás, jelenlét,
 payroll, szervezet, erőforrás, projekt/Gantt/Agile, riport, analitika, API,
 webhook, biztonság és beállítások valós route-okba és futási útvonalakba vannak
@@ -33,7 +33,7 @@ lokális javítások production státusza nem azonosítható bizonyosan.
 **Release-döntés:** a termék működő, integrált alkalmazás; nem landing-only.
 Az auditált következő backend release azonban **nem release-kész**, mert a
 repository és a linked adatbázis migrációtörténete nem reprodukálható egymásból,
-a clean replay 104/130 sikeres fájl után a 105. migrációnál hiányzó lokális DDL-re
+a clean replay 104/131 sikeres fájl után a 105. migrációnál hiányzó lokális DDL-re
 fut, a generált public sémából 30 tábla, 1 view, 46 függvény és 2 enum eredete
 nem bizonyítható migrációval, és a dokumentált többlépcsős approval chain nincs
 bekötve a döntési runtime-ba. Az ebben a branchben készült javítások nincsenek
@@ -80,8 +80,8 @@ kötelező release-kapu.
   manifest/plist, deep-link szerződés, PKCE bridge, lifecycle, PWA-elválasztás,
   Keychain/AndroidKeyStore session adapter, migráció, mobil CSP, külön build,
   mobile contract, komponensszintű cold/warm callback és natív E2E tesztek.
-- Mind a 130 lokális migráció, generált Supabase típusok, RLS/policy-k, RPC-k,
-  30 Edge Function-könyvtár és az összes runtime caller.
+- Mind a 131 lokális migráció, generált Supabase típusok, RLS/policy-k, RPC-k,
+  31 Edge Function-könyvtár és az összes runtime caller.
 - Linked Supabase migrációlista és read-only `db lint`; generált/live sémaobjektum-
   inventory. Nem futott production write, deploy vagy linked migráció-apply.
 - Izolált PostgreSQL/Supabase replay, célzott PG18 migration compile és access-
@@ -92,7 +92,7 @@ kötelező release-kapu.
   audit, typecheck, Vitest, production build és ESLint-baseline.
 - A felhasználó által adott hat, az élő teljes alkalmazást mutató képernyőkép; az
   in-app interaktív browser smoke webview-csatlakozási hiba miatt nem futott le.
-- Current-tree secret scan 1 437 követett és nem ignorált untracked szövegfájlon,
+- Current-tree secret scan 1 519 követett és nem ignorált untracked szövegfájlon,
   plusz tracked mobil signing-key fájlnév tiltással.
   Követett service-role kulcsot vagy privát
   provider secretet nem találtunk; teljes historikus secret scan még nyitott CI-tétel.
@@ -141,7 +141,8 @@ adatbázis-objektumot nem töröltünk.
 | R-034 | Admin override same-key exactly-once és crash-safe retry | lost-response kockázat + v1/v2 call path + mobil közös adatforrás | BIZONYÍTOTT main + hosted | v2 RPC, hash-only ledger, közös adapter, 7 napos retry/reconciliation-horizontú outbox | igen | PG18 + runner 12/12 + 82 célzott + hosted 8/8 | igen | PR #175, main `f526718…`, run `29682829301`; production NO-GO | restored staging, DB→client rollout |
 | R-035 | Profiles tenant privacy, self locale/profile és közös workspace-mérföldkövek | történeti globális policy + raw widget/caller inventory | BIZONYÍTOTT source candidate + hosted | restrictive RLS/update guard, catalog-driven ACL, három RPC, shared adapter/widget, AST caller contract | candidate-ben igen | runner 10/10; PG18 + mind a 4 DB contract PASS; focused 77/77; full coverage 727/727; type/build/bundle/audit/web/mobile PASS; hosted 9/9 | igen | P0 forrásjavítás és regressziókapuk elkészültek; draft PR #176; production NO-GO | 59/69/84 history reconcile, restored staging, controlled DB-first rollout, live SHA-attestation |
 | R-036 | Workspace-member profil atomi, konkurenciabiztos szerkesztése minden kliensen | négy független UI-mutation + direct allocation writer + tenant/RBAC audit | BIZONYÍTOTT source candidate + hosted | egy-statement read RPC, atomi save RPC, `profile_revision`, exact self-name baseline, shared TypeScript adapter, Auth/Edge writer contract, nyolc locale | igen a candidate-ben | runner 15/15; PG18 atomic + 4 legacy DB PASS; focused UI/client/Edge-writer 208/208; full coverage 896/896; type/lint/build/bundle/Edge/security/mobile PASS; hosted 10/10 | igen | draft PR #177, final head `9dea63e…`, run `29868681921`; production NO-GO | history reconcile, restored-staging inventories, DB-first rollout |
-| R-037 | Atomi business-role allokáció/törlés és tartós direct-identity kompenzáció | I-28 nyitott direct writer + Edge Auth-create/error útvonal inventory | BIZONYÍTOTT source candidate + hosted | max-20/exact-100/exact-one-priority draft, atomic profile save, tenant-wide role-delete RPC; négyállapotú pre-Auth saga, hat service-only RPC, retry-prepare, membership/profile write guard, gated finalizer, Edge writerek és cleanup worker | igen a candidate-ben | focused Vitest 99/99; Edge 60/60 és entrypoint 30/30; runner 15/15; PG18 member-profile/business-role/identity-saga két-session finalizer/writer contracttal; full coverage 76 fájl / 992 teszt; type/build/bundle/mobile PASS; hosted 10/10 | igen | draft PR #178, source `77531b8…`, run `29879329719`; production NO-GO | recurring cleanup scheduler, history reconcile, restored staging, DB-first rollout és live SHA-attestation |
+| R-037 | Atomi business-role allokáció/törlés és tartós direct-identity kompenzáció | I-28 nyitott direct writer + Edge Auth-create/error útvonal inventory | BIZONYÍTOTT source candidate + hosted | max-20/exact-100/exact-one-priority draft, atomic profile save, tenant-wide role-delete RPC; négyállapotú pre-Auth saga, hat service-only RPC, retry-prepare, membership/profile write guard, gated finalizer, Edge writerek és cleanup worker | igen a candidate-ben | focused Vitest 99/99; Edge 60/60 és entrypoint 30/30; runner 15/15; PG18 member-profile/business-role/identity-saga két-session finalizer/writer contracttal; full coverage 76 fájl / 992 teszt; type/build/bundle/mobile PASS; hosted 10/10 | igen | draft PR #178, final source `f628d0b…`, run `29879703648`; production NO-GO | recurring cleanup scheduler, history reconcile, restored staging, DB-first rollout és live SHA-attestation |
+| R-038 | Fenced recurring created-identity cleanup és legacy temp-cleanup szétválasztása | I-29 durable saga + hiányzó recurring worker/single-flight/secret boundary | BIZONYÍTOTT source candidate + hosted | külön `cleanup-created-identities` Edge worker; per-job tokenes lease, worker singleton, pontos receipt, Vaultból futáskor feloldott cron credential; `cleanup-temp-users` külön legacy felelősség, renew-ölt delete-adjacent lease és szűkített profile/event guard | forrásban igen; scheduler szándékosan dormant | Edge 86/86, entrypoint/config 31/31, 65/65 pinned import, AST log-safety 9/9, runner 16/16, öt PG18 contract, köztük két-session single-flight/event-extension/temp-upgrade; hosted 10/10 | igen | draft PR #179, implementation head `1e3d874…`, run `29885969841`; production NO-GO | restored staging DB→Edge→scheduler, pg_net response+worker-state korreláció, secret rotation, monitoring és live attestation |
 
 ## 4. Megtalált és kijavított hiányok
 
@@ -354,7 +355,7 @@ státuszoszlopai jelzik:
 
 | Tétel                                       | Üzleti/technikai indok és bizonyíték                                                                                                                                                                             | Érintett terület                                       | Kockázat, függőség, méret                                     | Elfogadási kritérium / teszt / dokumentáció                                                                       |
 | ------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| DB history és schema drift                  | A v3.51.6 read-only baseline 59 közös migration ID / **69 local-only** / 84 remote-only (128 local, 143 remote); az I-29 két további, szándékosan nem alkalmazott local migrationnel 130 repository-fájlt tartalmaz. Három local-only HR/office/analytics fájl remote migrationök eltérő ID alatti tartalmi duplikátuma. A clean replay 104/130 után a `plugin_webhook_events` hiányán áll meg. A generált public felület 165 tábla/4 view/99 függvény/11 enum; ezekből 30/1/46/2 helyi DDL-je nem bizonyított; a candidate RPC-k/táblák sincsenek még hitelesen regenerált types-ban. Hat attendance tábla a `d4a441a4` types-only commitban, további 21 tábla a `7c59e9a7` „Regenerate types.ts from live DB” commitban jelent meg; a `b952a466` v3.6 commit 24 frontend/test/docs fájlt és 0 SQL-t adott hozzá. | `supabase/migrations`, generated types, git history    | hibás deploy vagy repair; backup+staging kell; XL             | remote statement/hash manifest; duplikátum-besorolás; transitívan teljes recovery migration; clean shadow replay; regenerated-types/schema fingerprint diff; DB lint/RLS teszt; bulk `migration repair` tilos |
+| DB history és schema drift                  | A v3.51.6 read-only baseline 59 közös migration ID / **69 local-only** / 84 remote-only (128 local, 143 remote); az I-29 két és az I-30 egy további, szándékosan nem alkalmazott local migrationnel 131 repository-fájlt tartalmaz. Három local-only HR/office/analytics fájl remote migrationök eltérő ID alatti tartalmi duplikátuma. A clean replay 104/131 után a `plugin_webhook_events` hiányán áll meg. A generált public felület 165 tábla/4 view/99 függvény/11 enum; ezekből 30/1/46/2 helyi DDL-je nem bizonyított; a candidate RPC-k/táblák sincsenek még hitelesen regenerált types-ban. Hat attendance tábla a `d4a441a4` types-only commitban, további 21 tábla a `7c59e9a7` „Regenerate types.ts from live DB” commitban jelent meg; a `b952a466` v3.6 commit 24 frontend/test/docs fájlt és 0 SQL-t adott hozzá. | `supabase/migrations`, generated types, git history    | hibás deploy vagy repair; backup+staging kell; XL             | remote statement/hash manifest; duplikátum-besorolás; transitívan teljes recovery migration; clean shadow replay; regenerated-types/schema fingerprint diff; DB lint/RLS teszt; bulk `migration repair` tilos |
 | Linked DB lint                              | read-only `supabase db lint --linked --level warning`: 7 error, 6 warning                                                                                                                                        | compliance/webhook/analytics/onboarding/password RPC-k | runtime hiba; a history reconcile előfeltétel; L              | 0 error; pgTAP/integration; caller smoke; changelog                                                               |
 | Approval chain nincs runtime-ban            | chain editor/táblák és `step_order` dokumentált, de `decide_leave_request` nem választ stepet/approvert; első jogosult véglegesít                                                                                | approval UI/RPC/schema                                 | kiadott fő funkció nem teljes; L/XL                           | step/approver modell; sorzár; rész-döntések; végső státusz csak utolsó stepnél; concurrency/E2E; migrációs leírás |
 | `instant_member_create` biztonságos pótlása | v3.33 dokumentált fizetős funkció; régi admin-confirmed email globális identityt foglalhatott; most 409 fail-closed                                                                                              | user provisioning/auth/invite                          | funkciókompatibilitás; product+security döntés; L             | SCIM/domain vagy mailbox-verified activation; cross-tenant adversarial teszt; admin UX és migration note          |
@@ -362,7 +363,7 @@ státuszoszlopai jelzik:
 | Fióktörlés nem atomi                        | GoTrue delete és DB cleanup nem egy tranzakció; a preflight csak ismert FK-ket fed                                                                                                                               | `delete-account`, retention                            | részleges törlés / blokkolt GDPR-flow; jogi döntés; XL        | retention policy; job/RPC+kompenzáció; retry/idempotency/concurrency; audit és runbook                            |
 | Webhook/API DDL és producer provenance      | live/repo function source helyreállt, de egyes delivery/config objektumok és producer-ek helyi eredete nem teljes                                                                                                | public API/webhook                                     | következő clean deploy nem reprodukálja a live viselkedést; L | helyi DDL+producer inventory; staging key/revoke/rate/delivery/SSRF E2E; source↔deploy checksum                   |
 | Data migration részleges commit             | több entitás egymás után íródik, hiba esetén részleges eredmény/HTTP-eredmény lehetséges; nincs teljes resumable checksum                                                                                        | `data-migration`, import                               | ismétlés/duplikáció/kevert állapot; L                         | manifest+checksum; idempotens resume; hibastátusz; fixture és rollback doc                                        |
-| Deploy provenance és provider lánc          | Az I-25 main merge SHA, hosted CI és schema-2 artifact bizonyított, de a jelenlegi `effectime.app` Lovable/Cloudflare deploymentje továbbra sem köthető Git SHA-hoz: a live release marker hiányzik, a repository webhook HTTP 405, a kézi publish pedig authenticated Lovable loginon blokkolt. A release-identity kód mainen van, productionben még nincs igazolva. | frontend/Edge/DB release | rollback és audit nem reprodukálható; M | élő `/.well-known/effectime-release.json`; Edge body/header SHA; provider deployment-ID↔SHA rekord; fail-closed verifier; azonos commitból háromrétegű deploy |
+| Deploy provenance és provider lánc          | Az I-30 revalidáláskor a repositoryban egyetlen workflow a quality gate; nincs GitHub environment, deployment, release, Actions secret vagy variable. A jelenlegi `effectime.app` Lovable/Cloudflare deploymentje továbbra sem köthető Git SHA-hoz: a live release marker hiányzik, a repository Lovable webhook utolsó válasza HTTP 405, a Vercel projekt pedig nem az élő domain célpontja. A push ezért validál, de nem deployol. | frontend/Edge/DB release | rollback és audit nem reprodukálható; M | publish authority helyreállítása; védett production environment; provider preview + deployment-ID↔SHA rekord; élő `/.well-known/effectime-release.json`; Edge body/header SHA; fail-closed verifier; azonos commitból háromrétegű deploy |
 | Payroll időszak/rate/export szemantika      | Tetszőleges részidőszakhoz teljes havi attendance aggregate kerülhet; a rate-választás latest-all; a v1 szerződés az ISO pénznemkódot validálja, de tagonként eltérő pénznemeket egyetlen `total_gross` mezőbe összead (a contract teszt EUR+USD összeget is elfogad); az attendance/leave/rate HTTP-olvasások nem egyetlen MVCC snapshotból készülnek. A lock/export és elsődleges audit már atomi, a snapshot immutable és DB-digestelt. | payroll Edge/DB/domain                                 | magas pénzügyi eltérés vagy időközi read drift; termékdöntés és egyetlen DB-számítási határ kell; L | full-month vagy napi canonical szabály; rate-as-of/effective-to; v1 single-currency vagy v2 per-currency totals; egy statement/transaction számítás; concurrency+staging fixture; legacy snapshot inventory/remediation |
 | Natív store release biztonsági kapuk        | Android/iOS és CI forrás, PKCE, Keychain/AndroidKeyStore adapter, exact-origin CSP, hosted Android build és locked Xcode 26.5 simulator build kész; nincs store reservation/signing, verified HTTPS link, jóváhagyott brand asset vagy fizikai smoke | mobile auth/platform/release | signing/scheme ownership, OS-integráció és rollback kockázat; L | app ID/team/cert; AASA/assetlinks; device storage+CSP+auth smoke; signed internal rollout; `docs/mobile/README.md` |
 | Admin-created leave production acceptance   | Az I-26 lokálisan additív v2 RPC-t, hash-only ledgert, v1 compatibility smoke-ot, pozitív/negatív RBAC/tenant/audit/quota contractot és duplicate/demotion serialization tesztet ad. A linked sémára a drift miatt nem alkalmazható vakon, a PostgREST schema-cache és valós policy/trigger-kombináció nem igazolt. | admin override RPC/RBAC/audit + web/mobile rollout | client-first deploy 404/RPC-hibát, hibás DB apply üzemzavart okozna; M/L | backup/PITR; restored production-like staging; exact catalog/ACL; v1+v2 smoke; DB-first apply/schema reload; client-second deploy; client-first rollback |
@@ -408,7 +409,7 @@ státuszoszlopai jelzik:
 | I-05   | DB security és tenant correlation          | `20260717130000..132000`; új RPC/policy/trigger/ACL                                                                 | PG18+contract                  | additív repair; policy/RPC migration rollback kell                                                           | kész lokálisan             |
 | I-06   | Invite acceptance és provisioning boundary | `20260717133000`, invite UI/Edge                                                                                    | 6 contract+PG                  | invitation backward path megmarad; direct-create 409 dokumentált                                             | kész lokálisan             |
 | I-07   | Leave/access döntés és ledger atomizálás   | `decide_leave_request`, `decide_access_request`, guardok, UI                                                        | concurrency/semantic/static    | direct decision write megszűnik; RPC rollback csak auditált migrationnel                                     | kész lokálisan             |
-| I-08   | DB history reconcile                       | remote/local manifests, hiányzó DDL repair                                                                          | clean replay/schema diff/pgTAP | backup kötelező; semmit nem töröl automatikusan; 130/130 replay                                              | nyitott P1                 |
+| I-08   | DB history reconcile                       | remote/local manifests, hiányzó DDL repair                                                                          | clean replay/schema diff/pgTAP | backup kötelező; semmit nem töröl automatikusan; 131/131 replay                                              | nyitott P1                 |
 | I-09   | Multi-step approval runtime                | chain schema, approver resolution, partial decisions, UI                                                            | unit+PG concurrency+E2E        | meglévő single-step migrálható alap chainné; rollback feature flaggel                                        | nyitott P1                 |
 | I-10   | Biztonságos instant provisioning           | SCIM/domain vagy verified activation                                                                                | auth/API/UI/migration          | invitation kompatibilis; cross-tenant identity teszt                                                         | emberi döntés              |
 | I-11   | Staging/release                            | azonos SHA frontend+Edge+DB, smoke, release marker                                                                  | teljes staging suite           | backup/rollback artifact; production csak jóváhagyás után                                                    | blokkolt I-08/I-09-en, payroll szemantikán/legacy inventoryn és staging bizonyítékon |
@@ -429,7 +430,8 @@ státuszoszlopai jelzik:
 | I-26   | Admin override idempotency és tartós retry | additív v2 RPC, privát SHA-256 ledger, reserved-audit guard, determinisztikus authorization lockok, közös adapter, 30 s timeout, hét napos retry/reconciliation-horizontú PII-mentes outbox, egy unresolved művelet/scope, lokalizált `outcome_uncertain`; legacy v1 érintetlen | PG18 teljes contract; runner 12/12; outbox/API/UI/Dialog 82/82; teljes 666/666 coverage; typecheck/lint/build/bundle/web+mobile/Edge/security; hosted 8/8 | exact-key cleanup csak hiteles receipt után; minden hiba evidence-retaining; Web Locks hiányában RPC előtti fail-closed; DB-first/client-second; rollback client-first v1-re, v2/ledger marad; új dependency nincs; generated type cast az adapterre izolált | PR #175-ben mainre merge-elve (`f52671880748c58802d94e0705204d846f4b5928`); run `29682829301`; artifact `8441138073`; restored staging, linked DB és production deploy NO-GO |
 | I-27   | Profiles tenant privacy és közös mobil mérföldkő/profile szerződés | restrictive select/update RLS, catalog-driven ACL, `get_my_profile_locale_v1`, self-only `update_my_workspace_profile_display_name_v1`, ötmezős milestone RPC, AST caller contract, shared adapters, CapacityFit, widget és i18n | runner 10/10; DB-runner 42/42; mind a 4 PG18 contract; focused 77/77; full coverage 727/727; type/build/bundle/audit/web 7/7; mobile 183/345/2, drift 0; hosted 9/9 | három RPC additív, de a raw preferences grant megvonása régi cached klienst funkcionálisan tör; controlled maintenance DB-first/immediate-client rollout, privacy ACL rollback tilos | draft PR #176; run `29687248014`; artifact `8442491749`; linked apply/live deploy nem történt; production P0 NO-GO |
 | I-28   | Atomi workspace-member profilolvasás és -mentés | egy-statement read RPC, teljes-snapshot save RPC, server-managed `profile_revision`, exact self-name CAS, tenant office/allocation FK, restrictive policy, lexical/max-20 guard, minimális reserved audit, közös web/Android/iOS adapter, Auth/Edge writer contract és fail-visible UI | runner 15/15; atomic PG18 + négy legacy PG18; focused 208/208; full coverage 896/896; type/lint/build/bundle/Edge/security; mobile 183/345/2, drift 0; hosted 10/10 | forward-only DB/schema-cache-first rollout; stale kliens RPC hiányán fail-closed; rollback client capabilityvel, constraint/tenant guard nem lazítható; generated types csak history reconcile után | draft PR #177, final source `9dea63e…`, run `29868681921`, release `8510309445`, diagnostics `8510306792`, Android `8510265497`; production NO-GO |
-| I-29   | Atomi business-role allokáció/törlés és durable identity-provisioning saga | bounded role draft, friss optimistic member snapshot/save, tenant-wide transactional delete+audit; pre-Auth saga négy állapottal, hat service-only RPC-vel, DB-first compensationnel, pending retry-prepare-rel, tenant-write guarddal, gated finalizerrel, Edge-writer/worker bekötéssel és operátori runbookkal | focused Vitest 99/99; Edge helper 60/60; entrypoint 30/30; runner 15/15; pinned PG18 member-profile/business-role/identity saga két-session finalizer/writer contracttal; full coverage 76/992; type/build/bundle/mobile PASS; lint ratchet 1 148/98, 11 javulás; hosted 10/10 | additív két migration; shared web/Android/iOS React/Supabase contract; DB/schema-cache-first rollout; worker/saga reverttel nem törölhető pending job mellett; recurring scheduler, restored staging és live attestation kötelező | draft PR #178, source `77531b8…`, run `29879329719`, release `8514194752`, diagnostics `8514193053`, Android `8514165397`; production NO-GO |
+| I-29   | Atomi business-role allokáció/törlés és durable identity-provisioning saga | bounded role draft, friss optimistic member snapshot/save, tenant-wide transactional delete+audit; pre-Auth saga négy állapottal, hat service-only RPC-vel, DB-first compensationnel, pending retry-prepare-rel, tenant-write guarddal, gated finalizerrel, Edge-writer/worker bekötéssel és operátori runbookkal | focused Vitest 99/99; Edge helper 60/60; entrypoint 30/30; runner 15/15; pinned PG18 member-profile/business-role/identity saga két-session finalizer/writer contracttal; full coverage 76/992; type/build/bundle/mobile PASS; lint ratchet 1 148/98, 11 javulás; hosted 10/10 | additív két migration; shared web/Android/iOS React/Supabase contract; DB/schema-cache-first rollout; worker/saga reverttel nem törölhető pending job mellett; recurring scheduler, restored staging és live attestation kötelező | draft PR #178, final source `f628d0b…`, run `29879703648`, release `8514318251`, diagnostics `8514316593`, Android `8514289059`; production NO-GO |
+| I-30   | Fenced created-identity worker és dormant scheduler foundation | additív tokenes job lease, immutable expiry, késői worker tiltás, singleton run state, service-only v2 RPC-k; POST-only dedicated Edge worker; owner-only Vault/pg_cron installer és pause; legacy cleanup külön claim/prepare/complete handlerrel, 120 s renew-ölt tokennel és eligibility guarddal | Edge 86/86; inventory/config 31/31 és 65/65 pinned import; AST log-safety 9/9; runner 16/16; öt pinned PG18 contract, köztük token/late-writer/ACL/reclaim/same-owner cascade/expired-orphan rotation és determinisztikus két-session overlap/event-extension/temp-upgrade; source identity `5d38e629…`; hosted 10/10 | egy additív migration; scheduler nem települ automatikusan; DB→érintett Edge funkciók→scheduler-last; rollback/pause csak pending jobok és worker lease-ek auditja után | draft PR #179, implementation head `1e3d874…`, run `29885969841`, release `8516558700`, diagnostics `8516557751`, Android `8516531963`; production NO-GO |
 
 ## 7. Ellenőrzések és eredmények
 
@@ -451,9 +453,9 @@ profile/business-role/identity-saga, két-session finalizer/writer serialization
 typecheck, build, bundle, web és mobile kapuja PASS. A teljes coverage 76 fájl /
 992 teszt (51,27% statements/lines, 75,11% branches, 46,39% functions). A lint-
 ratchet 1 148 error / 98 warning baseline-t rögzít 11 javulással. Draft PR #178
-source commitja `77531b818b95a1cbe54a8d20abc3e3047a0c1c1e`; a `29879329719`
-hosted Quality Gate 10/10 PASS. Release evidence `8514194752`, diagnostics
-`8514193053`, unsigned Android artifact `8514165397`.
+final source commitja `f628d0b7d0931be5f16ebd03e14a608648077ac8`; a `29879703648`
+hosted Quality Gate 10/10 PASS. Release evidence `8514318251`, diagnostics
+`8514316593`, unsigned Android artifact `8514289059`.
 Restored staging, linked DB apply és production rollout egyik csomagnál sem
 történt; az I-27 production státusza P0/NO-GO, az I-29 pedig a hiányzó recurring
 identity-cleanup scheduler miatt külön is production NO-GO.
@@ -493,20 +495,22 @@ identity-cleanup scheduler miatt külön is production NO-GO.
 | `npm run build`                         | I-29 LOKÁLIS PASS       | A current production build PASS; nincs új runtime dependency. |
 | `npm run bundle:check`                  | I-29 LOKÁLIS PASS       | JS 4 527 940 raw / 1 296 700 gzip; largest 1 765 067 / 561 428; CSS 180 862 / 29 600. A +0,417% raw növekedés a review-zott I-29 contract; az exact ratchet csak a korábbi platformtoleranciát tartja meg. |
 | `npm audit --audit-level=moderate`      | I-27 LOKÁLIS PASS       | 0 ismert vulnerability. |
-| `npm run security:secrets`              | I-29 LOKÁLIS PASS       | 1 505 tracked és nem ignorált untracked text file magas bizonyosságú current-tree scan + tracked mobil signing-key fájlnév tiltás; history scan még nyitott. |
+| `npm run security:secrets`              | I-30 LOKÁLIS PASS       | 1 519 tracked és nem ignorált untracked text file magas bizonyosságú current-tree scan + tracked mobil signing-key fájlnév tiltás; history scan még nyitott. |
 | `npm run lint:ratchet`                  | I-29 LOKÁLIS PASS       | 1 148 error / 98 warning; az I-29 11 további javulást rögzít, új vagy elmozdított diagnosztika nélkül. |
 | Strukturált logger Deno teszt/check     | I-26 LOKÁLIS PASS       | Edge log-safety, `auth-email-hook` és `send-transactional-email` Deno 2.9.3 check PASS; strukturálatlan érzékeny hiba nem került vissza. |
-| `npm run edge:check` / ratchet / test    | I-29 LOKÁLIS PASS       | 30/30 entrypoint és config, 0 Deno diagnostic; 64/64 remote import exact, 0 unpinned; Deno 2.9.3; Edge helper 60/60 PASS. Immutable source gate `05f62b1374c9bd895b2342f4fd9a6a4d4b39110b936e49b4d3ae6e20847bd617`, 81 fájl / 780 165 canonical byte. |
+| `npm run edge:check` / ratchet / test    | I-30 LOKÁLIS PASS       | 31/31 entrypoint és config, 0 Deno diagnostic; 65/65 remote import exact, 0 unpinned; Deno 2.9.3; Edge 86/86 PASS. Immutable source gate `5d38e629bc798af9e4536f51b819e2b99cd5378f95250478e09d05c3c26c6bce`, 89 fájl / 859 724 canonical byte. |
+| Edge strukturált log és release SBOM    | I-30 LOKÁLIS PASS       | Adversarial AST log-safety 9/9, közvetlen és globális console/stdout/stderr escape tiltással; Edge SBOM unit 3/3, a 31 deployálható entrypoint/config teljes leltárával. |
 | Payroll contract és UI regresszió       | PASS                    | Deno payroll contract 15/15; célzott Vitest 20/20; AuditLog allowlist 2/2; typed Edge check PASS; current full unit 549/549 |
 | Payroll snapshot DB contract            | I-25 REVALIDÁLVA PASS   | runner unit 12/12; pinned PostgreSQL 18.4 migration/digest/ACL/search_path/trigger/negative auth/member drift/audit rollback PASS. A readiness valódi `SELECT 1` lekérdezéssel igazolja a név szerinti céladatbázist, ezért a konténerfolyamat és az adatbázis-létrehozás közti race fail-closed. Négy manipulált pgcrypto/schema trust eset fail-closed; runtime TRUNCATE, direct service reset és reserved-audit forge/tamper/delete tiltott; whitespace/NULL és 7/8/1000/1001 indokhatárok, exact prev/new audit, locked/exported/legacy reopen auditált. Determinisztikus lock és reopen exactly-one-winner, valamint actor-demotion→reopen fail-closed, bitazonos sor/0 audit igazolt. Collisionteszt idegen konténert megőriz; nincs hálózat/host port, csak két read-only mount, ownership-ID+label cleanup PASS. Ez célzott fixture, nem teljes migration replay. |
 | HR workflow tenant DB/UI contract       | I-25 REVALIDÁLVA PASS   | runner unit 8/8; pinned PostgreSQL 18.4 static contract, repeat apply és legacy-row preservation PASS; cross-workspace template/membership/instance/task/assignee, inactive membership, member/admin RLS, list PII, parent cascade és exact RPC/FK catalog fail-closed. Négy determinisztikus reassignment/suspension/direct-write lock-race PASS. UI data+a11y+request-ordering 10/10; nincs `eq.undefined`, backend/task hiba fail-visible, pending instance-read deduplikált, workspace-váltás és unmount utáni válasz invalidált. Nincs hálózat/host port; exact ownership cleanup és bounded child termination. Célzott fixture, nem teljes migration replay vagy restored-staging bizonyíték. |
-| Schema provenance gate                  | I-29 LOKÁLIS PASS KORLÁTTAL | Unit 7/7 és exact-debt gate PASS 130 migráción; az I-27/I-28/I-29 candidate RPC-k és a `profile_revision` nincsenek generated types-ban, ezért az exact local interface nem helyettesíti a hiteles linked-schema regenerálást. |
-| SBOM és release manifest                | I-29 HOSTED PASS | Run `29879329719`, release evidence artifact `8514194752`, diagnostics `8514193053`; ez source candidate evidence, nem live deploy. |
-| GitHub-hosted quality workflow          | I-29 PASS | Draft PR #178 source `77531b818b95a1cbe54a8d20abc3e3047a0c1c1e`; run `29879329719` mind a 10 jobja PASS, benne az öt PostgreSQL contract, frontend/Edge, Android és locked iOS. |
+| Schema provenance gate                  | I-30 LOKÁLIS PASS KORLÁTTAL | Unit 7/7 és exact-debt gate PASS 131 migráción; az I-27–I-30 candidate RPC-k, private worker state és a `profile_revision` nincsenek generated types-ban, ezért az exact local interface nem helyettesíti a hiteles linked-schema regenerálást. |
+| SBOM és release manifest                | I-29 HOSTED PASS | Run `29879703648`, release evidence artifact `8514318251`, diagnostics `8514316593`; ez source candidate evidence, nem live deploy. |
+| GitHub-hosted quality workflow          | I-29 PASS | Draft PR #178 final source `f628d0b7d0931be5f16ebd03e14a608648077ac8`; run `29879703648` mind a 10 jobja PASS, benne az öt PostgreSQL contract, frontend/Edge, Android és locked iOS. |
+| I-30 hosted release evidence            | PASS | Draft PR #179 implementation head `1e3d874275c33115e97c0216ef36e5b832edd3f7`; run `29885969841` mind a 10 jobja PASS, release artifact `8516558700`, diagnostics `8516557751`, unsigned Android `8516531963`. Ez source/CI bizonyíték, nem linked apply vagy production deploy. |
 | Új v3.51.3 migration PG18 compile/apply | PASS                    | Access submit/döntés/ledger/rollback szemantika PASS; candidate dual-feature compile PASS, candidate runtime smoke megszakadt; production/linked apply nem történt |
-| Clean lokális migration replay          | FAIL                    | 104/130 után `20260517230000...`: `plugin_webhook_events` helyi CREATE TABLE hiányzik                                                                              |
+| Clean lokális migration replay          | FAIL                    | 104/131 után `20260517230000...`: `plugin_webhook_events` helyi CREATE TABLE hiányzik                                                                              |
 | Linked `db lint --level warning`        | FAIL                    | 7 error, 6 warning; read-only ellenőrzés                                                                                                                           |
-| Live `effectime.app` release attestation | FAIL                    | A Lovable/Cloudflare root elérhető, de `/.well-known/effectime-release.json` továbbra is 404. A live artifact ezért nem köthető az I-27, I-28 vagy I-29 SHA-hoz; production attestation NO-GO. |
+| Live `effectime.app` release attestation | FAIL                    | A Lovable/Cloudflare root elérhető, de `/.well-known/effectime-release.json` továbbra is 404. A live artifact ezért nem köthető az I-27–I-30 SHA-k egyikéhez sem; production attestation NO-GO. |
 | Linked DB write/deploy                  | NEM FUTOTT              | szándékosan; history drift miatt veszélyes lenne                                                                                                                   |
 
 Az első build-újrafutásnál átmeneti helyi npm/Node launcher hiba jelent meg; az
@@ -521,7 +525,7 @@ vagy forráskódhibaként van lezárva, mert a tényleges production build PASS.
 2. Production backup és a 59/69/84 migration history tartalmi/hash reconcile.
 3. Hiányzó 30 tábla, 1 view, 46 function és 2 enum eredetének besorolása; read-only
    live dumpból transitívan teljes recovery migration; clean replay
-   130/130 és jóváhagyott schema diff.
+   131/131 és jóváhagyott schema diff.
 4. Linked DB lint 7 error javítása repair migrationökben.
 5. I-26 restored-snapshot acceptance; v2 DB/schema-cache deploy a kliens előtt,
    majd web/Android/iOS ugyanabból az attestált forrásból. Rollbackkor először a
@@ -537,10 +541,13 @@ vagy forráskódhibaként van lezárva, mert a tényleges production build PASS.
    display-name inventory csak jóváhagyott adatmegőrző remediation után lehet
    nulla; utána atomic read/save old/new-client acceptance és azonos attestált
    web/Android/iOS kliens.
-8. Az I-29 recurring created-identity cleanup schedulerének least-privilege
-   telepítése és restored-staging fault-injection drillje: provisioning/pending
-   age metrika, dead-letter riasztás, overlap/singleton és secret-rotation
-   acceptance. A scheduler bizonyítéka nélkül a direct identity provisioning
+8. Az I-30 fenced worker és dormant least-privilege scheduler forrása elkészült.
+   A legacy temp-cleanup eligibility/lease/deadline review, same-owner cascade,
+   expired-orphan tokenrotáció és két determinisztikus race lokálisan zöld. A
+   következő kapu a restored-staging DB→négy Edge artifact→scheduler-last fault-injection:
+   provisioning/pending age, dead-letter, pg_net response/worker-state
+   korreláció, overlap/singleton és secret-rotation acceptance. Telepített és
+   monitorozott scheduler-bizonyíték nélkül a direct identity provisioning
    production NO-GO marad.
 9. Az I-29 BusinessRoleManager allokáció/save/delete restored-staging acceptance:
    max-20/exact-100/exact-one-priority, tenant/RBAC/entitlement, konkurens delete/
@@ -613,17 +620,26 @@ határt és durable pre-Auth identity-provisioning sagát ad. A focused Vitest
 99/99, Edge 60/60, entrypoint 30/30, runner 15/15, pinned PostgreSQL 18.4
 member-profile/business-role/identity-saga két-session concurrency contracttal,
 teljes coverage 76 fájl / 992 teszt, typecheck, build, bundle, web/mobile és lint-
-ratchet kapuk zöldek. Draft PR #178 source commit `77531b8…`; a hosted
-`29879329719` run 10/10 PASS, release `8514194752`, diagnostics `8514193053`,
-unsigned Android artifact `8514165397`. A web, Android és iOS változatlanul
+ratchet kapuk zöldek. Draft PR #178 final source commit `f628d0b…`; a hosted
+`29879703648` run 10/10 PASS, release `8514318251`, diagnostics `8514316593`,
+unsigned Android artifact `8514289059`. A web, Android és iOS változatlanul
 ugyanazt a React/Supabase adatforrást használja.
+
+Az I-30 v3.51.8 local candidate tokenesen fence-elt created-identity jobokat,
+whole-worker singletont, bounded POST-only Edge workert és owner-only, dormant
+Vault/pg_cron installert ad. A 86/86 Edge, 31/31 entrypoint/config, 65/65 pinned
+import, AST log-safety 9/9, runner 16/16 és mind az öt pinned PG18 contract,
+köztük a late-worker/single-flight/event-extension/temp-upgrade védelem,
+lokálisan zöld. A scheduler nem települt; a hosted bizonyíték még a candidate
+lezárási kapuja.
 
 **Kiadási döntés: production/backend NO-GO.** A v3.51.6 read-only linked baseline
 59 shared / 69 local-only / 84 remote-only volt, az I-29 két további unapplied
-local migrationt ad; a clean replay 104/130 után elakad, a linked lint hibás és a
+local migrationt ad; az I-30 további egy candidate migrationnel a clean replay
+104/131 után elakad, a linked lint hibás és a
 live release manifest hiányzik. A created-identity cleanup recurring schedulere
 nincs telepítve, ezért a kompenzáció automatikus működése sem release-képes.
-Backup, history reconcile, 130/130 clean replay, restored-staging old/new-client
+Backup, history reconcile, 131/131 clean replay, restored-staging old/new-client
 és fault-injection acceptance, reviewed scheduler, DB-first apply/schema-cache,
 majd azonnali attestált web/Android/iOS rollout kötelező. A privacy ACL és pending
 saga adat rollbackként sem lazítható/törölhető.

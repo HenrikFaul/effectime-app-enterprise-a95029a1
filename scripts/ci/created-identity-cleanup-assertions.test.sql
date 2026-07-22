@@ -485,7 +485,7 @@ BEGIN
   );
   PERFORM contract.force_created_identity_cleanup_due(v_job_id);
   SELECT * INTO v_claim
-  FROM public.claim_created_enterprise_identity_cleanup_jobs_v1(25)
+  FROM public.claim_created_enterprise_identity_cleanup_jobs_v2(25)
   WHERE cleanup_job_id = v_job_id;
   PERFORM contract.assert_true(
     v_claim.cleanup_job_id = v_job_id
@@ -493,10 +493,11 @@ BEGIN
     AND v_claim.user_id IS NULL,
     'interrupted provisioning saga was not claimable before binding'
   );
-  v_result := public.prepare_created_enterprise_identity_cleanup_v1(
+  v_result := public.prepare_created_enterprise_identity_cleanup_v2(
     v_job_id,
     NULL,
-    NULL
+    NULL,
+    v_claim.lease_token
   );
   PERFORM contract.assert_true(
     v_result ->> 'status' = 'pending_auth'
@@ -632,16 +633,17 @@ BEGIN
   );
   PERFORM contract.force_created_identity_cleanup_due(v_job_id);
   SELECT * INTO v_claim
-  FROM public.claim_created_enterprise_identity_cleanup_jobs_v1(25)
+  FROM public.claim_created_enterprise_identity_cleanup_jobs_v2(25)
   WHERE cleanup_job_id = v_job_id;
   PERFORM contract.assert_true(
     v_claim.status = 'provisioning',
     'failed database cleanup saga was not retryable'
   );
-  v_result := public.prepare_created_enterprise_identity_cleanup_v1(
+  v_result := public.prepare_created_enterprise_identity_cleanup_v2(
     v_job_id,
     NULL,
-    NULL
+    NULL,
+    v_claim.lease_token
   );
   PERFORM contract.assert_true(
     v_result ->> 'status' = 'pending_auth'
@@ -720,7 +722,7 @@ BEGIN
   PERFORM contract.assert_true(
     NOT EXISTS (
       SELECT 1
-      FROM public.claim_created_enterprise_identity_cleanup_jobs_v1(25)
+      FROM public.claim_created_enterprise_identity_cleanup_jobs_v2(25)
       WHERE cleanup_job_id = v_job_id
     ),
     'successfully provisioned identity was claimable for cleanup'
@@ -749,18 +751,24 @@ BEGIN
   );
   PERFORM contract.force_created_identity_cleanup_due(v_job_id);
   SELECT * INTO v_claim
-  FROM public.claim_created_enterprise_identity_cleanup_jobs_v1(25)
+  FROM public.claim_created_enterprise_identity_cleanup_jobs_v2(25)
   WHERE cleanup_job_id = v_job_id;
   BEGIN
-    PERFORM public.prepare_created_enterprise_identity_cleanup_v1(v_job_id, NULL, NULL);
+    PERFORM public.prepare_created_enterprise_identity_cleanup_v2(
+      v_job_id,
+      NULL,
+      NULL,
+      v_claim.lease_token
+    );
   EXCEPTION WHEN no_data_found THEN
     v_missing := true;
   END;
   PERFORM contract.assert_true(v_missing, 'missing Auth identity was treated as cleaned');
-  v_result := public.fail_created_enterprise_identity_cleanup_v1(
+  v_result := public.fail_created_enterprise_identity_cleanup_v2(
     v_job_id,
     NULL,
-    'identity_not_visible'
+    'identity_not_visible',
+    v_claim.lease_token
   );
   PERFORM contract.assert_true(
     v_claim.status = 'provisioning'

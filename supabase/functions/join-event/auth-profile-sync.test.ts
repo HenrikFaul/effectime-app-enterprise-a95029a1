@@ -85,11 +85,14 @@ Deno.test("temporary cleanup preserves every database row when auth deletion fai
 
 Deno.test("temporary cleanup runs database cleanup only after verified auth deletion", async () => {
   const calls: string[] = [];
+  let authDeleted = false;
   const result = await cleanupTemporaryUserAuthFirst({
     expectedUserId: "temp-user",
-    getAuthUser: async () => successfulAuthResult("temp-user"),
+    getAuthUser: async () =>
+      authDeleted ? missingAuthResult() : successfulAuthResult("temp-user"),
     deleteAuthUser: async () => {
       calls.push("auth");
+      authDeleted = true;
       return successfulAuthResult("temp-user");
     },
     deleteDatabaseRows: [
@@ -114,10 +117,15 @@ Deno.test("temporary cleanup runs database cleanup only after verified auth dele
 
 Deno.test("temporary cleanup fails visibly and stops after a database cleanup failure", async () => {
   const calls: string[] = [];
+  let authDeleted = false;
   const result = await cleanupTemporaryUserAuthFirst({
     expectedUserId: "temp-user",
-    getAuthUser: async () => successfulAuthResult("temp-user"),
-    deleteAuthUser: async () => successfulAuthResult("temp-user"),
+    getAuthUser: async () =>
+      authDeleted ? missingAuthResult() : successfulAuthResult("temp-user"),
+    deleteAuthUser: async () => {
+      authDeleted = true;
+      return successfulAuthResult("temp-user");
+    },
     deleteDatabaseRows: [
       async () => {
         calls.push("votes");

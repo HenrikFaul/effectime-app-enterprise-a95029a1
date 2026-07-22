@@ -180,6 +180,12 @@ Minden enterprise_ tábla RLS-sel védett. Általános minták:
 ### pg_cron ütemezett feladatok
 - **02:15 UTC**: lefedettségi szabályok automatikus archiválása
 - Egyéb cron: `send-scheduled-reports`, `process-email-queue` (inferred)
+- A v3.51.8 created-identity cleanup ötperces schedulere alapértelmezetten
+  **nincs telepítve**. Az owner-only installer csak restored-staging acceptance
+  után hívható: a project origint, legacy anon JWT-t és külön trigger secretet
+  Vaultból oldja fel minden futáskor, az URL-t és credentialt nem tárolja a
+  `cron.job.command` mezőben. A rollout sorrend DB → érintett Edge funkciók →
+  scheduler-last; részletek: `docs/runbooks/created-identity-cleanup.md`.
 
 ### Edge Functions áttekintés
 
@@ -196,7 +202,8 @@ Minden enterprise_ tábla RLS-sel védett. Általános minták:
 | `send-scheduled-reports` | Deno | Ütemezett riport küldés |
 | `sync-holidays` | Deno | Ünnepnap szinkronizáció (külső API) |
 | `cleanup-demo-workspace` | Deno | Lejárt demo workspace törlés |
-| `cleanup-temp-users` | Deno | Ideiglenes demo auth user törlés |
+| `cleanup-temp-users` | Deno | Legacy ideiglenes profilok service-role-only cleanupja; created-identity sagát nem futtat |
+| `cleanup-created-identities` | Deno | Tokenesen fence-elt, singleton created-identity kompenzációs worker |
 | `create-instant-enterprise-member` | Deno | Azonnali tag létrehozás meghívó nélkül |
 | `auth-email-hook` | Deno | Supabase auth e-mail testreszabás |
 | `delete-account` | Deno | Önkiszolgáló fiók törlés |
@@ -376,10 +383,12 @@ Returns: { "regenerated": number }
 
 ## 9. Deployment
 
-### Frontend (Vercel)
+### Frontend (provider-managed CDN)
 - Build tool: Vite → statikus fájlok
-- Hosting: Vercel CDN
-- SPA konfiguráció: `vercel.json` + `SpaRedirectHandler` (összes route → `index.html`)
+- A repository Vercel-kompatibilis konfigurációt tartalmaz, de a jelenlegi live
+  provider és immutable deployment-ID nincs hiteles release evidence-hez kötve.
+- SPA konfiguráció: `vercel.json`, `public/_redirects` és provider-specifikus
+  fallback (összes alkalmazásroute → `index.html`).
 - Környezeti változók: Supabase URL, Supabase Anon Key, stb.
 
 ### Backend (Supabase Cloud)
@@ -399,14 +408,14 @@ supabase/migrations/
 ### Környezetek
 | Környezet | Frontend | Backend |
 |---|---|---|
-| Production | Vercel production | Supabase production project |
+| Production | Provider-managed CDN; pontos artifact/deployment ID auditálandó | Supabase production project |
 | Development | `localhost:5173` (Vite dev server) | Supabase cloud vagy local |
 
 ### Lokális fejlesztés
 ```bash
 # Frontend
-bun install
-bun run dev
+npm ci
+npm run dev
 
 # Supabase Edge Functions lokálisan (inferred)
 supabase functions serve

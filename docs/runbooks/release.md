@@ -14,10 +14,10 @@ frontend build alone is not release approval.
 - Public browser smoke against the exact production `dist`, including asset MIME,
   manifest/favicon, service-worker and responsive-viewport evidence, with retained
   failure trace/screenshots.
-- Mandatory Edge diagnostic-ratchet evidence for all 30 entrypoints, plus the raw
+- Mandatory Edge diagnostic-ratchet evidence for all 31 entrypoints, plus the raw
   compile result and an explicit record of any known baseline debt. A new module,
   diagnostic or unpinned import is not advisory and fails the release gate.
-- For v3.51.3 and v3.51.4, both Edge checks must report zero diagnostics, all 64 remote
+- For the current source tree, both Edge checks must report zero diagnostics, all 65 remote
   imports exact and zero unpinned imports. `npm run edge:ratchet:test` must prove
   the discovery runner, and `npm run edge:test` must execute every recursively
   discovered `supabase/functions/**/*.test.ts` file; zero discovered tests fails.
@@ -32,7 +32,7 @@ frontend build alone is not release approval.
   extension membership, digest, fixed search path, trigger/rollback, runtime
   TRUNCATE denial, normalized reason boundaries, exact audit state, deterministic
   lock/reopen races and actor-demotion serialization. It is a targeted fixture
-  and never substitutes for the clean 128-migration replay.
+  and never substitutes for the clean 131-migration replay.
 - `node --test scripts/ci/hr-workflow-tenant-db-contract.test.mjs` and
   `npm run db:hr-workflow:test` for the HR workflow tenant-boundary migration.
   The pinned PostgreSQL 18.4 fixture must pass cross-workspace template,
@@ -59,6 +59,14 @@ frontend build alone is not release approval.
   display-name conflicts, bounded lock retry, mixed legacy/RPC whole-transaction
   abort and one-statement MVCC read. Rerun all four earlier DB contracts because
   this migration recreates shared audit/payroll lifecycle guards.
+- For v3.51.8 the same member-profile runner must also mount and execute the
+  created-identity scheduler migration, scheduler assertions and deterministic
+  two-session concurrency script. Require per-job fencing-token ownership,
+  immutable unexpired leases, late-worker denial, strict worker counters,
+  singleton overlap redaction, exact service-role RPC ACLs and proof that the
+  migration creates no cron job. Edge evidence must cover
+  `create-instant-enterprise-member`, `join-event`,
+  `cleanup-created-identities` and `cleanup-temp-users` from one frozen SHA.
 - Verified backup plus an isolated restore drill within the agreed RPO/RTO.
 - Critical-path staging smoke for at least two tenants and affected roles.
 - Payroll staging smoke must cover open calculation → lock → repeat calculation →
@@ -125,7 +133,11 @@ frontend build alone is not release approval.
    authority and verify auth, timeout, retry and redaction paths. Do not leave
    the new payroll schema serving the old payroll Edge implementation. Record
    the provider deployment/version ID because the runtime value alone is not a
-   cryptographic binding between source and the provider artifact.
+   cryptographic binding between source and the provider artifact. For v3.51.8,
+   deploy all four cleanup-related functions listed above, prove a manual
+   service-role invocation, and only then call the private scheduler installer.
+   Retain the pg_net response row/status and correlate it with the exact worker
+   run state; enqueue request ID or one HTTP 200 alone is not delivery proof.
 7. Deploy the exact tested web artifact from the same SHA, then run critical-path
    browser smoke and `npm run release:verify:deployment -- --web-url=<live-url>
    --expected-sha=<candidate> --expected-web-sha256=<approved-artifact-sha256>
@@ -149,7 +161,7 @@ frontend build alone is not release approval.
 ## Immediate NO-GO conditions
 
 - Migration history or schema differs from the approved staging result.
-- Clean migration replay is not 128/128, or the 30-table / 1-view / 46-function /
+- Clean migration replay is not 131/131, or the 30-table / 1-view / 46-function /
   2-enum provenance debt has not been replaced by transitively complete reviewed
   DDL with regenerated-types and schema-fingerprint comparison.
 - Backup/restore evidence is absent or stale.
@@ -165,8 +177,13 @@ frontend build alone is not release approval.
 - The admin-override PG18 contract is not green, restored staging does not expose
   both exact v1/v2 contracts, PostgREST has not reloaded the v2 signature, or a
   v2 web/mobile client would be deployed before the verified DB boundary.
+- The v3.51.8 created-identity worker or any of its four matching Edge artifacts
+  is missing, has a different SHA/source digest, accepts an unfenced/expired
+  lease, or the scheduler is installed before manual staging smoke, retained
+  pg_net response evidence and matching singleton worker-state completion.
 - A new critical/high dependency vulnerability or unreviewed Edge compile failure exists.
-- The Edge diagnostic ratchet reports a new entrypoint, diagnostic or unpinned import.
+- The Edge diagnostic ratchet reports an unreviewed/unregistered entrypoint, a
+  new diagnostic or an unpinned import.
 - The release manifest is dirty, names a different SHA, or its distribution,
   migration, Edge-source or SBOM hash differs from the approved artifact.
 - The public release-identity file is missing/malformed, web and Edge identities

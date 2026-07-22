@@ -11,10 +11,19 @@ import {
   BUSINESS_ROLE_ASSERTIONS_SQL_PATH,
   BUSINESS_ROLE_CONCURRENCY_SQL_PATH,
   IDENTITY_CLEANUP_MIGRATION_SQL_PATH,
+  IDENTITY_CLEANUP_SCHEDULER_MIGRATION_SQL_PATH,
   IDENTITY_CLEANUP_ASSERTIONS_SQL_PATH,
+  IDENTITY_CLEANUP_SCHEDULER_ASSERTIONS_SQL_PATH,
+  IDENTITY_CLEANUP_SCHEDULER_CONCURRENCY_SQL_PATH,
   IDENTITY_CLEANUP_CONCURRENCY_SQL_PATH,
   IDENTITY_CLEANUP_FINALIZER_BARRIER_QUERY,
   IDENTITY_CLEANUP_FINALIZER_WAIT_QUERY,
+  IDENTITY_CLEANUP_SCHEDULER_WORKER_BARRIER_QUERY,
+  IDENTITY_CLEANUP_SCHEDULER_WORKER_WAIT_QUERY,
+  TEMPORARY_PROFILE_EVENT_BARRIER_QUERY,
+  TEMPORARY_PROFILE_EVENT_WAIT_QUERY,
+  TEMPORARY_PROFILE_UPGRADE_BARRIER_QUERY,
+  TEMPORARY_PROFILE_UPGRADE_WAIT_QUERY,
   assertExpectedInventoryFailure,
   assertExpectedMigrationFailure,
   buildCleanupArgs,
@@ -39,6 +48,7 @@ import {
   POSTGRES_IMAGE,
   resolveOwnedCleanupTarget,
   SETUP_SQL_PATH,
+  TEMPORARY_PROFILE_PREFLIGHT_DRIFT_CASE,
   waitForPostgres,
 } from "./member-profile-save-db-contract.mjs";
 
@@ -112,6 +122,10 @@ test("pins PostgreSQL 18.4 and mounts only reviewed inputs read-only", () => {
     )},target=${IDENTITY_CLEANUP_MIGRATION_SQL_PATH},readonly`,
     `type=bind,source=${resolve(
       repoRoot,
+      "supabase/migrations/20260722003000_v3_51_8_created_identity_cleanup_scheduler.sql",
+    )},target=${IDENTITY_CLEANUP_SCHEDULER_MIGRATION_SQL_PATH},readonly`,
+    `type=bind,source=${resolve(
+      repoRoot,
       "scripts/ci/member-profile-save-assertions.test.sql",
     )},target=${ASSERTIONS_SQL_PATH},readonly`,
     `type=bind,source=${resolve(
@@ -126,6 +140,14 @@ test("pins PostgreSQL 18.4 and mounts only reviewed inputs read-only", () => {
       repoRoot,
       "scripts/ci/created-identity-cleanup-concurrency.test.sql",
     )},target=${IDENTITY_CLEANUP_CONCURRENCY_SQL_PATH},readonly`,
+    `type=bind,source=${resolve(
+      repoRoot,
+      "scripts/ci/created-identity-cleanup-scheduler-assertions.test.sql",
+    )},target=${IDENTITY_CLEANUP_SCHEDULER_ASSERTIONS_SQL_PATH},readonly`,
+    `type=bind,source=${resolve(
+      repoRoot,
+      "scripts/ci/created-identity-cleanup-scheduler-concurrency.test.sql",
+    )},target=${IDENTITY_CLEANUP_SCHEDULER_CONCURRENCY_SQL_PATH},readonly`,
     `type=bind,source=${resolve(
       repoRoot,
       "scripts/ci/business-role-delete-concurrency.test.sql",
@@ -143,9 +165,12 @@ test("psql entry points are isolated and path allow-listed", () => {
     MIGRATION_SQL_PATH,
     BUSINESS_ROLE_MIGRATION_SQL_PATH,
     IDENTITY_CLEANUP_MIGRATION_SQL_PATH,
+    IDENTITY_CLEANUP_SCHEDULER_MIGRATION_SQL_PATH,
     ASSERTIONS_SQL_PATH,
     BUSINESS_ROLE_ASSERTIONS_SQL_PATH,
     IDENTITY_CLEANUP_ASSERTIONS_SQL_PATH,
+    IDENTITY_CLEANUP_SCHEDULER_ASSERTIONS_SQL_PATH,
+    IDENTITY_CLEANUP_SCHEDULER_CONCURRENCY_SQL_PATH,
     IDENTITY_CLEANUP_CONCURRENCY_SQL_PATH,
     BUSINESS_ROLE_CONCURRENCY_SQL_PATH,
     CONCURRENCY_SQL_PATH,
@@ -259,6 +284,25 @@ test("an unknown additional auth bootstrap trigger fails closed without silent d
   );
 });
 
+test("temporary-profile cleanup preflight rejects drift before partial DDL", () => {
+  assert.match(
+    TEMPORARY_PROFILE_PREFLIGHT_DRIFT_CASE.installSql,
+    /RENAME COLUMN is_temporary/,
+  );
+  assert.match(
+    TEMPORARY_PROFILE_PREFLIGHT_DRIFT_CASE.expectedFailure,
+    /profile-column contract is incompatible/,
+  );
+  assert.match(
+    TEMPORARY_PROFILE_PREFLIGHT_DRIFT_CASE.verificationSql,
+    /temporary_profile_cleanup_leases/,
+  );
+  assert.match(
+    TEMPORARY_PROFILE_PREFLIGHT_DRIFT_CASE.verificationSql,
+    /lease_token/,
+  );
+});
+
 test("fixture cleanup is an exact SQL command with a row-count assertion", () => {
   const args = buildPsqlCommandArgs(containerName, FIXTURE_MISMATCH_CLEANUP_SQL);
   assert.deepEqual(args.slice(0, 3), ["exec", containerName, "psql"]);
@@ -303,6 +347,39 @@ test("concurrency evidence uses fixed advisory and blocking-session queries", ()
   assert.match(
     IDENTITY_CLEANUP_FINALIZER_WAIT_QUERY,
     /effectime-created-identity-finalize-writer/,
+  );
+  assert.match(IDENTITY_CLEANUP_SCHEDULER_WORKER_BARRIER_QUERY, /classid = 734562/);
+  assert.match(IDENTITY_CLEANUP_SCHEDULER_WORKER_BARRIER_QUERY, /objid = 21/);
+  assert.match(IDENTITY_CLEANUP_SCHEDULER_WORKER_WAIT_QUERY, /pg_blocking_pids/);
+  assert.match(
+    IDENTITY_CLEANUP_SCHEDULER_WORKER_WAIT_QUERY,
+    /effectime-created-identity-worker-a/,
+  );
+  assert.match(
+    IDENTITY_CLEANUP_SCHEDULER_WORKER_WAIT_QUERY,
+    /effectime-created-identity-worker-b/,
+  );
+  assert.match(TEMPORARY_PROFILE_EVENT_BARRIER_QUERY, /classid = 734563/);
+  assert.match(TEMPORARY_PROFILE_EVENT_BARRIER_QUERY, /objid = 31/);
+  assert.match(TEMPORARY_PROFILE_EVENT_WAIT_QUERY, /pg_blocking_pids/);
+  assert.match(
+    TEMPORARY_PROFILE_EVENT_WAIT_QUERY,
+    /effectime-temp-cleanup-event-claimer/,
+  );
+  assert.match(
+    TEMPORARY_PROFILE_EVENT_WAIT_QUERY,
+    /effectime-temp-cleanup-event-writer/,
+  );
+  assert.match(TEMPORARY_PROFILE_UPGRADE_BARRIER_QUERY, /classid = 734563/);
+  assert.match(TEMPORARY_PROFILE_UPGRADE_BARRIER_QUERY, /objid = 32/);
+  assert.match(TEMPORARY_PROFILE_UPGRADE_WAIT_QUERY, /pg_blocking_pids/);
+  assert.match(
+    TEMPORARY_PROFILE_UPGRADE_WAIT_QUERY,
+    /effectime-temp-cleanup-upgrade-claimer/,
+  );
+  assert.match(
+    TEMPORARY_PROFILE_UPGRADE_WAIT_QUERY,
+    /effectime-temp-cleanup-upgrade-writer/,
   );
 });
 

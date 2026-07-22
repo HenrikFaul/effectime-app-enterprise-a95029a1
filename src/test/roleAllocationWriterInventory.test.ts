@@ -211,25 +211,41 @@ describe("enterprise member role-allocation writer inventory", () => {
     }
   });
 
-  it("makes the worker prepare provisioning jobs before exact Auth deletion", () => {
-    const source = readFileSync(
+  it("fences the dedicated identity worker and keeps legacy temp cleanup separate", () => {
+    const workerIndex = readFileSync(
+      join(EDGE_ROOT, "cleanup-created-identities", "index.ts"),
+      "utf8",
+    );
+    const workerHandler = readFileSync(
+      join(EDGE_ROOT, "cleanup-created-identities", "handler.ts"),
+      "utf8",
+    );
+    const legacyIndex = readFileSync(
       join(EDGE_ROOT, "cleanup-temp-users", "index.ts"),
       "utf8",
     );
-    const claimIndex = source.indexOf(
-      "claim_created_enterprise_identity_cleanup_jobs_v1",
+    const legacyHandler = readFileSync(
+      join(EDGE_ROOT, "cleanup-temp-users", "handler.ts"),
+      "utf8",
     );
-    const legacyCleanupIndex = source.indexOf("// Find all temporary profiles");
-    const sagaWorker = source.slice(claimIndex, legacyCleanupIndex);
 
-    expect(claimIndex).toBeGreaterThan(-1);
-    expect(legacyCleanupIndex).toBeGreaterThan(claimIndex);
-    expect(sagaWorker).toContain("prepare_created_enterprise_identity_cleanup_v1");
-    expect(sagaWorker).toContain("reconcileCreatedIdentityCleanupJobs");
-    expect(sagaWorker).toContain("deleteAuthUser:");
-    expect(sagaWorker).toContain("isFailedCreatedIdentityCleanupReceipt");
-    expect(sagaWorker).not.toMatch(
+    expect(workerIndex).toContain("acquire_created_identity_cleanup_worker_v1");
+    expect(workerIndex).toContain("claim_created_enterprise_identity_cleanup_jobs_v2");
+    expect(workerIndex).toContain("prepare_created_enterprise_identity_cleanup_v2");
+    expect(workerIndex).toContain("complete_created_enterprise_identity_cleanup_v2");
+    expect(workerIndex).toContain("fail_created_enterprise_identity_cleanup_v2");
+    expect(workerIndex).toContain("finish_created_identity_cleanup_worker_v1");
+    expect(workerIndex).not.toContain("claim_created_enterprise_identity_cleanup_jobs_v1");
+    expect(workerHandler).toContain("deleteCreatedAuthIdentityVerified");
+    expect(workerHandler).toContain("leaseToken");
+    expect(workerHandler).toContain("WORKER_LEASE_SECONDS");
+    expect(workerHandler).not.toMatch(
       /from\(["'](?:enterprise_memberships|profiles)["']\)[\s\S]{0,160}\.delete\(/,
+    );
+
+    expect(legacyIndex).not.toContain("created_enterprise_identity_cleanup");
+    expect(legacyHandler).toContain(
+      'created_identity_cleanup: "delegated_to_cleanup-created-identities"',
     );
   });
 

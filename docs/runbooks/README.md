@@ -7,6 +7,8 @@ Effectime release. They do not authorize production access or deployment.
 - [Rollback](rollback.md) — recovery decision tree without ad-hoc data deletion.
 - [Incident response](incident.md) — severity, containment and evidence handling.
 - [Backup and restore](restore.md) — isolated restore drill and acceptance checks.
+- [Created-identity cleanup](created-identity-cleanup.md) — fenced worker,
+  Vault/pg_cron activation, monitoring, pause and rollback evidence.
 
 System owners must fill in the production owner, hosting provider, escalation
 contacts, RPO, RTO and retention values before these documents can be treated as
