@@ -3120,7 +3120,7 @@ const sk = {
     btn_exporting: 'Exportujem...',
     btn_download: 'Stiahnuť',
     export_ready: 'Export pripravený — {{count}} riadkov',
-    export_error: 'Údaje na export sa nepodarilo načítať. Skúste to znova.',
+    export_error: 'Export sa nepodarilo dokončiť. Pred ďalším pokusom skontrolujte stiahnuté súbory.',
     header_description: 'Vyberte polia, ktoré chcete exportovať. Povinné polia sú uzamknuté (potrebné na import).',
     fields_label: 'Polia',
     btn_select_all: 'Všetko',
@@ -3705,6 +3705,8 @@ const sk = {
     error: 'Došlo k chybe. Skúste to prosím znova.',
   },
   import_export: {
+    export_label: 'Export',
+    import_label: 'Import',
     access_restricted: 'Správa dát (import / export) je dostupná iba pre roly owner a resourceAssistant.',
     export_description: 'Stiahnuť dáta do Excelu / CSV',
     import_description: 'Nahrať dáta zo šablóny',

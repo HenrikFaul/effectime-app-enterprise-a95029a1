@@ -3274,7 +3274,7 @@ const hu = {
     btn_exporting: 'Exportálás...',
     btn_download: 'Letöltés',
     export_ready: 'Export kész — {{count}} sor',
-    export_error: 'Az exportálandó adatokat nem sikerült betölteni. Próbáld újra.',
+    export_error: 'Az exportot nem sikerült befejezni. Újrapróbálás előtt ellenőrizd a letöltéseidet.',
     header_description: 'Válaszd ki, mely mezőket szeretnéd exportálni. A kötelező mezők zárolva vannak (importhoz szükségesek).',
     fields_label: 'Mezők',
     btn_select_all: 'Összes',
@@ -4024,6 +4024,8 @@ const hu = {
   },
   import_export: {
     access_restricted: 'Adatkezelés (import / export) csak owner és resourceAssistant szerepkörnek érhető el.',
+    export_label: 'Exportálás',
+    import_label: 'Importálás',
     export_description: 'Adatok letöltése Excelbe / CSV-be',
     import_description: 'Adatok feltöltése sablon alapján',
     select_entity: 'Válassz entitást:',

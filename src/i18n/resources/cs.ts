@@ -3120,7 +3120,7 @@ const cs = {
     btn_exporting: 'Exportuji...',
     btn_download: 'Stáhnout',
     export_ready: 'Export připraven — {{count}} řádků',
-    export_error: 'Data pro export se nepodařilo načíst. Zkuste to znovu.',
+    export_error: 'Export se nepodařilo dokončit. Před dalším pokusem zkontrolujte stažené soubory.',
     header_description: 'Vyberte pole, která chcete exportovat. Povinná pole jsou zamčena (potřebná pro import).',
     fields_label: 'Pole',
     btn_select_all: 'Vše',
@@ -3705,6 +3705,8 @@ const cs = {
     error: 'Došlo k chybě. Zkuste to prosím znovu.',
   },
   import_export: {
+    export_label: 'Export',
+    import_label: 'Import',
     access_restricted: 'Správa dat (import / export) je dostupná pouze pro role owner a resourceAssistant.',
     export_description: 'Stáhnout data do Excelu / CSV',
     import_description: 'Nahrát data ze šablony',

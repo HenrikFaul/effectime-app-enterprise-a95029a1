@@ -422,7 +422,7 @@ export async function executeLegacyLeaveExport(
           end_date: endDate,
           row_count: rows.length,
           format: request.format,
-          delivery: 'browser_download_requested',
+          delivery: 'browser_download_pending',
         },
       }),
     'AUDIT_QUERY_FAILED'
