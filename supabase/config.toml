@@ -43,6 +43,9 @@ verify_jwt = false
 [functions.cleanup-temp-users]
 verify_jwt = true
 
+[functions.cleanup-created-identities]
+verify_jwt = true
+
 [functions.create-instant-enterprise-member]
 verify_jwt = true
 

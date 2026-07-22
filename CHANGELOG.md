@@ -1,11 +1,80 @@
+## 2026-07-22 — v3.51.8 Fenced identity-cleanup scheduler foundation (unreleased)
+
+**Status:** local stacked source candidate; not deployed.
+
+Local release-candidate evidence: the complete Edge suite is 86/86 across 11
+files, all 31/31 Edge entrypoints/configs type-check with 65/65 remote imports
+pinned, the adversarial AST log-safety suite is 9/9, the isolated database
+runner is 16/16, and all five pinned PostgreSQL 18.4 contracts pass. The frozen
+Edge source identity is
+`5d38e629bc798af9e4536f51b819e2b99cd5378f95250478e09d05c3c26c6bce`
+(89 files / 859,724 canonical bytes). The full frontend coverage run is 76
+files / 992 tests, and typecheck, strict lint ratchet, build, bundle, browser,
+mobile, dependency and current-tree secret gates pass. Hosted evidence is still
+required after publication.
+
+- Replaces the unfenced cleanup-queue worker contract with per-job v2 fencing
+  tokens. Prepare preserves the five-minute lease through the Auth side effect;
+  complete/fail require the exact unexpired token, and a late worker cannot
+  mutate a replacement lease. The direct writer v1 signatures remain available
+  but fail closed while a fenced worker owns the job.
+- Adds a private whole-worker singleton lease and bounded aggregate run state.
+  The dedicated worker uses a 150-second run lease, a 110-second total deadline,
+  at most ten jobs and 15-second network-operation deadlines. Concurrent
+  invocations produce an explicit redacted overlap skip; malformed receipts,
+  pending work and receipt persistence failures remain HTTP 5xx.
+- Adds the POST-only `cleanup-created-identities` Edge Function. Its scheduler
+  route requires the target project's gateway-verified legacy anon JWT, with
+  an exact project `ref`, in both gateway headers, and also requires
+  an independent high-entropy trigger secret plus an exact versioned body; the
+  reviewed manual route retains exact service-role authorization. It runs only
+  the created-identity saga and cannot reach the legacy temporary-profile scan.
+- Hardens `cleanup-temp-users` as a separate service-role-only bounded handler.
+  A service-only database claim selects only currently eligible profiles, so
+  retained rows cannot starve later work. A 120-second per-user token plus
+  profile/event guards freezes eligibility across Auth deletion; prepare
+  renews the exact lease after Auth lookup and immediately before each delete,
+  and completion requires an unexpired token plus authoritative Auth absence
+  before atomically deleting votes, participants, the lease and profile. An
+  expired orphan token must be reclaimed and rotated before it can complete;
+  the exact same-owner Auth cascade is permitted only when it cannot remove a
+  different profile, claimant, participant or voter's event data.
+  The exact-origin Edge client uses abortable ten-second calls, a 90-second total
+  deadline and fail-visible 503 aggregates. Its response explicitly delegates
+  the created-identity saga to the dedicated worker.
+- Adds an owner-only, dormant scheduler installer and pause contract. The
+  installer validates one exact 20-character Supabase project origin, one
+  project-bound legacy anon JWT and one dedicated 43–128 character Vault
+  secret, then creates exactly one five-minute pg_cron job. The stored command
+  resolves Vault values at runtime and contains no literal URL or credential;
+  pg_net has a 120-second response timeout. The migration itself schedules
+  nothing.
+- Extends the pinned PostgreSQL 18.4 contract with fencing, late-token denial,
+  worker lease reclaim, redacted overlap, strict counters, ACLs and a
+  deterministic two-session single-flight proof. It additionally proves legacy
+  retained-row starvation prevention, same-owner Auth cascade, expired-orphan
+  rotation, and two-session event-extension and temporary-upgrade exclusion.
+  Edge handler contracts cover
+  the scheduler/manual auth matrix, body/method gates, overlap, deadlines,
+  failure receipts, legacy cleanup query/Auth/delete uncertainty and log safety.
+- Keeps web, Android and iOS on the same Supabase data plane. No mobile-only
+  database, service-role key or cleanup behavior is introduced.
+
+Production remains **NO-GO**. The scheduler foundation is deliberately dormant,
+the linked migration history and clean replay are not reconciled, and no
+restored-staging DB → Edge → scheduler acceptance or immutable production
+deployment/job evidence exists. Installing the cron job before matching Edge
+deployment and staging proof is prohibited; see
+`docs/runbooks/created-identity-cleanup.md`.
+
 ## 2026-07-22 — v3.51.7 Atomic business-role allocation and identity compensation (unreleased)
 
 **Status:** stacked draft PR
 [#178](https://github.com/HenrikFaul/effectime-app-enterprise-a95029a1/pull/178)
-at source commit `77531b818b95a1cbe54a8d20abc3e3047a0c1c1e`. Hosted Quality
-Gate run `29879329719` passed all 10/10 jobs; release evidence artifact
-`8514194752`, diagnostics artifact `8514193053` and unsigned Android artifact
-`8514165397` retain the candidate evidence. The focused browser/client suite is
+at final source commit `f628d0b7d0931be5f16ebd03e14a608648077ac8`. Hosted Quality
+Gate run `29879703648` passed all 10/10 jobs; release evidence artifact
+`8514318251`, diagnostics artifact `8514316593` and unsigned Android artifact
+`8514289059` retain the candidate evidence. The focused browser/client suite is
 99/99, Edge helper tests are 60/60, all 30/30 Edge entrypoints pass, the isolated
 database runner is 15/15, and the pinned PostgreSQL 18.4 member-profile/business-
 role/identity-saga contract and typecheck PASS. The complete Vitest coverage run

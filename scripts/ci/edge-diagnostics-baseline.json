@@ -6,6 +6,7 @@
     "admin": 0,
     "ai-copilot": 0,
     "auth-email-hook": 0,
+    "cleanup-created-identities": 0,
     "cleanup-demo-workspace": 0,
     "cleanup-temp-users": 0,
     "create-instant-enterprise-member": 0,

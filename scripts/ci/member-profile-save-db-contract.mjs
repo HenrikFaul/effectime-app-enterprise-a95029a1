@@ -11,7 +11,13 @@ export const MIGRATION_SQL_PATH = "/contract/migration.sql";
 export const BUSINESS_ROLE_MIGRATION_SQL_PATH = "/contract/business-role-migration.sql";
 export const BUSINESS_ROLE_ASSERTIONS_SQL_PATH = "/contract/business-role-assertions.sql";
 export const IDENTITY_CLEANUP_MIGRATION_SQL_PATH = "/contract/identity-cleanup-migration.sql";
+export const IDENTITY_CLEANUP_SCHEDULER_MIGRATION_SQL_PATH =
+  "/contract/identity-cleanup-scheduler-migration.sql";
 export const IDENTITY_CLEANUP_ASSERTIONS_SQL_PATH = "/contract/identity-cleanup-assertions.sql";
+export const IDENTITY_CLEANUP_SCHEDULER_ASSERTIONS_SQL_PATH =
+  "/contract/identity-cleanup-scheduler-assertions.sql";
+export const IDENTITY_CLEANUP_SCHEDULER_CONCURRENCY_SQL_PATH =
+  "/contract/identity-cleanup-scheduler-concurrency.sql";
 export const IDENTITY_CLEANUP_CONCURRENCY_SQL_PATH =
   "/contract/identity-cleanup-concurrency.sql";
 export const BUSINESS_ROLE_CONCURRENCY_SQL_PATH = "/contract/business-role-concurrency.sql";
@@ -91,6 +97,34 @@ export const AUTH_BOOTSTRAP_EXTRA_TRIGGER_DRIFT_CASE = Object.freeze({
     "CREATE TRIGGER legacy_auth_profile_bootstrap AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();",
   cleanupSql: "DROP TRIGGER legacy_auth_profile_bootstrap ON auth.users;",
   expectedFailure: "unexpected additional auth profile bootstrap trigger binding: 1 trigger(s)",
+});
+export const TEMPORARY_PROFILE_PREFLIGHT_DRIFT_CASE = Object.freeze({
+  label: "temporary-profile cleanup schema drift",
+  installSql:
+    "ALTER TABLE public.profiles RENAME COLUMN is_temporary TO is_temporary_incompatible;",
+  cleanupSql:
+    "ALTER TABLE public.profiles RENAME COLUMN is_temporary_incompatible TO is_temporary;",
+  expectedFailure: "Temporary profile cleanup profile-column contract is incompatible",
+  verificationSql: `DO $verify_temporary_profile_preflight$
+BEGIN
+  IF pg_catalog.to_regclass(
+       'effectime_private.temporary_profile_cleanup_leases'
+     ) IS NOT NULL
+     OR pg_catalog.to_regclass(
+       'effectime_private.created_identity_cleanup_worker_state'
+     ) IS NOT NULL
+     OR EXISTS (
+       SELECT 1
+       FROM pg_catalog.pg_attribute AS attribute_record
+       WHERE attribute_record.attrelid =
+         'effectime_private.created_identity_cleanup_jobs'::pg_catalog.regclass
+         AND attribute_record.attname = 'lease_token'
+         AND NOT attribute_record.attisdropped
+     ) THEN
+    RAISE EXCEPTION 'temporary-profile preflight left partial scheduler DDL';
+  END IF;
+END;
+$verify_temporary_profile_preflight$;`,
 });
 export const FIXTURE_MISMATCH_CLEANUP_SQL = `DO $cleanup$
 DECLARE
@@ -237,6 +271,75 @@ export const IDENTITY_CLEANUP_FINALIZER_WAIT_QUERY = [
   ")",
   ");",
 ].join(" ");
+export const IDENTITY_CLEANUP_SCHEDULER_WORKER_BARRIER_QUERY = [
+  "SELECT EXISTS (",
+  "SELECT 1 FROM pg_catalog.pg_locks",
+  "WHERE locktype = 'advisory'",
+  "AND classid = 734562",
+  "AND objid = 21",
+  "AND granted",
+  ");",
+].join(" ");
+export const IDENTITY_CLEANUP_SCHEDULER_WORKER_WAIT_QUERY = [
+  "SELECT EXISTS (",
+  "SELECT 1 FROM pg_catalog.pg_stat_activity AS waiter",
+  "WHERE waiter.datname = pg_catalog.current_database()",
+  "AND waiter.application_name = 'effectime-created-identity-worker-b'",
+  "AND waiter.state = 'active'",
+  "AND waiter.wait_event_type = 'Lock'",
+  "AND EXISTS (",
+  "SELECT 1 FROM pg_catalog.unnest(pg_catalog.pg_blocking_pids(waiter.pid)) AS blocker_pid(pid)",
+  "JOIN pg_catalog.pg_stat_activity AS blocker ON blocker.pid = blocker_pid.pid",
+  "WHERE blocker.application_name = 'effectime-created-identity-worker-a'",
+  ")",
+  ");",
+].join(" ");
+export const TEMPORARY_PROFILE_EVENT_BARRIER_QUERY = [
+  "SELECT EXISTS (",
+  "SELECT 1 FROM pg_catalog.pg_locks",
+  "WHERE locktype = 'advisory'",
+  "AND classid = 734563",
+  "AND objid = 31",
+  "AND granted",
+  ");",
+].join(" ");
+export const TEMPORARY_PROFILE_EVENT_WAIT_QUERY = [
+  "SELECT EXISTS (",
+  "SELECT 1 FROM pg_catalog.pg_stat_activity AS waiter",
+  "WHERE waiter.datname = pg_catalog.current_database()",
+  "AND waiter.application_name = 'effectime-temp-cleanup-event-writer'",
+  "AND waiter.state = 'active'",
+  "AND waiter.wait_event_type = 'Lock'",
+  "AND EXISTS (",
+  "SELECT 1 FROM pg_catalog.unnest(pg_catalog.pg_blocking_pids(waiter.pid)) AS blocker_pid(pid)",
+  "JOIN pg_catalog.pg_stat_activity AS blocker ON blocker.pid = blocker_pid.pid",
+  "WHERE blocker.application_name = 'effectime-temp-cleanup-event-claimer'",
+  ")",
+  ");",
+].join(" ");
+export const TEMPORARY_PROFILE_UPGRADE_BARRIER_QUERY = [
+  "SELECT EXISTS (",
+  "SELECT 1 FROM pg_catalog.pg_locks",
+  "WHERE locktype = 'advisory'",
+  "AND classid = 734563",
+  "AND objid = 32",
+  "AND granted",
+  ");",
+].join(" ");
+export const TEMPORARY_PROFILE_UPGRADE_WAIT_QUERY = [
+  "SELECT EXISTS (",
+  "SELECT 1 FROM pg_catalog.pg_stat_activity AS waiter",
+  "WHERE waiter.datname = pg_catalog.current_database()",
+  "AND waiter.application_name = 'effectime-temp-cleanup-upgrade-writer'",
+  "AND waiter.state = 'active'",
+  "AND waiter.wait_event_type = 'Lock'",
+  "AND EXISTS (",
+  "SELECT 1 FROM pg_catalog.unnest(pg_catalog.pg_blocking_pids(waiter.pid)) AS blocker_pid(pid)",
+  "JOIN pg_catalog.pg_stat_activity AS blocker ON blocker.pid = blocker_pid.pid",
+  "WHERE blocker.application_name = 'effectime-temp-cleanup-upgrade-claimer'",
+  ")",
+  ");",
+].join(" ");
 export const RESET_CONCURRENCY_GATE_SQL =
   "UPDATE contract.member_profile_save_concurrency_gate SET released = false WHERE id = 1; DELETE FROM contract.member_profile_save_concurrency_results;";
 export const RELEASE_CONCURRENCY_GATE_SQL =
@@ -251,6 +354,16 @@ export const RESET_IDENTITY_CLEANUP_CONCURRENCY_SQL =
   "UPDATE contract.created_identity_cleanup_concurrency_gate SET released = false WHERE id = 13; DELETE FROM contract.created_identity_cleanup_concurrency_results;";
 export const RELEASE_IDENTITY_CLEANUP_FINALIZER_GATE_SQL =
   "UPDATE contract.created_identity_cleanup_concurrency_gate SET released = true WHERE id = 13;";
+export const RESET_IDENTITY_CLEANUP_SCHEDULER_CONCURRENCY_SQL =
+  "UPDATE contract.created_identity_cleanup_scheduler_concurrency_gate SET released = false WHERE id = 21; DELETE FROM contract.created_identity_cleanup_scheduler_concurrency_results; UPDATE effectime_private.created_identity_cleanup_worker_state SET active_run_id = NULL, lease_expires_at = NULL, active_started_at = NULL WHERE singleton;";
+export const RELEASE_IDENTITY_CLEANUP_SCHEDULER_WORKER_GATE_SQL =
+  "UPDATE contract.created_identity_cleanup_scheduler_concurrency_gate SET released = true WHERE id = 21;";
+export const RESET_TEMPORARY_PROFILE_CLEANUP_CONCURRENCY_SQL =
+  "UPDATE contract.temporary_profile_cleanup_concurrency_gate SET released = false; DELETE FROM contract.temporary_profile_cleanup_concurrency_results;";
+export const RELEASE_TEMPORARY_PROFILE_EVENT_GATE_SQL =
+  "UPDATE contract.temporary_profile_cleanup_concurrency_gate SET released = true WHERE id = 31;";
+export const RELEASE_TEMPORARY_PROFILE_UPGRADE_GATE_SQL =
+  "UPDATE contract.temporary_profile_cleanup_concurrency_gate SET released = true WHERE id = 32;";
 const TERMINATE_CONCURRENCY_BACKENDS_SQL = [
   "SELECT pg_catalog.pg_terminate_backend(pid)",
   "FROM pg_catalog.pg_stat_activity",
@@ -269,7 +382,13 @@ const TERMINATE_CONCURRENCY_BACKENDS_SQL = [
   "'effectime-business-role-delete-first-a',",
   "'effectime-business-role-delete-first-b',",
   "'effectime-created-identity-finalizer',",
-  "'effectime-created-identity-finalize-writer'",
+  "'effectime-created-identity-finalize-writer',",
+  "'effectime-created-identity-worker-a',",
+  "'effectime-created-identity-worker-b',",
+  "'effectime-temp-cleanup-event-claimer',",
+  "'effectime-temp-cleanup-event-writer',",
+  "'effectime-temp-cleanup-upgrade-claimer',",
+  "'effectime-temp-cleanup-upgrade-writer'",
   ");",
 ].join(" ");
 
@@ -337,6 +456,10 @@ export function buildDockerRunArgs({ containerName, repoRoot, password, ownershi
     repoRoot,
     "supabase/migrations/20260721234500_v3_51_7_created_identity_compensation.sql",
   );
+  const identityCleanupSchedulerMigrationSource = resolve(
+    repoRoot,
+    "supabase/migrations/20260722003000_v3_51_8_created_identity_cleanup_scheduler.sql",
+  );
   const assertionsSource = resolve(repoRoot, "scripts/ci/member-profile-save-assertions.test.sql");
   const businessRoleAssertionsSource = resolve(
     repoRoot,
@@ -349,6 +472,14 @@ export function buildDockerRunArgs({ containerName, repoRoot, password, ownershi
   const identityCleanupConcurrencySource = resolve(
     repoRoot,
     "scripts/ci/created-identity-cleanup-concurrency.test.sql",
+  );
+  const identityCleanupSchedulerAssertionsSource = resolve(
+    repoRoot,
+    "scripts/ci/created-identity-cleanup-scheduler-assertions.test.sql",
+  );
+  const identityCleanupSchedulerConcurrencySource = resolve(
+    repoRoot,
+    "scripts/ci/created-identity-cleanup-scheduler-concurrency.test.sql",
   );
   const businessRoleConcurrencySource = resolve(
     repoRoot,
@@ -381,6 +512,8 @@ export function buildDockerRunArgs({ containerName, repoRoot, password, ownershi
     "--mount",
     `type=bind,source=${identityCleanupMigrationSource},target=${IDENTITY_CLEANUP_MIGRATION_SQL_PATH},readonly`,
     "--mount",
+    `type=bind,source=${identityCleanupSchedulerMigrationSource},target=${IDENTITY_CLEANUP_SCHEDULER_MIGRATION_SQL_PATH},readonly`,
+    "--mount",
     `type=bind,source=${assertionsSource},target=${ASSERTIONS_SQL_PATH},readonly`,
     "--mount",
     `type=bind,source=${businessRoleAssertionsSource},target=${BUSINESS_ROLE_ASSERTIONS_SQL_PATH},readonly`,
@@ -388,6 +521,10 @@ export function buildDockerRunArgs({ containerName, repoRoot, password, ownershi
     `type=bind,source=${identityCleanupAssertionsSource},target=${IDENTITY_CLEANUP_ASSERTIONS_SQL_PATH},readonly`,
     "--mount",
     `type=bind,source=${identityCleanupConcurrencySource},target=${IDENTITY_CLEANUP_CONCURRENCY_SQL_PATH},readonly`,
+    "--mount",
+    `type=bind,source=${identityCleanupSchedulerAssertionsSource},target=${IDENTITY_CLEANUP_SCHEDULER_ASSERTIONS_SQL_PATH},readonly`,
+    "--mount",
+    `type=bind,source=${identityCleanupSchedulerConcurrencySource},target=${IDENTITY_CLEANUP_SCHEDULER_CONCURRENCY_SQL_PATH},readonly`,
     "--mount",
     `type=bind,source=${businessRoleConcurrencySource},target=${BUSINESS_ROLE_CONCURRENCY_SQL_PATH},readonly`,
     "--mount",
@@ -404,9 +541,12 @@ export function buildPsqlFileArgs(containerName, sqlPath, variables = []) {
       MIGRATION_SQL_PATH,
       BUSINESS_ROLE_MIGRATION_SQL_PATH,
       IDENTITY_CLEANUP_MIGRATION_SQL_PATH,
+      IDENTITY_CLEANUP_SCHEDULER_MIGRATION_SQL_PATH,
       ASSERTIONS_SQL_PATH,
       BUSINESS_ROLE_ASSERTIONS_SQL_PATH,
       IDENTITY_CLEANUP_ASSERTIONS_SQL_PATH,
+      IDENTITY_CLEANUP_SCHEDULER_ASSERTIONS_SQL_PATH,
+      IDENTITY_CLEANUP_SCHEDULER_CONCURRENCY_SQL_PATH,
       IDENTITY_CLEANUP_CONCURRENCY_SQL_PATH,
       BUSINESS_ROLE_CONCURRENCY_SQL_PATH,
       CONCURRENCY_SQL_PATH,
@@ -950,6 +1090,179 @@ async function runCreatedIdentityCleanupConcurrencyContract(containerName) {
   console.log("Proved created-identity finalizer/write serialization.");
 }
 
+async function runCreatedIdentityCleanupSchedulerConcurrencyContract(containerName) {
+  const sessions = [];
+  let scenarioError = null;
+  try {
+    dockerSync(
+      buildPsqlCommandArgs(
+        containerName,
+        RESET_IDENTITY_CLEANUP_SCHEDULER_CONCURRENCY_SQL,
+      ),
+    );
+    const firstWorker = dockerAsync(
+      buildPsqlFileArgs(
+        containerName,
+        IDENTITY_CLEANUP_SCHEDULER_CONCURRENCY_SQL_PATH,
+        ["CREATED_IDENTITY_SCHEDULER_WORKER_A=1"],
+      ),
+    );
+    sessions.push(firstWorker);
+    await waitForObservedQuery(
+      containerName,
+      firstWorker,
+      IDENTITY_CLEANUP_SCHEDULER_WORKER_BARRIER_QUERY,
+      "the created-identity scheduler worker barrier",
+    );
+
+    const overlappingWorker = dockerAsync(
+      buildPsqlFileArgs(
+        containerName,
+        IDENTITY_CLEANUP_SCHEDULER_CONCURRENCY_SQL_PATH,
+        ["CREATED_IDENTITY_SCHEDULER_WORKER_B=1"],
+      ),
+    );
+    sessions.push(overlappingWorker);
+    await waitForObservedQuery(
+      containerName,
+      overlappingWorker,
+      IDENTITY_CLEANUP_SCHEDULER_WORKER_WAIT_QUERY,
+      "the overlapping created-identity scheduler worker",
+    );
+  } catch (error) {
+    scenarioError = error;
+  } finally {
+    try {
+      dockerSync(
+        buildPsqlCommandArgs(
+          containerName,
+          RELEASE_IDENTITY_CLEANUP_SCHEDULER_WORKER_GATE_SQL,
+        ),
+      );
+    } catch (error) {
+      if (!scenarioError) scenarioError = error;
+    }
+  }
+
+  try {
+    await settleConcurrencySessions(containerName, sessions, 8_000);
+  } catch (error) {
+    if (!scenarioError) scenarioError = error;
+  }
+  if (scenarioError) throw scenarioError;
+
+  dockerSync(
+    buildPsqlFileArgs(
+      containerName,
+      IDENTITY_CLEANUP_SCHEDULER_CONCURRENCY_SQL_PATH,
+      ["CREATED_IDENTITY_SCHEDULER_VERIFY=1"],
+    ),
+    { stdio: "inherit" },
+  );
+  console.log("Proved created-identity scheduler worker single-flight fencing.");
+}
+
+async function runTemporaryProfileCleanupRaceScenario(
+  containerName,
+  {
+    claimerVariable,
+    writerVariable,
+    verifyVariable,
+    barrierQuery,
+    waitQuery,
+    releaseSql,
+    label,
+  },
+) {
+  const sessions = [];
+  let scenarioError = null;
+  try {
+    dockerSync(
+      buildPsqlCommandArgs(
+        containerName,
+        RESET_TEMPORARY_PROFILE_CLEANUP_CONCURRENCY_SQL,
+      ),
+    );
+    const claimer = dockerAsync(
+      buildPsqlFileArgs(
+        containerName,
+        IDENTITY_CLEANUP_SCHEDULER_CONCURRENCY_SQL_PATH,
+        [`${claimerVariable}=1`],
+      ),
+    );
+    sessions.push(claimer);
+    await waitForObservedQuery(
+      containerName,
+      claimer,
+      barrierQuery,
+      `${label} claimer barrier`,
+    );
+
+    const writer = dockerAsync(
+      buildPsqlFileArgs(
+        containerName,
+        IDENTITY_CLEANUP_SCHEDULER_CONCURRENCY_SQL_PATH,
+        [`${writerVariable}=1`],
+      ),
+    );
+    sessions.push(writer);
+    await waitForObservedQuery(
+      containerName,
+      writer,
+      waitQuery,
+      `${label} blocked writer`,
+    );
+  } catch (error) {
+    scenarioError = error;
+  } finally {
+    try {
+      dockerSync(buildPsqlCommandArgs(containerName, releaseSql));
+    } catch (error) {
+      if (!scenarioError) scenarioError = error;
+    }
+  }
+
+  try {
+    await settleConcurrencySessions(containerName, sessions, 8_000);
+  } catch (error) {
+    if (!scenarioError) scenarioError = error;
+  }
+  if (scenarioError) throw scenarioError;
+
+  dockerSync(
+    buildPsqlFileArgs(
+      containerName,
+      IDENTITY_CLEANUP_SCHEDULER_CONCURRENCY_SQL_PATH,
+      [`${verifyVariable}=1`],
+    ),
+    { stdio: "inherit" },
+  );
+}
+
+async function runTemporaryProfileCleanupConcurrencyContract(containerName) {
+  await runTemporaryProfileCleanupRaceScenario(containerName, {
+    claimerVariable: "TEMPORARY_PROFILE_EVENT_CLAIMER",
+    writerVariable: "TEMPORARY_PROFILE_EVENT_WRITER",
+    verifyVariable: "TEMPORARY_PROFILE_EVENT_VERIFY",
+    barrierQuery: TEMPORARY_PROFILE_EVENT_BARRIER_QUERY,
+    waitQuery: TEMPORARY_PROFILE_EVENT_WAIT_QUERY,
+    releaseSql: RELEASE_TEMPORARY_PROFILE_EVENT_GATE_SQL,
+    label: "temporary-profile event-extension",
+  });
+  await runTemporaryProfileCleanupRaceScenario(containerName, {
+    claimerVariable: "TEMPORARY_PROFILE_UPGRADE_CLAIMER",
+    writerVariable: "TEMPORARY_PROFILE_UPGRADE_WRITER",
+    verifyVariable: "TEMPORARY_PROFILE_UPGRADE_VERIFY",
+    barrierQuery: TEMPORARY_PROFILE_UPGRADE_BARRIER_QUERY,
+    waitQuery: TEMPORARY_PROFILE_UPGRADE_WAIT_QUERY,
+    releaseSql: RELEASE_TEMPORARY_PROFILE_UPGRADE_GATE_SQL,
+    label: "temporary-profile upgrade",
+  });
+  console.log(
+    "Proved temporary-profile event-extension and upgrade race fencing.",
+  );
+}
+
 export function cleanupOwnedContainer(
   { containerId, ownershipToken },
   executeDockerSync = dockerSync,
@@ -1114,6 +1427,46 @@ export async function runMemberProfileSaveDatabaseContract({
     executeDockerSync(buildPsqlFileArgs(containerName, IDENTITY_CLEANUP_MIGRATION_SQL_PATH), {
       stdio: "inherit",
     });
+    executeDockerSync(
+      buildPsqlCommandArgs(
+        containerName,
+        TEMPORARY_PROFILE_PREFLIGHT_DRIFT_CASE.installSql,
+      ),
+      { stdio: "inherit" },
+    );
+    try {
+      const preflightFailure = executeDockerSync(
+        buildPsqlFileArgs(containerName, IDENTITY_CLEANUP_SCHEDULER_MIGRATION_SQL_PATH),
+        { allowFailure: true, stdio: "pipe" },
+      );
+      assertExpectedMigrationFailure(
+        preflightFailure,
+        TEMPORARY_PROFILE_PREFLIGHT_DRIFT_CASE.expectedFailure,
+        TEMPORARY_PROFILE_PREFLIGHT_DRIFT_CASE.label,
+      );
+      executeDockerSync(
+        buildPsqlCommandArgs(
+          containerName,
+          TEMPORARY_PROFILE_PREFLIGHT_DRIFT_CASE.verificationSql,
+        ),
+        { stdio: "inherit" },
+      );
+    } finally {
+      executeDockerSync(
+        buildPsqlCommandArgs(
+          containerName,
+          TEMPORARY_PROFILE_PREFLIGHT_DRIFT_CASE.cleanupSql,
+        ),
+        { stdio: "inherit" },
+      );
+    }
+    console.log(
+      "Proved temporary-profile cleanup schema drift fails before scheduler DDL.",
+    );
+    executeDockerSync(
+      buildPsqlFileArgs(containerName, IDENTITY_CLEANUP_SCHEDULER_MIGRATION_SQL_PATH),
+      { stdio: "inherit" },
+    );
     executeDockerSync(buildPsqlFileArgs(containerName, BUSINESS_ROLE_MIGRATION_SQL_PATH), {
       stdio: "inherit",
     });
@@ -1124,6 +1477,10 @@ export async function runMemberProfileSaveDatabaseContract({
     executeDockerSync(buildPsqlFileArgs(containerName, IDENTITY_CLEANUP_ASSERTIONS_SQL_PATH), {
       stdio: "inherit",
     });
+    executeDockerSync(
+      buildPsqlFileArgs(containerName, IDENTITY_CLEANUP_SCHEDULER_ASSERTIONS_SQL_PATH),
+      { stdio: "inherit" },
+    );
     if (executeDockerSync !== dockerSync) {
       console.log("Skipped live concurrency child processes for injected runner execution.");
     } else {
@@ -1133,6 +1490,8 @@ export async function runMemberProfileSaveDatabaseContract({
       await runAtomicReadMvccContract(containerName);
       await runBusinessRoleDeleteConcurrencyContract(containerName);
       await runCreatedIdentityCleanupConcurrencyContract(containerName);
+      await runCreatedIdentityCleanupSchedulerConcurrencyContract(containerName);
+      await runTemporaryProfileCleanupConcurrencyContract(containerName);
     }
     console.log("Member profile save PostgreSQL 18.4 contract passed.");
   } catch (error) {

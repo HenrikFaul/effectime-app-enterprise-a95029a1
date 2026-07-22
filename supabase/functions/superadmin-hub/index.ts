@@ -652,6 +652,7 @@ Deno.serve(async (req: Request) => {
         'admin',
         'ai-copilot',
         'auth-email-hook',
+        'cleanup-created-identities',
         'cleanup-demo-workspace',
         'cleanup-temp-users',
         'create-instant-enterprise-member',

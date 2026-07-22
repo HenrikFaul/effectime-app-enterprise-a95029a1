@@ -128,9 +128,9 @@ fingerprint improvements. `npm run lint`
 still reports the complete debt, while `npm run lint:ratchet` rejects new or
 moved diagnostic fingerprints and requires the baseline to be reduced when debt
 is removed. Do not weaken lint rules, coverage floors or bundle ceilings to hide
-failures. The Edge gate covers all 30 functions with Deno 2.9.3. Both
+failures. The Edge gate covers all 31 functions with Deno 2.9.3. Both
 `npm run edge:check` and `npm run edge:ratchet` pass with zero diagnostics. All
-64 remote imports use exact versions and the allowed-unpinned baseline is empty;
+65 remote imports use exact versions and the allowed-unpinned baseline is empty;
 any new module, diagnostic or unpinned import fails the mandatory job. The
 focused PII logging contract is also mandatory. `npm run edge:test`
 automatically discovers every `supabase/functions/**/*.test.ts` file and fails
@@ -200,7 +200,7 @@ The generated public schema currently contains 30 tables, one view, 46
 functions and two enums whose defining migrations cannot be proven locally.
 `npm run schema:provenance` prevents this reviewed debt from changing silently;
 it does not make a clean install reproducible. A read-only live schema export,
-transitively complete recovery migration, 130/130 clean replay, regenerated-type
+transitively complete recovery migration, 131/131 clean replay, regenerated-type
 comparison, schema fingerprint and RLS/adversarial tests are required before a
 backend release.
 
@@ -365,10 +365,42 @@ and 76 files / 992 tests in the full coverage run (51.27% statements/lines,
 75.11% branches, 46.39% functions). The reviewed bundle is 4,527,940 raw /
 1,296,700 gzip JavaScript bytes (+0.417% raw versus v3.51.6), with an exact
 ratchet rather than broad headroom. The improved ESLint baseline is 1,148 errors
-/ 98 warnings with 11 removed fingerprints. Hosted run `29879329719` passed all
-10/10 jobs for source head `77531b818b95a1cbe54a8d20abc3e3047a0c1c1e`;
-release evidence `8514194752`, diagnostics `8514193053` and unsigned Android
-artifact `8514165397` prove the source/CI candidate, not a production deploy.
+/ 98 warnings with 11 removed fingerprints. Hosted run `29879703648` passed all
+10/10 jobs for final source head `f628d0b7d0931be5f16ebd03e14a608648077ac8`;
+release evidence `8514318251`, diagnostics `8514316593` and unsigned Android
+artifact `8514289059` prove the source/CI candidate, not a production deploy.
+
+The stacked v3.51.8 source candidate adds a dedicated POST-only
+`cleanup-created-identities` Edge worker and replaces unfenced queue ownership
+with per-job lease tokens plus a whole-worker singleton. The worker is bounded
+to ten jobs, 110 seconds total runtime and 15-second operations; every prepare,
+complete and failure receipt is tied to the exact unexpired token. The database
+migration includes a private, owner-only scheduler installer, but deliberately
+creates no cron job. Its five-minute pg_cron command resolves the exact target
+origin, gateway-verified legacy anon JWT and independent trigger secret from
+Vault at execution time, so neither URL nor credential is stored in
+`cron.job.command`. The legacy `cleanup-temp-users` path remains a separate
+service-role-only responsibility and cannot consume the created-identity saga.
+Its DB claim filters only eligible rows, then a short-lived token plus profile/
+event write guards freeze the exact decision across Auth deletion. The lease is
+renewed after the exact Auth lookup and immediately before each delete attempt;
+completion requires an unexpired token plus authoritative Auth absence and
+atomically removes the remaining rows. An expired orphan token must be rotated
+through a new claim before completion.
+Abortable ten-second calls and a 90-second total deadline keep partial outcomes
+fail-visible and retryable.
+Web, Android and iOS continue to share the same Supabase Auth/RLS/RPC/Edge data
+plane; no privileged credential is added to either native shell.
+
+Current focused evidence is 86/86 recursively discovered Edge tests, 31/31
+entrypoint/config inventory, 65/65 pinned remote imports, zero Edge diagnostics,
+the adversarial AST log-safety suite 9/9, a 16/16 DB-runner contract and all five
+pinned PostgreSQL 18.4 contracts, including deterministic event-extension and
+temporary-to-permanent upgrade races. The frozen Edge identity is
+`5d38e629bc798af9e4536f51b819e2b99cd5378f95250478e09d05c3c26c6bce`
+(89 files / 859,724 canonical bytes). These are local source contracts until
+the stacked PR and hosted run below are recorded; they are not restored-staging
+or live deployment evidence.
 
 Production is **NO-GO**: the recurring identity-cleanup scheduler is not
 installed, and the existing migration-history drift, failed clean replay/linked
@@ -378,8 +410,8 @@ reviewed scheduling and a DB-first rollout are release prerequisites.
 
 The last read-only linked comparison at the v3.51.6 boundary had 59 migration
 IDs in common, 69 local-only IDs and 84 remote-only IDs (128 local, 143 remote).
-The v3.51.7 candidate adds two intentionally unapplied local migrations, so the
-repository now contains 130. Three local-only HR/office/
+The v3.51.7 candidate adds two and v3.51.8 adds one intentionally unapplied local
+migration, so the repository now contains 131. Three local-only HR/office/
 analytics migrations are proven duplicate-content variants of remote migrations
 under different IDs; bulk `migration repair --status reverted` would therefore
 be unsafe. A forward-only HR workflow candidate now adds fail-closed tenant
@@ -450,6 +482,14 @@ The M365 cron is installed only when Vault contains both
 `supabase_function_base_url` (the current environment's `https://<ref>.supabase.co`
 origin) and `email_queue_service_role_key`. Never reuse a service-role key with a
 different environment URL.
+
+The created-identity cleanup scheduler is installed separately and only after
+restored-staging acceptance. It requires exactly one Vault value for each of
+`supabase_function_base_url`, `created_identity_cleanup_anon_key` and
+`created_identity_cleanup_scheduler_secret`. The anon JWT must contain the exact
+20-character project `ref`; the trigger secret must be a distinct high-entropy
+base64url value. The installer is private/owner-only and the migration leaves it
+dormant by default.
 
 ## Repository governance
 

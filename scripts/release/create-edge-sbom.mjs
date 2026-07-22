@@ -28,6 +28,8 @@ export const DENO_INFO_FLAGS = Object.freeze([
   "--node-modules-dir=none",
   "--no-lock",
 ]);
+
+export const DEFAULT_EXPECTED_EDGE_ENTRYPOINTS = 31;
 const repositoryRoot = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 
 function sha256(value) {
@@ -447,7 +449,7 @@ function assertDenoVersion(invocation) {
   }
 }
 
-function discoverEntrypoints(functionsDirectory) {
+export function discoverEntrypoints(functionsDirectory) {
   return readdirSync(functionsDirectory, { withFileTypes: true })
     .filter(
       (entry) =>
@@ -469,7 +471,8 @@ async function main() {
     outputArgument?.slice("--output=".length) || "artifacts/edge-sbom.cdx.json",
   );
   const expectedEntrypoints = Number(
-    expectedArgument?.slice("--expected-entrypoints=".length) || 30,
+    expectedArgument?.slice("--expected-entrypoints=".length) ||
+      DEFAULT_EXPECTED_EDGE_ENTRYPOINTS,
   );
   if (!Number.isInteger(expectedEntrypoints) || expectedEntrypoints <= 0) {
     throw new Error("--expected-entrypoints must be a positive integer");

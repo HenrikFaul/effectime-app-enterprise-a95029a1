@@ -86,10 +86,32 @@ ALTER TABLE public.enterprise_memberships
   ADD CONSTRAINT enterprise_memberships_office_id_fkey
   FOREIGN KEY (office_id) REFERENCES public.enterprise_offices(id) ON DELETE SET NULL;
 
+CREATE TABLE public.events (
+  id uuid PRIMARY KEY,
+  created_by uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  end_date date,
+  created_at timestamptz NOT NULL DEFAULT pg_catalog.now()
+);
+
 CREATE TABLE public.profiles (
   id uuid PRIMARY KEY DEFAULT pg_catalog.gen_random_uuid(),
   user_id uuid NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
-  display_name text
+  display_name text,
+  is_temporary boolean NOT NULL DEFAULT false,
+  linked_event_id uuid REFERENCES public.events(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT pg_catalog.now()
+);
+
+CREATE TABLE public.votes (
+  id uuid PRIMARY KEY DEFAULT pg_catalog.gen_random_uuid(),
+  event_id uuid NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE public.event_participants (
+  id uuid PRIMARY KEY DEFAULT pg_catalog.gen_random_uuid(),
+  event_id uuid NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE
 );
 
 INSERT INTO auth.users (id, email)

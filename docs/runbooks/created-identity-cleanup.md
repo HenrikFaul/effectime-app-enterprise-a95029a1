@@ -1,12 +1,13 @@
-# Created enterprise identity cleanup runbook v1
+# Created enterprise identity cleanup runbook v2
 
 ## Purpose and boundary
 
-This runbook operates the v3.51.7 durable provisioning saga and database-first
-compensation path for enterprise instant identities. Its safety objective is to
-commit recovery intent before the Auth request, prove successful provisioning
-server-side, and prevent a failed or interrupted create from leaving unowned
-tenant-visible data while cleanup remains uncertain.
+This runbook operates the v3.51.7 durable provisioning saga plus the v3.51.8
+fenced worker and dormant scheduler foundation for enterprise instant
+identities. Its safety objective is to commit recovery intent before the Auth
+request, prove successful provisioning server-side, and prevent a failed or
+interrupted create from leaving unowned tenant-visible data while cleanup
+remains uncertain.
 
 This document does not authorize production access, secret creation, migration
 apply or deployment. The named database, Edge, security/privacy and release
@@ -16,14 +17,24 @@ owners must approve those actions for the target environment.
 
 - Migration `20260721234500_v3_51_7_created_identity_compensation.sql` creates
   the private `effectime_private.created_identity_cleanup_jobs` saga/outbox and
-  six service-role-only RPCs:
+  the writer-side v1 contracts:
 
   1. `register_created_enterprise_identity_provisioning_v1(uuid, uuid)`;
   2. `prepare_created_enterprise_identity_cleanup_v1(uuid, uuid, uuid)`;
   3. `complete_created_enterprise_identity_provisioning_v1(uuid, uuid, uuid)`;
-  4. `claim_created_enterprise_identity_cleanup_jobs_v1(integer)`;
-  5. `complete_created_enterprise_identity_cleanup_v1(uuid, uuid)`;
-  6. `fail_created_enterprise_identity_cleanup_v1(uuid, uuid, text)`.
+  4. `complete_created_enterprise_identity_cleanup_v1(uuid, uuid)`;
+  5. `fail_created_enterprise_identity_cleanup_v1(uuid, uuid, text)`.
+- Migration `20260722003000_v3_51_8_created_identity_cleanup_scheduler.sql`
+  adds a per-job fencing token, preserves the v1 direct-writer signatures, and
+  retires the unfenced v1 claim. Its service-role-only worker interface is:
+
+  1. `acquire_created_identity_cleanup_worker_v1(uuid, integer)`;
+  2. `claim_created_enterprise_identity_cleanup_jobs_v2(integer)`;
+  3. `prepare_created_enterprise_identity_cleanup_v2(uuid, uuid, uuid, uuid)`;
+  4. `complete_created_enterprise_identity_cleanup_v2(uuid, uuid, uuid)`;
+  5. `fail_created_enterprise_identity_cleanup_v2(uuid, uuid, text, uuid)`;
+  6. `finish_created_identity_cleanup_worker_v1(uuid, text, integer, integer,
+     integer, integer, text)`.
 - `create-instant-enterprise-member` and `join-event` register a `provisioning`
   saga in a separate committed RPC **before** calling Auth. A writer crash or an
   ambiguous Auth-create response therefore cannot erase the cleanup intent.
@@ -48,19 +59,57 @@ owners must approve those actions for the target environment.
 - Membership/profile write guards join the per-user gate and reject new or
   changed tenant-visible rows for `pending_auth` and `completed` identities.
   A delayed writer therefore cannot resurrect data after database-first cleanup.
-- `cleanup-temp-users` claims at most 25 due `provisioning` or `pending_auth`
-  jobs and reconciles them before its existing temporary-profile cleanup. For a
-  `provisioning` job it first retries database prepare, discovers/binds the Auth
-  identity through exact `app_metadata`, and proceeds to Auth deletion only
-  after prepare succeeds. The endpoint is gateway protected and also requires
-  the exact environment's service-role bearer credential.
+- `cleanup-created-identities` is the only recurring-worker candidate. It is a
+  POST-only, saga-only endpoint: it never scans or deletes legacy temporary
+  profiles. It accepts either the exact service-role bearer for a reviewed
+  manual invocation, or the exact environment's legacy anon JWT in both
+  `Authorization` and `apikey` plus a dedicated 43–128 character
+  `x-effectime-cleanup-secret`. Credential source and the exact versioned body
+  source must agree. `verify_jwt = true` remains enabled.
+  Supabase documents that this built-in check accepts the legacy JWT key format,
+  not `sb_publishable_...` bearer values; see
+  [Authorization headers](https://supabase.com/docs/guides/functions/auth-headers)
+  and
+  [API-key migration](https://supabase.com/docs/guides/getting-started/migrating-to-new-api-keys).
+- The worker claims at most ten jobs, has a 110-second total runtime ceiling,
+  15-second network-operation ceilings and a 150-second singleton lease. A
+  second invocation returns an explicit `worker_overlap` skip without claiming
+  work. Every job mutation must present the exact still-valid fencing token;
+  a late or timed-out invocation cannot complete/fail a newer worker's lease.
+- `cleanup-temp-users` is now only the backward-compatible, service-role-only
+  legacy temporary-profile cleanup. It claims only currently eligible rows
+  through a service-only RPC (default ten, hard maximum 100), so retained head
+  rows cannot starve later eligible profiles. A separate 120-second per-user
+  lease token and profile/event triggers freeze temporary status, event binding
+  and expiry eligibility across the Auth side effect. Prepare first validates
+  the claim, then renews the exact lease again after the exact Auth lookup and
+  immediately before every delete attempt. Completion requires both an
+  unexpired token and authoritative Auth absence before it atomically deletes
+  votes, participants, the lease and profile. Expired orphan tokens cannot
+  complete: a new claim must rotate the token first. If the temporary identity
+  owns its sole linked event, the Auth cascade is admitted only when no other
+  profile, claimant, participant or voter can be deleted with it.
+  The Edge handler accepts only an exact 20-character Supabase HTTPS origin,
+  uses abortable ten-second network calls and a 90-second total deadline, and
+  returns HTTP 503 for every uncertain/partial outcome. Its response explicitly
+  delegates created-identity work to `cleanup-created-identities`; it must never
+  be the target of this scheduler.
 - The job table contains UUID references, state, bounded error codes and
   timestamps. It intentionally has no direct grant even for `service_role`; the
   reviewed SECURITY DEFINER RPCs are the only runtime interface.
+- The private singleton state stores only the active operational run token,
+  bounded aggregate outcome, last completion and scheduler metadata. It stores
+  no email, name, Auth metadata or credential and has no direct runtime grant.
+- The private owner-only installer resolves exactly one URL, legacy anon JWT and
+  dedicated trigger secret from Vault, validates the exact 20-character project
+  reference, and persists a static five-minute pg_cron command that resolves the
+  values again at execution. The migration itself deliberately creates no job.
+  The companion owner-only pause function removes the exact stable job name
+  while preserving queue and worker evidence.
 
-The current source does **not** install a production scheduler for this worker.
-A deployed worker without a monitored recurring invocation is not an operational
-implementation and remains a release NO-GO.
+The current source provides a **dormant** installer but does not install a
+production scheduler. A deployed worker without a monitored recurring
+invocation is not an operational implementation and remains a release NO-GO.
 
 | Status | Meaning | Allowed next status | Worker-claimable |
 | --- | --- | --- | --- |
@@ -74,9 +123,11 @@ implementation and remains a release NO-GO.
 - Registration gives a `provisioning` saga a five-minute grace period before it
   can be claimed. A healthy writer must finish and obtain the `provisioned`
   receipt inside that window; the worker must not race a normal in-flight create.
-- Claim uses `FOR UPDATE SKIP LOCKED`, increments `attempt_count` and grants a
-  separate five-minute lease. A crashed invocation becomes claimable after lease
-  expiry.
+- Claim uses `FOR UPDATE SKIP LOCKED`, increments `attempt_count`, generates a
+  new opaque fencing token and grants a separate five-minute job lease. Prepare
+  preserves that lease across the Auth lookup/delete window. A crashed
+  invocation becomes claimable only after lease expiry, and replacement creates
+  a different token.
 - A claimed `provisioning` job with no exact Auth `app_metadata` match records
   `identity_not_visible`, remains `provisioning` and retries with backoff. A null
   or not-yet-visible Auth identity is **not** successful cleanup and the durable
@@ -90,13 +141,15 @@ implementation and remains a release NO-GO.
 - Each claimed job makes at most two exact-ID Auth delete/verification attempts.
   Once a saga is bound in `pending_auth`, authoritative absence of that exact
   user proves the Auth side effect; an unknown lookup never proves absence.
-- A state-compatible preparation or Auth failure clears the lease and schedules
-  exponential retry with `min(3600, 30 * 2^min(attempt_count, 7))` seconds.
-  Because claim increments the count first, the first recorded failure is
-  retried after 60 seconds; the delay is capped at one hour. The bounded codes
-  are `identity_not_visible`/`database_cleanup_failed` for `provisioning`
-  and `database_cleanup_failed`/`auth_lookup_failed`/`auth_delete_failed`
-  for `pending_auth`.
+- A state-compatible preparation or Auth failure schedules exponential retry
+  with `min(3600, 30 * 2^min(attempt_count, 7))` seconds. The fencing lease is
+  retained until its original expiry, so a retry requires both the backoff and
+  lease to be due. Because claim increments the count first, the first recorded
+  failure has a 60-second backoff; the job remains fenced for at most five
+  minutes. The bounded codes are
+  `identity_not_visible`/`database_cleanup_failed` for `provisioning` and
+  `database_cleanup_failed`/`auth_lookup_failed`/`auth_delete_failed` for
+  `pending_auth`.
 - A completion/failure receipt error leaves the job pending. If the receipt did
   not commit, its existing lease expires and makes the job claimable again.
 - There is no automatic terminal dead-letter or maximum-attempt deletion. This
@@ -107,9 +160,10 @@ implementation and remains a release NO-GO.
   not create substitute users, bind an intent by hand, edit identity fields,
   mark rows terminal or delete saga evidence manually.
 
-The `identity_cleanup.pending` field in one worker response counts claimed jobs
-that were not completed in that invocation. It is not the total queue depth.
-Use the private aggregate queries below for backlog monitoring.
+The worker response `summary.pending` field counts claimed jobs that were not
+completed in that invocation. It is not the total queue depth. Non-zero pending
+or `receipt_failures` produces a fail-visible 5xx run. Use the private aggregate
+queries below for backlog monitoring.
 
 ## Pre-deployment gate
 
@@ -125,23 +179,41 @@ Use the private aggregate queries below for backlog monitoring.
    ```
 
    The PostgreSQL contract must cover pre-Auth saga registration, all four saga
-   statuses and both terminal paths, exact metadata binding, six service-only
-   RPC ACLs, cross-workspace denial, five-minute grace/lease, no-visible-Auth
+   statuses and both terminal paths, exact metadata binding, every v1/v2
+   service-only RPC ACL, cross-workspace denial, five-minute grace/lease,
+   no-visible-Auth
    retry, late prepare rollback with saga preservation, provisioning postcondition
    receipt, claim/fail retry and Auth-before/after cleanup completion. It must
    additionally prove that every claimed `pending_auth` retry re-prepares the
    database before Auth access, non-service membership/profile writes cannot
    resurrect pending/completed identities, finalization re-deletes/rechecks rows
-   under workspace and user gates, and a two-session writer/finalizer race
-   serializes without residue. Targeted fixture success never replaces a clean
+   under workspace and user gates, a two-session writer/finalizer race
+   serializes without residue, a late fencing token is rejected, the singleton
+   lease redacts the active owner from an overlapping invocation, an expired
+   owner is reclaimable, and the dormant scheduler installer is fail-closed and
+   persists no credential. The same fixture must prove the separate legacy
+   temporary-profile lease: retained rows cannot starve eligible rows; event
+   extension and temporary-to-permanent profile mutation lose against an active
+   claim in deterministic two-session races; direct eligibility mutations fail
+   while unrelated columns remain writable; same-owner Auth-to-event cascade is
+   safe; expired/foreign tokens fail and an orphan requires token rotation;
+   completion requires exact Auth absence; and database cleanup is atomic. Edge
+   tests must prove exact-origin rejection, preparation after Auth lookup and
+   immediately before deletion, abortable per-call timeout and total-deadline
+   failure visibility. Targeted fixture success never replaces a clean
    migration replay and restored-staging schema comparison.
 4. Confirm `supabase/config.toml` still has
-   `[functions.cleanup-temp-users] verify_jwt = true` and that the function's
-   application-level service-role credential comparison remains present.
+   `[functions.cleanup-created-identities] verify_jwt = true` and
+   `[functions.cleanup-temp-users] verify_jwt = true`. Prove the new worker's
+   scheduler/manual auth matrix and the legacy function's exact service-role
+   comparison before either client is constructed.
 5. Prepare aggregate monitoring, a tested alert route and a single-concurrency
-   recurring scheduler in staging. Do not paste a service key into SQL, source,
-   logs, tickets or scheduler command text. Bind the function origin and bearer
-   from the target environment's approved secret manager.
+   recurring scheduler in staging. Vault must contain exactly one
+   `supabase_function_base_url`, `created_identity_cleanup_anon_key` and
+   `created_identity_cleanup_scheduler_secret`. The anon value must be the
+   target project's legacy `role=anon` JWT because gateway JWT verification is
+   enabled; it is not a service-role/secret key. Never paste any credential into
+   SQL, source, logs, tickets or scheduler command text.
 6. Pause new enterprise instant-identity creation for the short database-to-Edge
    rollout interval. If that write pause is unavailable, release authority must
    explicitly reject the rollout until a tested equivalent containment exists.
@@ -153,26 +225,34 @@ immediately after, scheduler last**.
 
 1. Apply the approved migration to staging. Do not deploy a new writer before
    the RPCs exist.
-2. After PostgREST schema-cache reload, verify all six exact RPC signatures,
+2. After PostgREST schema-cache reload, verify all exact v1/v2 RPC signatures,
    `postgres` ownership, fixed search paths and EXECUTE only for `service_role`.
    Verify RLS is enabled on the private table and that PUBLIC, `anon`,
-   `authenticated` and `service_role` have no direct table privileges.
-3. Deploy these three Edge Functions from the same frozen SHA:
-   `create-instant-enterprise-member`, `join-event` and `cleanup-temp-users`.
+   `authenticated` and `service_role` have no direct table privileges. Include
+   the three legacy temporary-profile claim/prepare/complete RPCs, both narrowed
+   guard triggers, both cleanup indexes and the private lease table in this
+   catalog check.
+3. Deploy these four Edge Functions from the same frozen SHA:
+   `create-instant-enterprise-member`, `join-event`,
+   `cleanup-created-identities` and `cleanup-temp-users`.
    Record each immutable provider deployment/version ID and Edge source digest.
 4. Run both successful-provisioning and failed-compensation staging smoke tests,
    including the strict terminal receipts and the manual checks below.
-5. Install or enable the recurring scheduler only after the worker is verified.
-   The initial operating target is one invocation every five minutes, with no
-   overlapping invocations. The chosen interval must be lower than the accepted
-   orphan-Auth recovery objective and must account for the legacy temporary-user
-   scan that runs in the same function. Measure actual duration and reduce the
-   interval only after proving that scan cannot overlap or overload the service.
+5. Install the recurring scheduler only after the dedicated worker is verified.
+   Through the approved owner connection invoke
+   `effectime_private.install_created_identity_cleanup_scheduler_v1('<ref>')`
+   once, then prove exactly one `effectime-created-identity-cleanup-v1` job with
+   `*/5 * * * *`. The legacy temporary-user scan is deliberately not part of
+   this invocation. Do not grant the installer to a runtime role.
 6. Retain the scheduler provider/job ID, exact schedule, target project reference,
    last successful invocation, HTTP result and response summary in release
-   evidence. For a database `pg_cron`/`pg_net` scheduler, add it through a
-   separately reviewed forward-only migration using environment-matched Vault
-   secrets; do not install it as untracked ad-hoc production SQL.
+   evidence. The persisted pg_cron command must contain the three Vault names,
+   the fixed function path, a 120-second HTTP timeout and no resolved URL or
+   credential. Retain the reviewed installer invocation as change evidence; do
+   not install an alternative ad-hoc job. pg_net starts the asynchronous HTTP
+   request only after the scheduling transaction commits; its request ID is not
+   proof of the worker response. See the official
+   [pg_net contract](https://supabase.com/docs/guides/database/extensions/pg_net).
 7. Repeat the same DB -> Edge -> scheduler sequence in production during the
    approved window. Reopen instant-identity creation only after one successful
    scheduled invocation and all invariant checks are green.
@@ -190,16 +270,17 @@ $cleanupHeaders = @{
 }
 Invoke-RestMethod `
   -Method Post `
-  -Uri "$env:EFFECTIME_CLEANUP_FUNCTION_ORIGIN/functions/v1/cleanup-temp-users" `
+  -Uri "$env:EFFECTIME_CLEANUP_FUNCTION_ORIGIN/functions/v1/cleanup-created-identities" `
   -Headers $cleanupHeaders `
-  -Body "{}"
+  -Body '{"schema_version":1,"source":"manual"}'
 ```
 
 Expected HTTP status is 200 and the JSON response must contain an
-`identity_cleanup` object with integer `claimed`, `completed`, `pending` and
-`receiptFailures` values. HTTP 403 means the credential boundary rejected the
-call. HTTP 500 with `Identity cleanup queue unavailable`, a malformed summary or
-any non-zero `receiptFailures` is an operational failure, not a successful drain.
+exact `status=completed` or explicit `status=skipped` contract plus integer
+`summary.claimed`, `completed`, `pending` and `receipt_failures` values. HTTP 403
+means the credential/body-source boundary rejected the call. HTTP 503, a
+malformed receipt, any non-zero pending/receipt failure or a missing singleton
+finish receipt is an operational failure, not a successful drain.
 
 ## Monitoring and alerts
 
@@ -235,6 +316,29 @@ FROM effectime_private.created_identity_cleanup_jobs
 WHERE status IN ('provisioning', 'pending_auth')
 GROUP BY status, last_error_code
 ORDER BY status, last_error_code NULLS FIRST;
+
+SELECT
+  active_run_id IS NOT NULL AS worker_active,
+  lease_expires_at,
+  last_status,
+  last_claimed,
+  last_completed,
+  last_pending,
+  last_receipt_failures,
+  last_error_code,
+  last_finished_at,
+  overlap_count,
+  scheduler_job_id IS NOT NULL AS scheduler_installed,
+  scheduler_project_ref,
+  scheduler_installed_at
+FROM effectime_private.created_identity_cleanup_worker_state
+WHERE singleton;
+
+SELECT
+  count(*) FILTER (WHERE lease_expires_at > pg_catalog.now()) AS active_claims,
+  count(*) FILTER (WHERE lease_expires_at <= pg_catalog.now()) AS expired_claims,
+  min(claimed_at) AS oldest_claimed_at
+FROM effectime_private.temporary_profile_cleanup_leases;
 ```
 
 Initial alert defaults, to be replaced by approved SLO-derived thresholds:
@@ -249,7 +353,7 @@ Initial alert defaults, to be replaced by approved SLO-derived thresholds:
   `pending_auth` cleanup identity.
 
 Track at minimum invocation success/rate/duration, `claimed`, `completed`, batch
-`pending`, `receiptFailures`, aggregate depth and age for both active states,
+`pending`, `receipt_failures`, overlap count, aggregate depth and age for both active states,
 terminal transition counts, maximum attempt count and counts by bounded error
 code. Alert payloads must contain release SHA, deployment ID, environment,
 timestamps and a correlation/request ID, but no service key, email, display name,
@@ -288,13 +392,32 @@ raw Auth metadata or general-access user UUID.
    gated final database cleanup completes the same job.
 7. Invoke the worker again after terminal completion. Neither `provisioned` nor
    `completed` rows may be claimed and no additional tenant data may change.
-8. Run the active-state checks with two concurrent worker invocations. Each job
-   must be claimed by at most one active lease. Also race finalization against
-   profile and membership insertion: the writer must wait/fail, `completed`
-   must commit without tenant-visible or Auth rows, and no terminal ghost may
-   appear.
-9. Confirm the scheduler captures the first successful response and that alerts
-   fire when the schedule is temporarily disabled in staging.
+8. Run two concurrent worker invocations. Exactly one may acquire the singleton;
+   the other must return an explicit overlap skip without exposing the active
+   run token. Let an isolated lease expire, then prove one new run can reclaim
+   it and the old token cannot prepare, complete, fail or finish the new run.
+9. Race finalization against profile and membership insertion: the writer must
+   wait/fail, `completed` must commit without tenant-visible or Auth rows, and no
+   terminal ghost may appear.
+10. Prove missing/wrong trigger secret, wrong anon key, a user JWT and a body/
+    credential source mismatch fail before any client/RPC/Auth work. Confirm the
+    service-role manual path still requires `source=manual`.
+11. Invoke the reviewed installer twice in staging. Each invocation must leave
+    exactly one five-minute job and the same static command; rotate the Vault
+    trigger value and prove the command text does not change while the next HTTP
+    request uses the new value. A wrong URL/key pair must fail and alert.
+12. Retain the first pg_net response row and require HTTP 200 with the exact
+    response schema; also prove alerts fire when the schedule is temporarily
+    paused. `cron.job_run_details` enqueue success alone is not worker success;
+    correlate the retained pg_net response with the matching aggregate worker
+    state before activation is accepted.
+13. Exercise the separate legacy worker with one retained and one eligible
+    profile. Prove the eligible row is claimed first, then race event extension
+    and temporary-to-permanent upgrade against separate active claims. Verify
+    both writers lose without data drift, the exact same-owner Auth cascade
+    succeeds only for a sole linked profile, and an expired orphan token is
+    rejected until a new claim rotates it. Do not point the recurring
+    created-identity scheduler at this endpoint.
 
 For an approved test identity, the database invariant check is:
 
@@ -360,11 +483,13 @@ query output in a general release ticket.
 4. A 403 normally indicates wrong credential, wrong project or gateway drift.
    Correct the environment binding; never weaken `verify_jwt` or the exact bearer
    comparison.
-5. A queue-unavailable 500, provisioning postcondition failure or receipt failure
+5. A worker 503, provisioning postcondition failure or receipt failure
    requires database/PostgREST review. Do not return successful provisioning
    without its `provisioned` receipt. Do not interpret an Auth delete response as
    cleanup completion without the exact post-delete lookup and `completed`
-   receipt.
+   receipt. For the legacy worker, also inspect aggregate active/expired lease
+   counts and the event/profile guard path; never delete or extend a lease by
+   hand to force progress.
 6. After repair, invoke one bounded batch, verify aggregate invariants, then let
    the monitored scheduler drain naturally. Avoid concurrent manual drain loops.
 7. Close only after backlog age and attempts return to normal, all affected jobs
@@ -373,23 +498,27 @@ query output in a general release ticket.
 
 ## Rollback and forward repair
 
-- If migration apply fails, do not deploy any of the three new Edge artifacts.
-- After the additive migration is applied, prefer a forward Edge/database repair.
+- If migration apply fails, do not deploy any of the four matching Edge artifacts.
+- After the forward-only migration is applied, prefer a forward Edge/database repair.
   Keep the private table and durable jobs; do not run a destructive down-migration.
 - Rolling the writers back to an older Auth-first compensation path reintroduces
   the orphan-membership failure and is unsafe. Disable instant identity creation
   while deploying the last known-good **database-first-compatible** Edge artifact.
-- Pausing the scheduler is a containment step only when the worker itself is
-  harmful. It does not resolve pending Auth identities. Preserve the queue and
-  resume with the same jobs after repair.
+- Pause only through
+  `effectime_private.pause_created_identity_cleanup_scheduler_v1()`. This is a
+  containment step when the worker itself is harmful; it does not resolve
+  pending Auth identities. Preserve the queue and resume with the same jobs
+  after repair.
 - Do not update `status`, identity UUIDs, attempts or timestamps directly; do not
   delete `provisioning`, `pending_auth`, `provisioned` or `completed` jobs; and do
   not recreate a missing Auth identity.
   Any exceptional data repair requires reviewed forward-only SQL, backup/restore
   evidence and release/privacy authority approval.
-- Rotate a suspected exposed service-role key through the approved secret process,
-  update the scheduler atomically for the same project, and prove old-key rejection
-  plus new-key worker success before reopening writes.
+- Rotate a suspected scheduler trigger secret or legacy anon JWT through the
+  approved secret process, prove the static job resolves the new Vault value,
+  reject the old value and then prove worker success before reopening writes.
+  A service-role compromise additionally requires normal project-wide privileged
+  key rotation; the scheduler itself must never store or transmit that key.
 
 ## Privacy and retention
 
@@ -413,14 +542,14 @@ task.
 
 - Database migration/history or restored-staging schema differs from the approved
   candidate, clean replay is red, or the PostgreSQL/Edge contracts above fail.
-- Any new writer is deployed before all six exact RPCs are present and the
+- Any new writer/worker is deployed before all exact v1/v2 RPCs are present and the
   PostgREST schema cache is verified.
-- The three Edge artifacts do not map to the same frozen SHA/source digest, or
+- The four Edge artifacts do not map to the same frozen SHA/source digest, or
   production is still running an Auth-first compensation writer.
 - Scheduler is absent, disabled, unmonitored, overlapping without evidence, bound
   to a different project/key, or lacks a retained successful invocation.
-- Queue claim returns 500, service authorization returns 403, a response is
-  malformed, `receiptFailures` is non-zero in release smoke, or backlog/attempt
+- Queue claim/finish returns 503, authorization returns 403, a response is
+  malformed, `pending`/`receipt_failures` is non-zero in release smoke, or backlog/attempt
   alerts are firing.
 - Saga registration is not committed before Auth, a writer can return success
   without the strict `provisioned` server receipt, or a late prepare rollback
@@ -429,6 +558,9 @@ task.
   retryable `provisioning`; a `pending_auth` identity still has membership/profile
   data; a `completed` identity still exists in Auth; direct table grants exist;
   or a non-service role can execute a saga/cleanup RPC.
+- A legacy temporary-profile delete can cross an event-extension or permanent-
+  upgrade race, accepts an expired token, cannot complete a safe same-owner Auth
+  cascade, or returns success after any uncertain Auth/database result.
 - Required backup/restore, monitoring/alert test, rollback owner, provider IDs,
   privacy access/retention decision or staging failure/recovery smoke is absent.
 - Instant identity creation cannot be paused for an unsafe DB/Edge interval or

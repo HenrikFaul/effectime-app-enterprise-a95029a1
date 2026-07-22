@@ -427,6 +427,16 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
+          cache: npm
+
+      - name: Pin npm
+        run: npm install --global npm@11.13.0
+
+      - name: Install AST gate dependencies from lockfile
+        run: npm ci --no-audit --no-fund
+
+      - name: Verify install did not rewrite dependency manifests
+        run: git diff --exit-code -- package.json package-lock.json
 
       - name: Prevent raw logging in PII-sensitive functions
         run: npm run edge:log-safety
