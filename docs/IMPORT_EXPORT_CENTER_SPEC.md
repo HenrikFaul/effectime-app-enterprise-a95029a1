@@ -1,18 +1,21 @@
 # Import/Export Center — Product & Technical Specification
 
-**Version**: v3.5.0 draft  
-**Date**: 2026-05-10  
-**Status**: Implementation Blueprint  
-**Owner**: Principal Product + Engineering  
-**Target branch**: `claude/create-software-documentation-O7kj1`
+**Version**: v3.51.25 maintained contract
+**Date**: 2026-07-23
+**Status**: Implemented client contract; server-owned P1 boundaries remain
+**Owner**: Principal Product + Engineering
+**Target branch**: `codex/export-pagination-integrity`
 
 ---
 
 ## 1. CONTEXT SUMMARY
 
-### Current State
+### Historical Baseline (Superseded)
 
-The product currently has two separate, disconnected, limited bulk-data tools inside the Settings panel:
+This specification originated when the product had two separate, disconnected,
+limited bulk-data tools inside the Settings panel. The active implementation is
+now the config-driven `import-export/ImportExportCenter.tsx`; the following
+inventory is retained as historical rationale rather than current runtime state:
 
 **ExportCenter** (`src/components/enterprise/ExportCenter.tsx`)
 - Exports leave/vacation requests only
@@ -303,9 +306,10 @@ mode. Mode changes always clear selection, and the runtime rechecks the selected
 entity's `exportEnabled` / `importEnabled` flag before opening or mounting a
 wizard.
 
-The client execution order is: validate request → fetch complete provider
-envelope → build artifact → insert `export.created` audit → request browser
-download. Only an object response with `error: null` and array `data` is a
+The client execution order is: validate request → fetch the complete validated
+paged dataset → build artifact → insert `export.created` audit → request browser
+download. Every provider page must be an object response with `error: null` and
+array `data`; a
 successful data read; rejected, null, missing or non-array envelopes fail with a
 stable code and no raw provider detail. The audit must return an object with an
 explicit `error: null` field. Audit metadata retains the legacy logical
@@ -327,8 +331,75 @@ staleness is detected. An audit already in flight cannot be cancelled and may
 finish with `browser_download_pending`; the post-audit stale check then prevents
 download/toast/close effects, and stale cleanup cannot unlock a newer operation.
 These are client integrity controls, not a server authorization claim: exact
-permission, entitlement, `auth.uid()` actor derivation, atomic snapshot/audit
-and exact-count pagination remain server-owned P1 requirements.
+permission, entitlement, `auth.uid()` actor derivation and an atomic
+snapshot/audit receipt remain server-owned P1 requirements.
+
+### 5.9 Complete Export Pagination Boundary
+
+Every active Import/Export Center Export Wizard source and every source used by
+the legacy leave exporter uses the shared exact-count pager. The first request
+includes an exact count and range `0..499`; subsequent requests use
+non-overlapping 500-row ranges. The pager rejects a missing/unsafe count, a
+provider envelope without explicit `error: null`, a page whose length differs
+from the expected range, or a source larger than 100,000 rows. Multi-page reads
+finish with another exact count and fail if it changed. Table sources use a
+count-only `HEAD` probe. The linked export RPCs in this scope are VOLATILE, so
+their final probe is a one-row POST range with exact count; GET/HEAD is not a
+compatible PostgREST route for those functions.
+
+Table sources and the member RPC order by stable values followed by an immutable
+identity and reject blank or globally duplicated trimmed IDs. The legacy leave
+RPC exposes no immutable request ID, therefore its stable tuple contains every
+projected export field. Rows tied across that entire tuple are observationally
+identical in the artifact; adding a projected field requires adding it to the
+tuple and its contract test. No pagination-only field is added to an artifact;
+the pre-existing `membership_id` system field remains part of member exports.
+Profile enrichment remains limited to the privacy-allowlisted
+`user_id, display_name` projection and uses the linked schema's unique
+`profiles.user_id` evidence as its identity; unresolved migration provenance is
+still tracked separately.
+
+Legacy membership/profile enrichment is split into at most 200 user IDs per
+query, with cross-batch identity checks and a 100,000-row ceiling for each
+enrichment source. Any paging, enrichment or final-count failure stops before
+audit and download.
+
+Every returned row must own every projected field and each value must match its
+declared scalar/null contract. Immutable identifiers are non-blank. Date fields
+must be valid `YYYY-MM-DD` calendar dates and leave intervals cannot be inverted.
+Unknown additive response fields are allowed; missing, wrong-typed or invalid
+projected values fail closed instead of becoming silent empty cells.
+
+Artifact limits are format-specific. The single-sheet XML Spreadsheet 2003
+`.xls` generator allows 65,536 worksheet rows total: one header plus at most
+65,535 data rows, or at most 65,534 when an import-guidance row is present.
+CSV/XML/HTML artifacts allow at most 100,000 data rows. The legacy daily leave
+view applies the limit both to the selected calendar span and to the expanded
+overlap result before artifact generation or audit. Its active-interval sweep
+preserves the stable `start_date, id` source order while avoiding the former
+`days × requests` scan. The XML Spreadsheet limit is also enforced centrally by
+`generateExcelXML`, so direct callers such as the current-data template path
+cannot bypass it.
+
+Scope note: the time-attendance payroll export is a separate runtime path. The
+central SpreadsheetML limit protects its generated worksheet, but v3.51.25 does
+not claim complete pagination for its one-shot RPC. Exact-count paging, runtime
+row validation, the dedicated `payroll_export` entitlement and artifact-before-
+record-before-download ordering remain a separate P1 hardening package.
+
+This client contract detects common service-row-limit truncation, short pages,
+duplicate identities and count drift. It is not a transactionally consistent
+snapshot: a same-count delete/insert or value update can occur between requests.
+The production target remains a server-owned export RPC/job that derives the
+actor from `auth.uid()`, enforces exact permission and entitlement, materializes
+one bounded snapshot, and atomically records its audit receipt. Release
+acceptance also requires an authenticated isolated PostgREST fixture above 500
+rows; unit/stateful provider doubles alone do not prove live gateway behavior.
+The current client ceilings are row-count ceilings, not aggregate byte or
+per-cell text ceilings, and the multi-request pager has no abort/timeout policy.
+Measured query plans, latency/memory tests and bounded text/byte handling remain
+P2 operational requirements; the server job target should stream or materialize
+large artifacts rather than retain unbounded text in browser memory.
 
 ---
 

@@ -5,11 +5,13 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { ImportWizard } from '@/components/enterprise/import-export/ImportWizard';
 import { getEntityConfig } from '@/components/enterprise/import-export/config/entity-registry';
 import { buildTemplateGuidanceRow } from '@/components/enterprise/import-export/utils/validator';
+import { maxExportArtifactDataRows } from '@/lib/exportArtifactLimits';
 
 const {
   downloadFile,
   fetchEntityRows,
   generateCSV,
+  generateExcelXML,
   invoke,
   parseUploadedFile,
   toastError,
@@ -19,6 +21,7 @@ const {
   downloadFile: vi.fn(),
   fetchEntityRows: vi.fn(),
   generateCSV: vi.fn(() => 'generated,csv'),
+  generateExcelXML: vi.fn(() => '<Workbook />'),
   invoke: vi.fn(),
   parseUploadedFile: vi.fn(),
   toastError: vi.fn(),
@@ -39,7 +42,7 @@ vi.mock('@/components/enterprise/import-export/utils/data-fetcher', () => ({
 vi.mock('@/components/enterprise/import-export/utils/file-parser', () => ({
   downloadFile,
   generateCSV,
-  generateExcelXML: vi.fn(() => '<Workbook />'),
+  generateExcelXML,
   parseUploadedFile,
 }));
 
@@ -188,6 +191,29 @@ beforeEach(() => {
 });
 
 describe('ImportWizard client safety boundary', () => {
+  it('blocks an oversized current-data XLS template before artifact or download', async () => {
+    fetchEntityRows.mockResolvedValueOnce(
+      new Array(maxExportArtifactDataRows('xls', true) + 1).fill({
+        name: 'TypeScript',
+        category: 'Engineering',
+        color: '#3178c6',
+        skill_id: 'skill-1',
+      }),
+    );
+    renderWizard();
+
+    fireEvent.click(screen.getByRole('button', {
+      name: /import_wizard\.btn_current_data/,
+    }));
+
+    await waitFor(() => {
+      expect(toastError).toHaveBeenCalledWith('import_wizard.toast_error');
+    });
+    expect(generateExcelXML).not.toHaveBeenCalled();
+    expect(downloadFile).not.toHaveBeenCalled();
+    expect(toastSuccess).not.toHaveBeenCalled();
+  });
+
   it('lands directly on Step 3 mapping after a successful file upload', async () => {
     await uploadRows([['Alpha']]);
 
