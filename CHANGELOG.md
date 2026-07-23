@@ -1,8 +1,8 @@
 ## 2026-07-23 — v3.51.25 Complete export pagination boundary (unreleased)
 
-**Status:** local source candidate on `codex/export-pagination-integrity`.
-Production deployment has not been performed. No database migration, Edge wire
-contract, route or new dependency is introduced.
+**Status:** source + hosted candidate on `codex/export-pagination-integrity`;
+draft PR #196. Production deployment has not been performed. No database
+migration, Edge wire contract, route or new dependency is introduced.
 
 - Adds one shared fail-closed export pager to the active Export Wizard sources
   and the legacy leave export. Every source now starts with an exact count,
@@ -56,8 +56,14 @@ mobile source 228/228, deterministic Android/iOS sync with zero tracked drift,
 mobile foundation 390/390 and native-shell E2E 2/2; Edge 109/109 plus 31/31
 entrypoints and 0/0 diagnostics; 0 dependency vulnerabilities; current secret,
 migration/schema provenance, Edge log/source and release-identity gates PASS.
-The clean-worktree release assertion and exact-head hosted Quality Gate are
-rerun after commit; this entry does not claim them early.
+The clean implementation commit passes the 410/410 mobile release assertion and
+the complete Git-history secret scan. Hosted Quality Gate run `29970235413`
+passed 12/12 jobs with zero annotations on exact source head `041b773…`; the PR
+checkout built potential merge `edce77a…`. Hosted bundle evidence is 4,587,242
+raw / 1,316,272 gzip JavaScript bytes, largest 1,785,150 / 567,951, with
+unchanged CSS. Retained release, diagnostics and unsigned Android artifacts are
+`8549433507`, `8549431377` and `8549399088`. The documentation-only final head
+must pass the same gate before handoff.
 
 The remaining P1 boundary is server-owned: exact export authorization and actor
 derivation, one transactionally consistent snapshot/materialized job, and an
