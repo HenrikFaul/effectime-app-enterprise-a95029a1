@@ -1,3 +1,5 @@
+import { maxExportArtifactDataRows } from '@/lib/exportArtifactLimits';
+
 /**
  * RFC 4180-compliant CSV parser supporting:
  * - UTF-8 BOM detection
@@ -199,6 +201,11 @@ export function generateExcelXML(
     sheetName?: string;
   }
 ): string {
+  const hasGuidanceRow = options?.guidanceRow !== undefined;
+  if (rows.length > maxExportArtifactDataRows('xls', hasGuidanceRow)) {
+    throw new RangeError('Excel XML worksheet row limit exceeded.');
+  }
+
   const sheetName = (options?.sheetName || 'Export').replace(/[^A-Za-z0-9_-]/g, '_').slice(0, 31);
   const required = options?.requiredFlags || headers.map(() => false);
 

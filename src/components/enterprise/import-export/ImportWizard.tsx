@@ -10,6 +10,7 @@ import { Upload, AlertCircle, CheckCircle2, ArrowLeft, ArrowRight, Loader2, File
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { maxExportArtifactDataRows } from '@/lib/exportArtifactLimits';
 import type { EntityConfig } from './config/entity-registry';
 import { fetchEntityRows } from './utils/data-fetcher';
 import { generateCSV, generateExcelXML, downloadFile, parseUploadedFile } from './utils/file-parser';
@@ -95,6 +96,9 @@ export function ImportWizard({ entity, workspaceId, onClose }: Props) {
       const fields = importableFields;
       const headers = fields.map(f => f.required ? `${f.key} *` : f.key);
       const guidance = buildTemplateGuidanceRow(fields);
+      if (rows.length > maxExportArtifactDataRows('xls', true)) {
+        throw new Error('Current-data template exceeds the XLS worksheet row budget.');
+      }
       const dataRows = rows.map(r => fields.map(f => r[f.key] ?? ''));
       const requiredFlags = fields.map(f => f.required);
       const xml = generateExcelXML(headers, dataRows, { requiredFlags, guidanceRow: guidance, sheetName: entity.label });

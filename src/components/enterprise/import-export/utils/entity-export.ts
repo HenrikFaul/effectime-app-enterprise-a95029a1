@@ -1,10 +1,12 @@
 import type { EntityConfig, FieldDefinition } from '../config/entity-registry';
+import { maxExportArtifactDataRows } from '@/lib/exportArtifactLimits';
 
 export type EntityExportFormat = 'csv' | 'xls';
 
 export type EntityExportErrorCode =
   | 'INVALID_EXPORT_REQUEST'
   | 'AUDIT_QUERY_FAILED'
+  | 'ARTIFACT_ROW_LIMIT_EXCEEDED'
   | 'ARTIFACT_GENERATION_FAILED'
   | 'DOWNLOAD_FAILED'
   | 'STALE_SCOPE';
@@ -189,10 +191,15 @@ function buildArtifact(
     const headers = fields.map((field) => (
       request.importCompatible && field.required ? `${field.key} *` : field.key
     ));
-    const dataRows = rows.map((row) => fields.map((field) => row[field.key] ?? ''));
     const guidanceRow = request.importCompatible
       ? dependencies.buildGuidanceRow(fields)
       : undefined;
+    if (
+      rows.length > maxExportArtifactDataRows(request.format, guidanceRow !== undefined)
+    ) {
+      throw new EntityExportError('ARTIFACT_ROW_LIMIT_EXCEEDED');
+    }
+    const dataRows = rows.map((row) => fields.map((field) => row[field.key] ?? ''));
     const date = dependencies.now();
     if (Number.isNaN(date.getTime())) {
       throw new Error('Invalid export clock.');

@@ -1,9 +1,18 @@
-import { eachDayOfInterval, format, isValid } from 'date-fns';
+import { differenceInCalendarDays, eachDayOfInterval, format, isValid } from 'date-fns';
 import {
   escapeXmlText,
   generateCSV,
   generateExcelXML,
 } from '@/components/enterprise/import-export/utils/file-parser';
+import {
+  fetchCompleteExportRows,
+  MAX_EXPORT_SOURCE_ROWS,
+} from '@/lib/exportPagination';
+import { maxExportArtifactDataRows } from '@/lib/exportArtifactLimits';
+import {
+  defineExportRowSchema,
+  matchesExportRowSchema,
+} from '@/lib/exportRowValidation';
 
 export type LegacyLeaveExportFormat = 'csv' | 'xls' | 'xml' | 'html';
 
@@ -17,6 +26,7 @@ export type LegacyLeaveExportErrorCode =
   | 'HOLIDAY_QUERY_FAILED'
   | 'COMPANY_DAY_QUERY_FAILED'
   | 'AUDIT_QUERY_FAILED'
+  | 'ARTIFACT_ROW_LIMIT_EXCEEDED'
   | 'ARTIFACT_GENERATION_FAILED'
   | 'DOWNLOAD_FAILED'
   | 'STALE_SCOPE';
@@ -34,15 +44,23 @@ export class LegacyLeaveExportError extends Error {
 interface QueryResult<TRow> {
   data: TRow[] | null;
   error: unknown;
+  count?: number | null;
 }
 
 interface LegacyExportQuery<TRow> extends PromiseLike<QueryResult<TRow>> {
-  select(columns: string): LegacyExportQuery<TRow>;
+  select(
+    columns: string,
+    options?: { count?: 'exact'; head?: boolean }
+  ): LegacyExportQuery<TRow>;
   eq(column: string, value: string): LegacyExportQuery<TRow>;
   gte(column: string, value: string): LegacyExportQuery<TRow>;
   lte(column: string, value: string): LegacyExportQuery<TRow>;
   in(column: string, values: string[]): LegacyExportQuery<TRow>;
-  order(column: string): LegacyExportQuery<TRow>;
+  order(
+    column: string,
+    options?: { ascending?: boolean; nullsFirst?: boolean }
+  ): LegacyExportQuery<TRow>;
+  range(from: number, to: number): LegacyExportQuery<TRow>;
   insert(values: Record<string, unknown>): PromiseLike<QueryResult<TRow>>;
 }
 
@@ -57,30 +75,104 @@ interface LeaveRequestRow {
   end_date: string;
   leave_type: string;
   status: string;
-  is_half_day?: boolean | null;
-  half_day_period?: string | null;
-  comment?: string | null;
+  is_half_day: boolean;
+  half_day_period: string | null;
+  comment: string | null;
 }
 
 interface ProfileRow {
   user_id: string;
-  display_name?: string | null;
+  display_name: string | null;
 }
 
 interface MembershipRow {
+  id: string;
   user_id: string;
-  team?: string | null;
-  business_role?: string | null;
+  team: string | null;
+  business_role: string | null;
 }
 
 interface HolidayRow {
+  id: string;
   holiday_date: string;
-  name?: string | null;
+  name: string;
 }
 
 interface CompanyDayRow {
+  id: string;
   leave_date: string;
-  name?: string | null;
+  name: string;
+}
+
+const LEAVE_REQUEST_ROW_SCHEMA = defineExportRowSchema<LeaveRequestRow>({
+  id: 'nonEmptyString',
+  user_id: 'nonEmptyString',
+  start_date: 'nonEmptyString',
+  end_date: 'nonEmptyString',
+  leave_type: 'nonEmptyString',
+  status: 'nonEmptyString',
+  is_half_day: 'boolean',
+  half_day_period: 'nullableString',
+  comment: 'nullableString',
+});
+
+const PROFILE_ROW_SCHEMA = defineExportRowSchema<ProfileRow>({
+  user_id: 'nonEmptyString',
+  display_name: 'nullableString',
+});
+
+const MEMBERSHIP_ROW_SCHEMA = defineExportRowSchema<MembershipRow>({
+  id: 'nonEmptyString',
+  user_id: 'nonEmptyString',
+  team: 'nullableString',
+  business_role: 'nullableString',
+});
+
+const HOLIDAY_ROW_SCHEMA = defineExportRowSchema<HolidayRow>({
+  id: 'nonEmptyString',
+  holiday_date: 'nonEmptyString',
+  name: 'string',
+});
+
+const COMPANY_DAY_ROW_SCHEMA = defineExportRowSchema<CompanyDayRow>({
+  id: 'nonEmptyString',
+  leave_date: 'nonEmptyString',
+  name: 'string',
+});
+
+function isIsoDate(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/u.test(value)) {
+    return false;
+  }
+  const parsed = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(parsed.getTime())
+    && parsed.toISOString().slice(0, 10) === value;
+}
+
+function isLeaveRequestRow(value: unknown): value is LeaveRequestRow {
+  if (!matchesExportRowSchema(value, LEAVE_REQUEST_ROW_SCHEMA)) return false;
+  const row = value as Record<string, unknown>;
+  // Existing writes do not enforce the boolean/period cross-field invariant.
+  // Accept persisted enum/null shapes and render only an exact period below;
+  // a future DB cleanup + CHECK can safely tighten the relationship.
+  const halfDayPeriodIsValid = row.half_day_period === null
+    || row.half_day_period === ''
+    || row.half_day_period === 'morning'
+    || row.half_day_period === 'afternoon';
+  return halfDayPeriodIsValid
+    && isIsoDate(row.start_date)
+    && isIsoDate(row.end_date)
+    && row.start_date <= row.end_date;
+}
+
+function isHolidayRow(value: unknown): value is HolidayRow {
+  return matchesExportRowSchema(value, HOLIDAY_ROW_SCHEMA)
+    && isIsoDate((value as Record<string, unknown>).holiday_date);
+}
+
+function isCompanyDayRow(value: unknown): value is CompanyDayRow {
+  return matchesExportRowSchema(value, COMPANY_DAY_ROW_SCHEMA)
+    && isIsoDate((value as Record<string, unknown>).leave_date);
 }
 
 interface AuditInsertRow {
@@ -123,20 +215,62 @@ export interface LegacyLeaveExportResult {
 
 export type LegacyLeaveExportDownload = (artifact: LegacyLeaveExportArtifact) => void;
 
-async function queryRowsOrThrow<TRow>(
-  query: PromiseLike<QueryResult<TRow>>,
+const ENRICHMENT_USER_BATCH_SIZE = 200;
+
+async function fetchRowsOrThrow<TRow>(
+  fetchPage: (
+    from: number,
+    to: number,
+    includeExactCount: boolean
+  ) => unknown | PromiseLike<unknown>,
+  fetchFinalCount: () => unknown | PromiseLike<unknown>,
+  identity: (row: TRow) => unknown,
+  validateRow: (row: unknown) => row is TRow,
   code: LegacyLeaveExportErrorCode
 ): Promise<TRow[]> {
   try {
-    const result = await query;
-    if (result.error || !Array.isArray(result.data)) {
-      throw new LegacyLeaveExportError(code);
-    }
-    return result.data;
-  } catch (error) {
-    if (error instanceof LegacyLeaveExportError) throw error;
+    return await fetchCompleteExportRows<TRow>({
+      fetchPage,
+      fetchFinalCount,
+      identity,
+      validateRow,
+    });
+  } catch {
     throw new LegacyLeaveExportError(code);
   }
+}
+
+async function fetchBatchedRowsOrThrow<TRow>(
+  userIds: string[],
+  fetchBatch: (userIdBatch: string[]) => Promise<TRow[]>,
+  identity: (row: TRow) => unknown,
+  code: LegacyLeaveExportErrorCode
+): Promise<TRow[]> {
+  const rows: TRow[] = [];
+  const seenIds = new Set<string>();
+  for (let offset = 0; offset < userIds.length; offset += ENRICHMENT_USER_BATCH_SIZE) {
+    const batchRows = await fetchBatch(
+      userIds.slice(offset, offset + ENRICHMENT_USER_BATCH_SIZE)
+    );
+    for (const row of batchRows) {
+      let value: unknown;
+      try {
+        value = identity(row);
+      } catch {
+        throw new LegacyLeaveExportError(code);
+      }
+      const id = typeof value === 'string' ? value.trim() : '';
+      if (id.length === 0 || seenIds.has(id)) {
+        throw new LegacyLeaveExportError(code);
+      }
+      if (rows.length >= MAX_EXPORT_SOURCE_ROWS) {
+        throw new LegacyLeaveExportError(code);
+      }
+      seenIds.add(id);
+      rows.push(row);
+    }
+  }
+  return rows;
 }
 
 async function querySuccessOrThrow<TRow>(
@@ -149,7 +283,7 @@ async function querySuccessOrThrow<TRow>(
       typeof result !== 'object'
       || result === null
       || !('error' in result)
-      || result.error
+      || result.error !== null
     ) {
       throw new LegacyLeaveExportError(code);
     }
@@ -157,6 +291,178 @@ async function querySuccessOrThrow<TRow>(
     if (error instanceof LegacyLeaveExportError) throw error;
     throw new LegacyLeaveExportError(code);
   }
+}
+
+function fetchMembershipRows(
+  client: LegacyLeaveExportClient,
+  workspaceId: string,
+  code: LegacyLeaveExportErrorCode,
+  options: { userIds?: string[]; activeOnly?: boolean } = {}
+): Promise<MembershipRow[]> {
+  const applyFilters = (source: LegacyExportQuery<MembershipRow>) => {
+    let query = source.eq('workspace_id', workspaceId);
+    if (options.activeOnly) query = query.eq('status', 'active');
+    if (options.userIds) query = query.in('user_id', options.userIds);
+    return query;
+  };
+
+  return fetchRowsOrThrow<MembershipRow>(
+    (from, to, includeExactCount) => applyFilters(
+      client
+        .from<MembershipRow>('enterprise_memberships')
+        .select(
+          'id, user_id, team, business_role',
+          includeExactCount ? { count: 'exact', head: false } : undefined
+        )
+    )
+      .order('id', { ascending: true })
+      .range(from, to),
+    () => applyFilters(
+      client
+        .from<MembershipRow>('enterprise_memberships')
+        .select('id', { count: 'exact', head: true })
+    ),
+    (row) => row.id,
+    (row) => matchesExportRowSchema(row, MEMBERSHIP_ROW_SCHEMA),
+    code
+  );
+}
+
+function fetchProfileRows(
+  client: LegacyLeaveExportClient,
+  userIds: string[]
+): Promise<ProfileRow[]> {
+  const applyFilters = (source: LegacyExportQuery<ProfileRow>) =>
+    source.in('user_id', userIds);
+
+  return fetchRowsOrThrow<ProfileRow>(
+    (from, to, includeExactCount) => applyFilters(
+      client
+        .from<ProfileRow>('profiles')
+        .select(
+          'user_id, display_name',
+          includeExactCount ? { count: 'exact', head: false } : undefined
+        )
+    )
+      .order('user_id', { ascending: true })
+      .range(from, to),
+    () => applyFilters(
+      client
+        .from<ProfileRow>('profiles')
+        .select('user_id', { count: 'exact', head: true })
+    ),
+    (row) => row.user_id,
+    (row) => matchesExportRowSchema(row, PROFILE_ROW_SCHEMA),
+    'PROFILE_QUERY_FAILED'
+  );
+}
+
+function fetchLeaveRequestRows(
+  client: LegacyLeaveExportClient,
+  request: LegacyLeaveExportRequest,
+  startDate: string,
+  endDate: string
+): Promise<LeaveRequestRow[]> {
+  const applyFilters = (source: LegacyExportQuery<LeaveRequestRow>) => {
+    let query = source
+      .eq('workspace_id', request.workspaceId)
+      .lte('start_date', endDate)
+      .gte('end_date', startDate);
+    if (request.statusFilter !== 'all') {
+      query = query.eq('status', request.statusFilter);
+    }
+    return query;
+  };
+
+  return fetchRowsOrThrow<LeaveRequestRow>(
+    (from, to, includeExactCount) => applyFilters(
+      client
+        .from<LeaveRequestRow>('leave_requests')
+        .select(
+          'id, user_id, start_date, end_date, leave_type, status, is_half_day, half_day_period, comment',
+          includeExactCount ? { count: 'exact', head: false } : undefined
+        )
+    )
+      .order('start_date', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, to),
+    () => applyFilters(
+      client
+        .from<LeaveRequestRow>('leave_requests')
+        .select('id', { count: 'exact', head: true })
+    ),
+    (row) => row.id,
+    isLeaveRequestRow,
+    'LEAVE_QUERY_FAILED'
+  );
+}
+
+function fetchHolidayRows(
+  client: LegacyLeaveExportClient,
+  workspaceId: string,
+  startDate: string,
+  endDate: string
+): Promise<HolidayRow[]> {
+  const applyFilters = (source: LegacyExportQuery<HolidayRow>) => source
+    .eq('workspace_id', workspaceId)
+    .gte('holiday_date', startDate)
+    .lte('holiday_date', endDate);
+
+  return fetchRowsOrThrow<HolidayRow>(
+    (from, to, includeExactCount) => applyFilters(
+      client
+        .from<HolidayRow>('enterprise_holidays')
+        .select(
+          'id, holiday_date, name',
+          includeExactCount ? { count: 'exact', head: false } : undefined
+        )
+    )
+      .order('holiday_date', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, to),
+    () => applyFilters(
+      client
+        .from<HolidayRow>('enterprise_holidays')
+        .select('id', { count: 'exact', head: true })
+    ),
+    (row) => row.id,
+    isHolidayRow,
+    'HOLIDAY_QUERY_FAILED'
+  );
+}
+
+function fetchCompanyDayRows(
+  client: LegacyLeaveExportClient,
+  workspaceId: string,
+  startDate: string,
+  endDate: string
+): Promise<CompanyDayRow[]> {
+  const applyFilters = (source: LegacyExportQuery<CompanyDayRow>) => source
+    .eq('workspace_id', workspaceId)
+    .gte('leave_date', startDate)
+    .lte('leave_date', endDate);
+
+  return fetchRowsOrThrow<CompanyDayRow>(
+    (from, to, includeExactCount) => applyFilters(
+      client
+        .from<CompanyDayRow>('enterprise_company_leave_days')
+        .select(
+          'id, leave_date, name',
+          includeExactCount ? { count: 'exact', head: false } : undefined
+        )
+    )
+      .order('leave_date', { ascending: true })
+      .order('id', { ascending: true })
+      .range(from, to),
+    () => applyFilters(
+      client
+        .from<CompanyDayRow>('enterprise_company_leave_days')
+        .select('id', { count: 'exact', head: true })
+    ),
+    (row) => row.id,
+    isCompanyDayRow,
+    'COMPANY_DAY_QUERY_FAILED'
+  );
 }
 
 function buildXml(headers: string[], rows: string[][]): string {
@@ -254,14 +560,11 @@ export async function loadLegacyLeaveExportFilterOptions(
   client: LegacyLeaveExportClient,
   workspaceId: string
 ): Promise<{ teams: string[]; roles: string[] }> {
-  const rows = await queryRowsOrThrow(
-    client
-      .from<MembershipRow>('enterprise_memberships')
-      .select('user_id, team, business_role')
-      .eq('workspace_id', workspaceId)
-      .eq('status', 'active')
-      .order('user_id'),
-    'FILTER_OPTIONS_QUERY_FAILED'
+  const rows = await fetchMembershipRows(
+    client,
+    workspaceId,
+    'FILTER_OPTIONS_QUERY_FAILED',
+    { activeOnly: true }
   );
   const teams = new Set<string>();
   const roles = new Set<string>();
@@ -289,68 +592,66 @@ export async function executeLegacyLeaveExport(
   ) {
     throw new LegacyLeaveExportError('INVALID_DATE_RANGE');
   }
+  if (!['csv', 'xls', 'xml', 'html'].includes(request.format)) {
+    throw new LegacyLeaveExportError('UNSUPPORTED_FORMAT');
+  }
   if (labels.dayNames.length !== 7 || labels.headers.length !== 11) {
     throw new LegacyLeaveExportError('UNSUPPORTED_FORMAT');
   }
 
+  const maxArtifactRows = maxExportArtifactDataRows(request.format);
+  const calendarDayCount = differenceInCalendarDays(
+    request.endDate,
+    request.startDate
+  ) + 1;
+  if (
+    !Number.isSafeInteger(calendarDayCount)
+    || calendarDayCount < 1
+    || calendarDayCount > maxArtifactRows
+  ) {
+    throw new LegacyLeaveExportError('ARTIFACT_ROW_LIMIT_EXCEEDED');
+  }
+
   const startDate = format(request.startDate, 'yyyy-MM-dd');
   const endDate = format(request.endDate, 'yyyy-MM-dd');
-  let leaveQuery = client
-    .from<LeaveRequestRow>('leave_requests')
-    .select('id, user_id, start_date, end_date, leave_type, status, is_half_day, half_day_period, comment')
-    .eq('workspace_id', request.workspaceId)
-    .lte('start_date', endDate)
-    .gte('end_date', startDate);
-  if (request.statusFilter !== 'all') {
-    leaveQuery = leaveQuery.eq('status', request.statusFilter);
-  }
-  const requests = await queryRowsOrThrow(
-    leaveQuery.order('start_date').order('id'),
-    'LEAVE_QUERY_FAILED'
-  );
+  const requests = (await fetchLeaveRequestRows(
+    client,
+    request,
+    startDate,
+    endDate
+  )).sort((left, right) => (
+    left.start_date.localeCompare(right.start_date)
+    || left.id.localeCompare(right.id)
+  ));
 
   const userIds = [...new Set(requests.map((row) => row.user_id))];
   let profiles: ProfileRow[] = [];
   let memberships: MembershipRow[] = [];
   if (userIds.length > 0) {
     [profiles, memberships] = await Promise.all([
-      queryRowsOrThrow(
-        client.from<ProfileRow>('profiles').select('user_id, display_name').in('user_id', userIds).order('user_id'),
+      fetchBatchedRowsOrThrow(
+        userIds,
+        (userIdBatch) => fetchProfileRows(client, userIdBatch),
+        (row) => row.user_id,
         'PROFILE_QUERY_FAILED'
       ),
-      queryRowsOrThrow(
-        client
-          .from<MembershipRow>('enterprise_memberships')
-          .select('user_id, team, business_role')
-          .eq('workspace_id', request.workspaceId)
-          .in('user_id', userIds)
-          .order('user_id'),
+      fetchBatchedRowsOrThrow(
+        userIds,
+        (userIdBatch) => fetchMembershipRows(
+          client,
+          request.workspaceId,
+          'MEMBERSHIP_QUERY_FAILED',
+          { userIds: userIdBatch }
+        ),
+        (row) => row.id,
         'MEMBERSHIP_QUERY_FAILED'
       ),
     ]);
   }
 
   const [holidays, companyDays] = await Promise.all([
-    queryRowsOrThrow(
-      client
-        .from<HolidayRow>('enterprise_holidays')
-        .select('holiday_date, name')
-        .eq('workspace_id', request.workspaceId)
-        .gte('holiday_date', startDate)
-        .lte('holiday_date', endDate)
-        .order('holiday_date'),
-      'HOLIDAY_QUERY_FAILED'
-    ),
-    queryRowsOrThrow(
-      client
-        .from<CompanyDayRow>('enterprise_company_leave_days')
-        .select('leave_date, name')
-        .eq('workspace_id', request.workspaceId)
-        .gte('leave_date', startDate)
-        .lte('leave_date', endDate)
-        .order('leave_date'),
-      'COMPANY_DAY_QUERY_FAILED'
-    ),
+    fetchHolidayRows(client, request.workspaceId, startDate, endDate),
+    fetchCompanyDayRows(client, request.workspaceId, startDate, endDate),
   ]);
 
   const profileByUser = new Map(profiles.map((row) => [row.user_id, row.display_name || labels.unknownPerson]));
@@ -368,23 +669,38 @@ export async function executeLegacyLeaveExport(
   if (!isCurrent()) throw new LegacyLeaveExportError('STALE_SCOPE');
 
   const rows: string[][] = [];
+  let nextRequestIndex = 0;
+  let activeRequests: LeaveRequestRow[] = [];
   for (const day of eachDayOfInterval({ start: request.startDate, end: request.endDate })) {
     const date = format(day, 'yyyy-MM-dd');
-    const dayRequests = filteredRequests.filter(
-      (row) => row.start_date <= date && row.end_date >= date
-    );
+    activeRequests = activeRequests.filter((row) => row.end_date >= date);
+    while (
+      nextRequestIndex < filteredRequests.length
+      && filteredRequests[nextRequestIndex].start_date <= date
+    ) {
+      const candidate = filteredRequests[nextRequestIndex];
+      if (candidate.end_date >= date) activeRequests.push(candidate);
+      nextRequestIndex += 1;
+    }
+
+    const nextRowCount = Math.max(1, activeRequests.length);
+    if (rows.length > maxArtifactRows - nextRowCount) {
+      throw new LegacyLeaveExportError('ARTIFACT_ROW_LIMIT_EXCEEDED');
+    }
     const holiday = holidayByDate.get(date) || '';
     const companyDay = companyDayByDate.get(date) || '';
-    if (dayRequests.length === 0) {
+    if (activeRequests.length === 0) {
       rows.push([date, labels.dayNames[day.getDay()], '', '', '', '', '', '', holiday, companyDay, '']);
       continue;
     }
-    for (const leave of dayRequests) {
+    for (const leave of activeRequests) {
       const membership = membershipByUser.get(leave.user_id);
       const halfDay = leave.is_half_day
         ? leave.half_day_period === 'morning'
           ? labels.halfDayMorning
-          : labels.halfDayAfternoon
+          : leave.half_day_period === 'afternoon'
+            ? labels.halfDayAfternoon
+            : ''
         : '';
       rows.push([
         date,

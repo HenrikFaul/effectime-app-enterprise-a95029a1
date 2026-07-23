@@ -1,3 +1,79 @@
+## 2026-07-23 — v3.51.25 Complete export pagination boundary (unreleased)
+
+**Status:** local source candidate on `codex/export-pagination-integrity`.
+Production deployment has not been performed. No database migration, Edge wire
+contract, route or new dependency is introduced.
+
+- Adds one shared fail-closed export pager to the active Export Wizard sources
+  and the legacy leave export. Every source now starts with an exact count,
+  reads deterministic 500-row ranges, requires every page to have the expected
+  length, rejects malformed/provider-error envelopes, enforces a 100,000-source-
+  row ceiling and rechecks the count after multi-page reads. Sources with an
+  immutable identity also reject blank or globally duplicated trimmed IDs.
+- Uses stable business ordering plus an immutable ID for table sources and the
+  member RPC. The legacy leave RPC exposes no request ID, so its order contains
+  every projected export field: tied rows are observationally identical, and a
+  future projected field must extend the ordering tuple. This protects static
+  result pagination but does not create a cross-request MVCC snapshot.
+- Uses exact-count `HEAD` probes for table sources. The linked schema declares
+  both export RPCs VOLATILE, so their final count probe remains a bounded one-row
+  POST range; forcing GET/HEAD would be incompatible with PostgREST function
+  routing. Legacy profile/membership enrichment is split into bounded 200-user
+  batches with a per-source aggregate 100,000-row ceiling and cross-batch
+  identity checks.
+- Preserves profile privacy: enrichment selects only the existing allowlisted
+  `user_id, display_name` projection and relies on linked-schema evidence for
+  unique `profiles.user_id`; unresolved migration provenance remains explicit.
+  No pagination-only field is added to an artifact (the pre-existing
+  `membership_id` system field remains). Each enrichment source has its own
+  100,000-row aggregate ceiling. Audit success is now accepted only for an
+  explicit `error: null` envelope.
+- Validates every projected provider field as an own runtime property with its
+  expected scalar/null contract; IDs must be non-blank, and exported date fields
+  must be real ISO calendar dates with non-inverted intervals. Missing or
+  wrong-typed data now fails before artifact, audit or download instead of being
+  silently normalized into an empty cell. Additive provider fields remain
+  compatible.
+- Aligns artifact capacity with the actual format. Single-sheet XML
+  Spreadsheet 2003 `.xls` exports count their header and optional guidance row
+  inside the 65,536-row worksheet limit; CSV/XML/HTML retain the 100,000-data-row
+  budget. The guard is enforced both in the export orchestrators and centrally
+  in `generateExcelXML`, including the Import Wizard's current-data template
+  path. The legacy daily expansion rejects an oversized date span before any
+  read and an overlap-expanded result before artifact/audit. Its former
+  `days × requests` scan is replaced by a stable active-interval sweep whose
+  work is bounded by the accepted output size. Persisted half-day enum/null
+  shapes remain readable, but a missing period is no longer fabricated as
+  `afternoon`.
+
+Local validation is green: focused pagination/data-source/artifact/legacy/UI
+contracts 6 files / 175/175 tests; complete single-worker coverage 103 files /
+1,361/1,361 tests (57.52% statements/lines, 82.12% branches, 43.30% functions);
+TypeScript; targeted ESLint; unchanged 1,108-error/98-warning lint fingerprint;
+production build and reviewed bundle ceiling (4,587,149 raw / 1,316,233 gzip
+JavaScript bytes; largest 1,785,150 / 567,949; unchanged CSS); web E2E 7/7;
+mobile source 228/228, deterministic Android/iOS sync with zero tracked drift,
+mobile foundation 390/390 and native-shell E2E 2/2; Edge 109/109 plus 31/31
+entrypoints and 0/0 diagnostics; 0 dependency vulnerabilities; current secret,
+migration/schema provenance, Edge log/source and release-identity gates PASS.
+The clean-worktree release assertion and exact-head hosted Quality Gate are
+rerun after commit; this entry does not claim them early.
+
+The remaining P1 boundary is server-owned: exact export authorization and actor
+derivation, one transactionally consistent snapshot/materialized job, and an
+atomic audit receipt. Client multi-request paging can detect count drift but not
+a same-count delete/insert or value update between requests. An authenticated
+isolated 501+ row PostgREST acceptance fixture is also still required. The
+separate time-attendance payroll export still uses a one-shot RPC cast and
+downloads before its snapshot/record RPC; central XLS capacity protection now
+applies, but exact pagination, runtime row validation, dedicated entitlement
+and record-before-download ordering remain the next P1 package. Aggregate byte/
+cell budgets, request cancellation/timeouts and measured large-export latency
+remain P2 operational work. Rollback is the source/test/version/documentation
+commit revert. Production remains **NO-GO** for the inherited quota, staging,
+migration-history, server snapshot, Edge parity and same-SHA live-attestation
+blockers.
+
 ## 2026-07-23 — v3.51.24 Export Wizard authorization and delivery boundary (unreleased)
 
 **Status:** source + hosted candidate on `codex/export-wizard-integrity`; draft

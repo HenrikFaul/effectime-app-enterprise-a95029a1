@@ -7,6 +7,7 @@ import {
   type EntityExportErrorCode,
   type EntityExportRequest,
 } from '@/components/enterprise/import-export/utils/entity-export';
+import { maxExportArtifactDataRows } from '@/lib/exportArtifactLimits';
 
 const RAW_PROVIDER_DETAIL = '<script>private schema export failure</script>';
 
@@ -250,6 +251,74 @@ describe('entity export execution boundary', () => {
     );
 
     expect(deps.fetchRows).not.toHaveBeenCalled();
+    expect(deps.auditClient.from).not.toHaveBeenCalled();
+    expect(deps.download).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['with guidance', true],
+    ['without guidance', false],
+  ] as const)('rejects an XLS row beyond the worksheet budget %s', async (_name, importCompatible) => {
+    const events: string[] = [];
+    const deps = dependencies(events);
+    const maxRows = maxExportArtifactDataRows('xls', importCompatible);
+    vi.mocked(deps.fetchRows).mockImplementation(async () => {
+      events.push('fetch');
+      return new Array(maxRows + 1).fill({
+        email: 'member@example.com',
+        team: 'Platform',
+      });
+    });
+
+    await expectCode(
+      executeEntityExport(request({ format: 'xls', importCompatible }), deps),
+      'ARTIFACT_ROW_LIMIT_EXCEEDED',
+    );
+
+    expect(events).toEqual(['fetch']);
+    expect(deps.generateExcelXml).not.toHaveBeenCalled();
+    expect(deps.auditClient.from).not.toHaveBeenCalled();
+    expect(deps.download).not.toHaveBeenCalled();
+  });
+
+  it('accepts the exact XLS data-row maximum including the import guidance row', async () => {
+    const events: string[] = [];
+    const deps = dependencies(events);
+    const maxRows = maxExportArtifactDataRows('xls', true);
+    vi.mocked(deps.fetchRows).mockImplementation(async () => {
+      events.push('fetch');
+      return new Array(maxRows).fill({
+        email: 'member@example.com',
+        team: 'Platform',
+      });
+    });
+
+    await expect(executeEntityExport(
+      request({ format: 'xls', importCompatible: true }),
+      deps,
+    )).resolves.toMatchObject({ rowCount: maxRows });
+
+    expect(events).toEqual(['fetch', 'artifact', 'audit', 'download']);
+    expect(deps.generateExcelXml).toHaveBeenCalledOnce();
+  });
+
+  it('defends the artifact boundary even if a CSV row provider bypasses the pager', async () => {
+    const events: string[] = [];
+    const deps = dependencies(events);
+    vi.mocked(deps.fetchRows).mockImplementation(async () => {
+      events.push('fetch');
+      return new Array(maxExportArtifactDataRows('csv') + 1).fill({
+        email: 'member@example.com',
+        team: 'Platform',
+      });
+    });
+
+    await expectCode(
+      executeEntityExport(request({ format: 'csv' }), deps),
+      'ARTIFACT_ROW_LIMIT_EXCEEDED',
+    );
+    expect(events).toEqual(['fetch']);
+    expect(deps.generateCsv).not.toHaveBeenCalled();
     expect(deps.auditClient.from).not.toHaveBeenCalled();
     expect(deps.download).not.toHaveBeenCalled();
   });
