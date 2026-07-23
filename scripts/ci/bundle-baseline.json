@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "purpose": "Current production bundle debt ceiling. The v3.51.25 export completeness and artifact-integrity boundary measures 4,587,149 raw / 1,316,233 gzip JavaScript bytes on the reviewed Windows source tree. Against the v3.51.24 clean source artifact (4,578,450 / 1,313,642), the delta is +8,699 raw / +2,591 gzip (under 0.20%) for the shared exact-count pager, stable 500-row paging, 100,000-row fail-closed ceiling, provider row schemas, identity/count-drift checks, legacy enrichment batching and interval sweep, and exact SpreadsheetML worksheet limits across direct generators and export flows. The largest chunk remains 1,785,150 raw / 567,949 gzip. No database, Edge wire contract, runtime dependency, CSS size or route was added. The reviewed ceilings retain only 128 raw / 279 gzip bytes of total cross-platform and release-SHA tolerance; the existing largest-chunk ceilings are not increased. Further increases require an explicit measured baseline review.",
+  "purpose": "Current production bundle debt ceiling. The v3.51.26 payroll export integrity boundary measures 4,600,314 raw / 1,320,496 gzip JavaScript bytes on the reviewed Windows source tree. Against the v3.51.25 reviewed artifact (4,587,149 / 1,316,233), the delta is +13,165 raw / +4,263 gzip (under 0.33%) for the pure export orchestrator, fail-closed entitlement and tenant-scope handling, bidirectional mutation/export single-flight gate, localized accessible recovery states, async web/native delivery port, complete RPC pagination, canonical projection, UUID/timestamp/value/arithmetic validation and targeted error recovery. The largest chunk measures 1,789,794 raw / 569,555 gzip (+4,644 / +1,606). No database or Edge wire contract, runtime dependency, CSS size or route was added. The reviewed ceilings retain only 128 raw / 279 gzip bytes of cross-platform and release-SHA tolerance. Further increases require an explicit measured baseline review.",
   "ceilings": {
     "javascript": {
-      "totalRawBytes": 4587277,
-      "totalGzipBytes": 1316512,
-      "largestRawBytes": 1785278,
-      "largestGzipBytes": 567982
+      "totalRawBytes": 4600442,
+      "totalGzipBytes": 1320775,
+      "largestRawBytes": 1789922,
+      "largestGzipBytes": 569834
     },
     "css": {
       "totalRawBytes": 180900,

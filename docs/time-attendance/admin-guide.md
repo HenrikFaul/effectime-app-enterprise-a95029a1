@@ -61,12 +61,31 @@ Click **Zárol** on an `approved` row. The period becomes `locked`. This is the 
 
 Two buttons:
 
-- **Bérelőkészítés export (XLSX, csak zárolt)** — XLSX with all locked periods of the month. After export, all locked periods auto-advance to `exported` status.
-- **Teljes (CSV, minden státusz)** — CSV with every period regardless of status (useful for ad-hoc analysis or before-lock review).
+- **Bérelőkészítés export (XLSX, csak zárolt)** — the current compatibility contract can return locked and already exported periods. After recording, current locked periods advance to `exported`.
+- **Teljes (CSV, minden státusz)** — CSV with every period regardless of status. It currently uses the same mutating record RPC, so it must not be treated as a non-mutating ad-hoc analysis export until the server contracts are separated.
 
 The XLSX path uses the same Excel XML format as the Import/Export Center (no SheetJS dependency, opens natively in Excel/Numbers/LibreOffice).
 
 Every export run is recorded in `enterprise_attendance_payroll_exports` with a JSON snapshot of the exported rows for audit replay.
+
+The current state machine does not expose an `exported → draft` correction
+transition. Do not promise re-export correction or duplicate-free retry until a
+reason-bound, idempotent server workflow and batch redownload path are released.
+
+The export controls are available only after the `payroll_export` entitlement
+has been resolved for the active workspace. The UI fails closed while that
+decision is loading or unavailable; the database RPC must still enforce the
+authoritative tenant and role boundary.
+
+Export preparation is bounded and fail-closed: the client loads deterministic
+500-row pages with an exact count, validates the complete payroll row contract,
+generates the complete file, records the immutable batch, and only then asks the
+delivery adapter to save it. A record failure cannot release a file. The port
+supports synchronous browser initiation and asynchronous native adapters; an
+adapter rejection after recording reports the affected period and batch id
+instead of showing success. A browser does not provide acknowledgement that a
+file was actually saved, so verify the file before handing it to payroll. Review
+the stored batch before retrying, because retrying creates a new audit batch.
 
 ## What's in the export
 

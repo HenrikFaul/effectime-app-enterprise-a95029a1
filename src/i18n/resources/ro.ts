@@ -703,6 +703,13 @@ const ro = {
     export_empty: 'No data for this period.',
     export_done: 'Export ready: {{count}} rows',
     export_failed: 'Export failed',
+    exporting: 'Se exportă…',
+    export_access_checking: 'Se verifică accesul la export…',
+    export_recorded_not_delivered: 'Lotul de export {{recordId}} pentru perioada {{period}} a fost înregistrat, dar fișierul nu a fost livrat. Deschide perioada înainte de a încerca din nou.',
+    export_download_failed_after_record: 'Lotul de export {{recordId}} pentru perioada {{period}} a fost înregistrat, dar descărcarea fișierului nu a putut fi pornită. Reîncarcă perioada înainte de a încerca din nou.',
+    export_controls: 'Acțiuni de export pentru salarizare',
+    previous_month: 'Luna precedentă',
+    next_month: 'Luna următoare',
     // Admin summary stats
     summary_members: 'Members',
     summary_submitted: 'Submitted',

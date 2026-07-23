@@ -703,6 +703,13 @@ const de = {
     export_empty: 'No data for this period.',
     export_done: 'Export ready: {{count}} rows',
     export_failed: 'Export failed',
+    exporting: 'Wird exportiert…',
+    export_access_checking: 'Exportzugriff wird geprüft…',
+    export_recorded_not_delivered: 'Export-Batch {{recordId}} für {{period}} wurde erfasst, aber keine Datei ausgeliefert. Öffnen Sie diesen Zeitraum vor einem erneuten Versuch.',
+    export_download_failed_after_record: 'Export-Batch {{recordId}} für {{period}} wurde erfasst, aber der Dateidownload konnte nicht gestartet werden. Laden Sie diesen Zeitraum vor einem erneuten Versuch neu.',
+    export_controls: 'Aktionen für den Abrechnungsexport',
+    previous_month: 'Vorheriger Monat',
+    next_month: 'Nächster Monat',
     // Admin summary stats
     summary_members: 'Members',
     summary_submitted: 'Submitted',

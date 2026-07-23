@@ -704,6 +704,13 @@ const en = {
     export_empty: 'No data for this period.',
     export_done: 'Export ready: {{count}} rows',
     export_failed: 'Export failed',
+    exporting: 'Exporting…',
+    export_access_checking: 'Checking export access…',
+    export_recorded_not_delivered: 'Export batch {{recordId}} for {{period}} was recorded, but no file was delivered. Open that period before trying again.',
+    export_download_failed_after_record: 'Export batch {{recordId}} for {{period}} was recorded, but the file download could not be started. Reload that period before trying again.',
+    export_controls: 'Payroll export actions',
+    previous_month: 'Previous month',
+    next_month: 'Next month',
     // Admin summary stats
     summary_members: 'Members',
     summary_submitted: 'Submitted',
