@@ -1,6 +1,6 @@
 import type { PropsWithChildren } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 import { ImportWizard } from '@/components/enterprise/import-export/ImportWizard';
 import { getEntityConfig } from '@/components/enterprise/import-export/config/entity-registry';
@@ -189,6 +189,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   fetchEntityRows.mockResolvedValue([]);
 });
+
+afterEach(cleanup);
 
 describe('ImportWizard client safety boundary', () => {
   it('blocks an oversized current-data XLS template before artifact or download', async () => {

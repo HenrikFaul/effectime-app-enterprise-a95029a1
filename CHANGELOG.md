@@ -1,3 +1,62 @@
+## 2026-07-23 — v3.51.26 Attendance payroll export integrity boundary (unreleased)
+
+**Status:** local source candidate on `codex/payroll-export-integrity`.
+Production deployment has not been performed. No database migration, Edge wire
+contract, route or runtime dependency is introduced.
+
+- Replaces the attendance payroll RPC's one-shot cast with the shared exact-
+  count export pager: deterministic 500-row ranges, final count recheck for
+  multi-page results, 100,000-source-row cap and duplicate
+  `(membership_id, period_label)` rejection. All 23 business fields plus the two
+  internal UUID identities are runtime-validated and projected onto an exact
+  allowlist before artifact or audit persistence; additive provider fields
+  cannot become accidental payroll PII.
+- Fails closed on wrong periods/states, malformed state timestamps, numeric
+  strings/non-finite/negative values, duplicate normalized payroll emails and
+  documented payroll arithmetic drift. SpreadsheetML is capped before mapping
+  at 65,535 data rows; CSV retains the 100,000-row ceiling.
+- Moves export sequencing into a React-independent typed orchestrator:
+  fetch → complete artifact → UUID-validated audit receipt → delivery. Fetch,
+  artifact and record failures cannot release an unaudited file. Post-record
+  stale/delivery failures carry bounded recovery metadata, and the delivery
+  port now awaits both synchronous browser initiation and asynchronous native
+  adapters so Android/iOS rejections cannot become false success.
+- Applies the exact `payroll_export` entitlement fail-closed to the active
+  workspace, prevents stale tenant/list/export results, and uses one synchronous
+  operation gate in both export→status-transition and transition→export
+  directions. Month navigation and every relevant mutation remain locked until
+  the owning operation settles. Raw provider details never enter toasts.
+- Adds localized busy/recovery and accessible labels in all eight locales.
+  Global RTL cleanup is registered from the per-file Vitest setup, preventing
+  serial shared-jsdom DOM leakage that was reproduced across test files.
+- Corrects the payroll documentation to match the actual English artifact
+  labels, text-typed SpreadsheetML cells, `locked`/`exported` compatibility
+  behavior, mutating full-CSV path and missing exported-correction/idempotency
+  workflow. These server/product gaps remain explicit release blockers.
+
+Local validation is green: focused payroll/API/UI/i18n contracts 4 files /
+113/113 tests; complete isolated coverage 106 files / 1,458/1,458 tests (58.05%
+statements/lines, 82.59% branches, 45.03% functions); TypeScript; targeted
+ESLint; reduced 1,100-error/98-warning fingerprint; production build and
+reviewed bundle ceiling (4,600,314 raw / 1,320,496 gzip JavaScript bytes,
+largest 1,789,794 / 569,555; unchanged CSS); web E2E 7/7; mobile source 228/228,
+deterministic Android/iOS sync, mobile foundation 390/390 and native-shell E2E
+2/2; Edge 109/109, 31/31 entrypoints and 0 diagnostics; pinned PostgreSQL 18.4
+payroll snapshot contract; 0 dependency vulnerabilities; current/history secret,
+migration/schema provenance, Edge log/source and release-identity gates PASS.
+The clean-worktree native release assertion must be rerun after the candidate is
+committed; the pre-commit run correctly refused 24 changed/untracked paths.
+
+Production remains **NO-GO**. The linked Supabase Edge runtime currently returns
+HTTP 402 `exceed_db_size_quota`; no isolated staging exists; migration drift is
+61 matched / 78 local-only / 82 remote-only; the attendance payroll table/RPC
+DDL is not migration-proven; the Vercel project targets a different repository
+and not `effectime.app`; and the live release marker is 404. Payroll also needs
+one server transaction over exact period IDs/revisions, idempotency, an explicit
+`exported` correction policy, non-mutating analysis CSV, tenant-safe batch
+redownload and retention policy. Rollback is the source/test/i18n/docs/baseline
+commit revert; it cannot undo a batch already recorded by the server.
+
 ## 2026-07-23 — v3.51.25 Complete export pagination boundary (unreleased)
 
 **Status:** source + hosted candidate on `codex/export-pagination-integrity`;
@@ -63,7 +122,8 @@ checkout built potential merge `edce77a…`. Hosted bundle evidence is 4,587,242
 raw / 1,316,272 gzip JavaScript bytes, largest 1,785,150 / 567,951, with
 unchanged CSS. Retained release, diagnostics and unsigned Android artifacts are
 `8549433507`, `8549431377` and `8549399088`. The documentation-only final head
-must pass the same gate before handoff.
+`ed5ec517…` also passed all 12/12 jobs in run `29970573620`; the first attempt's
+external `esm.sh` HTTP 522 cleared on rerun.
 
 The remaining P1 boundary is server-owned: exact export authorization and actor
 derivation, one transactionally consistent snapshot/materialized job, and an

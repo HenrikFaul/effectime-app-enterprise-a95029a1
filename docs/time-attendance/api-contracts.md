@@ -37,10 +37,32 @@ Any other transition raises an exception. Each transition writes one audit row.
 Admin-only. One row per active member, with cached `totals`. Used by `AdminOverview`.
 
 ### `attendance_payroll_export(p_workspace_id, p_year, p_month, p_only_locked)` → SETOF row
-Admin-only. Returns 23-column rows ready for export. When `p_only_locked=true`, members without `locked`/`exported` periods are skipped.
+Admin-only. Returns 23-column rows ready for export. When `p_only_locked=true`,
+members without `locked`/`exported` periods are skipped. This compatibility
+behavior permits re-reading previously exported rows; duplicate-proof official
+export needs an explicit server state-machine and idempotency contract.
+
+The current client applies `membership_id, period_label` ordering, exact-count
+500-row ranges, a 100,000-row ceiling and runtime validation of the returned
+shape. Count drift and duplicate identities fail closed. Because this invokes a
+VOLATILE RPC across multiple requests, it does not establish one MVCC snapshot;
+concurrency-safe export ultimately requires one server-owned materialization
+transaction/job over exact period ids and revisions.
 
 ### `attendance_record_export(p_workspace_id, p_year, p_month, p_variant, p_format, p_member_count, p_total_periods, p_payload)` → `uuid`
-Admin-only. Inserts into `enterprise_attendance_payroll_exports` and advances every `locked` period in the month to `exported`. Returns the export batch id.
+Admin-only. Inserts into `enterprise_attendance_payroll_exports` and advances
+every currently `locked` period in the month to `exported`. Returns the export
+batch id. Because this is a separate call from row retrieval and does not accept
+exact period ids/revisions, it cannot prove that the persisted/status-updated
+set is identical to the generated artifact under concurrent changes.
+
+The client accepts only a UUID receipt and calls this RPC after complete
+artifact generation but before browser delivery. A failed or malformed receipt
+prevents delivery. The delivery port awaits both synchronous browser initiation
+and an asynchronous native adapter. A rejection after a successful receipt
+retains the recorded payload/exported statuses and reports the period and
+receipt id. The DOM download API still does not attest that the browser actually
+saved the file.
 
 ### `attendance_recompute_totals(p_period_id)` → `jsonb`
 Idempotent. Called automatically by every mutation RPC. Public so admins can trigger a refresh after manually altering the schedule template.

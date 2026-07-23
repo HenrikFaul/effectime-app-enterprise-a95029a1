@@ -220,6 +220,23 @@ describe('i18n key parity — EN and HU bundles', () => {
     }
   });
 
+  it('payroll export boundary and navigation keys are non-empty in every supported locale', () => {
+    const criticalKeys = [
+      'attendance.exporting',
+      'attendance.export_access_checking',
+      'attendance.export_recorded_not_delivered',
+      'attendance.export_download_failed_after_record',
+      'attendance.export_controls',
+      'attendance.previous_month',
+      'attendance.next_month',
+    ];
+    for (const [locale, bundle] of supportedBundles) {
+      for (const key of criticalKeys) {
+        expect(bundle.get(key)?.trim(), `${locale} missing or empty: ${key}`).toBeTruthy();
+      }
+    }
+  });
+
   it('profile load and optimistic-conflict recovery keys are non-empty in every supported locale', () => {
     const criticalKeys = [
       'profile.load_error',

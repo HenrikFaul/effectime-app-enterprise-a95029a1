@@ -1,10 +1,15 @@
 # Payroll export — column reference
 
-Stable schema for accountant / payroll handoff. **Never reorder columns**. Add new columns at the end.
+Stable field order for accountant / payroll handoff. **Never reorder columns**.
+The current artifact uses the English runtime labels listed in
+`PAYROLL_COLUMNS`; the Hungarian labels below describe their business meaning.
+SpreadsheetML currently serializes every cell as text even where the source
+contract is numeric. Any label or cell-type migration requires an
+accountant-approved golden artifact and real office-suite round-trip.
 
 | # | Column (Hungarian) | Source field | Type | Notes |
 |---|---------------------|--------------|------|-------|
-| 1 | Email | `auth.users.email` | text | Unique identifier per employee |
+| 1 | Email | `auth.users.email` | text | Required and unique within one client export; not an immutable payroll employee id |
 | 2 | Név | `profiles.display_name` | text | May be empty if user never set it |
 | 3 | Csapat | `enterprise_memberships.team` | text | |
 | 4 | Munkakör | `enterprise_memberships.business_role` | text | |
@@ -35,22 +40,51 @@ Stable schema for accountant / payroll handoff. **Never reorder columns**. Add n
 One row per `(employee, period)`. Wide format. Suitable for direct payroll input.
 
 - File name: `attendance_payroll_<YYYY>_<MM>.xls` or `.csv`
-- Sheet name: **Bérelőkészítés**
+- Sheet name: **Payroll** (stable runtime compatibility contract)
 - One row per employee per month
 
 ### `detailed` (planned, not in v1)
 
 The data model already supports a "detailed" variant that exports one row per segment (date, start, end, type, flags, note). To enable, extend `attendance_payroll_export(...)` with a variant parameter and add a UI toggle. Stable column order is required for accountant compatibility.
 
-## Lock-and-export discipline
+## Current lock-and-export compatibility behavior
 
-The XLSX button uses `p_only_locked = true`. This guarantees:
+The XLSX button uses `p_only_locked = true`. The current RPC contract may return
+both `locked` and previously `exported` rows. The client preserves that behavior
+for compatibility and validates both states; therefore it does **not** yet
+guarantee duplicate-proof official export.
 
-- Only locked periods leave the system.
+- Rows outside `locked` / `exported` fail closed on the XLSX path.
 - The lock timestamp is captured in the audit trail.
-- Once exported, the period status advances to `exported` (visible to admins) — preventing a second accidental export from being treated as a fresh source of truth.
+- The record RPC reports that current `locked` periods advance to `exported`.
 
-To re-export a period (e.g. after a correction), an admin must reopen → re-approve → re-lock → export. Every step is audited.
+The documented transition contract and current UI do not reopen an `exported`
+period. A correction/re-export policy (including reason, prior-batch reference
+and idempotency) is therefore an explicit release blocker, not an implemented
+workflow.
+
+The client reads the RPC through deterministic 500-row pages with an exact
+count, validates all 23 business fields plus the two internal identities, and
+rejects duplicate `(membership_id, period_label)` rows. A source above 100,000
+rows is refused. SpreadsheetML additionally allows at most 65,535 data rows so
+the header remains inside Excel 97-2003's 65,536-row worksheet limit. These are
+client integrity controls; multiple HTTP requests are not an atomic database
+snapshot. A server-owned, transactionally materialized export job remains the
+required boundary for concurrent payroll mutations. The client also rejects
+negative values, duplicate normalized email identifiers and totals that violate
+the documented payroll arithmetic within a 0.05-hour rounding tolerance. This
+is defense in depth; the server must remain the source of truth.
+
+The delivery order is **fetch → generate complete artifact → record immutable
+snapshot / advance status → request delivery**. A fetch, validation, artifact
+or record failure therefore cannot release an unaudited file. The delivery port
+accepts synchronous browser initiation and asynchronous native adapters; an
+adapter rejection after recording reports the batch id instead of claiming
+success. The DOM anchor API still does not acknowledge that the browser actually
+saved the file, so real web, iOS and Android delivery remains an acceptance
+requirement. The recorded JSONB payload remains the canonical recovery source;
+an operator should inspect the reported batch id before initiating another
+export, because a second run creates another audit batch.
 
 ## Audit replay
 
@@ -68,3 +102,8 @@ This is the canonical record handed to payroll.
 
 - **CSV** — UTF-8 with BOM, RFC 4180. Best for raw import into other systems.
 - **XLSX** — Excel XML Spreadsheet 2003 format (file extension `.xls`). Opens natively in Excel/Numbers/LibreOffice without macros. Same generator as the Import/Export Center, no SheetJS dependency.
+
+The UI label uses “XLSX” as the established payroll action name, while the
+actual and audited artifact is XML Spreadsheet 2003 with a `.xls` extension.
+This compatibility behavior is intentional; consumers must not infer an OOXML
+ZIP container from the action label.

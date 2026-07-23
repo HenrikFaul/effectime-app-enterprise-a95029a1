@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
-  ChevronLeft, ChevronRight, Download, FileSpreadsheet, FileText,
+  ChevronLeft, ChevronRight, FileSpreadsheet, FileText,
   CheckCircle2, RotateCcw, Lock, Loader2, Send, AlertTriangle,
   XCircle, ChevronDown,
 } from 'lucide-react';
@@ -16,64 +16,118 @@ import {
   listWorkspacePeriods, transitionPeriod, fetchPayrollExport, recordPayrollExport,
 } from './api';
 import { generateCSV, generateExcelXML, downloadFile } from '../import-export/utils/file-parser';
-import { STATUS_BADGE_VARIANT, type AdminPeriodRow } from './types';
+import {
+  STATUS_BADGE_VARIANT,
+  type AdminPeriodRow,
+  type AttendancePeriodStatus,
+} from './types';
 import { useI18n, useDateLocale } from '@/i18n/I18nProvider';
+import { useFeature } from '@/hooks/useFeature';
+import {
+  executePayrollExport,
+  PayrollExportError,
+  type PayrollExportDependencies,
+  type PayrollExportFormat,
+} from './payroll-export';
 
 interface Props {
   workspaceId: string;
 }
 
-const PAYROLL_COLUMNS = [
-  { key: 'email', label: 'Email' },
-  { key: 'display_name', label: 'Name' },
-  { key: 'team', label: 'Team' },
-  { key: 'business_role', label: 'Role' },
-  { key: 'office_name', label: 'Site' },
-  { key: 'period_label', label: 'Period' },
-  { key: 'status', label: 'Status' },
-  { key: 'regular_hours', label: 'Regular h' },
-  { key: 'overtime_hours', label: 'OT h' },
-  { key: 'weekend_overtime_hours', label: 'WE OT h' },
-  { key: 'night_hours', label: 'Night h' },
-  { key: 'oncall_intervention_hours', label: 'Callout h' },
-  { key: 'oncall_standby_hours', label: 'Standby h' },
-  { key: 'oncall_standby_compensated_hours', label: 'Standby comp h (×0.20)' },
-  { key: 'expected_hours', label: 'Expected h' },
-  { key: 'leave_days', label: 'Leave days' },
-  { key: 'leave_hours', label: 'Leave h' },
-  { key: 'expected_after_leave', label: 'Expected after leave' },
-  { key: 'worked_hours', label: 'Worked h' },
-  { key: 'payroll_total_hours', label: 'Payroll total h' },
-  { key: 'submitted_at', label: 'Submitted at' },
-  { key: 'approved_at', label: 'Approved at' },
-  { key: 'locked_at', label: 'Locked at' },
-] as const;
+const payrollExportDependencies: PayrollExportDependencies = {
+  fetchPayrollExport,
+  generateCSV,
+  generateExcelXML,
+  recordPayrollExport,
+  downloadFile,
+};
+
+interface PeriodListState {
+  scopeKey: string | null;
+  rows: AdminPeriodRow[];
+  loading: boolean;
+}
+
+const EMPTY_PERIOD_ROWS: AdminPeriodRow[] = [];
 
 export function AdminOverview({ workspaceId }: Props) {
   const { t } = useI18n();
   const dateFnsLocale = useDateLocale();
+  const {
+    enabled: payrollExportEnabled,
+    isLoading: payrollExportAccessLoading,
+    isError: payrollExportAccessError,
+  } = useFeature(workspaceId, 'payroll_export');
   const today = new Date();
   const [year, setYear] = useState(getYear(today));
   const [month, setMonth] = useState(getMonth(today) + 1);
-  const [rows, setRows] = useState<AdminPeriodRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const requestScopeKey = `${workspaceId}:${year}:${month}`;
+  const [periodList, setPeriodList] = useState<PeriodListState>({
+    scopeKey: null,
+    rows: [],
+    loading: true,
+  });
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [exporting, setExporting] = useState(false);
+  const [exportingFormat, setExportingFormat] = useState<PayrollExportFormat | null>(null);
+  const [transitioningPeriodId, setTransitioningPeriodId] = useState<string | null>(null);
+  const exportStatusId = useId();
+  const mountedRef = useRef(false);
+  const latestScopeRef = useRef(requestScopeKey);
+  const listOperationRef = useRef<symbol | null>(null);
+  const exportOperationRef = useRef<symbol | null>(null);
+  const transitionOperationRef = useRef<symbol | null>(null);
+  const canExport = payrollExportEnabled
+    && !payrollExportAccessLoading
+    && !payrollExportAccessError;
+  const latestCanExportRef = useRef(canExport);
+  const operationBusy = exportingFormat !== null || transitioningPeriodId !== null;
+  latestScopeRef.current = requestScopeKey;
+  latestCanExportRef.current = canExport;
 
-  const reload = async () => {
-    setLoading(true);
+  const rows = periodList.scopeKey === requestScopeKey ? periodList.rows : EMPTY_PERIOD_ROWS;
+  const loading = periodList.scopeKey !== requestScopeKey || periodList.loading;
+
+  const reload = useCallback(async () => {
+    const requestedScopeKey = requestScopeKey;
+    if (!mountedRef.current || latestScopeRef.current !== requestedScopeKey) return;
+    const operationToken = Symbol('attendance-period-list');
+    listOperationRef.current = operationToken;
+    setPeriodList({ scopeKey: requestedScopeKey, rows: [], loading: true });
     try {
       const data = await listWorkspacePeriods(workspaceId, year, month);
-      setRows(data);
-    } catch (e: any) {
-      toast.error(e?.message || t('attendance.list_load_failed'));
-    } finally {
-      setLoading(false);
+      if (
+        mountedRef.current
+        && latestScopeRef.current === requestedScopeKey
+        && listOperationRef.current === operationToken
+      ) {
+        setPeriodList({ scopeKey: requestedScopeKey, rows: data, loading: false });
+      }
+    } catch {
+      if (
+        mountedRef.current
+        && latestScopeRef.current === requestedScopeKey
+        && listOperationRef.current === operationToken
+      ) {
+        setPeriodList({ scopeKey: requestedScopeKey, rows: [], loading: false });
+        toast.error(t('attendance.list_load_failed'));
+      }
     }
-  };
+  }, [month, requestScopeKey, t, workspaceId, year]);
 
-  useEffect(() => { reload(); /* eslint-disable-line */ }, [workspaceId, year, month]);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      listOperationRef.current = null;
+      exportOperationRef.current = null;
+      transitionOperationRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    void reload();
+  }, [reload]);
 
   const filtered = useMemo(() => {
     const s = search.toLowerCase().trim();
@@ -105,50 +159,128 @@ export function AdminOverview({ workspaceId }: Props) {
     return acc;
   }, [rows]);
 
-  const handlePrev = () => { const d = subMonths(new Date(year, month - 1), 1); setYear(getYear(d)); setMonth(getMonth(d) + 1); };
-  const handleNext = () => { const d = addMonths(new Date(year, month - 1), 1); setYear(getYear(d)); setMonth(getMonth(d) + 1); };
+  const handlePrev = () => {
+    if (exportOperationRef.current || transitionOperationRef.current) return;
+    const d = subMonths(new Date(year, month - 1), 1);
+    setYear(getYear(d));
+    setMonth(getMonth(d) + 1);
+  };
+  const handleNext = () => {
+    if (exportOperationRef.current || transitionOperationRef.current) return;
+    const d = addMonths(new Date(year, month - 1), 1);
+    setYear(getYear(d));
+    setMonth(getMonth(d) + 1);
+  };
 
-  const doTransition = async (periodId: string, target: any, reason?: string) => {
+  const doTransition = async (
+    periodId: string,
+    target: AttendancePeriodStatus,
+    reason?: string,
+  ) => {
+    if (exportOperationRef.current || transitionOperationRef.current) return;
+    const operationToken = Symbol('attendance-period-transition');
+    const operationScopeKey = requestScopeKey;
+    transitionOperationRef.current = operationToken;
+    setTransitioningPeriodId(periodId);
+    const isCurrent = () => (
+      mountedRef.current
+      && transitionOperationRef.current === operationToken
+      && latestScopeRef.current === operationScopeKey
+    );
     try {
       await transitionPeriod(periodId, target, reason);
-      toast.success(t('attendance.status_updated'));
-      reload();
-    } catch (e: any) {
-      toast.error(e?.message || t('attendance.action_failed'));
+      if (isCurrent()) {
+        toast.success(t('attendance.status_updated'));
+        void reload();
+      }
+    } catch {
+      if (isCurrent()) toast.error(t('attendance.action_failed'));
+    } finally {
+      if (transitionOperationRef.current === operationToken) {
+        transitionOperationRef.current = null;
+        if (mountedRef.current) setTransitioningPeriodId(null);
+      }
     }
   };
 
-  const handleExport = async (fmt: 'xlsx' | 'csv', onlyLocked: boolean) => {
-    setExporting(true);
+  const handleExport = async (format: PayrollExportFormat, onlyLocked: boolean) => {
+    if (!canExport || exportOperationRef.current || transitionOperationRef.current) return;
+    const operationToken = Symbol('attendance-payroll-export');
+    const operationScopeKey = requestScopeKey;
+    exportOperationRef.current = operationToken;
+    setExportingFormat(format);
+    const isCurrent = () => (
+      mountedRef.current
+      && exportOperationRef.current === operationToken
+      && latestScopeRef.current === operationScopeKey
+      && latestCanExportRef.current
+    );
+
     try {
-      const exportRows = await fetchPayrollExport(workspaceId, year, month, onlyLocked);
-      if (exportRows.length === 0) {
+      const result = await executePayrollExport({
+        workspaceId,
+        year,
+        month,
+        onlyLocked,
+        format,
+      }, payrollExportDependencies, isCurrent);
+      if (!isCurrent()) return;
+      toast.success(t('attendance.export_done', { count: result.rowCount }));
+      void reload();
+    } catch (error) {
+      const isPostRecordFailure = error instanceof PayrollExportError
+        && (
+          error.code === 'RECORDED_NOT_DELIVERED'
+          || error.code === 'DOWNLOAD_FAILED_AFTER_RECORD'
+        );
+      const metadata = isPostRecordFailure ? error.metadata : null;
+      const metadataMatchesRequest = metadata !== null
+        && metadata.workspaceId === workspaceId
+        && metadata.year === year
+        && metadata.month === month;
+      if (isPostRecordFailure && metadataMatchesRequest) {
+        const toastKey = error.code === 'RECORDED_NOT_DELIVERED'
+          ? 'attendance.export_recorded_not_delivered'
+          : 'attendance.export_download_failed_after_record';
+        toast.error(t(toastKey, {
+          period: `${metadata.year}-${String(metadata.month).padStart(2, '0')}`,
+          recordId: metadata.recordId,
+        }));
+        if (mountedRef.current && latestScopeRef.current === operationScopeKey) {
+          void reload();
+        }
+      } else if (isPostRecordFailure) {
+        toast.error(t('attendance.export_failed'));
+      } else if (
+        error instanceof PayrollExportError
+        && error.code === 'EMPTY_EXPORT'
+        && isCurrent()
+      ) {
         toast.error(onlyLocked ? t('attendance.export_empty_locked') : t('attendance.export_empty'));
+      } else if (!isCurrent()) {
         return;
-      }
-      const headers = PAYROLL_COLUMNS.map(c => c.label);
-      const dataRows = exportRows.map(r => PAYROLL_COLUMNS.map(c => {
-        const v = (r as any)[c.key];
-        if (v === null || v === undefined) return '';
-        return String(v);
-      }));
-      const periodLabel = `${year}_${String(month).padStart(2, '0')}`;
-      if (fmt === 'xlsx') {
-        const xml = generateExcelXML(headers, dataRows, { sheetName: 'Payroll' });
-        downloadFile(xml, `attendance_payroll_${periodLabel}.xls`, 'application/vnd.ms-excel');
       } else {
-        const csv = generateCSV(headers, dataRows);
-        downloadFile(csv, `attendance_payroll_${periodLabel}.csv`, 'text/csv;charset=utf-8');
+        toast.error(t('attendance.export_failed'));
       }
-      await recordPayrollExport(workspaceId, year, month, 'summary', fmt, exportRows);
-      toast.success(t('attendance.export_done', { count: exportRows.length }));
-      reload();
-    } catch (e: any) {
-      toast.error(e?.message || t('attendance.export_failed'));
     } finally {
-      setExporting(false);
+      if (exportOperationRef.current === operationToken) {
+        exportOperationRef.current = null;
+        if (mountedRef.current) setExportingFormat(null);
+      }
     }
   };
+
+  const exportAccessStatus = payrollExportAccessLoading
+    ? t('attendance.export_access_checking')
+    : payrollExportAccessError
+      ? t('feature_gate.entitlement_unavailable_title')
+      : !payrollExportEnabled
+        ? t('feature_gate.locked_title')
+        : transitioningPeriodId
+          ? t('common.saving')
+          : exportingFormat
+            ? t('attendance.exporting')
+            : '';
 
   if (loading) return (
     <div className="flex items-center justify-center p-8 text-muted-foreground">
@@ -161,17 +293,52 @@ export function AdminOverview({ workspaceId }: Props) {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-center gap-2">
-            <Button size="sm" variant="ghost" onClick={handlePrev}><ChevronLeft className="h-4 w-4" /></Button>
+            <Button type="button" size="sm" variant="ghost" disabled={operationBusy} aria-label={t('attendance.previous_month')} onClick={handlePrev}><ChevronLeft className="h-4 w-4" aria-hidden="true" /></Button>
             <CardTitle className="text-base tabular-nums">
               {format(new Date(year, month - 1, 1), 'yyyy. MMMM', { locale: dateFnsLocale })}
             </CardTitle>
-            <Button size="sm" variant="ghost" onClick={handleNext}><ChevronRight className="h-4 w-4" /></Button>
-            <div className="ml-auto flex items-center gap-2 flex-wrap">
-              <Button size="sm" variant="outline" disabled={exporting} onClick={() => handleExport('xlsx', true)}>
-                <FileSpreadsheet className="h-3 w-3 mr-1" /> {t('attendance.export_xlsx')}
+            <Button type="button" size="sm" variant="ghost" disabled={operationBusy} aria-label={t('attendance.next_month')} onClick={handleNext}><ChevronRight className="h-4 w-4" aria-hidden="true" /></Button>
+            <div
+              className="ml-auto flex items-center gap-2 flex-wrap"
+              role="group"
+              aria-label={t('attendance.export_controls')}
+              aria-busy={payrollExportAccessLoading || operationBusy}
+            >
+              <span id={exportStatusId} role="status" aria-live="polite" className="sr-only">
+                {exportAccessStatus}
+              </span>
+              {!canExport && exportAccessStatus && (
+                <span className="text-xs text-muted-foreground" aria-hidden="true">
+                  {exportAccessStatus}
+                </span>
+              )}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={!canExport || operationBusy}
+                aria-busy={payrollExportAccessLoading || exportingFormat === 'xlsx'}
+                aria-describedby={exportAccessStatus ? exportStatusId : undefined}
+                onClick={() => void handleExport('xlsx', true)}
+              >
+                {exportingFormat === 'xlsx'
+                  ? <Loader2 className="h-3 w-3 mr-1 animate-spin" aria-hidden="true" />
+                  : <FileSpreadsheet className="h-3 w-3 mr-1" aria-hidden="true" />}
+                {exportingFormat === 'xlsx' ? t('attendance.exporting') : t('attendance.export_xlsx')}
               </Button>
-              <Button size="sm" variant="ghost" disabled={exporting} onClick={() => handleExport('csv', false)}>
-                <FileText className="h-3 w-3 mr-1" /> {t('attendance.export_csv')}
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                disabled={!canExport || operationBusy}
+                aria-busy={payrollExportAccessLoading || exportingFormat === 'csv'}
+                aria-describedby={exportAccessStatus ? exportStatusId : undefined}
+                onClick={() => void handleExport('csv', false)}
+              >
+                {exportingFormat === 'csv'
+                  ? <Loader2 className="h-3 w-3 mr-1 animate-spin" aria-hidden="true" />
+                  : <FileText className="h-3 w-3 mr-1" aria-hidden="true" />}
+                {exportingFormat === 'csv' ? t('attendance.exporting') : t('attendance.export_csv')}
               </Button>
             </div>
           </div>
@@ -235,7 +402,7 @@ export function AdminOverview({ workspaceId }: Props) {
                       <td className="px-2 py-1.5">
                         {r.status ? (
                           <Badge variant={STATUS_BADGE_VARIANT[r.status]} className="text-[10px]">
-                            {t(`attendance.status_${r.status}` as any)}
+                            {t(`attendance.status_${r.status}`)}
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="text-[10px] text-muted-foreground">{t('attendance.status_missing')}</Badge>
@@ -253,10 +420,10 @@ export function AdminOverview({ workspaceId }: Props) {
                       <td className="px-2 py-1.5 text-right">
                         {r.period_id && r.status === 'submitted' && (
                           <div className="flex items-center gap-1 justify-end">
-                            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => doTransition(r.period_id!, 'approved')}>
+                            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" disabled={operationBusy} onClick={() => doTransition(r.period_id!, 'approved')}>
                               <CheckCircle2 className="h-3 w-3 mr-1" /> {t('attendance.action_approve')}
                             </Button>
-                            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-destructive" onClick={() => {
+                            <Button size="sm" variant="ghost" className="h-6 px-2 text-xs text-destructive" disabled={operationBusy} onClick={() => {
                               const reason = prompt(t('attendance.action_return_reason'));
                               if (reason) doTransition(r.period_id!, 'returned', reason);
                             }}>
@@ -265,12 +432,12 @@ export function AdminOverview({ workspaceId }: Props) {
                           </div>
                         )}
                         {r.period_id && r.status === 'approved' && (
-                          <Button size="sm" variant="default" className="h-6 px-2 text-xs" onClick={() => doTransition(r.period_id!, 'locked')}>
+                          <Button size="sm" variant="default" className="h-6 px-2 text-xs" disabled={operationBusy} onClick={() => doTransition(r.period_id!, 'locked')}>
                             <Lock className="h-3 w-3 mr-1" /> {t('attendance.action_lock')}
                           </Button>
                         )}
                         {r.period_id && (r.status === 'locked' || r.status === 'approved' || r.status === 'returned') && (
-                          <Button size="sm" variant="ghost" className="h-6 px-2 text-xs" onClick={() => {
+                          <Button type="button" size="sm" variant="ghost" className="h-6 px-2 text-xs" disabled={operationBusy} aria-label={t('attendance.action_reopen')} onClick={() => {
                             if (confirm(t('attendance.action_reopen_confirm'))) {
                               doTransition(r.period_id!, 'draft');
                             }
